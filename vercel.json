@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "routes": [
+    { "src": "/api/cron/whatsapp", "dest": "/api/cron/whatsapp.js" },
+    { "src": "/(.*)", "dest": "/api/index.js" }
+  ],
+  "crons": [
+    { "path": "/api/cron/whatsapp", "schedule": "* * * * *" }
+  ]
+}

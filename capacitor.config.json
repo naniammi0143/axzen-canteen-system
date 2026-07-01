@@ -1,0 +1,8 @@
+{
+  "appId": "com.axenhospitality.canteen",
+  "appName": "Axen Canteen",
+  "webDir": "sa",
+  "server": {
+    "cleartext": true
+  }
+}

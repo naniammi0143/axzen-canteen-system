@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Axzen Infotech POS</title>
+  <style>
+    :root {
+      --ink: #091225;
+      --muted: #667085;
+      --line: #e4e9f2;
+      --page: #f6f8fc;
+      --panel: #ffffff;
+      --navy: #061b34;
+      --blue: #1f64f2;
+      --green: #21b86b;
+      --orange: #f59e0b;
+      --red: #ef4056;
+      --shadow: 0 18px 50px #10213d18;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 15% 0%, #eaf2ff 0, transparent 34%),
+        radial-gradient(circle at 100% 10%, #e8fff4 0, transparent 26%),
+        var(--page);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .hidden { display: none !important; }
+
+    .app {
+      max-width: 480px;
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #fbfcff;
+      box-shadow: 0 0 45px #10213d20;
+      overflow-x: hidden;
+    }
+
+    .login {
+      min-height: 100vh;
+      display: grid;
+      align-content: center;
+      gap: 22px;
+      padding: 30px 22px;
+    }
+
+    .brand-lockup { text-align: center; }
+    .powered { margin: 0 0 4px; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .brand-name { margin: 0; font-size: 42px; line-height: 1; letter-spacing: 0; color: var(--ink); }
+    .tagline { margin: 5px 0 0; color: var(--blue); font-size: 17px; font-weight: 900; text-transform: uppercase; }
+
+    .login-card, .panel, .sheet {
+      border: 1px solid #ffffffbd;
+      border-radius: 8px;
+      background: #ffffffd9;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .login-card { padding: 20px; display: grid; gap: 14px; }
+    .login-card h1 { margin: 0; font-size: 24px; }
+    .login-card p { margin: -6px 0 4px; color: var(--muted); font-size: 14px; }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px 14px;
+      background: white;
+      color: var(--ink);
+      outline: none;
+    }
+
+    input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px #1f64f21a; }
+
+    .primary, .secondary, .danger {
+      min-height: 46px;
+      border: 0;
+      border-radius: 8px;
+      font-weight: 900;
+    }
+
+    .primary { background: var(--blue); color: white; }
+    .secondary { background: #eef3ff; color: var(--blue); border: 1px solid #d8e3ff; }
+    .danger { background: #fff0f2; color: var(--red); border: 1px solid #ffd7dd; }
+
+    .status {
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .status.error { color: var(--red); }
+    .status.ok { color: var(--green); }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 14px 15px;
+      background: #fbfcfff2;
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+
+    .title-block { min-width: 0; }
+    .title-block strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+    .title-block span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 800; }
+
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      color: var(--ink);
+      font-weight: 900;
+    }
+
+    .content { padding: 14px 12px 300px; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 0 13px;
+    }
+
+    .tab {
+      flex: 0 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 13px;
+      background: white;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .tab.active { background: var(--blue); border-color: var(--blue); color: white; }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .item-card {
+      min-height: 104px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      box-shadow: 0 10px 24px #10213d10;
+      display: grid;
+      align-content: center;
+      justify-items: center;
+      gap: 6px;
+      padding: 10px 5px;
+      text-align: center;
+    }
+
+    .item-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #fff7e6, #eef4ff);
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--blue);
+    }
+
+    .item-card h3 { margin: 0; font-size: 11px; overflow-wrap: anywhere; }
+    .item-card p { margin: 0; color: var(--muted); font-size: 11px; font-weight: 900; }
+
+    .cart-sheet {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      z-index: 6;
+      width: min(480px, 100%);
+      transform: translateX(-50%);
+      border-top: 1px solid var(--line);
+      background: #fffffff5;
+      box-shadow: 0 -18px 45px #10213d1a;
+      backdrop-filter: blur(16px);
+    }
+
+    .cart-inner { padding: 12px; }
+    .cart-head, .row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .cart-head strong { font-size: 14px; }
+    .cart-head button { border: 0; background: transparent; color: var(--red); font-size: 12px; font-weight: 900; }
+
+    .cart-list {
+      display: grid;
+      gap: 8px;
+      max-height: 122px;
+      overflow: auto;
+      margin: 8px 0 10px;
+    }
+
+    .cart-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .cart-row small { display: block; margin-top: 2px; color: var(--muted); font-weight: 800; }
+    .qty { display: grid; grid-template-columns: 28px 28px 28px; align-items: center; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; text-align: center; }
+    .qty button { height: 28px; border: 0; background: #f3f6fb; color: var(--blue); font-weight: 900; }
+
+    .pay-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .pay-toggle button { min-height: 38px; border: 1px solid var(--line); border-radius: 8px; background: white; font-weight: 900; }
+    .pay-toggle button.active { background: var(--green); border-color: var(--green); color: white; }
+
+    .place { width: 100%; margin-top: 8px; }
+
+    .bottom-nav {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      z-index: 7;
+      width: min(480px, 100%);
+      transform: translateX(-50%);
+      display: none;
+      grid-template-columns: repeat(4, 1fr);
+      border-top: 1px solid var(--line);
+      background: white;
+    }
+
+    .bottom-nav.user-nav { bottom: 254px; }
+    .bottom-nav button { min-height: 56px; border: 0; background: white; color: var(--muted); font-size: 11px; font-weight: 900; }
+    .bottom-nav button.active { color: var(--blue); }
+
+    .admin-shell { min-height: 100vh; background: var(--page); }
+    .admin-hero {
+      padding: 18px 14px;
+      background: linear-gradient(145deg, var(--navy), #0a2b50);
+      color: white;
+    }
+    .admin-hero .brand-name { color: white; font-size: 34px; }
+    .admin-hero .tagline { color: #8ec5ff; }
+
+    .admin-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px; }
+    .admin-tabs button { min-height: 42px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); font-size: 12px; font-weight: 900; }
+    .admin-tabs button.active { background: var(--blue); color: white; border-color: var(--blue); }
+    .admin-page { padding: 0 12px 22px; display: grid; gap: 12px; }
+
+    .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .kpi { padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: white; box-shadow: 0 10px 26px #10213d10; }
+    .kpi span { color: var(--muted); font-size: 12px; font-weight: 900; }
+    .kpi strong { display: block; margin-top: 8px; font-size: 22px; }
+
+    .panel { padding: 14px; }
+    .panel h2 { margin: 0 0 12px; font-size: 17px; }
+    .stack { display: grid; gap: 10px; }
+    .order-line, .user-line { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+    .order-line:last-child, .user-line:last-child { border-bottom: 0; }
+    .muted { color: var(--muted); font-size: 12px; font-weight: 800; }
+
+    .form-grid { display: grid; gap: 10px; }
+
+    @media (max-width: 360px) {
+      .brand-name { font-size: 36px; }
+      .cart-sheet { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="login" id="loginView">
+      <div class="brand-lockup">
+        <p class="powered">Powered by</p>
+        <h1 class="brand-name">Axzen</h1>
+        <p class="tagline">Infotech</p>
+      </div>
+      <form class="login-card" id="loginForm">
+        <h1>Sign in</h1>
+        <p id="loginCanteen">Main Canteen</p>
+        <label>Mobile number <input id="mobileInput" autocomplete="username" required></label>
+        <label>Password <input id="passwordInput" type="password" autocomplete="current-password" required></label>
+        <button class="primary" type="submit">Login</button>
+        <div class="status" id="loginStatus">Admin default: admin / 1234</div>
+      </form>
+    </section>
+
+    <section id="posView" class="hidden">
+      <header class="topbar">
+        <button class="icon-btn" id="logoutPos">X</button>
+        <div class="title-block">
+          <strong id="posCanteen">Main Canteen</strong>
+          <span id="syncStatus">Synced</span>
+        </div>
+        <button class="icon-btn" id="profileBtn">...</button>
+      </header>
+      <section class="content">
+        <div class="tabs" id="categoryTabs"></div>
+        <div class="menu-grid" id="menuGrid"></div>
+      </section>
+      <nav class="bottom-nav user-nav" id="userNav">
+        <button class="active">Home</button>
+        <button>Orders</button>
+        <button>Sales</button>
+        <button>Profile</button>
+      </nav>
+      <section class="cart-sheet">
+        <div class="cart-inner">
+          <div class="cart-head">
+            <strong id="cartTitle">Cart (0 items)</strong>
+            <button id="clearCart">Clear</button>
+          </div>
+          <div class="cart-list" id="cartList"></div>
+          <div class="row-between">
+            <strong>Total Amount</strong>
+            <strong id="cartTotal">Rs 0</strong>
+          </div>
+          <div class="pay-toggle">
+            <button class="active" data-pay="Cash">Cash</button>
+            <button data-pay="Online">Online</button>
+          </div>
+          <button class="primary place" id="placeOrder">Place Order</button>
+          <div class="status" id="posMessage"></div>
+        </div>
+      </section>
+    </section>
+
+    <section id="adminView" class="admin-shell hidden">
+      <div class="admin-hero">
+        <div class="brand-lockup">
+          <p class="powered">Powered by</p>
+          <h1 class="brand-name">Axzen</h1>
+          <p class="tagline">Infotech</p>
+        </div>
+        <div class="row-between" style="margin-top:16px">
+          <div>
+            <strong id="adminCanteen">Main Canteen</strong>
+            <div class="muted" id="adminRole">Admin Panel</div>
+          </div>
+          <button class="icon-btn" id="logoutAdmin">X</button>
+        </div>
+      </div>
+      <div class="admin-tabs">
+        <button class="active" data-admin-tab="dashboard">Home</button>
+        <button data-admin-tab="users">Users</button>
+        <button data-admin-tab="orders">Sales</button>
+        <button data-admin-tab="settings">Settings</button>
+      </div>
+      <section class="admin-page" id="adminPage"></section>
+    </section>
+  </main>
+
+  <script>
+    const apiParam = new URLSearchParams(window.location.search).get("api");
+    if (apiParam) localStorage.setItem("AXEN_API_URL", apiParam);
+    const browserHost = window.location.hostname && window.location.hostname !== "localhost"
+      ? window.location.hostname
+      : "localhost";
+    const nativeHost = window.Capacitor ? "192.168.29.115" : browserHost;
+    const storedApi = localStorage.getItem("AXEN_API_URL");
+    const productionApi = window.location.protocol === "https:" ? window.location.origin : "";
+    const API = productionApi
+      ? productionApi
+      : window.Capacitor && (!storedApi || storedApi.includes("10.0.2.2") || storedApi.includes("localhost"))
+      ? `http://${nativeHost}:5000`
+      : (storedApi || `http://${nativeHost}:5000`);
+
+    const categoryOrder = ["All", "Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner"];
+    const productCacheKey = "AXEN_PRODUCTS";
+    const pendingOrdersKey = "AXEN_PENDING_ORDERS";
+    const sessionKey = "AXEN_SESSION";
+    const tokenKey = "AXEN_TOKEN";
+    const loginCacheKey = "AXEN_LOGIN_CACHE";
+    let settings = { canteenName: "Main Canteen", brandName: "Axzen", tagline: "Infotech" };
+    let user = null;
+    let products = [];
+    let orders = [];
+    let users = [];
+    let activeCategory = "All";
+    let cart = [];
+    let payment = "Cash";
+    let adminTab = "dashboard";
+
+    const $ = id => document.getElementById(id);
+    const money = value => "Rs " + Number(value || 0).toFixed(0);
+    const readJson = (key, fallback) => {
+      try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
+    };
+    const writeJson = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+    const pendingOrders = () => readJson(pendingOrdersKey, []);
+    const setPendingOrders = value => { writeJson(pendingOrdersKey, value); updateSyncStatus(); };
+
+    async function api(path, options = {}) {
+      const token = localStorage.getItem(tokenKey);
+      const response = await fetch(API + path, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(options.headers || {})
+        }
+      });
+      if (!response.ok) throw new Error("Request failed");
+      return response.json();
+    }
+
+    function applySettings(next = {}) {
+      settings = { ...settings, ...next };
+      $("loginCanteen").textContent = settings.canteenName;
+      $("posCanteen").textContent = settings.canteenName;
+      $("adminCanteen").textContent = settings.canteenName;
+    }
+
+    function show(view) {
+      ["loginView", "posView", "adminView"].forEach(id => $(id).classList.add("hidden"));
+      $(view).classList.remove("hidden");
+    }
+
+    function setSession(nextUser, token) {
+      user = nextUser;
+      writeJson(sessionKey, user);
+      if (token) localStorage.setItem(tokenKey, token);
+    }
+
+    function cacheLogin(mobile, password, nextUser) {
+      const cache = readJson(loginCacheKey, {});
+      cache[String(mobile).trim()] = {
+        password: String(password),
+        user: nextUser,
+        savedAt: new Date().toISOString()
+      };
+      writeJson(loginCacheKey, cache);
+    }
+
+    function offlineLogin(mobile, password) {
+      const cache = readJson(loginCacheKey, {});
+      const saved = cache[String(mobile).trim()];
+      if (!saved || String(saved.password) !== String(password)) return null;
+      return saved.user;
+    }
+
+    function logout() {
+      localStorage.removeItem(sessionKey);
+      localStorage.removeItem(tokenKey);
+      user = null;
+      cart = [];
+      show("loginView");
+    }
+
+    function updateSyncStatus(text) {
+      const count = pendingOrders().length;
+      if (!$("syncStatus")) return;
+      if (count) $("syncStatus").textContent = text || `${count} pending sync`;
+      else $("syncStatus").textContent = navigator.onLine ? (text || "Synced") : "Offline";
+    }
+
+    async function loadSettings() {
+      try {
+        const data = await api("/settings");
+        applySettings(data);
+      } catch {
+        applySettings(settings);
+      }
+    }
+
+    async function loadProducts() {
+      const cached = readJson(productCacheKey, []);
+      if (cached.length) products = cached;
+      try {
+        products = await api("/products");
+        writeJson(productCacheKey, products);
+      } catch {}
+      renderProducts();
+    }
+
+    async function loadAdminData() {
+      try {
+        const dashboard = await api("/dashboard");
+        orders = dashboard.orders || [];
+      } catch {}
+      try {
+        users = await api("/users");
+      } catch {}
+      renderAdmin();
+    }
+
+    function renderCategories() {
+      const found = new Set(products.map(item => item.category || "Other"));
+      const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
+      $("categoryTabs").innerHTML = categories.map(category => `
+        <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${category}">${category}</button>
+      `).join("");
+    }
+
+    function renderProducts() {
+      renderCategories();
+      const visible = activeCategory === "All" ? products : products.filter(item => item.category === activeCategory);
+      $("menuGrid").innerHTML = visible.map(item => `
+        <button class="item-card" data-item="${item.id}">
+          <span class="item-icon">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
+          <h3>${item.name}</h3>
+          <p>${money(item.price)}</p>
+        </button>
+      `).join("") || `<div class="panel">No menu items</div>`;
+    }
+
+    function addToCart(id) {
+      const product = products.find(item => Number(item.id) === Number(id));
+      if (!product) return;
+      const existing = cart.find(item => Number(item.id) === Number(id));
+      if (existing) existing.qty += 1;
+      else cart.push({ ...product, qty: 1 });
+      renderCart();
+    }
+
+    function changeQty(id, amount) {
+      cart = cart.map(item => Number(item.id) === Number(id) ? { ...item, qty: item.qty + amount } : item).filter(item => item.qty > 0);
+      renderCart();
+    }
+
+    function renderCart() {
+      const total = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      $("cartTitle").textContent = `Cart (${cart.reduce((sum, item) => sum + item.qty, 0)} items)`;
+      $("cartTotal").textContent = money(total);
+      $("cartList").innerHTML = cart.map(item => `
+        <div class="cart-row">
+          <div><strong>${item.name}</strong><small>${item.qty} x ${money(item.price)}</small></div>
+          <div class="qty">
+            <button data-qty="-1" data-id="${item.id}">-</button>
+            <span>${item.qty}</span>
+            <button data-qty="1" data-id="${item.id}">+</button>
+          </div>
+        </div>
+      `).join("") || `<div class="muted">Cart empty</div>`;
+    }
+
+    function receipt(order) {
+      const lines = (order.items || []).map(item => `${item.name} x ${item.qty} = ${money(Number(item.price) * item.qty)}`).join("\n");
+      console.log(`${settings.canteenName}\n${order.time}\n${lines}\nTotal ${money(order.total)}`);
+    }
+
+    async function syncPendingOrders() {
+      const pending = pendingOrders();
+      if (!pending.length) return updateSyncStatus();
+      try {
+        updateSyncStatus("Syncing...");
+        const data = await api("/orders/sync", { method: "POST", body: JSON.stringify({ orders: pending }) });
+        const synced = new Set(data.synced || []);
+        setPendingOrders(pending.filter(order => !synced.has(order.clientOrderId) && !synced.has(order.id)));
+      } catch {
+        updateSyncStatus();
+      }
+    }
+
+    async function placeOrder() {
+      if (!cart.length) return;
+      const payload = {
+        id: Date.now(),
+        clientOrderId: "mobile-" + Date.now() + "-" + Math.random().toString(16).slice(2),
+        time: new Date().toLocaleString(),
+        canteen: settings.canteenName,
+        cashier: user.name,
+        payment,
+        total: cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0),
+        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, qty: item.qty }))
+      };
+
+      try {
+        const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload) });
+        $("posMessage").textContent = "Order saved";
+        $("posMessage").className = "status ok";
+        receipt(saved.order || payload);
+      } catch {
+        setPendingOrders([...pendingOrders(), payload]);
+        $("posMessage").textContent = "Offline saved. Auto sync pending.";
+        $("posMessage").className = "status ok";
+        receipt(payload);
+      }
+
+      cart = [];
+      renderCart();
+      await loadAdminData();
+    }
+
+    function dashboardStats() {
+      const total = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const cash = orders.filter(order => order.payment === "Cash").reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const online = total - cash;
+      return { total, cash, online, count: orders.length };
+    }
+
+    function renderAdmin() {
+      const stats = dashboardStats();
+      const page = $("adminPage");
+      document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.classList.toggle("active", btn.dataset.adminTab === adminTab));
+
+      if (adminTab === "dashboard") {
+        page.innerHTML = `
+          <div class="kpis">
+            <div class="kpi"><span>Today Sale</span><strong>${money(stats.total)}</strong></div>
+            <div class="kpi"><span>Total Orders</span><strong>${stats.count}</strong></div>
+            <div class="kpi"><span>Cash</span><strong>${money(stats.cash)}</strong></div>
+            <div class="kpi"><span>Online</span><strong>${money(stats.online)}</strong></div>
+          </div>
+          <div class="panel"><h2>Work Flow</h2><div class="muted">Admin creates users -> User login -> Select item -> Place order -> Sale recorded -> Sync report</div></div>
+          <div class="panel"><h2>Top Items</h2>${topItemsHtml()}</div>
+        `;
+      } else if (adminTab === "orders") {
+        page.innerHTML = `<div class="panel"><h2>Recent Sales</h2>${orders.slice().reverse().map(order => `
+          <div class="order-line"><strong>${order.canteen || settings.canteenName} - ${money(order.total)}</strong><span class="muted">${order.time} | ${order.payment} | ${order.cashier || "-"}</span></div>
+        `).join("") || `<div class="muted">No orders</div>`}</div>`;
+      } else if (adminTab === "users") {
+        page.innerHTML = `
+          <div class="panel">
+            <h2>Create User</h2>
+            <form class="form-grid" id="userForm">
+              <input id="newName" placeholder="Name" required>
+              <input id="newMobile" placeholder="Mobile number" required>
+              <input id="newPassword" placeholder="Password" required>
+              <select id="newRole"><option value="user">User</option><option value="admin">Admin</option></select>
+              <button class="primary">Save User</button>
+            </form>
+          </div>
+          <div class="panel"><h2>Users</h2>${users.map(item => `
+            <div class="user-line"><strong>${item.name}</strong><span class="muted">${item.mobile} | ${item.role}</span></div>
+          `).join("")}</div>
+        `;
+        $("userForm").addEventListener("submit", saveUser);
+      } else {
+        page.innerHTML = `
+          <div class="panel">
+            <h2>Settings</h2>
+            <form class="form-grid" id="settingsForm">
+              <label>Canteen name <input id="canteenNameInput" value="${settings.canteenName}"></label>
+              <label>Server URL <input id="apiInput" value="${API}"></label>
+              <button class="primary">Save Settings</button>
+            </form>
+          </div>
+        `;
+        $("settingsForm").addEventListener("submit", saveSettings);
+      }
+    }
+
+    function topItemsHtml() {
+      const counts = new Map();
+      orders.forEach(order => (order.items || []).forEach(item => {
+        counts.set(item.name, (counts.get(item.name) || 0) + Number(item.qty || 0));
+      }));
+      return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, qty]) =>
+        `<div class="row-between" style="padding:8px 0;border-bottom:1px solid var(--line)"><strong>${name}</strong><span>${qty}</span></div>`
+      ).join("") || `<div class="muted">No sales yet</div>`;
+    }
+
+    async function saveUser(event) {
+      event.preventDefault();
+      await api("/users", {
+        method: "POST",
+        body: JSON.stringify({
+          name: $("newName").value,
+          mobile: $("newMobile").value,
+          password: $("newPassword").value,
+          role: $("newRole").value
+        })
+      });
+      await loadAdminData();
+    }
+
+    async function saveSettings(event) {
+      event.preventDefault();
+      const nextApi = $("apiInput").value.trim().replace(/\/$/, "");
+      if (nextApi) localStorage.setItem("AXEN_API_URL", nextApi);
+      const data = await api("/settings", {
+        method: "POST",
+        body: JSON.stringify({ canteenName: $("canteenNameInput").value.trim() || "Main Canteen" })
+      });
+      applySettings(data.settings);
+      await loadAdminData();
+    }
+
+    async function login(event) {
+      event.preventDefault();
+      const mobile = $("mobileInput").value;
+      const password = $("passwordInput").value;
+      $("loginStatus").textContent = "Checking...";
+      $("loginStatus").className = "status";
+      try {
+        const data = await api("/login", {
+          method: "POST",
+          body: JSON.stringify({ mobile, password })
+        });
+        setSession(data.user, data.token);
+        cacheLogin(mobile, password, data.user);
+        applySettings(data.settings);
+        await enterApp();
+      } catch {
+        const cachedUser = offlineLogin(mobile, password);
+        if (cachedUser) {
+          setSession(cachedUser);
+          $("loginStatus").textContent = "Offline login success. Sync pending when internet returns.";
+          $("loginStatus").className = "status ok";
+          await enterApp();
+          return;
+        }
+
+        $("loginStatus").textContent = "Invalid mobile/password or no cached offline login";
+        $("loginStatus").className = "status error";
+      }
+    }
+
+    async function enterApp() {
+      if (!user) return show("loginView");
+      await loadSettings();
+      await loadProducts();
+      await syncPendingOrders();
+      if (user.role === "admin") {
+        $("adminRole").textContent = `${user.name} | Admin`;
+        show("adminView");
+        await loadAdminData();
+      } else {
+        show("posView");
+        renderCart();
+      }
+    }
+
+    $("loginForm").addEventListener("submit", login);
+    $("logoutPos").addEventListener("click", logout);
+    $("logoutAdmin").addEventListener("click", logout);
+    $("categoryTabs").addEventListener("click", event => {
+      const btn = event.target.closest("[data-category]");
+      if (!btn) return;
+      activeCategory = btn.dataset.category;
+      renderProducts();
+    });
+    $("menuGrid").addEventListener("click", event => {
+      const btn = event.target.closest("[data-item]");
+      if (btn) addToCart(btn.dataset.item);
+    });
+    $("cartList").addEventListener("click", event => {
+      const btn = event.target.closest("[data-qty]");
+      if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
+    });
+    $("clearCart").addEventListener("click", () => { cart = []; renderCart(); });
+    $("placeOrder").addEventListener("click", placeOrder);
+    $("profileBtn").addEventListener("click", () => {
+      $("posMessage").textContent = `${user.name} | ${user.role} | ${API}`;
+      $("posMessage").className = "status";
+    });
+    document.querySelectorAll("[data-pay]").forEach(btn => btn.addEventListener("click", () => {
+      payment = btn.dataset.pay;
+      document.querySelectorAll("[data-pay]").forEach(item => item.classList.toggle("active", item === btn));
+    }));
+    document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
+      adminTab = btn.dataset.adminTab;
+      renderAdmin();
+    }));
+    window.addEventListener("online", syncPendingOrders);
+    window.addEventListener("offline", updateSyncStatus);
+    window.setInterval(syncPendingOrders, 15000);
+
+    user = readJson(sessionKey, null);
+    loadSettings().then(enterApp);
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Axen Canteen</string>
+    <string name="title_activity_main">Axen Canteen</string>
+    <string name="package_name">com.axenhospitality.canteen</string>
+    <string name="custom_url_scheme">com.axenhospitality.canteen</string>
+</resources>

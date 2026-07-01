@@ -1,0 +1,15 @@
+.env
+backend/.env
+node_modules/
+backend/node_modules/
+npm-debug.log*
+*.log
+backend/server.log
+.vercel/
+.idea/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+dist/
+coverage/

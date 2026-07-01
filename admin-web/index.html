@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Axzen Infotech Admin</title>
+  <style>
+    :root {
+      --ink: #0b1220;
+      --muted: #667085;
+      --line: #e6ebf2;
+      --page: #f5f7fb;
+      --panel: #ffffff;
+      --navy: #061a33;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --orange: #f59e0b;
+      --red: #e11d48;
+      --purple: #7c3aed;
+      --shadow: 0 18px 50px #15233d14;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--page); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+
+    .login {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 18% 18%, #dfeaff 0, transparent 28%),
+        radial-gradient(circle at 80% 8%, #dcfce7 0, transparent 26%),
+        linear-gradient(180deg, #fbfcff, #eef3fb);
+    }
+
+    .login-card {
+      width: min(420px, 100%);
+      display: grid;
+      gap: 14px;
+      border: 1px solid #ffffffcc;
+      border-radius: 18px;
+      background: #fffffff2;
+      padding: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand-lockup { text-align: center; margin-bottom: 10px; }
+    .powered { margin: 0 0 4px; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
+    .brand-name { margin: 0; font-size: 46px; line-height: 1; letter-spacing: 0; }
+    .tagline { margin: 5px 0 0; color: var(--blue); font-size: 17px; font-weight: 900; text-transform: uppercase; }
+
+    label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; }
+    input, select { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px; background: white; color: var(--ink); outline: none; }
+    input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px #2563eb1a; }
+
+    .primary, .secondary, .danger {
+      min-height: 42px;
+      border-radius: 12px;
+      border: 0;
+      padding: 0 14px;
+      font-weight: 900;
+    }
+    .primary { background: var(--blue); color: white; box-shadow: 0 10px 24px #2563eb30; }
+    .secondary { background: #eef4ff; color: var(--blue); border: 1px solid #d8e5ff; }
+    .danger { background: #fff1f3; color: var(--red); border: 1px solid #ffd4dc; }
+    .status { min-height: 20px; color: var(--muted); font-size: 13px; font-weight: 800; }
+    .status.error { color: var(--red); }
+    .status.ok { color: var(--green); }
+
+    .shell { display: grid; grid-template-columns: 264px 1fr; min-height: 100vh; }
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 22px 16px;
+      background: linear-gradient(180deg, #071a33, #052646);
+      color: white;
+    }
+
+    .side-brand strong { display: block; font-size: 20px; }
+    .side-brand span, .profile span { color: #b9cbe3; font-size: 13px; }
+    .profile { display: flex; align-items: center; gap: 12px; padding: 12px 0 4px; }
+    .avatar { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: white; color: var(--navy); font-weight: 900; }
+
+    nav { display: grid; gap: 6px; }
+    nav button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 12px;
+      background: transparent;
+      color: #dbe8f7;
+      text-align: left;
+      padding: 0 12px;
+      font-weight: 850;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    nav button.active { background: #2563eb; color: white; box-shadow: 0 10px 28px #2563eb45; }
+    .logout { margin-top: auto; color: #ff9aa8; background: #ffffff10; border: 0; min-height: 40px; border-radius: 12px; font-weight: 900; }
+
+    main { padding: 24px; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+    .topbar h1 { margin: 0; font-size: 28px; }
+    .topbar p { margin: 5px 0 0; color: var(--muted); font-size: 13px; font-weight: 800; }
+    .top-actions { display: flex; gap: 10px; align-items: center; }
+    .chip { border: 1px solid var(--line); border-radius: 12px; background: #fffffff2; padding: 11px 13px; font-size: 13px; font-weight: 900; box-shadow: 0 8px 24px #15233d0d; }
+
+    .panel, .card, .workflow {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fffffff2;
+      box-shadow: var(--shadow);
+    }
+    .panel { padding: 16px; min-width: 0; }
+    .panel h2, .workflow h2 { margin: 0 0 14px; font-size: 16px; }
+
+    .workflow { padding: 16px; margin-bottom: 16px; }
+    .flow-grid { display: grid; grid-template-columns: repeat(8, minmax(96px, 1fr)); gap: 12px; }
+    .flow-step { display: grid; gap: 8px; justify-items: center; text-align: center; font-size: 12px; font-weight: 850; }
+    .flow-icon { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: linear-gradient(145deg, #eef4ff, #ffffff); color: var(--blue); border: 1px solid #dfe8ff; font-weight: 900; }
+
+    .kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 16px; }
+    .card { padding: 16px; min-height: 118px; background: linear-gradient(145deg, #ffffff, #fbfdff); }
+    .card.blue { background: linear-gradient(145deg, #eff6ff, #ffffff); }
+    .card.green { background: linear-gradient(145deg, #ecfdf3, #ffffff); }
+    .card.orange { background: linear-gradient(145deg, #fff7ed, #ffffff); }
+    .card.red { background: linear-gradient(145deg, #fff1f3, #ffffff); }
+    .card span { color: var(--muted); font-size: 12px; font-weight: 900; }
+    .card strong { display: block; margin-top: 10px; font-size: 25px; }
+    .card small { display: block; margin-top: 12px; color: var(--green); font-weight: 900; }
+
+    .grid-2 { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .65fr); gap: 16px; margin-bottom: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+
+    .chart { height: 220px; display: grid; align-items: end; grid-template-columns: repeat(7, 1fr); gap: 10px; padding: 14px 4px 0; }
+    .bar { border-radius: 12px 12px 0 0; background: linear-gradient(180deg, #4f8cff, #dbe8ff); min-height: 22px; }
+    .donut { width: 176px; height: 176px; border-radius: 50%; margin: 10px auto; background: conic-gradient(var(--blue) 0 55%, var(--green) 55% 88%, var(--orange) 88% 100%); display: grid; place-items: center; }
+    .donut span { width: 102px; height: 102px; border-radius: 50%; background: white; display: grid; place-items: center; text-align: center; font-weight: 900; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { color: var(--muted); text-align: left; font-size: 12px; padding: 10px; border-bottom: 1px solid var(--line); }
+    td { padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .list { display: grid; gap: 10px; }
+    .list-row { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+    .list-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .muted { color: var(--muted); }
+    .pill { display: inline-flex; align-items: center; min-height: 25px; border-radius: 999px; padding: 0 9px; background: #eef4ff; color: var(--blue); font-size: 12px; font-weight: 900; }
+    .pill.red { background: #fff1f3; color: var(--red); }
+    .pill.green { background: #ecfdf3; color: var(--green); }
+
+    .form-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-items: end; }
+    .settings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: end; }
+    .section-gap { display: grid; gap: 16px; }
+
+    .phone-preview { border: 9px solid #101010; border-radius: 28px; padding: 14px; background: #fbfcff; box-shadow: 0 18px 45px #0003; }
+    .phone-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; font-weight: 900; }
+    .phone-tabs { display: flex; gap: 6px; margin-bottom: 10px; overflow: hidden; }
+    .phone-tabs span { border-radius: 10px; background: #edf3ff; padding: 7px 9px; color: var(--blue); font-size: 11px; font-weight: 900; }
+    .phone-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .phone-item { border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; font-size: 11px; font-weight: 900; background: white; }
+    .wa-card { background: #eefbea; border: 1px solid #c7efca; border-radius: 14px; padding: 14px; font-size: 13px; line-height: 1.65; }
+
+    @media (max-width: 1200px) {
+      .shell { grid-template-columns: 1fr; }
+      aside { position: relative; height: auto; }
+      .flow-grid, .kpis, .grid-2, .grid-3, .grid-4, .form-grid, .settings-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <section class="login" id="loginView">
+    <form class="login-card" id="loginForm">
+      <div class="brand-lockup">
+        <p class="powered">Powered by</p>
+        <h1 class="brand-name">Axzen</h1>
+        <p class="tagline">Infotech</p>
+      </div>
+      <label>Mobile number <input id="mobileInput" required></label>
+      <label>Password <input id="passwordInput" type="password" required></label>
+      <button class="primary">Login</button>
+      <div class="status" id="loginStatus">Admin default: admin / 1234</div>
+    </form>
+  </section>
+
+  <section class="shell hidden" id="appView">
+    <aside>
+      <div class="side-brand"><strong>Axzen Infotech</strong><span id="sideCanteen">Admin Panel</span></div>
+      <div class="profile"><div class="avatar">A</div><div><strong id="profileName">Admin</strong><br><span>Super Admin</span></div></div>
+      <nav>
+        <button class="active" data-tab="dashboard">Dashboard</button>
+        <button data-tab="sales">Sales</button>
+        <button data-tab="menu">Menu Management</button>
+        <button data-tab="stock">Inventory / Stock</button>
+        <button data-tab="finance">Finance</button>
+        <button data-tab="users">Users</button>
+        <button data-tab="reports">Reports</button>
+        <button data-tab="whatsapp">WhatsApp Reports</button>
+        <button data-tab="settings">Settings</button>
+      </nav>
+      <button class="logout" id="logoutBtn">Logout</button>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div><h1 id="pageTitle">Dashboard</h1><p>Home / <span id="crumb">Dashboard</span></p></div>
+        <div class="top-actions">
+          <div class="chip" id="dateChip"></div>
+          <div class="chip" id="canteenChip">Main Canteen</div>
+        </div>
+      </header>
+      <section id="page"></section>
+      <div class="status" id="pageStatus"></div>
+    </main>
+  </section>
+
+  <script>
+    const isLocalHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
+    const apiHost = isLocalHost ? "localhost" : window.location.hostname;
+    const API = window.location.protocol === "https:" ? window.location.origin : `http://${apiHost}:5000`;
+    let session = JSON.parse(localStorage.getItem("AXEN_ADMIN_SESSION") || "null");
+    let settings = { canteenName: "Main Canteen", brandName: "Axzen", tagline: "Infotech", reportTime: "22:00", adminWhatsAppNumber: "", autoReport: false, reportType: "daily" };
+    let dashboard = emptyDashboard();
+    let whatsappLogs = [];
+    let tab = "dashboard";
+    const $ = id => document.getElementById(id);
+    const money = value => "Rs " + Number(value || 0).toFixed(0);
+    const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
+
+    function emptyDashboard() {
+      return { totalSales: 0, totalBills: 0, cash: 0, upi: 0, card: 0, online: 0, totalExpenses: 0, netCollection: 0, topItems: [], lowStock: [], stock: [], expenses: [], products: [], users: [], orders: [] };
+    }
+
+    async function api(path, options = {}) {
+      const token = localStorage.getItem("AXEN_ADMIN_TOKEN");
+      const response = await fetch(API + path, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(options.headers || {})
+        }
+      });
+      if (!response.ok) throw new Error(await response.text());
+      return response.json();
+    }
+
+    function pageMessage(text, type = "ok") {
+      $("pageStatus").textContent = text || "";
+      $("pageStatus").className = "status " + type;
+    }
+
+    function applySettings(next = {}) {
+      settings = { ...settings, ...next };
+      $("sideCanteen").textContent = settings.canteenName;
+      $("canteenChip").textContent = settings.canteenName;
+    }
+
+    async function loadData() {
+      try { applySettings(await api("/settings")); } catch {}
+      try { dashboard = { ...emptyDashboard(), ...(await api("/dashboard")) }; } catch { pageMessage("Server data load failed", "error"); }
+      try { whatsappLogs = await api("/whatsapp/logs"); } catch { whatsappLogs = []; }
+      render();
+    }
+
+    function showApp() {
+      $("loginView").classList.add("hidden");
+      $("appView").classList.remove("hidden");
+      $("profileName").textContent = session.name;
+      loadData();
+    }
+
+    function render() {
+      document.querySelectorAll("[data-tab]").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
+      const titles = { dashboard: "Dashboard", sales: "Sales", menu: "Menu Management", stock: "Inventory / Stock", finance: "Finance", users: "Users", reports: "Reports", whatsapp: "WhatsApp Reports", settings: "Settings" };
+      $("pageTitle").textContent = titles[tab] || "Dashboard";
+      $("crumb").textContent = $("pageTitle").textContent;
+      $("dateChip").textContent = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      const renderers = { dashboard: renderDashboard, sales: renderSales, menu: renderMenu, stock: renderStock, finance: renderFinance, users: renderUsers, reports: renderReports, whatsapp: renderWhatsapp, settings: renderSettings };
+      renderers[tab]();
+    }
+
+    function renderDashboard() {
+      $("page").innerHTML = `
+        <section class="workflow">
+          <h2>Canteen Work Flow</h2>
+          <div class="flow-grid">${["Create Users", "User Login", "Select Item", "Place Order", "Order to Sale", "Payment", "Admin Record", "Report"].map((text, i) => `<div class="flow-step"><div class="flow-icon">${i + 1}</div><span>${text}</span></div>`).join("")}</div>
+        </section>
+        <section class="kpis">
+          <div class="card blue"><span>Today's Sale</span><strong>${money(dashboard.totalSales)}</strong><small>Live</small></div>
+          <div class="card green"><span>Total Collection</span><strong>${money(dashboard.totalSales)}</strong><small>Cash + Online</small></div>
+          <div class="card orange"><span>Total Orders</span><strong>${dashboard.totalBills}</strong><small>Recorded</small></div>
+          <div class="card"><span>Net Collection</span><strong>${money(dashboard.netCollection)}</strong><small>After expenses</small></div>
+          <div class="card red"><span>Total Expenses</span><strong>${money(dashboard.totalExpenses)}</strong><small>Tracked</small></div>
+        </section>
+        <section class="grid-2">
+          <div class="panel"><h2>Sales Overview</h2><div class="chart">${chartBars()}</div></div>
+          <div class="panel"><h2>Payment Method</h2><div class="donut"><span>${money(dashboard.totalSales)}<br><small>Total</small></span></div>${paymentRows()}</div>
+        </section>
+        <section class="grid-3">
+          <div class="panel"><h2>Recent Sales</h2>${salesTable(6)}</div>
+          <div class="panel"><h2>Low Stock Items</h2>${lowStockRows()}</div>
+          <div class="panel"><h2>POS Preview</h2>${phonePreview()}</div>
+        </section>`;
+    }
+
+    function chartBars() {
+      const values = dashboard.orders.slice(-7).map(order => Number(order.total || 0));
+      const fallback = [20, 30, 44, 36, 56, 74, 62];
+      const data = values.length ? values : fallback;
+      const max = Math.max(...data, 1);
+      return data.map(value => `<div class="bar" style="height:${Math.max(18, (value / max) * 100)}%"></div>`).join("");
+    }
+
+    function paymentRows() {
+      return `<div class="list">
+        <div class="list-row"><span>Cash</span><strong>${money(dashboard.cash)}</strong></div>
+        <div class="list-row"><span>UPI / Online</span><strong>${money(dashboard.upi + dashboard.online)}</strong></div>
+        <div class="list-row"><span>Card</span><strong>${money(dashboard.card)}</strong></div>
+      </div>`;
+    }
+
+    function salesTable(limit = 100) {
+      const rows = dashboard.orders.slice().reverse().slice(0, limit).map(order => `
+        <tr><td>${esc(order.time || "-")}</td><td>${esc((order.items || []).map(i => i.name + " x " + i.qty).join(", "))}</td><td>${money(order.total)}</td><td><span class="pill green">${esc(order.payment || "-")}</span></td><td>${esc(order.cashier || "-")}</td></tr>
+      `).join("");
+      return `<table><thead><tr><th>Time</th><th>Items</th><th>Amount</th><th>Payment</th><th>User</th></tr></thead><tbody>${rows || `<tr><td colspan="5">No sales</td></tr>`}</tbody></table>`;
+    }
+
+    function lowStockRows() {
+      return `<div class="list">${(dashboard.lowStock || []).map(item => `<div class="list-row"><span>${esc(item.item)}</span><strong class="pill red">${item.stock} ${esc(item.unit)}</strong></div>`).join("") || `<span class="muted">All stock healthy</span>`}</div>`;
+    }
+
+    function phonePreview() {
+      return `<div class="phone-preview"><div class="phone-head"><span>${esc(settings.canteenName)}</span><span>POS</span></div><div class="phone-tabs"><span>Tiffin</span><span>Meals</span><span>Tea</span><span>Snacks</span></div><div class="phone-grid">${dashboard.products.slice(0, 4).map(item => `<div class="phone-item">${esc(item.name)}<br><span class="muted">${money(item.price)}</span></div>`).join("")}</div></div>`;
+    }
+
+    function renderSales() {
+      $("page").innerHTML = `<section class="grid-4">
+        <div class="card blue"><span>Sales</span><strong>${money(dashboard.totalSales)}</strong></div>
+        <div class="card green"><span>Cash</span><strong>${money(dashboard.cash)}</strong></div>
+        <div class="card"><span>Online</span><strong>${money(dashboard.online + dashboard.upi)}</strong></div>
+        <div class="card orange"><span>Bills</span><strong>${dashboard.totalBills}</strong></div>
+      </section><section class="panel" style="margin-top:16px"><h2>All Sales</h2>${salesTable(200)}</section>`;
+    }
+
+    function renderMenu() {
+      $("page").innerHTML = `
+        <section class="section-gap">
+          <div class="panel"><h2>Add / Update Menu Item</h2>
+            <form class="form-grid" id="productForm">
+              <label>Name <input id="productName" required></label>
+              <label>Price <input id="productPrice" type="number" min="0" required></label>
+              <label>Category <input id="productCategory" placeholder="Tiffin"></label>
+              <label>Image URL <input id="productImage"></label>
+              <button class="primary">Save Item</button>
+            </form>
+          </div>
+          <div class="panel"><h2>Menu Items</h2>${productsTable()}</div>
+        </section>`;
+      $("productForm").addEventListener("submit", saveProduct);
+      document.querySelectorAll("[data-delete-product]").forEach(btn => btn.addEventListener("click", deleteProduct));
+    }
+
+    function productsTable() {
+      const rows = dashboard.products.map(item => `<tr><td>${esc(item.name)}</td><td>${esc(item.category)}</td><td>${money(item.price)}</td><td><button class="danger" data-delete-product="${item.id}">Delete</button></td></tr>`).join("");
+      return `<table><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    async function saveProduct(event) {
+      event.preventDefault();
+      await api("/products", { method: "POST", body: JSON.stringify({ name: $("productName").value, price: $("productPrice").value, category: $("productCategory").value || "Snacks", image: $("productImage").value }) });
+      pageMessage("Menu item saved");
+      await loadData();
+    }
+
+    async function deleteProduct(event) {
+      await api(`/products/${event.target.dataset.deleteProduct}`, { method: "DELETE" });
+      pageMessage("Menu item deleted");
+      await loadData();
+    }
+
+    function renderStock() {
+      $("page").innerHTML = `<section class="section-gap">
+        <div class="panel"><h2>Add / Update Stock</h2>
+          <form class="form-grid" id="stockForm">
+            <label>Item <input id="stockName" required></label>
+            <label>Stock <input id="stockQty" type="number" step="0.001" required></label>
+            <label>Unit <input id="stockUnit" placeholder="Kg"></label>
+            <label>Minimum <input id="stockMin" type="number" step="0.001"></label>
+            <button class="primary">Save Stock</button>
+          </form>
+        </div>
+        <div class="panel"><h2>Inventory</h2>${stockTable()}</div>
+      </section>`;
+      $("stockForm").addEventListener("submit", saveStock);
+    }
+
+    function stockTable() {
+      const rows = dashboard.stock.map(item => `<tr><td>${esc(item.item)}</td><td>${item.stock} ${esc(item.unit)}</td><td>${item.minStock} ${esc(item.unit)}</td><td>${Number(item.stock) <= Number(item.minStock) ? `<span class="pill red">Low</span>` : `<span class="pill green">Good</span>`}</td></tr>`).join("");
+      return `<table><thead><tr><th>Item</th><th>Stock</th><th>Minimum</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    async function saveStock(event) {
+      event.preventDefault();
+      await api("/stock", { method: "POST", body: JSON.stringify({ item: $("stockName").value, stock: $("stockQty").value, unit: $("stockUnit").value || "Unit", minStock: $("stockMin").value || 0 }) });
+      pageMessage("Stock saved");
+      await loadData();
+    }
+
+    function renderFinance() {
+      $("page").innerHTML = `<section class="grid-3">
+        <div class="card green"><span>Total Collection</span><strong>${money(dashboard.totalSales)}</strong></div>
+        <div class="card red"><span>Expenses</span><strong>${money(dashboard.totalExpenses)}</strong></div>
+        <div class="card blue"><span>Net</span><strong>${money(dashboard.netCollection)}</strong></div>
+      </section>
+      <section class="grid-2">
+        <div class="panel"><h2>Add Expense</h2><form class="form-grid" id="expenseForm">
+          <label>Title <input id="expenseTitle" required></label>
+          <label>Amount <input id="expenseAmount" type="number" required></label>
+          <label>Category <input id="expenseCategory" value="General"></label>
+          <button class="primary">Save Expense</button>
+        </form></div>
+        <div class="panel"><h2>Expenses</h2>${expensesTable()}</div>
+      </section>`;
+      $("expenseForm").addEventListener("submit", saveExpense);
+    }
+
+    function expensesTable() {
+      return `<table><thead><tr><th>Time</th><th>Title</th><th>Category</th><th>Amount</th></tr></thead><tbody>${dashboard.expenses.map(item => `<tr><td>${esc(item.time)}</td><td>${esc(item.title)}</td><td>${esc(item.category)}</td><td>${money(item.amount)}</td></tr>`).join("")}</tbody></table>`;
+    }
+
+    async function saveExpense(event) {
+      event.preventDefault();
+      await api("/expenses", { method: "POST", body: JSON.stringify({ title: $("expenseTitle").value, amount: $("expenseAmount").value, category: $("expenseCategory").value }) });
+      pageMessage("Expense saved");
+      await loadData();
+    }
+
+    function renderUsers() {
+      $("page").innerHTML = `<section class="section-gap">
+        <div class="panel"><h2>Create User</h2><form class="form-grid" id="userForm">
+          <label>Name <input id="newName" required></label>
+          <label>Mobile <input id="newMobile" required></label>
+          <label>Password <input id="newPassword" required></label>
+          <label>Role <select id="newRole"><option value="user">User</option><option value="admin">Admin</option></select></label>
+          <button class="primary">Save User</button>
+        </form></div>
+        <div class="panel"><h2>Users</h2>${usersTable()}</div>
+      </section>`;
+      $("userForm").addEventListener("submit", saveUser);
+      document.querySelectorAll("[data-delete-user]").forEach(btn => btn.addEventListener("click", deleteUser));
+    }
+
+    function usersTable() {
+      const rows = dashboard.users.map(user => `<tr><td>${esc(user.name)}</td><td>${esc(user.mobile)}</td><td><span class="pill">${esc(user.role)}</span></td><td><button class="danger" data-delete-user="${esc(user.mobile)}">Delete</button></td></tr>`).join("");
+      return `<table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    async function saveUser(event) {
+      event.preventDefault();
+      await api("/users", { method: "POST", body: JSON.stringify({ name: $("newName").value, mobile: $("newMobile").value, password: $("newPassword").value, role: $("newRole").value }) });
+      pageMessage("User saved");
+      await loadData();
+    }
+
+    async function deleteUser(event) {
+      await api(`/users/${encodeURIComponent(event.target.dataset.deleteUser)}`, { method: "DELETE" });
+      pageMessage("User deleted");
+      await loadData();
+    }
+
+    function renderReports() {
+      $("page").innerHTML = `<section class="grid-3">
+        <div class="card blue"><span>Bills</span><strong>${dashboard.totalBills}</strong><small>All orders</small></div>
+        <div class="card green"><span>Served Customers</span><strong>${dashboard.totalBills}</strong><small>Estimated</small></div>
+        <div class="card orange"><span>Top Item</span><strong>${esc((dashboard.topItems[0] || {}).name || "-")}</strong><small>${(dashboard.topItems[0] || {}).qty || 0} sold</small></div>
+      </section>
+      <section class="grid-2"><div class="panel"><h2>Sales Report</h2>${salesTable(200)}</div><div class="panel"><h2>Item Report</h2>${topItemsHtml()}</div></section>`;
+    }
+
+    function topItemsHtml() {
+      return `<div class="list">${(dashboard.topItems || []).slice(0, 10).map(item => `<div class="list-row"><span>${esc(item.name)}</span><strong>${item.qty} pcs / ${money(item.total)}</strong></div>`).join("") || `<span class="muted">No items yet</span>`}</div>`;
+    }
+
+    function renderWhatsapp() {
+      $("page").innerHTML = `<section class="grid-2">
+        <div class="panel"><h2>Auto WhatsApp Report</h2><div class="wa-card">
+          <strong>${esc(settings.canteenName)} - Daily Report</strong><br>
+          Date: ${new Date().toLocaleDateString("en-IN")}<br>
+          Total Sale: ${money(dashboard.totalSales)}<br>
+          Total Orders: ${dashboard.totalBills}<br>
+          Cash: ${money(dashboard.cash)}<br>
+          Online: ${money(dashboard.online + dashboard.upi)}<br>
+          Card: ${money(dashboard.card)}<br>
+          Top Item: ${esc((dashboard.topItems[0] || {}).name || "-")}<br>
+          Report Time: ${esc(settings.reportTime || "22:00")}<br>
+          Auto Report: ${settings.autoReport ? "ON" : "OFF"}<br>
+          Type: ${esc(settings.reportType || "daily")}
+        </div></div>
+        <div class="panel"><h2>WhatsApp Settings</h2><form class="settings-grid" id="reportForm">
+          <label>Report Time <input id="reportTime" value="${esc(settings.reportTime || "22:00")}" placeholder="22:00"></label>
+          <label>Admin WhatsApp Number <input id="adminWhatsAppNumber" value="${esc(settings.adminWhatsAppNumber || settings.reportPhone || "")}" placeholder="919999999999"></label>
+          <label>Report Type <select id="reportType">
+            <option value="daily" ${settings.reportType === "daily" ? "selected" : ""}>Daily</option>
+            <option value="weekly" ${settings.reportType === "weekly" ? "selected" : ""}>Weekly</option>
+            <option value="monthly" ${settings.reportType === "monthly" ? "selected" : ""}>Monthly</option>
+          </select></label>
+          <label>Auto Report <select id="autoReport">
+            <option value="true" ${settings.autoReport ? "selected" : ""}>ON</option>
+            <option value="false" ${!settings.autoReport ? "selected" : ""}>OFF</option>
+          </select></label>
+          <button class="primary">Save Report</button>
+          <button class="secondary" type="button" id="sendTestReport">Send Test WhatsApp Report</button>
+        </form></div>
+        <div class="panel"><h2>WhatsApp Logs</h2>${whatsappLogsHtml()}</div>
+      </section>`;
+      $("reportForm").addEventListener("submit", saveReportSettings);
+      $("sendTestReport").addEventListener("click", sendTestReport);
+    }
+
+    async function saveReportSettings(event) {
+      event.preventDefault();
+      const data = await api("/settings", {
+        method: "POST",
+        body: JSON.stringify({
+          reportTime: $("reportTime").value,
+          adminWhatsAppNumber: $("adminWhatsAppNumber").value,
+          reportPhone: $("adminWhatsAppNumber").value,
+          reportType: $("reportType").value,
+          autoReport: $("autoReport").value === "true"
+        })
+      });
+      applySettings(data.settings);
+      pageMessage("WhatsApp report settings saved");
+      await loadData();
+      renderWhatsapp();
+    }
+
+    async function sendTestReport() {
+      pageMessage("Sending WhatsApp test report...");
+      try {
+        await api("/whatsapp/send-test-report", { method: "POST", body: JSON.stringify({}) });
+        pageMessage("WhatsApp test report sent");
+      } catch (error) {
+        pageMessage("WhatsApp test failed. Check token, phone number ID, and admin number.", "error");
+      }
+      await loadData();
+      renderWhatsapp();
+    }
+
+    function whatsappLogsHtml() {
+      if (!whatsappLogs.length) return `<span class="muted">No WhatsApp logs yet</span>`;
+      return `<table><thead><tr><th>Time</th><th>Recipient</th><th>Status</th><th>Reason</th></tr></thead><tbody>${whatsappLogs.slice(0, 10).map(log => `
+        <tr><td>${esc(new Date(log.time).toLocaleString("en-IN"))}</td><td>${esc(log.to || "-")}</td><td>${log.success ? `<span class="pill green">Sent</span>` : `<span class="pill red">Failed</span>`}</td><td>${esc(log.reason || log.error || "-")}</td></tr>
+      `).join("")}</tbody></table>`;
+    }
+
+    function renderSettings() {
+      $("page").innerHTML = `<section class="panel"><h2>Settings</h2><form class="settings-grid" id="settingsForm">
+        <label>Canteen Name <input id="canteenNameInput" value="${esc(settings.canteenName)}"></label>
+        <label>Brand <input id="brandNameInput" value="${esc(settings.brandName || "Axzen")}"></label>
+        <label>Tagline <input id="taglineInput" value="${esc(settings.tagline || "Infotech")}"></label>
+        <button class="primary">Save Settings</button>
+      </form></section>`;
+      $("settingsForm").addEventListener("submit", saveSettings);
+    }
+
+    async function saveSettings(event) {
+      event.preventDefault();
+      const data = await api("/settings", { method: "POST", body: JSON.stringify({ canteenName: $("canteenNameInput").value || "Main Canteen", brandName: $("brandNameInput").value || "Axzen", tagline: $("taglineInput").value || "Infotech" }) });
+      applySettings(data.settings);
+      pageMessage("Settings saved");
+      renderSettings();
+    }
+
+    $("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      try {
+        const data = await api("/login", { method: "POST", body: JSON.stringify({ mobile: $("mobileInput").value, password: $("passwordInput").value }) });
+        if (data.user.role !== "admin") throw new Error("Admin only");
+        session = data.user;
+        localStorage.setItem("AXEN_ADMIN_SESSION", JSON.stringify(session));
+        if (data.token) localStorage.setItem("AXEN_ADMIN_TOKEN", data.token);
+        applySettings(data.settings);
+        showApp();
+      } catch {
+        $("loginStatus").textContent = "Admin login failed";
+        $("loginStatus").className = "status error";
+      }
+    });
+
+    $("logoutBtn").addEventListener("click", () => {
+      localStorage.removeItem("AXEN_ADMIN_SESSION");
+      localStorage.removeItem("AXEN_ADMIN_TOKEN");
+      location.reload();
+    });
+    document.querySelectorAll("[data-tab]").forEach(btn => btn.addEventListener("click", () => { tab = btn.dataset.tab; pageMessage(""); render(); }));
+    if (session && session.role === "admin") showApp();
+  </script>
+</body>
+</html>
