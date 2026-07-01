@@ -15,7 +15,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 const PORT = Number(process.env.PORT || 5000);
-const DB_NAME = "axzen_canteen";
+const DB_NAME = process.env.MONGODB_DB_NAME || "axzen_canteen";
 const INDIA_TZ = "Asia/Kolkata";
 
 app.use(cors());

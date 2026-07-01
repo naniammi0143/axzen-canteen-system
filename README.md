@@ -8,13 +8,14 @@ Create `backend/.env` locally. In Vercel, add the same keys under Project Settin
 
 ```env
 MONGODB_URI=mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/?retryWrites=true&w=majority
+MONGODB_DB_NAME=axzen_canteen
 JWT_SECRET=change_this_to_a_long_random_secret
 WHATSAPP_TOKEN=your_meta_whatsapp_cloud_api_token
 WHATSAPP_PHONE_NUMBER_ID=your_meta_phone_number_id
 WHATSAPP_API_VERSION=v25.0
 ```
 
-The backend always uses MongoDB database name `axzen_canteen`. Do not commit `.env`.
+The backend uses `MONGODB_DB_NAME`; keep it as `axzen_canteen` for new deployments, or set the exact existing Atlas database name if it already exists with different casing. Do not commit `.env`.
 
 ## MongoDB Collections
 

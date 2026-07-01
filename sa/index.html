@@ -6,17 +6,17 @@
   <title>Axzen Infotech POS</title>
   <style>
     :root {
-      --ink: #091225;
-      --muted: #667085;
-      --line: #e4e9f2;
-      --page: #f6f8fc;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --page: #f5f5f7;
       --panel: #ffffff;
-      --navy: #061b34;
-      --blue: #1f64f2;
-      --green: #21b86b;
+      --navy: #101828;
+      --blue: #007aff;
+      --green: #22c55e;
       --orange: #f59e0b;
-      --red: #ef4056;
-      --shadow: 0 18px 50px #10213d18;
+      --red: #ef4444;
+      --shadow: 0 18px 45px #11182714;
     }
 
     * { box-sizing: border-box; }
@@ -24,12 +24,9 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background:
-        radial-gradient(circle at 15% 0%, #eaf2ff 0, transparent 34%),
-        radial-gradient(circle at 100% 10%, #e8fff4 0, transparent 26%),
-        var(--page);
+      background: linear-gradient(180deg, #fbfbfd, #f5f5f7);
       color: var(--ink);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Arial, sans-serif;
     }
 
     button, input, select { font: inherit; }
@@ -41,8 +38,8 @@
       max-width: 480px;
       min-height: 100vh;
       margin: 0 auto;
-      background: #fbfcff;
-      box-shadow: 0 0 45px #10213d20;
+      background: #f7f8fb;
+      box-shadow: 0 0 45px #11182718;
       overflow-x: hidden;
     }
 
@@ -50,25 +47,26 @@
       min-height: 100vh;
       display: grid;
       align-content: center;
-      gap: 22px;
-      padding: 30px 22px;
+      gap: 24px;
+      padding: 30px 20px;
+      background: linear-gradient(160deg, #ffffff, #eef5ff 58%, #f8fafc);
     }
 
     .brand-lockup { text-align: center; }
-    .powered { margin: 0 0 4px; color: var(--muted); font-size: 12px; font-weight: 800; text-transform: uppercase; }
-    .brand-name { margin: 0; font-size: 42px; line-height: 1; letter-spacing: 0; color: var(--ink); }
-    .tagline { margin: 5px 0 0; color: var(--blue); font-size: 17px; font-weight: 900; text-transform: uppercase; }
+    .powered { margin: 0 0 5px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
+    .brand-name { margin: 0; font-size: 48px; line-height: .95; letter-spacing: 0; color: var(--ink); }
+    .tagline { margin: 7px 0 0; color: var(--blue); font-size: 15px; font-weight: 900; text-transform: uppercase; }
 
     .login-card, .panel, .sheet {
-      border: 1px solid #ffffffbd;
-      border-radius: 8px;
-      background: #ffffffd9;
+      border: 1px solid #ffffff;
+      border-radius: 18px;
+      background: #ffffffdc;
       box-shadow: var(--shadow);
-      backdrop-filter: blur(18px);
+      backdrop-filter: blur(20px);
     }
 
-    .login-card { padding: 20px; display: grid; gap: 14px; }
-    .login-card h1 { margin: 0; font-size: 24px; }
+    .login-card { padding: 22px; display: grid; gap: 14px; }
+    .login-card h1 { margin: 0; font-size: 26px; letter-spacing: 0; }
     .login-card p { margin: -6px 0 4px; color: var(--muted); font-size: 14px; }
 
     label {
@@ -82,26 +80,26 @@
 
     input, select {
       width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 8px;
+      border: 1px solid #dfe3eb;
+      border-radius: 12px;
       padding: 13px 14px;
-      background: white;
+      background: #fbfcff;
       color: var(--ink);
       outline: none;
     }
 
-    input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px #1f64f21a; }
+    input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px #007aff1c; background: white; }
 
     .primary, .secondary, .danger {
       min-height: 46px;
       border: 0;
-      border-radius: 8px;
+      border-radius: 12px;
       font-weight: 900;
     }
 
-    .primary { background: var(--blue); color: white; }
-    .secondary { background: #eef3ff; color: var(--blue); border: 1px solid #d8e3ff; }
-    .danger { background: #fff0f2; color: var(--red); border: 1px solid #ffd7dd; }
+    .primary { background: linear-gradient(180deg, #1684ff, #006de8); color: white; box-shadow: 0 12px 26px #007aff30; }
+    .secondary { background: #f2f7ff; color: var(--blue); border: 1px solid #d7e8ff; }
+    .danger { background: #fff5f5; color: var(--red); border: 1px solid #ffd9d9; }
 
     .status {
       min-height: 20px;
@@ -121,27 +119,51 @@
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      padding: 14px 15px;
-      background: #fbfcfff2;
-      border-bottom: 1px solid var(--line);
-      backdrop-filter: blur(16px);
+      padding: 14px 16px;
+      background: #fbfbfde8;
+      border-bottom: 1px solid #e8edf4;
+      backdrop-filter: blur(20px);
     }
 
     .title-block { min-width: 0; }
     .title-block strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
     .title-block span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 800; }
+    .connection-line {
+      display: inline-flex !important;
+      align-items: center;
+      gap: 6px;
+      min-height: 18px;
+    }
+    .net-badge {
+      width: 17px;
+      height: 17px;
+      border-radius: 999px;
+      display: inline-grid;
+      place-items: center;
+      color: white;
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 900;
+      box-shadow: 0 4px 10px #11182718;
+    }
+    .net-badge.online { background: var(--green); }
+    .net-badge.online::before { content: "✓"; }
+    .net-badge.offline { background: var(--red); }
+    .net-badge.offline::before { content: "!"; }
+    .net-badge.syncing { background: var(--orange); }
+    .net-badge.syncing::before { content: "..."; font-size: 8px; }
 
     .icon-btn {
       width: 38px;
       height: 38px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
+      border: 1px solid #e1e6ee;
+      border-radius: 12px;
       background: white;
       color: var(--ink);
       font-weight: 900;
     }
 
-    .content { padding: 14px 12px 300px; }
+    .content { padding: 14px 12px 310px; }
 
     .tabs {
       display: flex;
@@ -152,8 +174,8 @@
 
     .tab {
       flex: 0 0 auto;
-      border: 1px solid var(--line);
-      border-radius: 8px;
+      border: 1px solid #e1e6ee;
+      border-radius: 999px;
       padding: 10px 13px;
       background: white;
       color: var(--ink);
@@ -161,41 +183,49 @@
       font-weight: 900;
     }
 
-    .tab.active { background: var(--blue); border-color: var(--blue); color: white; }
+    .tab.active { background: #111827; border-color: #111827; color: white; }
 
     .menu-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 8px;
+      gap: 9px;
     }
 
     .item-card {
-      min-height: 104px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
+      min-height: 116px;
+      border: 1px solid #e8edf4;
+      border-radius: 16px;
       background: white;
-      box-shadow: 0 10px 24px #10213d10;
+      box-shadow: 0 10px 24px #1118270d;
       display: grid;
       align-content: center;
       justify-items: center;
-      gap: 6px;
-      padding: 10px 5px;
+      gap: 7px;
+      padding: 8px 5px;
       text-align: center;
+      overflow: hidden;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
     }
+    .item-card:active { transform: scale(.97); }
+    .item-card:hover { border-color: #cfe0f5; box-shadow: 0 14px 30px #11182714; }
 
     .item-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 8px;
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
       display: grid;
       place-items: center;
-      background: linear-gradient(145deg, #fff7e6, #eef4ff);
-      font-size: 20px;
+      background: linear-gradient(145deg, #f0f7ff, #fff8e8);
+      background-size: cover;
+      background-position: center;
+      font-size: 0;
       font-weight: 900;
       color: var(--blue);
+      box-shadow: inset 0 1px 0 #fff;
     }
+    .item-icon.initials { font-size: 13px; background: linear-gradient(145deg, #eef7ff, #fff8e8); }
 
-    .item-card h3 { margin: 0; font-size: 11px; overflow-wrap: anywhere; }
+    .item-card h3 { margin: 0; font-size: 11px; line-height: 1.18; overflow-wrap: anywhere; }
     .item-card p { margin: 0; color: var(--muted); font-size: 11px; font-weight: 900; }
 
     .cart-sheet {
@@ -205,13 +235,13 @@
       z-index: 6;
       width: min(480px, 100%);
       transform: translateX(-50%);
-      border-top: 1px solid var(--line);
-      background: #fffffff5;
-      box-shadow: 0 -18px 45px #10213d1a;
-      backdrop-filter: blur(16px);
+      border-top: 1px solid #e8edf4;
+      background: #fffffff2;
+      box-shadow: 0 -18px 45px #11182718;
+      backdrop-filter: blur(20px);
     }
 
-    .cart-inner { padding: 12px; }
+    .cart-inner { padding: 13px; }
     .cart-head, .row-between { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
     .cart-head strong { font-size: 14px; }
     .cart-head button { border: 0; background: transparent; color: var(--red); font-size: 12px; font-weight: 900; }
@@ -233,11 +263,11 @@
     }
 
     .cart-row small { display: block; margin-top: 2px; color: var(--muted); font-weight: 800; }
-    .qty { display: grid; grid-template-columns: 28px 28px 28px; align-items: center; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; text-align: center; }
+    .qty { display: grid; grid-template-columns: 28px 28px 28px; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; text-align: center; }
     .qty button { height: 28px; border: 0; background: #f3f6fb; color: var(--blue); font-weight: 900; }
 
     .pay-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-    .pay-toggle button { min-height: 38px; border: 1px solid var(--line); border-radius: 8px; background: white; font-weight: 900; }
+    .pay-toggle button { min-height: 40px; border: 1px solid var(--line); border-radius: 12px; background: white; font-weight: 900; }
     .pay-toggle button.active { background: var(--green); border-color: var(--green); color: white; }
 
     .place { width: 100%; margin-top: 8px; }
@@ -262,19 +292,19 @@
     .admin-shell { min-height: 100vh; background: var(--page); }
     .admin-hero {
       padding: 18px 14px;
-      background: linear-gradient(145deg, var(--navy), #0a2b50);
+      background: linear-gradient(145deg, #111827, #172033);
       color: white;
     }
     .admin-hero .brand-name { color: white; font-size: 34px; }
     .admin-hero .tagline { color: #8ec5ff; }
 
     .admin-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px; }
-    .admin-tabs button { min-height: 42px; border: 1px solid var(--line); border-radius: 8px; background: white; color: var(--ink); font-size: 12px; font-weight: 900; }
+    .admin-tabs button { min-height: 42px; border: 1px solid var(--line); border-radius: 12px; background: white; color: var(--ink); font-size: 12px; font-weight: 900; }
     .admin-tabs button.active { background: var(--blue); color: white; border-color: var(--blue); }
     .admin-page { padding: 0 12px 22px; display: grid; gap: 12px; }
 
     .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .kpi { padding: 14px; border: 1px solid var(--line); border-radius: 8px; background: white; box-shadow: 0 10px 26px #10213d10; }
+    .kpi { padding: 14px; border: 1px solid #e8edf4; border-radius: 16px; background: white; box-shadow: 0 10px 26px #1118270d; }
     .kpi span { color: var(--muted); font-size: 12px; font-weight: 900; }
     .kpi strong { display: block; margin-top: 8px; font-size: 22px; }
 
@@ -316,7 +346,7 @@
         <button class="icon-btn" id="logoutPos">X</button>
         <div class="title-block">
           <strong id="posCanteen">Main Canteen</strong>
-          <span id="syncStatus">Synced</span>
+          <span class="connection-line"><span class="net-badge offline" id="connectionBadge"></span><span id="syncStatus">Connect internet</span></span>
         </div>
         <button class="icon-btn" id="profileBtn">...</button>
       </header>
@@ -406,6 +436,7 @@
     let cart = [];
     let payment = "Cash";
     let adminTab = "dashboard";
+    let serverOnline = navigator.onLine;
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(0);
@@ -416,16 +447,25 @@
     const pendingOrders = () => readJson(pendingOrdersKey, []);
     const setPendingOrders = value => { writeJson(pendingOrdersKey, value); updateSyncStatus(); };
 
+    function setConnectionState(state, text) {
+      const badge = $("connectionBadge");
+      if (badge) badge.className = `net-badge ${state}`;
+      if ($("syncStatus")) $("syncStatus").textContent = text;
+    }
+
     async function api(path, options = {}) {
       const token = localStorage.getItem(tokenKey);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000);
       const response = await fetch(API + path, {
         ...options,
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
           ...(options.headers || {})
         }
-      });
+      }).finally(() => clearTimeout(timeout));
       if (!response.ok) throw new Error("Request failed");
       return response.json();
     }
@@ -473,11 +513,38 @@
       show("loginView");
     }
 
-    function updateSyncStatus(text) {
+    function updateSyncStatus(text, state) {
       const count = pendingOrders().length;
       if (!$("syncStatus")) return;
-      if (count) $("syncStatus").textContent = text || `${count} pending sync`;
-      else $("syncStatus").textContent = navigator.onLine ? (text || "Synced") : "Offline";
+      if (state) return setConnectionState(state, text || "");
+      if (!navigator.onLine || !serverOnline) return setConnectionState("offline", "Connect internet");
+      if (count) return setConnectionState("syncing", text || `${count} pending sync`);
+      setConnectionState("online", text || "Connected");
+    }
+
+    async function checkServerConnection() {
+      if (!navigator.onLine) {
+        serverOnline = false;
+        updateSyncStatus("Connect internet", "offline");
+        return false;
+      }
+
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3500);
+      try {
+        const response = await fetch(API + "/health", {
+          cache: "no-store",
+          signal: controller.signal
+        });
+        serverOnline = response.ok;
+      } catch {
+        serverOnline = false;
+      } finally {
+        clearTimeout(timeout);
+      }
+
+      updateSyncStatus(serverOnline ? undefined : "Connect internet", serverOnline ? undefined : "offline");
+      return serverOnline;
     }
 
     async function loadSettings() {
@@ -523,7 +590,7 @@
       const visible = activeCategory === "All" ? products : products.filter(item => item.category === activeCategory);
       $("menuGrid").innerHTML = visible.map(item => `
         <button class="item-card" data-item="${item.id}">
-          <span class="item-icon">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
+          <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
           <h3>${item.name}</h3>
           <p>${money(item.price)}</p>
         </button>
@@ -567,14 +634,17 @@
 
     async function syncPendingOrders() {
       const pending = pendingOrders();
+      const connected = await checkServerConnection();
       if (!pending.length) return updateSyncStatus();
+      if (!connected) return updateSyncStatus("Connect internet", "offline");
       try {
-        updateSyncStatus("Syncing...");
+        updateSyncStatus("Syncing...", "syncing");
         const data = await api("/orders/sync", { method: "POST", body: JSON.stringify({ orders: pending }) });
         const synced = new Set(data.synced || []);
         setPendingOrders(pending.filter(order => !synced.has(order.clientOrderId) && !synced.has(order.id)));
       } catch {
-        updateSyncStatus();
+        serverOnline = false;
+        updateSyncStatus("Connect internet", "offline");
       }
     }
 
@@ -593,10 +663,13 @@
 
       try {
         const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload) });
+        serverOnline = true;
+        updateSyncStatus();
         $("posMessage").textContent = "Order saved";
         $("posMessage").className = "status ok";
         receipt(saved.order || payload);
       } catch {
+        serverOnline = false;
         setPendingOrders([...pendingOrders(), payload]);
         $("posMessage").textContent = "Offline saved. Auto sync pending.";
         $("posMessage").className = "status ok";
@@ -735,16 +808,20 @@
 
     async function enterApp() {
       if (!user) return show("loginView");
-      await loadSettings();
-      await loadProducts();
-      await syncPendingOrders();
       if (user.role === "admin") {
         $("adminRole").textContent = `${user.name} | Admin`;
         show("adminView");
+        updateSyncStatus();
+        await loadSettings();
         await loadAdminData();
+        await syncPendingOrders();
       } else {
         show("posView");
         renderCart();
+        updateSyncStatus();
+        await loadSettings();
+        await loadProducts();
+        await syncPendingOrders();
       }
     }
 
@@ -780,11 +857,19 @@
       renderAdmin();
     }));
     window.addEventListener("online", syncPendingOrders);
-    window.addEventListener("offline", updateSyncStatus);
+    window.addEventListener("offline", () => {
+      serverOnline = false;
+      updateSyncStatus("Connect internet", "offline");
+    });
     window.setInterval(syncPendingOrders, 15000);
+    window.setInterval(checkServerConnection, 30000);
 
     user = readJson(sessionKey, null);
-    loadSettings().then(enterApp);
+    if (user) enterApp();
+    else {
+      show("loginView");
+      loadSettings();
+    }
   </script>
 </body>
 </html>
