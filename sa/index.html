@@ -25,7 +25,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: #f7f8fb;
+      background: #ffffff;
       color: var(--ink);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Arial, sans-serif;
     }
@@ -39,7 +39,7 @@
       max-width: 520px;
       min-height: 100vh;
       margin: 0 auto;
-      background: #f8fafc;
+      background: #ffffff;
       box-shadow: 0 0 55px #11182714;
       overflow-x: hidden;
     }
@@ -422,24 +422,24 @@
 
     /* POS visual style matching the supplied mobile mockup. */
     #posView .topbar {
-      gap: 14px;
-      padding: 18px 16px 16px;
-      background: #f8fafcf2;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #ffffff;
       border-bottom: 1px solid #edf1f5;
     }
     #posView .title-block { flex: 1; }
-    #posView .title-block strong { font-size: 23px; line-height: 1.05; }
-    #posView .title-block span { margin-top: 5px; color: #667085; font-size: 15px; font-weight: 650; }
+    #posView .title-block strong { font-size: 20px; line-height: 1.05; }
+    #posView .title-block span { margin-top: 4px; color: #667085; font-size: 13px; font-weight: 650; }
     #posView .net-badge { display: none; }
-    #posView .icon-btn { width: 50px; height: 50px; border-radius: 18px; border-color: #edf1f5; box-shadow: 0 12px 24px #1118270a; font-size: 22px; }
-    .brand-mark { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: white; background: linear-gradient(180deg, #3c9632, #2f7d26); box-shadow: 0 14px 28px #2f7d2633; font-size: 25px; }
+    #posView .icon-btn { width: 42px; height: 42px; border-radius: 15px; border-color: #edf1f5; box-shadow: 0 8px 18px #1118270a; font-size: 20px; }
+    .brand-mark { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: #172033; background: #f3f6fb; box-shadow: 0 10px 20px #1118270a; font-size: 22px; }
     .connection-pill { display: none; }
     .notif-dot { position: relative; }
-    .notif-dot::after { content: ""; position: absolute; top: 11px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--red); border: 2px solid white; }
+    .notif-dot::after { content: ""; position: absolute; top: 15px; left: 15px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); border: 2px solid white; }
     .notif-dot.online::after { background: #16a34a; }
     .notif-dot.offline::after { background: #ef4444; }
-    #posView .content { padding: 12px 14px 310px; }
-    .search-row { display: grid; grid-template-columns: 1fr; gap: 0; margin-bottom: 14px; }
+    #posView .content { padding: 10px 14px 300px; }
+    .search-row { display: none; }
     .search-box { display: flex; align-items: center; gap: 10px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; padding: 0 14px; color: #667085; box-shadow: 0 10px 24px #11182708; }
     .search-box input { border: 0; box-shadow: none; background: transparent; padding: 0; font-size: 16px; font-weight: 650; }
     .filter-btn { display: none; }
@@ -457,7 +457,7 @@
     .item-name-wrap { display: inline-flex; align-items: center; min-width: 0; gap: 7px; }
     .item-foot { display: block; padding: 0; }
     .item-price { color: #27364a; font-size: 18px; font-weight: 950; white-space: nowrap; }
-    .add-mini { min-height: 0; border: 0; border-radius: 0; background: transparent; color: #52657f; padding: 0; font-size: 13px; font-weight: 900; text-align: right; }
+    .add-mini { display: none; }
     #posView .count-badge { top: 10px; right: 12px; }
     #posView .remove-badge { top: 10px; left: 12px; }
     #posView .cart-sheet { width: min(520px, calc(100% - 20px)); bottom: 10px; border: 1px solid #e8edf4; border-radius: 18px; background: #fffffff5; box-shadow: 0 -18px 45px #11182716; }
@@ -466,6 +466,8 @@
     .cart-icon { display: none; }
     #posView .cart-head strong { display: block; font-size: 17px; }
     #posView .cart-head button { font-size: 14px; }
+    #posView #cartTotal { font-size: 22px; }
+    #posView .row-between strong:first-child { font-size: 16px; }
     #posView .place { margin-top: 10px; background: linear-gradient(180deg, #24384f, #172033); box-shadow: 0 12px 26px #17203326; }
 
     @media (max-width: 360px) {
@@ -502,7 +504,7 @@
           <span>Good Food, Good Mood</span>
         </div>
         <div class="connection-pill"><span class="net-badge offline" id="connectionBadge"></span><span id="syncStatus">Connected</span></div>
-        <button class="icon-btn notif-dot" id="profileBtn" type="button">🔔</button>
+        <button class="icon-btn notif-dot" id="profileBtn" type="button" aria-label="Status"></button>
       </header>
       <section class="content">
         <div class="search-row">
@@ -825,7 +827,7 @@
               <span class="item-name-wrap"><span class="item-emoji">${itemEmoji(item)}</span><h3>${item.name}</h3></span>
               <span class="item-price">${money(item.price)}</span>
             </span>
-            <span class="add-mini">+ Add</span>
+            <span class="add-mini"></span>
           </span>
         </button>
       `).join("") || `<div class="panel">No menu items</div>`;
@@ -965,7 +967,7 @@
     }
 
     function receiptText(order, copy = false) {
-      const width = 46;
+      const width = 32;
       const line = "-".repeat(width);
       const thick = "=".repeat(width);
       const center = value => String(value || "").slice(0, width).padStart(Math.floor((width + String(value || "").slice(0, width).length) / 2)).padEnd(width);
@@ -979,8 +981,8 @@
         const qty = Number(item.qty || 0);
         const rate = Number(item.price || 0);
         const amount = qty * rate;
-        const name = String(item.name || "Item").slice(0, 18).padEnd(18);
-        return `${String(index).padEnd(2)} ${name} ${String(qty).padStart(3)} ${String(rate.toFixed(0)).padStart(5)} ${String(amount.toFixed(2)).padStart(9)}`;
+        const name = String(item.name || "Item").slice(0, 12).padEnd(12);
+        return `${String(index).padEnd(2)} ${name}${String(qty).padStart(3)} ${String(rate.toFixed(0)).padStart(4)} ${String(amount.toFixed(2)).padStart(8)}`;
       };
       const totalQty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const total = Number(order.total || 0);
@@ -1002,7 +1004,7 @@
         leftRight(`Cashier ${order.cashier || user?.name || "-"}`, `Token ${tokenNo}`),
         leftRight("Payment", paymentLabel),
         line,
-        "#  Item Name            Qty  Rate    Amount",
+        "#  ITEM NAME     QTY RATE   AMOUNT",
         line,
         ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
         line,
@@ -1104,11 +1106,11 @@
     function adminUnlockHtml() {
       if (hasAdminAccess()) return "";
       return `<form class="option-card" id="adminUnlockForm">
-        <h3>Admin Access</h3>
+        <h3>Admin Access / WhatsApp Reports</h3>
         <input id="unlockMobile" placeholder="Admin mobile" autocomplete="username">
         <input id="unlockPassword" type="password" placeholder="Admin password" autocomplete="current-password">
-        <button class="primary" type="submit">Unlock Bills</button>
-        <div class="muted">Last 5 copy receipt print admin access tho matrame.</div>
+        <button class="primary" type="submit">Unlock Admin Options</button>
+        <div class="muted">Admin login tarvata last 5 bills copy print, WhatsApp report settings access clear ga untayi.</div>
       </form>`;
     }
 
@@ -1135,6 +1137,10 @@
           <div class="payment-modal">
             <h2>Options</h2>
             <div class="option-actions">
+              <div class="option-card">
+                <h3>Search Items</h3>
+                <input id="optionSearchInput" placeholder="Type item name" value="${itemSearch.replace(/"/g, "&quot;")}">
+              </div>
               <button class="secondary" id="menuTestPrint" type="button">Test Print</button>
               ${todaySaleHtml()}
               ${adminUnlockHtml()}
@@ -1145,6 +1151,11 @@
           </div>
         </div>`;
       $("closeOptionsModal").addEventListener("click", closeOptionsModal);
+      $("optionSearchInput").addEventListener("input", event => {
+        itemSearch = event.target.value;
+        if ($("itemSearch")) $("itemSearch").value = itemSearch;
+        renderProducts();
+      });
       $("menuTestPrint").addEventListener("click", testPrint);
       $("menuLogout").addEventListener("click", logout);
       if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
@@ -1540,6 +1551,9 @@
     });
     window.setInterval(syncPendingOrders, 15000);
     window.setInterval(checkServerConnection, 30000);
+    window.setInterval(() => {
+      if (user && !$("posView").classList.contains("hidden")) wakePrinter();
+    }, 45000);
 
     user = readJson(sessionKey, null);
     if (user) enterApp();

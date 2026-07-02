@@ -64,63 +64,78 @@ public class MainActivity extends BridgeActivity {
     }
 
     public class ThermalPrinterBridge {
+        private BluetoothSocket socket;
+        private OutputStream output;
+        private BluetoothDevice cachedPrinter;
+
         @JavascriptInterface
-        public String wake() {
+        public synchronized String wake() {
             if (!hasBluetoothPermission()) {
                 requestBluetoothPermission();
                 return "Bluetooth permission needed";
             }
 
-            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-            if (adapter == null || !adapter.isEnabled()) return "Bluetooth is off";
-
-            Set<BluetoothDevice> devices = adapter.getBondedDevices();
-            if (devices == null || devices.isEmpty()) return "Pair the 58mm printer first";
-
-            BluetoothDevice printer = findPrinter(devices);
-            try (BluetoothSocket socket = printer.createRfcommSocketToServiceRecord(SPP_UUID)) {
-                if (hasBluetoothScanPermission()) {
-                    adapter.cancelDiscovery();
-                }
-                socket.connect();
-                OutputStream output = socket.getOutputStream();
+            try {
+                OutputStream output = ensurePrinterOutput();
                 output.write(new byte[]{0x1B, 0x40});
                 output.flush();
                 return "Printer ready";
             } catch (Exception error) {
+                closePrinter();
                 return "Printer failed: " + error.getMessage();
             }
         }
 
         @JavascriptInterface
-        public String print(String text) {
+        public synchronized String print(String text) {
             if (!hasBluetoothPermission()) {
                 requestBluetoothPermission();
                 return "Bluetooth permission needed";
             }
 
-            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-            if (adapter == null || !adapter.isEnabled()) return "Bluetooth is off";
-
-            Set<BluetoothDevice> devices = adapter.getBondedDevices();
-            if (devices == null || devices.isEmpty()) return "Pair the 58mm printer first";
-
-            BluetoothDevice printer = findPrinter(devices);
-
-            try (BluetoothSocket socket = printer.createRfcommSocketToServiceRecord(SPP_UUID)) {
-                if (hasBluetoothScanPermission()) {
-                    adapter.cancelDiscovery();
-                }
-                socket.connect();
-                OutputStream output = socket.getOutputStream();
+            try {
+                OutputStream output = ensurePrinterOutput();
                 output.write(new byte[]{0x1B, 0x40});
                 output.write(text.getBytes(Charset.forName("UTF-8")));
-                output.write(new byte[]{0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x01});
+                output.write(new byte[]{0x0A, 0x0A, 0x1D, 0x56, 0x01});
                 output.flush();
                 return "Print sent";
             } catch (Exception error) {
+                closePrinter();
                 return "Printer failed: " + error.getMessage();
             }
+        }
+
+        private OutputStream ensurePrinterOutput() throws Exception {
+            if (socket != null && socket.isConnected() && output != null) {
+                return output;
+            }
+
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            if (adapter == null || !adapter.isEnabled()) throw new Exception("Bluetooth is off");
+
+            Set<BluetoothDevice> devices = adapter.getBondedDevices();
+            if (devices == null || devices.isEmpty()) throw new Exception("Pair the 58mm printer first");
+
+            cachedPrinter = cachedPrinter == null ? findPrinter(devices) : cachedPrinter;
+            if (hasBluetoothScanPermission()) {
+                adapter.cancelDiscovery();
+            }
+            socket = cachedPrinter.createRfcommSocketToServiceRecord(SPP_UUID);
+            socket.connect();
+            output = socket.getOutputStream();
+            return output;
+        }
+
+        private void closePrinter() {
+            try {
+                if (output != null) output.close();
+            } catch (Exception ignored) {}
+            try {
+                if (socket != null) socket.close();
+            } catch (Exception ignored) {}
+            output = null;
+            socket = null;
         }
 
         private BluetoothDevice findPrinter(Set<BluetoothDevice> devices) {
