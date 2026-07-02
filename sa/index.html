@@ -448,11 +448,11 @@
     const nativeHost = window.Capacitor ? "192.168.29.115" : browserHost;
     const storedApi = localStorage.getItem("AXEN_API_URL");
     const storedApiIsLocal = storedApi && /localhost|127\.0\.0\.1|10\.0\.2\.2|192\.168\.|http:\/\/10\.|http:\/\/172\.(1[6-9]|2\d|3[0-1])\./.test(storedApi);
-    const productionApi = window.location.protocol === "https:" ? window.location.origin : "";
-    const API = productionApi
-      ? productionApi
-      : window.Capacitor && (!hasApiOverride || !storedApi || storedApiIsLocal)
+    const productionApi = !window.Capacitor && window.location.protocol === "https:" ? window.location.origin : "";
+    const API = window.Capacitor && (!hasApiOverride || !storedApi || storedApiIsLocal)
       ? liveApi
+      : productionApi
+      ? productionApi
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner"];
