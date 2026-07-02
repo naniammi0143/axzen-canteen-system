@@ -857,7 +857,7 @@ function registerWhatsAppWebhookRoutes(targetApp) {
 registerWhatsAppWebhookRoutes(app);
 
 app.get("/", (req, res) => {
-  res.redirect("/mobile/");
+  res.redirect("/admin/");
 });
 
 app.get("/health", (req, res) => {
