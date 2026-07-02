@@ -438,6 +438,7 @@
 
   <script>
     const apiParam = new URLSearchParams(window.location.search).get("api");
+    const hasApiOverride = Boolean(apiParam);
     if (apiParam) localStorage.setItem("AXEN_API_URL", apiParam);
     const liveApi = "https://canteen.axzen.in";
     const browserHost = window.location.hostname && window.location.hostname !== "localhost"
@@ -449,7 +450,7 @@
     const productionApi = window.location.protocol === "https:" ? window.location.origin : "";
     const API = productionApi
       ? productionApi
-      : window.Capacitor && (!storedApi || storedApiIsLocal)
+      : window.Capacitor && (!hasApiOverride || !storedApi || storedApiIsLocal)
       ? liveApi
       : (storedApi || `http://${nativeHost}:5000`);
 
