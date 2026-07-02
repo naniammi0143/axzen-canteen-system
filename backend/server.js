@@ -111,6 +111,7 @@ const orderSchema = new mongoose.Schema({
   cashier: String,
   payment: String,
   paymentBreakup: mongoose.Schema.Types.Mixed,
+  creditName: String,
   total: Number,
   items: [{ id: Number, name: String, price: Number, qty: Number }],
   syncedAt: String
@@ -124,6 +125,7 @@ const saleSchema = new mongoose.Schema({
   cashier: String,
   payment: String,
   paymentBreakup: mongoose.Schema.Types.Mixed,
+  creditName: String,
   total: Number,
   items: [{ id: Number, name: String, price: Number, qty: Number }],
   syncedAt: String
@@ -479,6 +481,7 @@ function makeOrder(payload) {
     cashier: payload.cashier || "Mobile Cashier",
     payment: payload.payment || "Cash",
     paymentBreakup,
+    creditName: payload.creditName || "",
     total,
     items: Array.isArray(payload.items) ? payload.items : [],
     syncedAt: new Date().toISOString()
@@ -490,11 +493,13 @@ function normalizePaymentBreakup(value, payment, total) {
   if (payment === "Split") {
     const cash = Math.max(0, Number(source.cash || 0));
     const online = Math.max(0, Number(source.online || 0));
-    return { cash, online };
+    const credit = Math.max(0, Number(source.credit || 0));
+    return { cash, online, credit };
   }
-  if (payment === "Online") return { cash: 0, online: total };
-  if (payment === "Cancel") return { cash: 0, online: 0 };
-  return { cash: total, online: 0 };
+  if (payment === "Online") return { cash: 0, online: total, credit: 0 };
+  if (payment === "Credit") return { cash: 0, online: 0, credit: total };
+  if (payment === "Cancel") return { cash: 0, online: 0, credit: 0 };
+  return { cash: total, online: 0, credit: 0 };
 }
 
 async function saveOrder(payload) {
@@ -603,22 +608,24 @@ function paymentTotals(orders) {
     const breakup = normalizePaymentBreakup(order.paymentBreakup, order.payment, amount);
     totals.cash += Number(breakup.cash || 0);
     totals.upi += Number(breakup.online || 0);
+    totals.credit += Number(breakup.credit || 0);
     totals.online = totals.upi + totals.card;
     return totals;
-  }, { totalSales: 0, cash: 0, upi: 0, card: 0, online: 0 });
+  }, { totalSales: 0, cash: 0, upi: 0, card: 0, online: 0, credit: 0 });
 }
 
 function userSalesFromOrders(orders) {
   const rows = new Map();
   orders.forEach(order => {
     const key = order.cashier || "Unknown";
-    const row = rows.get(key) || { user: key, orders: 0, total: 0, cash: 0, online: 0 };
+    const row = rows.get(key) || { user: key, orders: 0, total: 0, cash: 0, online: 0, credit: 0 };
     const amount = Number(order.total || 0);
     const breakup = normalizePaymentBreakup(order.paymentBreakup, order.payment, amount);
     row.orders += 1;
     row.total += amount;
     row.cash += Number(breakup.cash || 0);
     row.online += Number(breakup.online || 0);
+    row.credit += Number(breakup.credit || 0);
     rows.set(key, row);
   });
   return [...rows.values()].sort((a, b) => b.total - a.total);

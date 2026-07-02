@@ -337,7 +337,40 @@
     .payment-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .payment-actions button { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: white; font-weight: 950; }
     .payment-actions button.primary-choice { background: var(--green); border-color: var(--green); color: white; }
+    .payment-actions button.selected { background: var(--green); border-color: var(--green); color: white; box-shadow: 0 10px 22px #2f7d2633; }
     .modal-close { width: 100%; }
+    .credit-box {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .credit-box input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      font-weight: 850;
+    }
+    .option-actions { display: grid; gap: 10px; }
+    .option-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #f8fafc;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .option-card h3 { margin: 0; font-size: 15px; }
+    .option-card input { width: 100%; padding: 11px; border: 1px solid var(--line); border-radius: 12px; font-weight: 850; }
+    .option-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 850; }
+    .bill-action {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      padding: 8px;
+      text-align: left;
+      font-weight: 850;
+    }
 
     .bottom-nav {
       position: fixed;
@@ -440,7 +473,6 @@
             <strong id="cartTotal">Rs 0</strong>
           </div>
           <button class="primary place" id="placeOrder">Place Order</button>
-          <button class="secondary place" id="testPrintBtn" type="button">Test Print</button>
           <div class="status" id="posMessage"></div>
         </div>
       </section>
@@ -470,6 +502,7 @@
       <section class="admin-page" id="adminPage"></section>
     </section>
     <div id="paymentModalMount"></div>
+    <div id="optionsModalMount"></div>
   </main>
 
   <script>
@@ -506,6 +539,7 @@
     let payment = "Cash";
     let adminTab = "dashboard";
     let serverOnline = navigator.onLine;
+    let adminUnlocked = false;
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(0);
@@ -579,6 +613,7 @@
       localStorage.removeItem(tokenKey);
       user = null;
       cart = [];
+      adminUnlocked = false;
       show("loginView");
     }
 
@@ -736,20 +771,23 @@
       if (selectedPayment === "Split") {
         const cash = Math.max(0, Number($("modalSplitCash").value || 0));
         const online = Math.max(0, Number($("modalSplitOnline").value || 0));
-        return { cash, online };
+        return { cash, online, credit: 0 };
       }
-      if (selectedPayment === "Online") return { cash: 0, online: total };
-      if (selectedPayment === "Cancel") return { cash: 0, online: 0 };
-      return { cash: total, online: 0 };
+      if (selectedPayment === "Online") return { cash: 0, online: total, credit: 0 };
+      if (selectedPayment === "Credit") return { cash: 0, online: 0, credit: total };
+      if (selectedPayment === "Cancel") return { cash: 0, online: 0, credit: 0 };
+      return { cash: total, online: 0, credit: 0 };
     }
 
-    function receiptText(order) {
+    function receiptText(order, copy = false) {
       const lines = (order.items || []).map(item => `${item.name} x ${item.qty} = ${money(Number(item.price) * item.qty)}`).join("\n");
       const breakup = order.paymentBreakup || {};
       const payLine = order.payment === "Split"
         ? `Payment Split\nCash ${money(breakup.cash)}\nOnline ${money(breakup.online)}`
+        : order.payment === "Credit"
+        ? `Payment Credit\nName ${order.creditName || "-"}`
         : `Payment ${order.payment}`;
-      return `${settings.canteenName}\n${order.time}\nCashier: ${order.cashier || "-"}\n------------------------\n${lines}\n------------------------\nTotal ${money(order.total)}\n${payLine}\n`;
+      return `${settings.canteenName}\n${copy ? "COPY RECEIPT NOT ORIGINAL\n" : ""}${order.time}\nCashier: ${order.cashier || "-"}\n------------------------\n${lines}\n------------------------\nTotal ${money(order.total)}\n${payLine}\n`;
     }
 
     async function receipt(order) {
@@ -769,6 +807,12 @@
       console.log(text);
     }
 
+    function wakePrinter() {
+      if (window.AxenPrinter && typeof window.AxenPrinter.wake === "function") {
+        try { window.AxenPrinter.wake(); } catch {}
+      }
+    }
+
     function testPrint() {
       if (!window.AxenPrinter || typeof window.AxenPrinter.print !== "function") {
         $("posMessage").textContent = "Direct Bluetooth print works only inside the Android APK.";
@@ -781,6 +825,136 @@
         $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
       } catch (error) {
         $("posMessage").textContent = `Printer failed: ${error.message || "Unknown error"}`;
+        $("posMessage").className = "status error";
+      }
+    }
+
+    function orderBreakup(order) {
+      const total = Number(order.total || 0);
+      const breakup = order.paymentBreakup || {};
+      if (order.payment === "Split") return { cash: Number(breakup.cash || 0), online: Number(breakup.online || 0), credit: Number(breakup.credit || 0) };
+      if (order.payment === "Online") return { cash: 0, online: total, credit: 0 };
+      if (order.payment === "Credit") return { cash: 0, online: 0, credit: total };
+      if (order.payment === "Cancel") return { cash: 0, online: 0, credit: 0 };
+      return { cash: total, online: 0, credit: 0 };
+    }
+
+    function todayOrders() {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return orders.filter(order => {
+        const date = order.createdAt ? new Date(order.createdAt) : order.syncedAt ? new Date(order.syncedAt) : Number(order.id) ? new Date(Number(order.id)) : new Date(order.time || Date.now());
+        return date >= start;
+      });
+    }
+
+    function todaySaleHtml() {
+      const rows = todayOrders();
+      const totals = rows.reduce((sum, order) => {
+        const pay = orderBreakup(order);
+        sum.total += Number(order.total || 0);
+        sum.cash += pay.cash;
+        sum.online += pay.online;
+        sum.credit += pay.credit;
+        return sum;
+      }, { total: 0, cash: 0, online: 0, credit: 0 });
+      return `
+        <div class="option-card">
+          <h3>Today Sale Report</h3>
+          <div class="option-row"><span>Total Bills</span><strong>${rows.length}</strong></div>
+          <div class="option-row"><span>Total Sale</span><strong>${money(totals.total)}</strong></div>
+          <div class="option-row"><span>Cash</span><strong>${money(totals.cash)}</strong></div>
+          <div class="option-row"><span>Online</span><strong>${money(totals.online)}</strong></div>
+          <div class="option-row"><span>Credit</span><strong>${money(totals.credit)}</strong></div>
+        </div>`;
+    }
+
+    function hasAdminAccess() {
+      return adminUnlocked || (user && user.role === "admin");
+    }
+
+    function adminUnlockHtml() {
+      if (hasAdminAccess()) return "";
+      return `<form class="option-card" id="adminUnlockForm">
+        <h3>Admin Access</h3>
+        <input id="unlockMobile" placeholder="Admin mobile" autocomplete="username">
+        <input id="unlockPassword" type="password" placeholder="Admin password" autocomplete="current-password">
+        <button class="primary" type="submit">Unlock Bills</button>
+        <div class="muted">Last 5 copy receipt print admin access tho matrame.</div>
+      </form>`;
+    }
+
+    function lastBillsHtml() {
+      if (!hasAdminAccess()) {
+        return `<div class="option-card"><h3>Last 5 Bills</h3><div class="muted">Admin access required for copy receipts.</div></div>`;
+      }
+      const recent = orders.slice().reverse().slice(0, 5);
+      const rows = recent.map(order => `
+        <button class="bill-action" data-copy-bill="${order.id || order.clientOrderId}" type="button">
+          <div>${order.time || "-"} | ${money(order.total)}</div>
+          <small>${(order.items || []).map(item => `${item.name} x ${item.qty}`).join(", ")}</small>
+        </button>`).join("");
+      return `<div class="option-card"><h3>Last 5 Bills</h3>${rows || `<div class="muted">No bills yet</div>`}</div>`;
+    }
+
+    async function openOptionsModal() {
+      await loadAdminData();
+      $("optionsModalMount").innerHTML = `
+        <div class="modal-backdrop">
+          <div class="payment-modal">
+            <h2>Options</h2>
+            <div class="option-actions">
+              <button class="secondary" id="menuTestPrint" type="button">Test Print</button>
+              ${todaySaleHtml()}
+              ${adminUnlockHtml()}
+              ${lastBillsHtml()}
+            </div>
+            <button class="secondary modal-close" type="button" id="closeOptionsModal">Close</button>
+          </div>
+        </div>`;
+      $("closeOptionsModal").addEventListener("click", closeOptionsModal);
+      $("menuTestPrint").addEventListener("click", testPrint);
+      if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
+      document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
+    }
+
+    function closeOptionsModal() {
+      $("optionsModalMount").innerHTML = "";
+    }
+
+    async function printCopyBill(orderId) {
+      if (!hasAdminAccess()) {
+        $("posMessage").textContent = "Admin access required";
+        $("posMessage").className = "status error";
+        return;
+      }
+      const order = orders.find(row => String(row.id || row.clientOrderId) === String(orderId));
+      if (!order) return;
+      if (window.AxenPrinter && typeof window.AxenPrinter.print === "function") {
+        const result = window.AxenPrinter.print(receiptText(order, true));
+        $("posMessage").textContent = result || "Copy receipt sent";
+        $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
+      } else {
+        console.log(receiptText(order, true));
+        $("posMessage").textContent = "Copy receipt ready only inside Android APK printer mode.";
+        $("posMessage").className = "status";
+      }
+    }
+
+    async function unlockAdminBills(event) {
+      event.preventDefault();
+      try {
+        const data = await api("/login", {
+          method: "POST",
+          body: JSON.stringify({ mobile: $("unlockMobile").value.trim(), password: $("unlockPassword").value })
+        });
+        if (!data.user || data.user.role !== "admin") throw new Error("Admin only");
+        adminUnlocked = true;
+        if (data.token) localStorage.setItem(tokenKey, data.token);
+        await loadAdminData();
+        openOptionsModal();
+      } catch {
+        $("posMessage").textContent = "Admin unlock failed";
         $("posMessage").className = "status error";
       }
     }
@@ -801,18 +975,26 @@
       }
     }
 
+    function setModalSelection(button) {
+      document.querySelectorAll("[data-modal-pay], [data-show-split], [data-show-credit]").forEach(btn => btn.classList.remove("selected"));
+      if (button) button.classList.add("selected");
+    }
+
     function openPaymentModal() {
       if (!cart.length) return;
+      wakePrinter();
       const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const creditNames = users.map(row => row.name).filter(Boolean);
       $("paymentModalMount").innerHTML = `
         <div class="modal-backdrop">
           <div class="payment-modal">
             <h2>Select Payment</h2>
             <div class="payment-total"><span>Total Amount</span><strong>${money(orderTotal)}</strong></div>
             <div class="payment-actions">
-              <button class="primary-choice" data-modal-pay="Cash">Cash</button>
+              <button data-modal-pay="Cash">Cash</button>
               <button data-modal-pay="Online">Online</button>
               <button data-show-split>Split</button>
+              <button data-show-credit>Credit</button>
               <button data-modal-pay="Cancel">Cancel</button>
             </div>
             <div class="split-box hidden" id="modalSplitBox">
@@ -820,12 +1002,32 @@
               <label>Online <input id="modalSplitOnline" type="number" min="0" inputmode="numeric" value="${Math.floor(orderTotal / 2)}"></label>
               <button class="primary" data-modal-pay="Split" type="button">Confirm Split</button>
             </div>
+            <div class="credit-box hidden" id="modalCreditBox">
+              <label>Credit Name
+                <input id="creditNameInput" list="creditNames" placeholder="Select or type name">
+                <datalist id="creditNames">${creditNames.map(name => `<option value="${name}"></option>`).join("")}</datalist>
+              </label>
+              <button class="primary" data-modal-pay="Credit" type="button">Confirm Credit</button>
+            </div>
             <button class="secondary modal-close" type="button" id="closePaymentModal">Close</button>
             <div class="status" id="paymentModalStatus"></div>
           </div>
         </div>`;
-      document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", () => completeOrder(btn.dataset.modalPay)));
-      document.querySelector("[data-show-split]").addEventListener("click", () => $("modalSplitBox").classList.remove("hidden"));
+      document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", () => {
+        setModalSelection(btn);
+        completeOrder(btn.dataset.modalPay);
+      }));
+      document.querySelector("[data-show-split]").addEventListener("click", event => {
+        setModalSelection(event.currentTarget);
+        $("modalCreditBox").classList.add("hidden");
+        $("modalSplitBox").classList.remove("hidden");
+      });
+      document.querySelector("[data-show-credit]").addEventListener("click", event => {
+        setModalSelection(event.currentTarget);
+        $("modalSplitBox").classList.add("hidden");
+        $("modalCreditBox").classList.remove("hidden");
+        $("creditNameInput").focus();
+      });
       $("closePaymentModal").addEventListener("click", closePaymentModal);
       $("modalSplitCash").addEventListener("input", () => {
         $("modalSplitOnline").value = Math.max(0, orderTotal - Number($("modalSplitCash").value || 0));
@@ -839,6 +1041,12 @@
     async function completeOrder(selectedPayment) {
       if (!cart.length) return closePaymentModal();
       const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const creditName = selectedPayment === "Credit" ? String($("creditNameInput").value || "").trim() : "";
+      if (selectedPayment === "Credit" && !creditName) {
+        $("paymentModalStatus").textContent = "Credit name select or type cheyyandi";
+        $("paymentModalStatus").className = "status error";
+        return;
+      }
       payment = selectedPayment;
       const payload = {
         id: Date.now(),
@@ -848,6 +1056,7 @@
         cashier: user.name,
         payment: selectedPayment,
         paymentBreakup: paymentBreakup(orderTotal, selectedPayment),
+        creditName,
         total: orderTotal,
         items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, qty: item.qty }))
       };
@@ -886,9 +1095,14 @@
 
     function dashboardStats() {
       const total = orders.reduce((sum, order) => sum + Number(order.total || 0), 0);
-      const cash = orders.filter(order => order.payment === "Cash").reduce((sum, order) => sum + Number(order.total || 0), 0);
-      const online = total - cash;
-      return { total, cash, online, count: orders.length };
+      const paid = orders.reduce((sum, order) => {
+        const pay = orderBreakup(order);
+        sum.cash += pay.cash;
+        sum.online += pay.online;
+        sum.credit += pay.credit;
+        return sum;
+      }, { cash: 0, online: 0, credit: 0 });
+      return { total, cash: paid.cash, online: paid.online, credit: paid.credit, count: orders.length };
     }
 
     function renderAdmin() {
@@ -1054,11 +1268,7 @@
     });
     $("clearCart").addEventListener("click", () => { cart = []; renderCart(); renderProducts(); });
     $("placeOrder").addEventListener("click", openPaymentModal);
-    $("testPrintBtn").addEventListener("click", testPrint);
-    $("profileBtn").addEventListener("click", () => {
-      $("posMessage").textContent = `${user.name} | ${user.role} | ${API}`;
-      $("posMessage").className = "status";
-    });
+    $("profileBtn").addEventListener("click", openOptionsModal);
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
       adminTab = btn.dataset.adminTab;
       renderAdmin();

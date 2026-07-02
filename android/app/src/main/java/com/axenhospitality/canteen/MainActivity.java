@@ -65,6 +65,34 @@ public class MainActivity extends BridgeActivity {
 
     public class ThermalPrinterBridge {
         @JavascriptInterface
+        public String wake() {
+            if (!hasBluetoothPermission()) {
+                requestBluetoothPermission();
+                return "Bluetooth permission needed";
+            }
+
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            if (adapter == null || !adapter.isEnabled()) return "Bluetooth is off";
+
+            Set<BluetoothDevice> devices = adapter.getBondedDevices();
+            if (devices == null || devices.isEmpty()) return "Pair the 58mm printer first";
+
+            BluetoothDevice printer = findPrinter(devices);
+            try (BluetoothSocket socket = printer.createRfcommSocketToServiceRecord(SPP_UUID)) {
+                if (hasBluetoothScanPermission()) {
+                    adapter.cancelDiscovery();
+                }
+                socket.connect();
+                OutputStream output = socket.getOutputStream();
+                output.write(new byte[]{0x1B, 0x40});
+                output.flush();
+                return "Printer ready";
+            } catch (Exception error) {
+                return "Printer failed: " + error.getMessage();
+            }
+        }
+
+        @JavascriptInterface
         public String print(String text) {
             if (!hasBluetoothPermission()) {
                 requestBluetoothPermission();
@@ -77,15 +105,7 @@ public class MainActivity extends BridgeActivity {
             Set<BluetoothDevice> devices = adapter.getBondedDevices();
             if (devices == null || devices.isEmpty()) return "Pair the 58mm printer first";
 
-            BluetoothDevice printer = null;
-            for (BluetoothDevice device : devices) {
-                String name = device.getName() == null ? "" : device.getName().toLowerCase();
-                if (name.contains("printer") || name.contains("58") || name.contains("pos") || name.contains("thermal")) {
-                    printer = device;
-                    break;
-                }
-            }
-            if (printer == null) printer = devices.iterator().next();
+            BluetoothDevice printer = findPrinter(devices);
 
             try (BluetoothSocket socket = printer.createRfcommSocketToServiceRecord(SPP_UUID)) {
                 if (hasBluetoothScanPermission()) {
@@ -101,6 +121,16 @@ public class MainActivity extends BridgeActivity {
             } catch (Exception error) {
                 return "Printer failed: " + error.getMessage();
             }
+        }
+
+        private BluetoothDevice findPrinter(Set<BluetoothDevice> devices) {
+            for (BluetoothDevice device : devices) {
+                String name = device.getName() == null ? "" : device.getName().toLowerCase();
+                if (name.contains("printer") || name.contains("58") || name.contains("pos") || name.contains("thermal")) {
+                    return device;
+                }
+            }
+            return devices.iterator().next();
         }
     }
 }

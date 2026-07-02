@@ -753,6 +753,9 @@
           </section>
           <section class="grid-2-even">
             <div class="panel"><h2>Category Report</h2>${reportCategoryHtml(data.categories, data.total)}</div>
+            <div class="panel"><h2>Credit Report</h2>${reportCreditHtml(data.creditRows)}</div>
+          </section>
+          <section class="grid-2-even">
             <div class="panel"><h2>Hourly Sales Trend</h2>${hourlyTrendHtml(data.orders)}</div>
           </section>
           <section class="panel"><h2>Quick Actions</h2>
@@ -809,9 +812,11 @@
     function paymentBreakup(order) {
       const total = Number(order.total || 0);
       const breakup = order.paymentBreakup || {};
-      if (order.payment === "Split") return { cash: Number(breakup.cash || 0), online: Number(breakup.online || 0) };
-      if (order.payment === "Online") return { cash: 0, online: total };
-      return { cash: total, online: 0 };
+      if (order.payment === "Split") return { cash: Number(breakup.cash || 0), online: Number(breakup.online || 0), credit: Number(breakup.credit || 0) };
+      if (order.payment === "Online") return { cash: 0, online: total, credit: 0 };
+      if (order.payment === "Credit") return { cash: 0, online: 0, credit: total };
+      if (order.payment === "Cancel") return { cash: 0, online: 0, credit: 0 };
+      return { cash: total, online: 0, credit: 0 };
     }
 
     function reportDataset() {
@@ -824,20 +829,30 @@
       const itemMap = new Map();
       const userMap = new Map();
       const categoryMap = new Map();
-      let total = 0, cash = 0, online = 0, totalQty = 0;
+      const creditMap = new Map();
+      let total = 0, cash = 0, online = 0, credit = 0, totalQty = 0;
       orders.forEach(order => {
         const amount = Number(order.total || 0);
         const pay = paymentBreakup(order);
         total += amount;
         cash += pay.cash;
         online += pay.online;
+        credit += pay.credit;
         const userName = order.cashier || "Unknown";
-        const userRow = userMap.get(userName) || { user: userName, orders: 0, cash: 0, online: 0, total: 0 };
+        const userRow = userMap.get(userName) || { user: userName, orders: 0, cash: 0, online: 0, credit: 0, total: 0 };
         userRow.orders += 1;
         userRow.cash += pay.cash;
         userRow.online += pay.online;
+        userRow.credit += pay.credit;
         userRow.total += amount;
         userMap.set(userName, userRow);
+        if (pay.credit) {
+          const name = order.creditName || "Unassigned Credit";
+          const creditRow = creditMap.get(name) || { name, orders: 0, amount: 0 };
+          creditRow.orders += 1;
+          creditRow.amount += pay.credit;
+          creditMap.set(name, creditRow);
+        }
         (order.items || []).forEach(item => {
           const qty = Number(item.qty || 0);
           const lineTotal = qty * Number(item.price || 0);
@@ -856,7 +871,8 @@
       const items = [...itemMap.values()].sort((a, b) => b.qty - a.qty);
       const userSales = [...userMap.values()].sort((a, b) => b.total - a.total);
       const categories = [...categoryMap.values()].sort((a, b) => b.total - a.total);
-      return { orders, total, cash, online, totalQty, items, userSales, categories };
+      const creditRows = [...creditMap.values()].sort((a, b) => b.amount - a.amount);
+      return { orders, total, cash, online, credit, totalQty, items, userSales, categories, creditRows };
     }
 
     function reportMetric(label, value, note) {
@@ -876,7 +892,7 @@
     }
 
     function reportUserSalesHtml(rows) {
-      return `<div class="table-wrap"><table><thead><tr><th>User name</th><th>Orders</th><th>Cash</th><th>Online</th><th>Total</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.user)}</strong></td><td>${item.orders}</td><td>${money(item.cash)}</td><td>${money(item.online)}</td><td>${money(item.total)}</td></tr>`).join("") || `<tr><td colspan="5">No user sales yet</td></tr>`}</tbody></table></div>`;
+      return `<div class="table-wrap"><table><thead><tr><th>User name</th><th>Orders</th><th>Cash</th><th>Online</th><th>Credit</th><th>Total</th></tr></thead><tbody>${rows.map(item => `<tr><td><strong>${esc(item.user)}</strong></td><td>${item.orders}</td><td>${money(item.cash)}</td><td>${money(item.online)}</td><td>${money(item.credit)}</td><td>${money(item.total)}</td></tr>`).join("") || `<tr><td colspan="6">No user sales yet</td></tr>`}</tbody></table></div>`;
     }
 
     function reportItemsHtml(items, totalQty) {
@@ -891,14 +907,21 @@
       const total = data.total || 1;
       const cashPct = Math.round((data.cash / total) * 100);
       const onlinePct = Math.round((data.online / total) * 100);
+      const creditPct = Math.round((data.credit / total) * 100);
       return `<div class="grid-2-even" style="align-items:center;margin-bottom:0">
-        <div class="donut small" style="background:conic-gradient(var(--green) 0 ${cashPct}%, var(--blue) ${cashPct}% ${cashPct + onlinePct}%, var(--purple) ${cashPct + onlinePct}% 100%)"><span>Total<br>${money(data.total)}</span></div>
+        <div class="donut small" style="background:conic-gradient(var(--green) 0 ${cashPct}%, var(--blue) ${cashPct}% ${cashPct + onlinePct}%, var(--orange) ${cashPct + onlinePct}% ${cashPct + onlinePct + creditPct}%, var(--purple) ${cashPct + onlinePct + creditPct}% 100%)"><span>Total<br>${money(data.total)}</span></div>
         <div class="list">
           <div class="list-row"><span>Cash total</span><strong>${money(data.cash)} (${cashPct}%)</strong></div>
           <div class="list-row"><span>Online total</span><strong>${money(data.online)} (${onlinePct}%)</strong></div>
+          <div class="list-row"><span>Credit total</span><strong>${money(data.credit)} (${creditPct}%)</strong></div>
           <div class="list-row"><span>UPI / Card</span><strong>${money(dashboard.upi + dashboard.card)}</strong></div>
         </div>
       </div>`;
+    }
+
+    function reportCreditHtml(rows) {
+      const body = rows.map(item => `<tr><td><strong>${esc(item.name)}</strong></td><td>${item.orders}</td><td>${money(item.amount)}</td></tr>`).join("");
+      return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Orders</th><th>Credit Amount</th></tr></thead><tbody>${body || `<tr><td colspan="3">No credit sales in selected range</td></tr>`}</tbody></table></div>`;
     }
 
     function reportCategoryHtml(categories, total) {
