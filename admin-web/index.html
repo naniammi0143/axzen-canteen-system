@@ -30,8 +30,10 @@
       background:
         linear-gradient(180deg, #fbfcff 0%, #f6f8fb 48%, #eef2f7 100%);
       color: var(--ink);
-      font-family: Aptos, "SF Pro Display", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-family: "Segoe UI Variable", "Segoe UI", "Noto Sans", Arial, sans-serif;
       letter-spacing: 0;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
     }
     button, input, select { font: inherit; }
     button { cursor: pointer; }
@@ -80,7 +82,7 @@
       border-radius: 8px;
       border: 0;
       padding: 0 14px;
-      font-weight: 850;
+      font-weight: 700;
     }
     .primary { background: linear-gradient(180deg, #1684ff, #006de8); color: white; box-shadow: 0 12px 28px #007aff33; }
     .secondary { background: #f2f7ff; color: var(--blue); border: 1px solid #d7e8ff; }
@@ -126,7 +128,7 @@
       color: #d7deea;
       text-align: left;
       padding: 0 13px;
-      font-weight: 850;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -193,7 +195,7 @@
     .donut.small { width: 148px; height: 148px; margin: 0; }
     .donut.small span { width: 86px; height: 86px; }
 
-    table { width: 100%; border-collapse: collapse; font-size: 13px; font-weight: 550; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; font-weight: 500; }
     th { color: var(--muted); text-align: left; font-size: 12px; padding: 11px 10px; border-bottom: 1px solid var(--line); background: #fafbfc; }
     td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
     tbody tr:hover { background: #fbfcff; }
