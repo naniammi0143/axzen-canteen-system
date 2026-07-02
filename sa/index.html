@@ -433,37 +433,40 @@
     #posView .net-badge { display: none; }
     #posView .icon-btn { width: 50px; height: 50px; border-radius: 18px; border-color: #edf1f5; box-shadow: 0 12px 24px #1118270a; font-size: 22px; }
     .brand-mark { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: white; background: linear-gradient(180deg, #3c9632, #2f7d26); box-shadow: 0 14px 28px #2f7d2633; font-size: 25px; }
-    .connection-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; border-radius: 999px; padding: 0 14px; color: #2f7d26; background: #eef8ef; font-size: 13px; font-weight: 850; white-space: nowrap; }
+    .connection-pill { display: none; }
     .notif-dot { position: relative; }
-    .notif-dot::after { content: ""; position: absolute; top: 11px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); border: 2px solid white; }
-    #posView .content { padding: 18px 14px 335px; }
-    .search-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; margin-bottom: 14px; }
+    .notif-dot::after { content: ""; position: absolute; top: 11px; right: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--red); border: 2px solid white; }
+    .notif-dot.online::after { background: #16a34a; }
+    .notif-dot.offline::after { background: #ef4444; }
+    #posView .content { padding: 12px 14px 310px; }
+    .search-row { display: grid; grid-template-columns: 1fr; gap: 0; margin-bottom: 14px; }
     .search-box { display: flex; align-items: center; gap: 10px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; padding: 0 14px; color: #667085; box-shadow: 0 10px 24px #11182708; }
     .search-box input { border: 0; box-shadow: none; background: transparent; padding: 0; font-size: 16px; font-weight: 650; }
-    .filter-btn { min-width: 84px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; color: var(--ink); font-weight: 850; box-shadow: 0 10px 24px #11182708; }
+    .filter-btn { display: none; }
     #posView .tabs { gap: 12px; padding: 4px 0 16px; }
     #posView .tab { min-height: 52px; border-radius: 18px; padding: 0 16px; border-color: #e5eaf0; font-size: 15px; font-weight: 850; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 8px 18px #11182708; }
-    #posView .tab.active { background: linear-gradient(180deg, #3c9632, #2f7d26); border-color: #2f7d26; color: white; }
+    #posView .tab.active { background: #edf4ff; border-color: #c8d8ef; color: #172033; }
     #posView .menu-grid { gap: 16px 12px; }
-    #posView .item-card { min-height: 238px; border-radius: 16px; grid-template-rows: 142px auto auto; gap: 7px; padding: 8px 8px 12px; text-align: left; box-shadow: 0 12px 28px #1118270d; }
+    #posView .item-card { min-height: 206px; border-radius: 16px; grid-template-rows: 142px auto; gap: 8px; padding: 8px 8px 12px; text-align: left; box-shadow: 0 12px 28px #1118270d; }
     #posView .item-icon { height: 142px; border-radius: 12px; }
     #posView .item-card h3 { font-size: 19px; }
-    #posView .item-card p { color: #667085; font-size: 14px; font-weight: 650; }
-    .item-body { display: grid; gap: 5px; padding: 4px 6px 0; }
-    .item-name-line { display: flex; align-items: center; gap: 7px; }
+    #posView .item-card p { display: none; }
+    .item-body { display: grid; gap: 7px; padding: 4px 6px 0; }
+    .item-name-line { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
     .item-emoji { font-size: 19px; }
-    .item-foot { display: flex; align-items: end; justify-content: space-between; gap: 8px; padding: 0 6px; }
-    .item-price { color: #2f7d26; font-size: 22px; font-weight: 950; }
-    .add-mini { min-height: 38px; border: 1px solid #2f7d26; border-radius: 10px; background: white; color: #2f7d26; padding: 0 12px; font-weight: 850; }
-    #posView .count-badge { top: 10px; right: 48px; }
+    .item-name-wrap { display: inline-flex; align-items: center; min-width: 0; gap: 7px; }
+    .item-foot { display: block; padding: 0; }
+    .item-price { color: #27364a; font-size: 18px; font-weight: 950; white-space: nowrap; }
+    .add-mini { min-height: 0; border: 0; border-radius: 0; background: transparent; color: #52657f; padding: 0; font-size: 13px; font-weight: 900; text-align: right; }
+    #posView .count-badge { top: 10px; right: 12px; }
     #posView .remove-badge { top: 10px; left: 12px; }
     #posView .cart-sheet { width: min(520px, calc(100% - 20px)); bottom: 10px; border: 1px solid #e8edf4; border-radius: 18px; background: #fffffff5; box-shadow: 0 -18px 45px #11182716; }
     #posView .cart-inner { padding: 14px; }
     .cart-title-wrap { display: flex; align-items: center; gap: 12px; }
-    .cart-icon { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: white; background: linear-gradient(180deg, #3c9632, #2f7d26); font-size: 21px; }
+    .cart-icon { display: none; }
     #posView .cart-head strong { display: block; font-size: 17px; }
     #posView .cart-head button { font-size: 14px; }
-    #posView .place { margin-top: 10px; background: linear-gradient(180deg, #3c9632, #2f7d26); box-shadow: 0 12px 26px #2f7d2633; }
+    #posView .place { margin-top: 10px; background: linear-gradient(180deg, #24384f, #172033); box-shadow: 0 12px 26px #17203326; }
 
     @media (max-width: 360px) {
       .brand-name { font-size: 36px; }
@@ -507,7 +510,7 @@
             <span>⌕</span>
             <input id="itemSearch" placeholder="Search for items...">
           </label>
-          <button class="filter-btn" id="filterBtn" type="button">☷ Filter</button>
+          <button class="filter-btn" id="filterBtn" type="button">Filter</button>
         </div>
         <div class="tabs" id="categoryTabs"></div>
         <div class="menu-grid" id="menuGrid"></div>
@@ -618,6 +621,10 @@
       const badge = $("connectionBadge");
       if (badge) badge.className = `net-badge ${state}`;
       if ($("syncStatus")) $("syncStatus").textContent = text;
+      if ($("profileBtn")) {
+        $("profileBtn").classList.toggle("online", state === "online");
+        $("profileBtn").classList.toggle("offline", state !== "online");
+      }
     }
 
     function categoryIcon(category) {
@@ -814,10 +821,12 @@
           ${cartQty(item.id) ? `<span class="count-badge">${cartQty(item.id)}</span>` : ""}
           <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
           <span class="item-body">
-            <span class="item-name-line"><span class="item-emoji">${itemEmoji(item)}</span><h3>${item.name}</h3></span>
-            <p>${itemSubtitle(item)}</p>
+            <span class="item-name-line">
+              <span class="item-name-wrap"><span class="item-emoji">${itemEmoji(item)}</span><h3>${item.name}</h3></span>
+              <span class="item-price">${money(item.price)}</span>
+            </span>
+            <span class="add-mini">+ Add</span>
           </span>
-          <span class="item-foot"><span class="item-price">${money(item.price)}</span><span class="add-mini">+ Add</span></span>
         </button>
       `).join("") || `<div class="panel">No menu items</div>`;
     }
@@ -951,6 +960,60 @@
         leftRight("Paid Amount", moneyText(paid)),
         leftRight("Balance", moneyText(Math.max(0, total - paid))),
         line,
+        center("THANK YOU! VISIT AGAIN")
+      ].join("\n");
+    }
+
+    function receiptText(order, copy = false) {
+      const width = 46;
+      const line = "-".repeat(width);
+      const thick = "=".repeat(width);
+      const center = value => String(value || "").slice(0, width).padStart(Math.floor((width + String(value || "").slice(0, width).length) / 2)).padEnd(width);
+      const amountText = value => `Rs ${Number(value || 0).toFixed(2)}`.padStart(12);
+      const leftRight = (left, right) => {
+        const l = String(left || "");
+        const r = String(right || "");
+        return (l + " ".repeat(Math.max(1, width - l.length - r.length)) + r).slice(0, width);
+      };
+      const itemLine = (index, item) => {
+        const qty = Number(item.qty || 0);
+        const rate = Number(item.price || 0);
+        const amount = qty * rate;
+        const name = String(item.name || "Item").slice(0, 18).padEnd(18);
+        return `${String(index).padEnd(2)} ${name} ${String(qty).padStart(3)} ${String(rate.toFixed(0)).padStart(5)} ${String(amount.toFixed(2)).padStart(9)}`;
+      };
+      const totalQty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
+      const total = Number(order.total || 0);
+      const paid = order.payment === "Cancel" ? 0 : total;
+      const tokenNo = String(order.id || Date.now()).slice(-4).padStart(4, "0");
+      const paymentLabel = order.payment === "Credit" && order.creditName ? `Credit - ${order.creditName}` : order.payment || "Cash";
+      const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
+      const dateText = billDate.toLocaleDateString("en-IN");
+      const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      const header = [
+        center(String(order.canteen || settings.canteenName || "AXZEN CANTEEN").toUpperCase()),
+        center("AXZEN INFOTECH")
+      ];
+      if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
+      return [
+        ...header,
+        line,
+        leftRight(`Date ${dateText}`, `Time ${timeText}`),
+        leftRight(`Cashier ${order.cashier || user?.name || "-"}`, `Token ${tokenNo}`),
+        leftRight("Payment", paymentLabel),
+        line,
+        "#  Item Name            Qty  Rate    Amount",
+        line,
+        ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
+        line,
+        leftRight("Total Items", String(totalQty)),
+        leftRight("Subtotal", amountText(total)),
+        leftRight("Discount", amountText(0)),
+        thick,
+        leftRight("TOTAL", amountText(total)),
+        leftRight("Paid", amountText(paid)),
+        leftRight("Balance", amountText(Math.max(0, total - paid))),
+        thick,
         center("THANK YOU! VISIT AGAIN")
       ].join("\n");
     }
