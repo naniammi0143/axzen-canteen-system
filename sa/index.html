@@ -407,6 +407,7 @@
             <label>Online <input id="splitOnline" type="number" min="0" inputmode="numeric"></label>
           </div>
           <button class="primary place" id="placeOrder">Place Order</button>
+          <button class="secondary place" id="testPrintBtn" type="button">Test Print</button>
           <div class="status" id="posMessage"></div>
         </div>
       </section>
@@ -725,7 +726,7 @@
         try {
           const result = window.AxenPrinter.print(text);
           $("posMessage").textContent = result || "Order saved and print sent";
-          $("posMessage").className = "status ok";
+          $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
           return;
         } catch (error) {
           $("posMessage").textContent = "Order saved. Printer not connected.";
@@ -734,6 +735,22 @@
         }
       }
       console.log(text);
+    }
+
+    function testPrint() {
+      if (!window.AxenPrinter || typeof window.AxenPrinter.print !== "function") {
+        $("posMessage").textContent = "Direct Bluetooth print works only inside the Android APK.";
+        $("posMessage").className = "status error";
+        return;
+      }
+      try {
+        const result = window.AxenPrinter.print(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n`);
+        $("posMessage").textContent = result;
+        $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
+      } catch (error) {
+        $("posMessage").textContent = `Printer failed: ${error.message || "Unknown error"}`;
+        $("posMessage").className = "status error";
+      }
     }
 
     async function syncPendingOrders() {
@@ -958,6 +975,7 @@
     });
     $("clearCart").addEventListener("click", () => { cart = []; renderCart(); renderProducts(); });
     $("placeOrder").addEventListener("click", placeOrder);
+    $("testPrintBtn").addEventListener("click", testPrint);
     $("profileBtn").addEventListener("click", () => {
       $("posMessage").textContent = `${user.name} | ${user.role} | ${API}`;
       $("posMessage").className = "status";

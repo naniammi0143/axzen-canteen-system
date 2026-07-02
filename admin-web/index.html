@@ -276,6 +276,7 @@
     let settings = { canteenName: "Main Canteen", brandName: "Axzen", tagline: "Infotech", reportTime: "22:00", adminWhatsAppNumber: "", autoReport: false, reportType: "daily" };
     let dashboard = emptyDashboard();
     let whatsappLogs = [];
+    let whatsappStatus = {};
     let defaultProducts = [];
     let tab = "dashboard";
     const $ = id => document.getElementById(id);
@@ -296,7 +297,15 @@
           ...(options.headers || {})
         }
       });
-      if (!response.ok) throw new Error(await response.text());
+      if (!response.ok) {
+        const text = await response.text();
+        let message = text;
+        try {
+          const data = JSON.parse(text);
+          message = data.message || text;
+        } catch {}
+        throw new Error(message);
+      }
       return response.json();
     }
 
@@ -315,6 +324,7 @@
       try { applySettings(await api("/settings")); } catch {}
       try { dashboard = { ...emptyDashboard(), ...(await api("/dashboard")) }; } catch { pageMessage("Server data load failed", "error"); }
       try { whatsappLogs = await api("/whatsapp/logs"); } catch { whatsappLogs = []; }
+      try { whatsappStatus = await api("/whatsapp/status"); } catch { whatsappStatus = {}; }
       try { defaultProducts = await api("/catalog/default-products"); } catch { defaultProducts = []; }
       render();
     }
@@ -603,7 +613,7 @@
           Report Time: ${esc(settings.reportTime || "22:00")}<br>
           Auto Report: ${settings.autoReport ? "ON" : "OFF"}<br>
           Type: ${esc(settings.reportType || "daily")}
-        </div></div>
+        </div>${whatsappStatusHtml()}</div>
         <div class="panel"><h2>WhatsApp Settings</h2><form class="settings-grid" id="reportForm">
           <label>Report Time <input id="reportTime" value="${esc(settings.reportTime || "22:00")}" placeholder="22:00"></label>
           <label>Admin WhatsApp Number <input id="adminWhatsAppNumber" value="${esc(settings.adminWhatsAppNumber || settings.reportPhone || "")}" placeholder="919999999999"></label>
@@ -617,12 +627,21 @@
             <option value="false" ${!settings.autoReport ? "selected" : ""}>OFF</option>
           </select></label>
           <button class="primary">Save Report</button>
-          <button class="secondary" type="button" id="sendTestReport">Send Test WhatsApp Report</button>
+          <button class="secondary" type="button" id="sendTestReport">Save & Send Test</button>
         </form></div>
         <div class="panel"><h2>WhatsApp Logs</h2>${whatsappLogsHtml()}</div>
       </section>`;
       $("reportForm").addEventListener("submit", saveReportSettings);
       $("sendTestReport").addEventListener("click", sendTestReport);
+    }
+
+    function whatsappStatusHtml() {
+      return `<div class="list" style="margin-top:12px">
+        <div class="list-row"><span>Token</span><strong>${whatsappStatus.tokenConfigured ? "Configured" : "Missing"}</strong></div>
+        <div class="list-row"><span>Phone Number ID</span><strong>${whatsappStatus.phoneNumberIdConfigured ? "Configured" : "Missing"}</strong></div>
+        <div class="list-row"><span>Recipient</span><strong>${whatsappStatus.recipientConfigured ? "Configured" : "Missing"}</strong></div>
+        <div class="list-row"><span>Auto Report</span><strong>${whatsappStatus.autoReport ? "ON" : "OFF"}</strong></div>
+      </div>`;
     }
 
     async function saveReportSettings(event) {
@@ -644,12 +663,22 @@
     }
 
     async function sendTestReport() {
-      pageMessage("Sending WhatsApp test report...");
+      pageMessage("Saving settings and sending WhatsApp test report...");
       try {
+        await api("/settings", {
+          method: "POST",
+          body: JSON.stringify({
+            reportTime: $("reportTime").value,
+            adminWhatsAppNumber: $("adminWhatsAppNumber").value,
+            reportPhone: $("adminWhatsAppNumber").value,
+            reportType: $("reportType").value,
+            autoReport: $("autoReport").value === "true"
+          })
+        });
         await api("/whatsapp/send-test-report", { method: "POST", body: JSON.stringify({}) });
         pageMessage("WhatsApp test report sent");
       } catch (error) {
-        pageMessage("WhatsApp test failed. Check token, phone number ID, and admin number.", "error");
+        pageMessage(`WhatsApp test failed: ${error.message || "Check token, phone number ID, and admin number."}`, "error");
       }
       await loadData();
       renderWhatsapp();
@@ -657,8 +686,8 @@
 
     function whatsappLogsHtml() {
       if (!whatsappLogs.length) return `<span class="muted">No WhatsApp logs yet</span>`;
-      return `<table><thead><tr><th>Time</th><th>Recipient</th><th>Status</th><th>Reason</th></tr></thead><tbody>${whatsappLogs.slice(0, 10).map(log => `
-        <tr><td>${esc(new Date(log.time).toLocaleString("en-IN"))}</td><td>${esc(log.to || "-")}</td><td>${log.success ? `<span class="pill green">Sent</span>` : `<span class="pill red">Failed</span>`}</td><td>${esc(log.reason || log.error || "-")}</td></tr>
+      return `<table><thead><tr><th>Time</th><th>Recipient</th><th>Status</th><th>Details</th></tr></thead><tbody>${whatsappLogs.slice(0, 10).map(log => `
+        <tr><td>${esc(new Date(log.time).toLocaleString("en-IN"))}</td><td>${esc(log.to || "-")}</td><td>${log.success ? `<span class="pill green">Sent</span>` : `<span class="pill red">Failed</span>`}</td><td>${esc(log.error || log.reason || "-")}</td></tr>
       `).join("")}</tbody></table>`;
     }
 

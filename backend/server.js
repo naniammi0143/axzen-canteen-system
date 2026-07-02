@@ -1004,6 +1004,20 @@ app.post("/whatsapp/send-test-report", requireAdmin, async (req, res) => {
 
 app.get("/whatsapp/logs", requireAdmin, async (req, res) => res.json(await allWhatsappLogs()));
 
+app.get("/whatsapp/status", requireAdmin, async (req, res) => {
+  const appSettings = await getSettings();
+  res.json({
+    success: true,
+    tokenConfigured: Boolean(process.env.WHATSAPP_TOKEN),
+    phoneNumberIdConfigured: Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID),
+    apiVersion: process.env.WHATSAPP_API_VERSION || "v25.0",
+    recipientConfigured: Boolean(appSettings.adminWhatsAppNumber || appSettings.reportPhone),
+    autoReport: Boolean(appSettings.autoReport),
+    reportTime: appSettings.reportTime || "22:00",
+    reportType: appSettings.reportType || "daily"
+  });
+});
+
 app.get("/api/cron/whatsapp", async (req, res) => {
   res.json(await checkScheduledWhatsAppReport());
 });

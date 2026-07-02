@@ -45,7 +45,8 @@ async function sendWhatsAppText(to, message) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const metaMessage = data.error?.message || data.error?.error_user_msg || response.statusText;
-    throw new Error(`Meta API error ${response.status}: ${metaMessage}`);
+    const details = data.error?.error_data?.details || data.error?.fbtrace_id || "";
+    throw new Error(`Meta API error ${response.status}: ${metaMessage}${details ? ` | ${details}` : ""}`);
   }
 
   return data;
