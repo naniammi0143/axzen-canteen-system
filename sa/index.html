@@ -14,6 +14,7 @@
       --navy: #101828;
       --blue: #007aff;
       --green: #22c55e;
+      --green-dark: #2f7d26;
       --orange: #f59e0b;
       --red: #ef4444;
       --shadow: 0 18px 45px #11182714;
@@ -24,7 +25,7 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background: linear-gradient(180deg, #fbfbfd, #f5f5f7);
+      background: #f7f8fb;
       color: var(--ink);
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Arial, sans-serif;
     }
@@ -35,11 +36,11 @@
     .hidden { display: none !important; }
 
     .app {
-      max-width: 480px;
+      max-width: 520px;
       min-height: 100vh;
       margin: 0 auto;
-      background: #f7f8fb;
-      box-shadow: 0 0 45px #11182718;
+      background: #f8fafc;
+      box-shadow: 0 0 55px #11182714;
       overflow-x: hidden;
     }
 
@@ -417,6 +418,55 @@
 
     .form-grid { display: grid; gap: 10px; }
 
+    /* POS visual style matching the supplied mobile mockup. */
+    #posView .topbar {
+      gap: 14px;
+      padding: 18px 16px 16px;
+      background: #f8fafcf2;
+      border-bottom: 1px solid #edf1f5;
+    }
+    #posView .title-block { flex: 1; }
+    #posView .title-block strong { font-size: 23px; line-height: 1.05; }
+    #posView .title-block span { margin-top: 5px; color: #667085; font-size: 15px; font-weight: 650; }
+    #posView .net-badge { display: none; }
+    #posView .icon-btn { width: 50px; height: 50px; border-radius: 18px; border-color: #edf1f5; box-shadow: 0 12px 24px #1118270a; font-size: 22px; }
+    .brand-mark { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: white; background: linear-gradient(180deg, #3c9632, #2f7d26); box-shadow: 0 14px 28px #2f7d2633; font-size: 25px; }
+    .connection-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; border-radius: 999px; padding: 0 14px; color: #2f7d26; background: #eef8ef; font-size: 13px; font-weight: 850; white-space: nowrap; }
+    .notif-dot { position: relative; }
+    .notif-dot::after { content: ""; position: absolute; top: 11px; right: 12px; width: 8px; height: 8px; border-radius: 50%; background: var(--red); border: 2px solid white; }
+    #posView .content { padding: 18px 14px 335px; }
+    .search-row { display: grid; grid-template-columns: 1fr auto; gap: 14px; margin-bottom: 14px; }
+    .search-box { display: flex; align-items: center; gap: 10px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; padding: 0 14px; color: #667085; box-shadow: 0 10px 24px #11182708; }
+    .search-box input { border: 0; box-shadow: none; background: transparent; padding: 0; font-size: 16px; font-weight: 650; }
+    .filter-btn { min-width: 84px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; color: var(--ink); font-weight: 850; box-shadow: 0 10px 24px #11182708; }
+    #posView .tabs { gap: 12px; padding: 4px 0 16px; }
+    #posView .tab { min-height: 52px; border-radius: 18px; padding: 0 16px; border-color: #e5eaf0; font-size: 15px; font-weight: 850; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 8px 18px #11182708; }
+    #posView .tab.active { background: linear-gradient(180deg, #3c9632, #2f7d26); border-color: #2f7d26; color: white; }
+    #posView .menu-grid { gap: 16px 12px; }
+    #posView .item-card { min-height: 238px; border-radius: 16px; grid-template-rows: 142px auto auto; gap: 7px; padding: 8px 8px 12px; text-align: left; box-shadow: 0 12px 28px #1118270d; }
+    #posView .item-icon { height: 142px; border-radius: 12px; }
+    #posView .item-card h3 { font-size: 19px; }
+    #posView .item-card p { color: #667085; font-size: 14px; font-weight: 650; }
+    .item-body { display: grid; gap: 5px; padding: 4px 6px 0; }
+    .item-name-line { display: flex; align-items: center; gap: 7px; }
+    .item-emoji { font-size: 19px; }
+    .item-foot { display: flex; align-items: end; justify-content: space-between; gap: 8px; padding: 0 6px; }
+    .item-price { color: #2f7d26; font-size: 22px; font-weight: 950; }
+    .add-mini { min-height: 38px; border: 1px solid #2f7d26; border-radius: 10px; background: white; color: #2f7d26; padding: 0 12px; font-weight: 850; }
+    .heart-badge { position: absolute; top: 16px; right: 16px; color: white; text-shadow: 0 2px 8px #0009; font-size: 25px; font-weight: 700; pointer-events: none; }
+    #posView .count-badge { top: 10px; right: 48px; }
+    #posView .remove-badge { top: 10px; left: 12px; }
+    #posView .cart-sheet { width: min(520px, calc(100% - 20px)); bottom: 10px; border: 1px solid #e8edf4; border-radius: 18px; background: #fffffff5; box-shadow: 0 -18px 45px #11182716; }
+    #posView .cart-inner { padding: 14px; }
+    .cart-title-wrap { display: flex; align-items: center; gap: 12px; }
+    .cart-icon { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: white; background: linear-gradient(180deg, #3c9632, #2f7d26); font-size: 21px; }
+    #posView .cart-head strong { display: block; font-size: 17px; }
+    #posView .cart-head button { font-size: 14px; }
+    #posView .pay-toggle { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
+    #posView .pay-toggle button { min-height: 52px; border: 1px solid var(--line); border-radius: 14px; background: white; color: #4b5563; font-weight: 850; display: grid; place-items: center; gap: 2px; }
+    #posView .pay-toggle button.active { background: linear-gradient(180deg, #3c9632, #2f7d26); border-color: #2f7d26; color: white; box-shadow: 0 10px 20px #2f7d2630; }
+    #posView .place { margin-top: 10px; background: linear-gradient(180deg, #3c9632, #2f7d26); box-shadow: 0 12px 26px #2f7d2633; }
+
     @media (max-width: 360px) {
       .brand-name { font-size: 36px; }
       .cart-sheet { font-size: 13px; }
@@ -444,14 +494,23 @@
 
     <section id="posView" class="hidden">
       <header class="topbar">
-        <button class="icon-btn" id="logoutPos">X</button>
+        <button class="icon-btn" id="logoutPos" type="button">☰</button>
+        <div class="brand-mark">🍴</div>
         <div class="title-block">
-          <strong id="posCanteen">Main Canteen</strong>
-          <span class="connection-line"><span class="net-badge offline" id="connectionBadge"></span><span id="syncStatus">Connect internet</span></span>
+          <strong id="posCanteen">Axzen Canteen</strong>
+          <span>Good Food, Good Mood</span>
         </div>
-        <button class="icon-btn" id="profileBtn">...</button>
+        <div class="connection-pill"><span class="net-badge offline" id="connectionBadge"></span><span id="syncStatus">Connected</span></div>
+        <button class="icon-btn notif-dot" id="profileBtn" type="button">🔔</button>
       </header>
       <section class="content">
+        <div class="search-row">
+          <label class="search-box" aria-label="Search for items">
+            <span>⌕</span>
+            <input id="itemSearch" placeholder="Search for items...">
+          </label>
+          <button class="filter-btn" id="filterBtn" type="button">☷ Filter</button>
+        </div>
         <div class="tabs" id="categoryTabs"></div>
         <div class="menu-grid" id="menuGrid"></div>
       </section>
@@ -464,13 +523,26 @@
       <section class="cart-sheet">
         <div class="cart-inner">
           <div class="cart-head">
-            <strong id="cartTitle">Cart (0 items)</strong>
-            <button id="clearCart">Clear</button>
+            <div class="cart-title-wrap">
+              <span class="cart-icon">🛒</span>
+              <div>
+                <strong id="cartTitle">Cart (0 items)</strong>
+                <div class="muted" id="cartSubtitle">Cart empty</div>
+              </div>
+            </div>
+            <button id="clearCart">🗑 Clear</button>
           </div>
           <div class="cart-list" id="cartList"></div>
           <div class="row-between">
             <strong>Total Amount</strong>
             <strong id="cartTotal">Rs 0</strong>
+          </div>
+          <div class="pay-toggle" id="cartPaymentButtons">
+            <button data-pay="Cash" type="button"><span>💼</span>Cash</button>
+            <button data-pay="Online" type="button"><span>💳</span>Online</button>
+            <button data-pay="Split" type="button"><span>◔</span>Split</button>
+            <button data-pay="Credit" type="button"><span>☷</span>Credit</button>
+            <button data-pay="Cancel" type="button"><span>⊗</span>Cancel</button>
           </div>
           <button class="primary place" id="placeOrder">Place Order</button>
           <div class="status" id="posMessage"></div>
@@ -536,7 +608,8 @@
     let users = [];
     let activeCategory = "All";
     let cart = [];
-    let payment = "Cash";
+    let payment = "";
+    let itemSearch = "";
     let adminTab = "dashboard";
     let serverOnline = navigator.onLine;
     let adminUnlocked = false;
@@ -554,6 +627,33 @@
       const badge = $("connectionBadge");
       if (badge) badge.className = `net-badge ${state}`;
       if ($("syncStatus")) $("syncStatus").textContent = text;
+    }
+
+    function categoryIcon(category) {
+      return ({ All: "▦", Tiffin: "▤", Meals: "🍽", Tea: "☕", Snacks: "△", Juice: "🥤", Drinks: "🥤", Lunch: "🍛", Dinner: "🍽" })[category] || "□";
+    }
+
+    function itemEmoji(item) {
+      const name = String(item.name || "").toLowerCase();
+      if (name.includes("tea")) return "☕";
+      if (name.includes("coffee")) return "☕";
+      if (name.includes("meals")) return "🍽";
+      if (name.includes("idly") || name.includes("idli")) return "🟠";
+      if (name.includes("dosa")) return "🥞";
+      if (name.includes("samosa")) return "△";
+      if (name.includes("juice")) return "🥤";
+      return categoryIcon(item.category || "All");
+    }
+
+    function itemSubtitle(item) {
+      const name = String(item.name || "").toLowerCase();
+      if (name.includes("tea")) return "Fresh & Strong";
+      if (name.includes("coffee")) return "Hot & Aromatic";
+      if (name.includes("meals")) return "Healthy & Delicious";
+      if (name.includes("idly") || name.includes("idli")) return "Soft & Fluffy";
+      if (name.includes("dosa")) return "Crispy & Tasty";
+      if (name.includes("samosa")) return "Hot & Crunchy";
+      return item.category || "Fresh Item";
     }
 
     async function api(path, options = {}) {
@@ -706,20 +806,38 @@
       const found = new Set(products.map(item => item.category || "Other"));
       const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
       $("categoryTabs").innerHTML = categories.map(category => `
-        <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${category}">${category}</button>
+        <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${category}"><span>${categoryIcon(category)}</span>${category}</button>
       `).join("");
+    }
+
+    function itemSalesRank() {
+      const sold = new Map();
+      orders.forEach(order => (order.items || []).forEach(item => {
+        const key = String(item.id || item.name || "");
+        sold.set(key, (sold.get(key) || 0) + Number(item.qty || 0));
+      }));
+      return sold;
     }
 
     function renderProducts() {
       renderCategories();
-      const visible = activeCategory === "All" ? products : products.filter(item => item.category === activeCategory);
+      const sold = itemSalesRank();
+      const query = itemSearch.trim().toLowerCase();
+      const visible = (activeCategory === "All" ? products : products.filter(item => item.category === activeCategory))
+        .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
+        .slice()
+        .sort((a, b) => (sold.get(String(b.id)) || sold.get(String(b.name)) || 0) - (sold.get(String(a.id)) || sold.get(String(a.name)) || 0));
       $("menuGrid").innerHTML = visible.map(item => `
         <button class="item-card" data-item="${item.id}">
           ${cartQty(item.id) ? `<span class="remove-badge" data-remove-item="${item.id}">X</span>` : ""}
           ${cartQty(item.id) ? `<span class="count-badge">${cartQty(item.id)}</span>` : ""}
+          <span class="heart-badge">♡</span>
           <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
-          <h3>${item.name}</h3>
-          <p>${money(item.price)}</p>
+          <span class="item-body">
+            <span class="item-name-line"><span class="item-emoji">${itemEmoji(item)}</span><h3>${item.name}</h3></span>
+            <p>${itemSubtitle(item)}</p>
+          </span>
+          <span class="item-foot"><span class="item-price">${money(item.price)}</span><span class="add-mini">+ Add</span></span>
         </button>
       `).join("") || `<div class="panel">No menu items</div>`;
     }
@@ -753,7 +871,9 @@
 
     function renderCart() {
       const total = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const qty = cart.reduce((sum, item) => sum + item.qty, 0);
       $("cartTitle").textContent = `Cart (${cart.reduce((sum, item) => sum + item.qty, 0)} items)`;
+      $("cartSubtitle").textContent = qty ? cart.map(item => `${item.name} x ${item.qty}`).join(", ") : "Cart empty";
       $("cartTotal").textContent = money(total);
       $("cartList").innerHTML = cart.map(item => `
         <div class="cart-row">
@@ -765,12 +885,15 @@
           </div>
         </div>
       `).join("") || `<div class="muted">Cart empty</div>`;
+      document.querySelectorAll("[data-pay]").forEach(btn => btn.classList.toggle("active", btn.dataset.pay === payment));
     }
 
     function paymentBreakup(total, selectedPayment = payment) {
       if (selectedPayment === "Split") {
-        const cash = Math.max(0, Number($("modalSplitCash").value || 0));
-        const online = Math.max(0, Number($("modalSplitOnline").value || 0));
+        const cashInput = $("modalSplitCash");
+        const onlineInput = $("modalSplitOnline");
+        const cash = Math.max(0, Number(cashInput ? cashInput.value : Math.ceil(total / 2)));
+        const online = Math.max(0, Number(onlineInput ? onlineInput.value : total - cash));
         return { cash, online, credit: 0 };
       }
       if (selectedPayment === "Online") return { cash: 0, online: total, credit: 0 };
@@ -908,12 +1031,14 @@
               ${todaySaleHtml()}
               ${adminUnlockHtml()}
               ${lastBillsHtml()}
+              <button class="danger" id="menuLogout" type="button">Logout</button>
             </div>
             <button class="secondary modal-close" type="button" id="closeOptionsModal">Close</button>
           </div>
         </div>`;
       $("closeOptionsModal").addEventListener("click", closeOptionsModal);
       $("menuTestPrint").addEventListener("click", testPrint);
+      $("menuLogout").addEventListener("click", logout);
       if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
       document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
     }
@@ -980,29 +1105,56 @@
       if (button) button.classList.add("selected");
     }
 
-    function openPaymentModal() {
+    function setPaymentStatus(text, className = "status") {
+      const node = $("paymentModalStatus");
+      if (node) {
+        node.textContent = text;
+        node.className = className;
+      } else {
+        $("posMessage").textContent = text;
+        $("posMessage").className = className;
+      }
+    }
+
+    function placeOrderFlow() {
       if (!cart.length) return;
       wakePrinter();
+      if (!payment) {
+        $("posMessage").textContent = "Select payment first";
+        $("posMessage").className = "status error";
+        return;
+      }
+      if (payment === "Cash" || payment === "Online" || payment === "Cancel") {
+        $("paymentModalMount").innerHTML = `
+          <div class="modal-backdrop">
+            <div class="payment-modal">
+              <h2>Processing Order</h2>
+              <div class="payment-total"><span>Payment</span><strong>${payment}</strong></div>
+              <div class="status" id="paymentModalStatus"></div>
+            </div>
+          </div>`;
+        completeOrder(payment);
+        return;
+      }
+      openPaymentModal();
+    }
+
+    function openPaymentModal() {
       const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
       const creditNames = users.map(row => row.name).filter(Boolean);
+      const isSplit = payment === "Split";
+      const isCredit = payment === "Credit";
       $("paymentModalMount").innerHTML = `
         <div class="modal-backdrop">
           <div class="payment-modal">
-            <h2>Select Payment</h2>
+            <h2>${isSplit ? "Split Payment" : "Credit Payment"}</h2>
             <div class="payment-total"><span>Total Amount</span><strong>${money(orderTotal)}</strong></div>
-            <div class="payment-actions">
-              <button data-modal-pay="Cash">Cash</button>
-              <button data-modal-pay="Online">Online</button>
-              <button data-show-split>Split</button>
-              <button data-show-credit>Credit</button>
-              <button data-modal-pay="Cancel">Cancel</button>
-            </div>
-            <div class="split-box hidden" id="modalSplitBox">
+            <div class="split-box ${isSplit ? "" : "hidden"}" id="modalSplitBox">
               <label>Cash <input id="modalSplitCash" type="number" min="0" inputmode="numeric" value="${Math.ceil(orderTotal / 2)}"></label>
               <label>Online <input id="modalSplitOnline" type="number" min="0" inputmode="numeric" value="${Math.floor(orderTotal / 2)}"></label>
               <button class="primary" data-modal-pay="Split" type="button">Confirm Split</button>
             </div>
-            <div class="credit-box hidden" id="modalCreditBox">
+            <div class="credit-box ${isCredit ? "" : "hidden"}" id="modalCreditBox">
               <label>Credit Name
                 <input id="creditNameInput" list="creditNames" placeholder="Select or type name">
                 <datalist id="creditNames">${creditNames.map(name => `<option value="${name}"></option>`).join("")}</datalist>
@@ -1013,25 +1165,12 @@
             <div class="status" id="paymentModalStatus"></div>
           </div>
         </div>`;
-      document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", () => {
-        setModalSelection(btn);
-        completeOrder(btn.dataset.modalPay);
-      }));
-      document.querySelector("[data-show-split]").addEventListener("click", event => {
-        setModalSelection(event.currentTarget);
-        $("modalCreditBox").classList.add("hidden");
-        $("modalSplitBox").classList.remove("hidden");
-      });
-      document.querySelector("[data-show-credit]").addEventListener("click", event => {
-        setModalSelection(event.currentTarget);
-        $("modalSplitBox").classList.add("hidden");
-        $("modalCreditBox").classList.remove("hidden");
-        $("creditNameInput").focus();
-      });
+      document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", () => completeOrder(btn.dataset.modalPay)));
       $("closePaymentModal").addEventListener("click", closePaymentModal);
       $("modalSplitCash").addEventListener("input", () => {
         $("modalSplitOnline").value = Math.max(0, orderTotal - Number($("modalSplitCash").value || 0));
       });
+      if (isCredit) $("creditNameInput").focus();
     }
 
     function closePaymentModal() {
@@ -1041,10 +1180,10 @@
     async function completeOrder(selectedPayment) {
       if (!cart.length) return closePaymentModal();
       const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
-      const creditName = selectedPayment === "Credit" ? String($("creditNameInput").value || "").trim() : "";
+      const creditInput = $("creditNameInput");
+      const creditName = selectedPayment === "Credit" ? String((creditInput && creditInput.value) || "").trim() : "";
       if (selectedPayment === "Credit" && !creditName) {
-        $("paymentModalStatus").textContent = "Credit name select or type cheyyandi";
-        $("paymentModalStatus").className = "status error";
+        setPaymentStatus("Credit name select or type cheyyandi", "status error");
         return;
       }
       payment = selectedPayment;
@@ -1061,13 +1200,11 @@
         items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, qty: item.qty }))
       };
       if (selectedPayment === "Split" && Math.round((payload.paymentBreakup.cash + payload.paymentBreakup.online) * 100) !== Math.round(payload.total * 100)) {
-        $("paymentModalStatus").textContent = `Split amount must equal ${money(payload.total)}`;
-        $("paymentModalStatus").className = "status error";
+        setPaymentStatus(`Split amount must equal ${money(payload.total)}`, "status error");
         return;
       }
       if (selectedPayment === "Cancel") payload.total = 0;
-      $("paymentModalStatus").textContent = "Saving order...";
-      $("paymentModalStatus").className = "status";
+      setPaymentStatus("Saving order...");
 
       try {
         const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload) });
@@ -1084,9 +1221,9 @@
         await receipt(payload);
       }
 
-      $("paymentModalStatus").textContent = "Success";
-      $("paymentModalStatus").className = "status ok";
+      setPaymentStatus("Success", "status ok");
       cart = [];
+      payment = "";
       renderCart();
       renderProducts();
       await loadAdminData();
@@ -1238,14 +1375,25 @@
         updateSyncStatus();
         await loadSettings();
         await loadProducts();
+        await loadAdminData();
         await syncPendingOrders();
       }
     }
 
     $("loginForm").addEventListener("submit", login);
     $("testServerBtn").addEventListener("click", testServerFromLogin);
-    $("logoutPos").addEventListener("click", logout);
+    $("logoutPos").addEventListener("click", openOptionsModal);
     $("logoutAdmin").addEventListener("click", logout);
+    $("itemSearch").addEventListener("input", event => {
+      itemSearch = event.target.value;
+      renderProducts();
+    });
+    $("filterBtn").addEventListener("click", () => {
+      activeCategory = "All";
+      itemSearch = "";
+      $("itemSearch").value = "";
+      renderProducts();
+    });
     $("categoryTabs").addEventListener("click", event => {
       const btn = event.target.closest("[data-category]");
       if (!btn) return;
@@ -1267,7 +1415,13 @@
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
     });
     $("clearCart").addEventListener("click", () => { cart = []; renderCart(); renderProducts(); });
-    $("placeOrder").addEventListener("click", openPaymentModal);
+    $("cartPaymentButtons").addEventListener("click", event => {
+      const btn = event.target.closest("[data-pay]");
+      if (!btn) return;
+      payment = btn.dataset.pay;
+      renderCart();
+    });
+    $("placeOrder").addEventListener("click", placeOrderFlow);
     $("profileBtn").addEventListener("click", openOptionsModal);
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
       adminTab = btn.dataset.adminTab;

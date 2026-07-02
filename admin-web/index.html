@@ -30,7 +30,8 @@
       background:
         linear-gradient(180deg, #fbfcff 0%, #f6f8fb 48%, #eef2f7 100%);
       color: var(--ink);
-      font-family: Inter, "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      font-family: Aptos, "SF Pro Display", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
     }
     button, input, select { font: inherit; }
     button { cursor: pointer; }
@@ -192,7 +193,7 @@
     .donut.small { width: 148px; height: 148px; margin: 0; }
     .donut.small span { width: 86px; height: 86px; }
 
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; font-weight: 550; }
     th { color: var(--muted); text-align: left; font-size: 12px; padding: 11px 10px; border-bottom: 1px solid var(--line); background: #fafbfc; }
     td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
     tbody tr:hover { background: #fbfcff; }
@@ -202,7 +203,7 @@
     .list { display: grid; gap: 10px; }
     .list-row { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
     .list-row:last-child { border-bottom: 0; padding-bottom: 0; }
-    .muted { color: var(--muted); }
+    .muted { color: var(--muted); font-weight: 600; }
     .pill { display: inline-flex; align-items: center; min-height: 25px; border-radius: 999px; padding: 0 9px; background: #eef4ff; color: var(--blue); font-size: 12px; font-weight: 900; }
     .pill.red { background: #fff1f3; color: var(--red); }
     .pill.green { background: #ecfdf3; color: var(--green); }
@@ -499,18 +500,29 @@
       `).join("") || `<span class="muted">Default list unavailable</span>`;
     }
 
+    function productSalesQty(item) {
+      return (dashboard.orders || []).reduce((sum, order) => {
+        return sum + (order.items || []).reduce((lineSum, sold) => {
+          const sameId = String(sold.id || "") && String(sold.id) === String(item.id);
+          const sameName = String(sold.name || "").toLowerCase() === String(item.name || "").toLowerCase();
+          return lineSum + (sameId || sameName ? Number(sold.qty || 0) : 0);
+        }, 0);
+      }, 0);
+    }
+
     function productsTable() {
       const query = menuSearch.trim().toLowerCase();
       const visible = dashboard.products.filter(item =>
         !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query)
-      );
+      ).slice().sort((a, b) => productSalesQty(b) - productSalesQty(a));
       const rows = visible.map(item => `<tr>
         <td><div class="name-cell"><img class="item-thumb" src="${esc(item.image || "")}" alt=""><strong>${esc(item.name)}</strong></div></td>
         <td><span class="pill">${esc(item.category)}</span></td>
         <td>${money(item.price)}</td>
+        <td>${productSalesQty(item)} sold</td>
         <td><div class="row-actions"><button class="secondary" data-edit-product="${item.id}" type="button">Edit</button><button class="danger" data-delete-product="${item.id}" type="button">Delete</button></div></td>
       </tr>`).join("");
-      return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Action</th></tr></thead><tbody>${rows || `<tr><td colspan="4">No products</td></tr>`}</tbody></table></div>`;
+      return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Sales Order</th><th>Action</th></tr></thead><tbody>${rows || `<tr><td colspan="5">No products</td></tr>`}</tbody></table></div>`;
     }
 
     async function saveProduct(event) {
@@ -531,6 +543,7 @@
     }
 
     function openProductModal(item = {}) {
+      const categories = ["Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner"];
       const mount = $("modalMount");
       mount.innerHTML = `
         <div class="modal-backdrop" data-close-modal>
@@ -544,7 +557,7 @@
                 <input id="productId" type="hidden" value="${esc(item.id || "")}">
                 <label>Name <input id="productName" value="${esc(item.name || "")}" required></label>
                 <label>Price <input id="productPrice" type="number" min="0" value="${Number(item.price || 0)}" required></label>
-                <label>Category <input id="productCategory" value="${esc(item.category || "Snacks")}" placeholder="Tiffin"></label>
+                <label>Category <select id="productCategory">${categories.map(category => `<option value="${category}" ${String(item.category || "Snacks") === category ? "selected" : ""}>${category}</option>`).join("")}</select></label>
                 <label>Image URL <input id="productImage" value="${esc(item.image || "")}"></label>
               </div>
               <div class="modal-actions">
