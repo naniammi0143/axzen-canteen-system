@@ -480,6 +480,7 @@
       $("addProductBtn").addEventListener("click", () => openProductModal());
       document.querySelectorAll("[data-edit-product]").forEach(btn => btn.addEventListener("click", editProduct));
       document.querySelectorAll("[data-delete-product]").forEach(btn => btn.addEventListener("click", deleteProduct));
+      document.querySelectorAll("[data-move-product]").forEach(btn => btn.addEventListener("click", moveProduct));
       document.querySelectorAll("[data-live-product]").forEach(input => input.addEventListener("change", toggleDefaultProduct));
     }
 
@@ -500,35 +501,46 @@
       `).join("") || `<span class="muted">Default list unavailable</span>`;
     }
 
-    function productSalesQty(item) {
-      return (dashboard.orders || []).reduce((sum, order) => {
-        return sum + (order.items || []).reduce((lineSum, sold) => {
-          const sameId = String(sold.id || "") && String(sold.id) === String(item.id);
-          const sameName = String(sold.name || "").toLowerCase() === String(item.name || "").toLowerCase();
-          return lineSum + (sameId || sameName ? Number(sold.qty || 0) : 0);
-        }, 0);
-      }, 0);
+    function productSortValue(item, index = 0) {
+      return Number(item.sortOrder ?? item.id ?? index);
     }
 
     function productsTable() {
       const query = menuSearch.trim().toLowerCase();
       const visible = dashboard.products.filter(item =>
         !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query)
-      ).slice().sort((a, b) => productSalesQty(b) - productSalesQty(a));
-      const rows = visible.map(item => `<tr>
+      ).slice().sort((a, b) => productSortValue(a) - productSortValue(b));
+      const rows = visible.map((item, index) => `<tr>
         <td><div class="name-cell"><img class="item-thumb" src="${esc(item.image || "")}" alt=""><strong>${esc(item.name)}</strong></div></td>
         <td><span class="pill">${esc(item.category)}</span></td>
         <td>${money(item.price)}</td>
-        <td>${productSalesQty(item)} sold</td>
-        <td><div class="row-actions"><button class="secondary" data-edit-product="${item.id}" type="button">Edit</button><button class="danger" data-delete-product="${item.id}" type="button">Delete</button></div></td>
+        <td>${productSortValue(item, index)}</td>
+        <td><div class="row-actions"><button class="ghost" data-move-product="${item.id}" data-direction="up" type="button">↑</button><button class="ghost" data-move-product="${item.id}" data-direction="down" type="button">↓</button><button class="secondary" data-edit-product="${item.id}" type="button">Edit</button><button class="danger" data-delete-product="${item.id}" type="button">Delete</button></div></td>
       </tr>`).join("");
-      return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Sales Order</th><th>Action</th></tr></thead><tbody>${rows || `<tr><td colspan="5">No products</td></tr>`}</tbody></table></div>`;
+      return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Display Order</th><th>Action</th></tr></thead><tbody>${rows || `<tr><td colspan="5">No products</td></tr>`}</tbody></table></div>`;
     }
 
     async function saveProduct(event) {
       event.preventDefault();
-      await api("/products", { method: "POST", body: JSON.stringify({ id: $("productId").value || undefined, name: $("productName").value, price: $("productPrice").value, category: $("productCategory").value || "Snacks", image: $("productImage").value }) });
+      await api("/products", { method: "POST", body: JSON.stringify({ id: $("productId").value || undefined, name: $("productName").value, price: $("productPrice").value, category: $("productCategory").value || "Snacks", image: $("productImage").value, sortOrder: $("productSortOrder").value || undefined }) });
       pageMessage("Menu item saved");
+      await loadData();
+    }
+
+    async function moveProduct(event) {
+      const id = Number(event.currentTarget.dataset.moveProduct);
+      const direction = event.currentTarget.dataset.direction;
+      const sorted = dashboard.products.slice().sort((a, b) => productSortValue(a) - productSortValue(b));
+      const index = sorted.findIndex(item => Number(item.id) === id);
+      const targetIndex = direction === "up" ? index - 1 : index + 1;
+      if (index < 0 || targetIndex < 0 || targetIndex >= sorted.length) return;
+      const current = sorted[index];
+      const target = sorted[targetIndex];
+      const currentOrder = productSortValue(current, index);
+      const targetOrder = productSortValue(target, targetIndex);
+      await api("/products", { method: "POST", body: JSON.stringify({ ...current, sortOrder: targetOrder }) });
+      await api("/products", { method: "POST", body: JSON.stringify({ ...target, sortOrder: currentOrder }) });
+      pageMessage("Display order updated");
       await loadData();
     }
 
@@ -558,6 +570,7 @@
                 <label>Name <input id="productName" value="${esc(item.name || "")}" required></label>
                 <label>Price <input id="productPrice" type="number" min="0" value="${Number(item.price || 0)}" required></label>
                 <label>Category <select id="productCategory">${categories.map(category => `<option value="${category}" ${String(item.category || "Snacks") === category ? "selected" : ""}>${category}</option>`).join("")}</select></label>
+                <label>Display Order <input id="productSortOrder" type="number" min="0" value="${Number(item.sortOrder ?? item.id ?? (dashboard.products.length + 1))}"></label>
                 <label>Image URL <input id="productImage" value="${esc(item.image || "")}"></label>
               </div>
               <div class="modal-actions">

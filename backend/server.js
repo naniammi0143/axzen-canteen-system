@@ -145,7 +145,8 @@ const menuItemSchema = new mongoose.Schema({
   name: String,
   price: Number,
   category: String,
-  image: String
+  image: String,
+  sortOrder: Number
 }, { timestamps: true, collection: "menu_items" });
 
 const stockItemSchema = new mongoose.Schema({
@@ -287,8 +288,9 @@ function modelToPlain(doc) {
 }
 
 async function allMenuItems() {
-  if (!mongoReady) return memory.menuItems;
-  return MenuItem.find({}).sort({ id: 1, createdAt: 1 }).lean();
+  const byOrder = (a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0);
+  if (!mongoReady) return memory.menuItems.slice().sort(byOrder);
+  return (await MenuItem.find({}).lean()).sort(byOrder);
 }
 
 async function saveMenuItem(payload) {
@@ -298,7 +300,8 @@ async function saveMenuItem(payload) {
     name: String(payload.name || "").trim(),
     price: Number(payload.price || 0),
     category: payload.category || "Snacks",
-    image: payload.image || ""
+    image: payload.image || "",
+    sortOrder: payload.sortOrder !== undefined && payload.sortOrder !== "" ? Number(payload.sortOrder) : Number(payload.id || nextId(current))
   };
 
   if (!item.name) throw new Error("Product name is required");

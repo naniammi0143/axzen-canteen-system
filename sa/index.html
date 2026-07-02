@@ -372,6 +372,8 @@
       text-align: left;
       font-weight: 850;
     }
+    .bill-row { display: grid; grid-template-columns: 1fr 46px; gap: 8px; align-items: stretch; }
+    .bill-print { border: 1px solid var(--line); border-radius: 10px; background: white; font-size: 19px; }
 
     .bottom-nav {
       position: fixed;
@@ -453,7 +455,6 @@
     .item-foot { display: flex; align-items: end; justify-content: space-between; gap: 8px; padding: 0 6px; }
     .item-price { color: #2f7d26; font-size: 22px; font-weight: 950; }
     .add-mini { min-height: 38px; border: 1px solid #2f7d26; border-radius: 10px; background: white; color: #2f7d26; padding: 0 12px; font-weight: 850; }
-    .heart-badge { position: absolute; top: 16px; right: 16px; color: white; text-shadow: 0 2px 8px #0009; font-size: 25px; font-weight: 700; pointer-events: none; }
     #posView .count-badge { top: 10px; right: 48px; }
     #posView .remove-badge { top: 10px; left: 12px; }
     #posView .cart-sheet { width: min(520px, calc(100% - 20px)); bottom: 10px; border: 1px solid #e8edf4; border-radius: 18px; background: #fffffff5; box-shadow: 0 -18px 45px #11182716; }
@@ -462,9 +463,6 @@
     .cart-icon { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; color: white; background: linear-gradient(180deg, #3c9632, #2f7d26); font-size: 21px; }
     #posView .cart-head strong { display: block; font-size: 17px; }
     #posView .cart-head button { font-size: 14px; }
-    #posView .pay-toggle { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
-    #posView .pay-toggle button { min-height: 52px; border: 1px solid var(--line); border-radius: 14px; background: white; color: #4b5563; font-weight: 850; display: grid; place-items: center; gap: 2px; }
-    #posView .pay-toggle button.active { background: linear-gradient(180deg, #3c9632, #2f7d26); border-color: #2f7d26; color: white; box-shadow: 0 10px 20px #2f7d2630; }
     #posView .place { margin-top: 10px; background: linear-gradient(180deg, #3c9632, #2f7d26); box-shadow: 0 12px 26px #2f7d2633; }
 
     @media (max-width: 360px) {
@@ -536,13 +534,6 @@
           <div class="row-between">
             <strong>Total Amount</strong>
             <strong id="cartTotal">Rs 0</strong>
-          </div>
-          <div class="pay-toggle" id="cartPaymentButtons">
-            <button data-pay="Cash" type="button"><span>💼</span>Cash</button>
-            <button data-pay="Online" type="button"><span>💳</span>Online</button>
-            <button data-pay="Split" type="button"><span>◔</span>Split</button>
-            <button data-pay="Credit" type="button"><span>☷</span>Credit</button>
-            <button data-pay="Cancel" type="button"><span>⊗</span>Cancel</button>
           </div>
           <button class="primary place" id="placeOrder">Place Order</button>
           <div class="status" id="posMessage"></div>
@@ -810,28 +801,17 @@
       `).join("");
     }
 
-    function itemSalesRank() {
-      const sold = new Map();
-      orders.forEach(order => (order.items || []).forEach(item => {
-        const key = String(item.id || item.name || "");
-        sold.set(key, (sold.get(key) || 0) + Number(item.qty || 0));
-      }));
-      return sold;
-    }
-
     function renderProducts() {
       renderCategories();
-      const sold = itemSalesRank();
       const query = itemSearch.trim().toLowerCase();
       const visible = (activeCategory === "All" ? products : products.filter(item => item.category === activeCategory))
         .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
         .slice()
-        .sort((a, b) => (sold.get(String(b.id)) || sold.get(String(b.name)) || 0) - (sold.get(String(a.id)) || sold.get(String(a.name)) || 0));
+        .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
       $("menuGrid").innerHTML = visible.map(item => `
         <button class="item-card" data-item="${item.id}">
           ${cartQty(item.id) ? `<span class="remove-badge" data-remove-item="${item.id}">X</span>` : ""}
           ${cartQty(item.id) ? `<span class="count-badge">${cartQty(item.id)}</span>` : ""}
-          <span class="heart-badge">♡</span>
           <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
           <span class="item-body">
             <span class="item-name-line"><span class="item-emoji">${itemEmoji(item)}</span><h3>${item.name}</h3></span>
@@ -885,7 +865,6 @@
           </div>
         </div>
       `).join("") || `<div class="muted">Cart empty</div>`;
-      document.querySelectorAll("[data-pay]").forEach(btn => btn.classList.toggle("active", btn.dataset.pay === payment));
     }
 
     function paymentBreakup(total, selectedPayment = payment) {
@@ -903,14 +882,77 @@
     }
 
     function receiptText(order, copy = false) {
-      const lines = (order.items || []).map(item => `${item.name} x ${item.qty} = ${money(Number(item.price) * item.qty)}`).join("\n");
-      const breakup = order.paymentBreakup || {};
-      const payLine = order.payment === "Split"
-        ? `Payment Split\nCash ${money(breakup.cash)}\nOnline ${money(breakup.online)}`
-        : order.payment === "Credit"
-        ? `Payment Credit\nName ${order.creditName || "-"}`
-        : `Payment ${order.payment}`;
-      return `${settings.canteenName}\n${copy ? "COPY RECEIPT NOT ORIGINAL\n" : ""}${order.time}\nCashier: ${order.cashier || "-"}\n------------------------\n${lines}\n------------------------\nTotal ${money(order.total)}\n${payLine}\n`;
+      const width = 42;
+      const line = "-".repeat(width);
+      const thick = "=".repeat(width);
+      const center = value => String(value || "").slice(0, width).padStart(Math.floor((width + String(value || "").slice(0, width).length) / 2)).padEnd(width);
+      const moneyText = value => `₹${Number(value || 0).toFixed(2)}`;
+      const leftRight = (left, right) => {
+        const l = String(left || "");
+        const r = String(right || "");
+        return (l + " ".repeat(Math.max(1, width - l.length - r.length)) + r).slice(0, width);
+      };
+      const field = (label, value) => `${String(label).padEnd(11)}: ${String(value || "-")}`.slice(0, width);
+      const itemLine = (index, item) => {
+        const qty = Number(item.qty || 0);
+        const rate = Number(item.price || 0);
+        const amount = qty * rate;
+        const name = String(item.name || "Item").slice(0, 15).padEnd(15);
+        return `${String(index).padEnd(2)} ${name} ${String(qty).padStart(3)} ${rate.toFixed(0).padStart(5)} ${amount.toFixed(2).padStart(8)}`;
+      };
+      const totalQty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
+      const total = Number(order.total || 0);
+      const paid = order.payment === "Cancel" ? 0 : total;
+      const paymentLabel = order.payment === "Credit" && order.creditName ? `Credit - ${order.creditName}` : order.payment || "Cash";
+      const billNo = `BILL-${String(order.id || Date.now()).slice(-6).padStart(6, "0")}`;
+      const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
+      const dateText = billDate.toLocaleDateString("en-IN");
+      const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      const header = [
+        center("AXZEN CANTEEN"),
+        center("GOOD FOOD, GOOD MOOD"),
+        center(order.canteen || settings.canteenName || "Main Canteen"),
+        center("Address Line"),
+        center("Phone Number"),
+        center("GSTIN: Optional")
+      ];
+      if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
+      return [
+        ...header,
+        "",
+        line,
+        center("TAX INVOICE"),
+        line,
+        field("Bill No", billNo),
+        field("Date", dateText),
+        field("Time", timeText),
+        field("Cashier", order.cashier || user?.name || "-"),
+        field("Order Type", "Dine In"),
+        field("Customer", order.creditName || "Walk-in"),
+        field("Payment", paymentLabel),
+        line,
+        center("ITEM DETAILS"),
+        line,
+        "#  Item Name       Qty  Rate   Amount",
+        line,
+        ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
+        line,
+        field("Total Items", totalQty),
+        leftRight("Subtotal", moneyText(total)),
+        leftRight("Discount", moneyText(0)),
+        leftRight("Tax", moneyText(0)),
+        leftRight("Round Off", moneyText(0)),
+        thick,
+        leftRight("TOTAL AMOUNT", moneyText(total)),
+        thick,
+        "PAYMENT SUMMARY",
+        line,
+        field("Payment Mode", paymentLabel),
+        leftRight("Paid Amount", moneyText(paid)),
+        leftRight("Balance", moneyText(Math.max(0, total - paid))),
+        line,
+        center("THANK YOU! VISIT AGAIN")
+      ].join("\n");
     }
 
     async function receipt(order) {
@@ -1013,10 +1055,13 @@
       }
       const recent = orders.slice().reverse().slice(0, 5);
       const rows = recent.map(order => `
-        <button class="bill-action" data-copy-bill="${order.id || order.clientOrderId}" type="button">
-          <div>${order.time || "-"} | ${money(order.total)}</div>
-          <small>${(order.items || []).map(item => `${item.name} x ${item.qty}`).join(", ")}</small>
-        </button>`).join("");
+        <div class="bill-row">
+          <div class="bill-action">
+            <div>${order.time || "-"} | ${money(order.total)}</div>
+            <small>${(order.items || []).map(item => `${item.name} x ${item.qty}`).join(", ")}</small>
+          </div>
+          <button class="bill-print" data-copy-bill="${order.id || order.clientOrderId}" type="button" title="Print copy">🖨</button>
+        </div>`).join("");
       return `<div class="option-card"><h3>Last 5 Bills</h3>${rows || `<div class="muted">No bills yet</div>`}</div>`;
     }
 
@@ -1119,42 +1164,31 @@
     function placeOrderFlow() {
       if (!cart.length) return;
       wakePrinter();
-      if (!payment) {
-        $("posMessage").textContent = "Select payment first";
-        $("posMessage").className = "status error";
-        return;
-      }
-      if (payment === "Cash" || payment === "Online" || payment === "Cancel") {
-        $("paymentModalMount").innerHTML = `
-          <div class="modal-backdrop">
-            <div class="payment-modal">
-              <h2>Processing Order</h2>
-              <div class="payment-total"><span>Payment</span><strong>${payment}</strong></div>
-              <div class="status" id="paymentModalStatus"></div>
-            </div>
-          </div>`;
-        completeOrder(payment);
-        return;
-      }
+      payment = "";
+      renderCart();
       openPaymentModal();
     }
 
     function openPaymentModal() {
       const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
       const creditNames = users.map(row => row.name).filter(Boolean);
-      const isSplit = payment === "Split";
-      const isCredit = payment === "Credit";
       $("paymentModalMount").innerHTML = `
         <div class="modal-backdrop">
           <div class="payment-modal">
-            <h2>${isSplit ? "Split Payment" : "Credit Payment"}</h2>
+            <h2>Select Payment</h2>
             <div class="payment-total"><span>Total Amount</span><strong>${money(orderTotal)}</strong></div>
-            <div class="split-box ${isSplit ? "" : "hidden"}" id="modalSplitBox">
+            <div class="payment-actions">
+              <button data-modal-pay="Cash" type="button">Cash</button>
+              <button data-modal-pay="Online" type="button">Online</button>
+              <button data-show-split type="button">Split</button>
+              <button data-show-credit type="button">Credit</button>
+            </div>
+            <div class="split-box hidden" id="modalSplitBox">
               <label>Cash <input id="modalSplitCash" type="number" min="0" inputmode="numeric" value="${Math.ceil(orderTotal / 2)}"></label>
               <label>Online <input id="modalSplitOnline" type="number" min="0" inputmode="numeric" value="${Math.floor(orderTotal / 2)}"></label>
               <button class="primary" data-modal-pay="Split" type="button">Confirm Split</button>
             </div>
-            <div class="credit-box ${isCredit ? "" : "hidden"}" id="modalCreditBox">
+            <div class="credit-box hidden" id="modalCreditBox">
               <label>Credit Name
                 <input id="creditNameInput" list="creditNames" placeholder="Select or type name">
                 <datalist id="creditNames">${creditNames.map(name => `<option value="${name}"></option>`).join("")}</datalist>
@@ -1165,12 +1199,27 @@
             <div class="status" id="paymentModalStatus"></div>
           </div>
         </div>`;
-      document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", () => completeOrder(btn.dataset.modalPay)));
+      document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", () => {
+        setModalSelection(btn);
+        completeOrder(btn.dataset.modalPay);
+      }));
+      document.querySelector("[data-show-split]").addEventListener("click", event => {
+        payment = "Split";
+        setModalSelection(event.currentTarget);
+        $("modalCreditBox").classList.add("hidden");
+        $("modalSplitBox").classList.remove("hidden");
+      });
+      document.querySelector("[data-show-credit]").addEventListener("click", event => {
+        payment = "Credit";
+        setModalSelection(event.currentTarget);
+        $("modalSplitBox").classList.add("hidden");
+        $("modalCreditBox").classList.remove("hidden");
+        $("creditNameInput").focus();
+      });
       $("closePaymentModal").addEventListener("click", closePaymentModal);
       $("modalSplitCash").addEventListener("input", () => {
         $("modalSplitOnline").value = Math.max(0, orderTotal - Number($("modalSplitCash").value || 0));
       });
-      if (isCredit) $("creditNameInput").focus();
     }
 
     function closePaymentModal() {
@@ -1415,12 +1464,6 @@
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
     });
     $("clearCart").addEventListener("click", () => { cart = []; renderCart(); renderProducts(); });
-    $("cartPaymentButtons").addEventListener("click", event => {
-      const btn = event.target.closest("[data-pay]");
-      if (!btn) return;
-      payment = btn.dataset.pay;
-      renderCart();
-    });
     $("placeOrder").addEventListener("click", placeOrderFlow);
     $("profileBtn").addEventListener("click", openOptionsModal);
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
