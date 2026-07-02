@@ -87,6 +87,7 @@ const defaultSettings = {
 };
 
 let mongoReady = false;
+let mongoError = "";
 let initialized = false;
 let schedulerStarted = false;
 let lastScheduledReportKey = "";
@@ -253,23 +254,27 @@ async function connectDatabase() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     mongoReady = false;
+    mongoError = "MONGODB_URI missing";
     console.log("MONGODB_URI missing. Running with local memory fallback.");
     return false;
   }
 
   if (mongoose.connection.readyState === 1) {
     mongoReady = true;
+    mongoError = "";
     return true;
   }
 
   try {
     await mongoose.connect(uri, { dbName: DB_NAME, serverSelectionTimeoutMS: 8000 });
     mongoReady = true;
+    mongoError = "";
     await seedDefaults();
     console.log(`MongoDB Atlas connected: ${DB_NAME}`);
     return true;
   } catch (error) {
     mongoReady = false;
+    mongoError = error.message;
     console.log("MongoDB Atlas connection failed:", error.message);
     return false;
   }
@@ -867,7 +872,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json({ success: true, mongoReady, database: DB_NAME });
+  res.json({ success: true, mongoReady, database: DB_NAME, mongoError });
 });
 
 app.get("/products", async (req, res) => res.json(await allMenuItems()));
