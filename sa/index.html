@@ -439,16 +439,18 @@
   <script>
     const apiParam = new URLSearchParams(window.location.search).get("api");
     if (apiParam) localStorage.setItem("AXEN_API_URL", apiParam);
+    const liveApi = "https://canteen.axzen.in";
     const browserHost = window.location.hostname && window.location.hostname !== "localhost"
       ? window.location.hostname
       : "localhost";
     const nativeHost = window.Capacitor ? "192.168.29.115" : browserHost;
     const storedApi = localStorage.getItem("AXEN_API_URL");
+    const storedApiIsLocal = storedApi && /localhost|127\.0\.0\.1|10\.0\.2\.2|192\.168\.|http:\/\/10\.|http:\/\/172\.(1[6-9]|2\d|3[0-1])\./.test(storedApi);
     const productionApi = window.location.protocol === "https:" ? window.location.origin : "";
     const API = productionApi
       ? productionApi
-      : window.Capacitor && (!storedApi || storedApi.includes("10.0.2.2") || storedApi.includes("localhost"))
-      ? `http://${nativeHost}:5000`
+      : window.Capacitor && (!storedApi || storedApiIsLocal)
+      ? liveApi
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner"];
