@@ -163,7 +163,7 @@
       font-weight: 900;
     }
 
-    .content { padding: 14px 12px 310px; }
+    .content { padding: 14px 12px 360px; }
 
     .tabs {
       display: flex;
@@ -187,21 +187,21 @@
 
     .menu-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 9px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
     }
 
     .item-card {
-      min-height: 116px;
+      position: relative;
+      min-height: 178px;
       border: 1px solid #e8edf4;
-      border-radius: 16px;
+      border-radius: 14px;
       background: white;
       box-shadow: 0 10px 24px #1118270d;
       display: grid;
-      align-content: center;
-      justify-items: center;
-      gap: 7px;
-      padding: 8px 5px;
+      grid-template-rows: 112px auto auto;
+      gap: 8px;
+      padding: 8px;
       text-align: center;
       overflow: hidden;
       transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
@@ -210,9 +210,9 @@
     .item-card:hover { border-color: #cfe0f5; box-shadow: 0 14px 30px #11182714; }
 
     .item-icon {
-      width: 44px;
-      height: 44px;
-      border-radius: 14px;
+      width: 100%;
+      height: 112px;
+      border-radius: 10px;
       display: grid;
       place-items: center;
       background: linear-gradient(145deg, #f0f7ff, #fff8e8);
@@ -225,8 +225,24 @@
     }
     .item-icon.initials { font-size: 13px; background: linear-gradient(145deg, #eef7ff, #fff8e8); }
 
-    .item-card h3 { margin: 0; font-size: 11px; line-height: 1.18; overflow-wrap: anywhere; }
-    .item-card p { margin: 0; color: var(--muted); font-size: 11px; font-weight: 900; }
+    .item-card h3 { margin: 0; font-size: 14px; line-height: 1.18; overflow-wrap: anywhere; }
+    .item-card p { margin: 0; color: var(--muted); font-size: 13px; font-weight: 900; }
+    .count-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      min-width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: var(--red);
+      color: white;
+      border: 2px solid white;
+      font-size: 14px;
+      font-weight: 950;
+      box-shadow: 0 8px 18px #ef444455;
+    }
 
     .cart-sheet {
       position: fixed;
@@ -266,9 +282,17 @@
     .qty { display: grid; grid-template-columns: 28px 28px 28px; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; text-align: center; }
     .qty button { height: 28px; border: 0; background: #f3f6fb; color: var(--blue); font-weight: 900; }
 
-    .pay-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .pay-toggle { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
     .pay-toggle button { min-height: 40px; border: 1px solid var(--line); border-radius: 12px; background: white; font-weight: 900; }
     .pay-toggle button.active { background: var(--green); border-color: var(--green); color: white; }
+    .pay-toggle button[data-pay="Cancel"].active { background: var(--red); border-color: var(--red); }
+    .split-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .split-box input { padding: 10px; border-radius: 10px; }
 
     .place { width: 100%; margin-top: 8px; }
 
@@ -374,6 +398,12 @@
           <div class="pay-toggle">
             <button class="active" data-pay="Cash">Cash</button>
             <button data-pay="Online">Online</button>
+            <button data-pay="Split">Split</button>
+            <button data-pay="Cancel">Cancel</button>
+          </div>
+          <div class="split-box hidden" id="splitBox">
+            <label>Cash <input id="splitCash" type="number" min="0" inputmode="numeric"></label>
+            <label>Online <input id="splitOnline" type="number" min="0" inputmode="numeric"></label>
           </div>
           <button class="primary place" id="placeOrder">Place Order</button>
           <div class="status" id="posMessage"></div>
@@ -590,11 +620,17 @@
       const visible = activeCategory === "All" ? products : products.filter(item => item.category === activeCategory);
       $("menuGrid").innerHTML = visible.map(item => `
         <button class="item-card" data-item="${item.id}">
+          ${cartQty(item.id) ? `<span class="count-badge">${cartQty(item.id)}</span>` : ""}
           <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
           <h3>${item.name}</h3>
           <p>${money(item.price)}</p>
         </button>
       `).join("") || `<div class="panel">No menu items</div>`;
+    }
+
+    function cartQty(id) {
+      const item = cart.find(row => Number(row.id) === Number(id));
+      return item ? Number(item.qty || 0) : 0;
     }
 
     function addToCart(id) {
@@ -604,11 +640,13 @@
       if (existing) existing.qty += 1;
       else cart.push({ ...product, qty: 1 });
       renderCart();
+      renderProducts();
     }
 
     function changeQty(id, amount) {
       cart = cart.map(item => Number(item.id) === Number(id) ? { ...item, qty: item.qty + amount } : item).filter(item => item.qty > 0);
       renderCart();
+      renderProducts();
     }
 
     function renderCart() {
@@ -625,11 +663,52 @@
           </div>
         </div>
       `).join("") || `<div class="muted">Cart empty</div>`;
+      updateSplitDefaults(total);
     }
 
-    function receipt(order) {
+    function paymentBreakup(total) {
+      if (payment === "Split") {
+        const cash = Math.max(0, Number($("splitCash").value || 0));
+        const online = Math.max(0, Number($("splitOnline").value || 0));
+        return { cash, online };
+      }
+      if (payment === "Online") return { cash: 0, online: total };
+      if (payment === "Cancel") return { cash: 0, online: 0 };
+      return { cash: total, online: 0 };
+    }
+
+    function updateSplitDefaults(total) {
+      if (!$("splitCash") || document.activeElement === $("splitCash") || document.activeElement === $("splitOnline")) return;
+      if (payment === "Split") {
+        $("splitCash").value = Math.ceil(total / 2);
+        $("splitOnline").value = Math.max(0, total - Number($("splitCash").value || 0));
+      }
+    }
+
+    function receiptText(order) {
       const lines = (order.items || []).map(item => `${item.name} x ${item.qty} = ${money(Number(item.price) * item.qty)}`).join("\n");
-      console.log(`${settings.canteenName}\n${order.time}\n${lines}\nTotal ${money(order.total)}`);
+      const breakup = order.paymentBreakup || {};
+      const payLine = order.payment === "Split"
+        ? `Payment Split\nCash ${money(breakup.cash)}\nOnline ${money(breakup.online)}`
+        : `Payment ${order.payment}`;
+      return `${settings.canteenName}\n${order.time}\nCashier: ${order.cashier || "-"}\n------------------------\n${lines}\n------------------------\nTotal ${money(order.total)}\n${payLine}\n`;
+    }
+
+    async function receipt(order) {
+      const text = receiptText(order);
+      if (window.AxenPrinter && typeof window.AxenPrinter.print === "function") {
+        try {
+          const result = window.AxenPrinter.print(text);
+          $("posMessage").textContent = result || "Order saved and print sent";
+          $("posMessage").className = "status ok";
+          return;
+        } catch (error) {
+          $("posMessage").textContent = "Order saved. Printer not connected.";
+          $("posMessage").className = "status error";
+          return;
+        }
+      }
+      console.log(text);
     }
 
     async function syncPendingOrders() {
@@ -650,6 +729,7 @@
 
     async function placeOrder() {
       if (!cart.length) return;
+      const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
       const payload = {
         id: Date.now(),
         clientOrderId: "mobile-" + Date.now() + "-" + Math.random().toString(16).slice(2),
@@ -657,9 +737,16 @@
         canteen: settings.canteenName,
         cashier: user.name,
         payment,
-        total: cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0),
+        paymentBreakup: paymentBreakup(orderTotal),
+        total: orderTotal,
         items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, qty: item.qty }))
       };
+      if (payment === "Split" && Math.round((payload.paymentBreakup.cash + payload.paymentBreakup.online) * 100) !== Math.round(payload.total * 100)) {
+        $("posMessage").textContent = `Split amount must equal ${money(payload.total)}`;
+        $("posMessage").className = "status error";
+        return;
+      }
+      if (payment === "Cancel") payload.total = 0;
 
       try {
         const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload) });
@@ -667,17 +754,18 @@
         updateSyncStatus();
         $("posMessage").textContent = "Order saved";
         $("posMessage").className = "status ok";
-        receipt(saved.order || payload);
+        await receipt(saved.order || payload);
       } catch {
         serverOnline = false;
         setPendingOrders([...pendingOrders(), payload]);
         $("posMessage").textContent = "Offline saved. Auto sync pending.";
         $("posMessage").className = "status ok";
-        receipt(payload);
+        await receipt(payload);
       }
 
       cart = [];
       renderCart();
+      renderProducts();
       await loadAdminData();
     }
 
@@ -842,7 +930,7 @@
       const btn = event.target.closest("[data-qty]");
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
     });
-    $("clearCart").addEventListener("click", () => { cart = []; renderCart(); });
+    $("clearCart").addEventListener("click", () => { cart = []; renderCart(); renderProducts(); });
     $("placeOrder").addEventListener("click", placeOrder);
     $("profileBtn").addEventListener("click", () => {
       $("posMessage").textContent = `${user.name} | ${user.role} | ${API}`;
@@ -851,7 +939,13 @@
     document.querySelectorAll("[data-pay]").forEach(btn => btn.addEventListener("click", () => {
       payment = btn.dataset.pay;
       document.querySelectorAll("[data-pay]").forEach(item => item.classList.toggle("active", item === btn));
+      $("splitBox").classList.toggle("hidden", payment !== "Split");
+      renderCart();
     }));
+    $("splitCash").addEventListener("input", () => {
+      const total = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      $("splitOnline").value = Math.max(0, total - Number($("splitCash").value || 0));
+    });
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
       adminTab = btn.dataset.adminTab;
       renderAdmin();

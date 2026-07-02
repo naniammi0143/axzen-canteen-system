@@ -17,9 +17,25 @@ const io = new Server(server, { cors: { origin: "*" } });
 const PORT = Number(process.env.PORT || 5000);
 const DB_NAME = process.env.MONGODB_DB_NAME || "axzen_canteen";
 const INDIA_TZ = "Asia/Kolkata";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+
+// Warn during startup when the Meta webhook verification token is not configured.
+if (!VERIFY_TOKEN) {
+  console.warn("VERIFY_TOKEN is missing. Meta WhatsApp webhook verification will fail until it is configured.");
+}
 
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+
+// Safely handle malformed JSON bodies without crashing existing API routes.
+app.use((error, req, res, next) => {
+  if (error instanceof SyntaxError && error.status === 400 && "body" in error) {
+    console.warn("Invalid JSON request body:", error.message);
+    return res.status(400).json({ success: false, message: "Invalid JSON body" });
+  }
+  return next(error);
+});
+
 app.use("/mobile", express.static(path.join(__dirname, "../sa")));
 app.use("/admin", express.static(path.join(__dirname, "../admin-web")));
 
@@ -32,6 +48,18 @@ const defaultMenuItems = [
   { id: 6, name: "Samosa", price: 15, category: "Snacks", image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=500&q=80" },
   { id: 7, name: "Veg Puff", price: 25, category: "Snacks", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=500&q=80" },
   { id: 8, name: "Juice", price: 35, category: "Juice", image: "https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=80" }
+];
+
+const defaultCatalogItems = [
+  ...defaultMenuItems,
+  { id: 101, name: "Poori", price: 40, category: "Tiffin", image: "https://images.unsplash.com/photo-1617692855027-33b14f061079?auto=format&fit=crop&w=500&q=80" },
+  { id: 102, name: "Vada", price: 25, category: "Tiffin", image: "https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=500&q=80" },
+  { id: 103, name: "Chapati", price: 50, category: "Meals", image: "https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?auto=format&fit=crop&w=500&q=80" },
+  { id: 104, name: "Lemon Rice", price: 45, category: "Lunch", image: "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=500&q=80" },
+  { id: 105, name: "Curd Rice", price: 40, category: "Lunch", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=500&q=80" },
+  { id: 106, name: "Water Bottle", price: 20, category: "Drinks", image: "https://images.unsplash.com/photo-1550505095-81378a674395?auto=format&fit=crop&w=500&q=80" },
+  { id: 107, name: "Biscuits", price: 10, category: "Snacks", image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=500&q=80" },
+  { id: 108, name: "Banana", price: 10, category: "Snacks", image: "https://images.unsplash.com/photo-1603833665858-e61d17a86224?auto=format&fit=crop&w=500&q=80" }
 ];
 
 const defaultStockItems = [
@@ -81,6 +109,7 @@ const orderSchema = new mongoose.Schema({
   canteen: String,
   cashier: String,
   payment: String,
+  paymentBreakup: mongoose.Schema.Types.Mixed,
   total: Number,
   items: [{ id: Number, name: String, price: Number, qty: Number }],
   syncedAt: String
@@ -93,6 +122,7 @@ const saleSchema = new mongoose.Schema({
   canteen: String,
   cashier: String,
   payment: String,
+  paymentBreakup: mongoose.Schema.Types.Mixed,
   total: Number,
   items: [{ id: Number, name: String, price: Number, qty: Number }],
   syncedAt: String
@@ -428,6 +458,8 @@ async function deleteUser(mobile) {
 }
 
 function makeOrder(payload) {
+  const total = Number(payload.total || 0);
+  const paymentBreakup = normalizePaymentBreakup(payload.paymentBreakup, payload.payment, total);
   return {
     id: payload.id || Date.now(),
     clientOrderId: payload.clientOrderId,
@@ -435,10 +467,23 @@ function makeOrder(payload) {
     canteen: payload.canteen || "Main Canteen",
     cashier: payload.cashier || "Mobile Cashier",
     payment: payload.payment || "Cash",
-    total: Number(payload.total || 0),
+    paymentBreakup,
+    total,
     items: Array.isArray(payload.items) ? payload.items : [],
     syncedAt: new Date().toISOString()
   };
+}
+
+function normalizePaymentBreakup(value, payment, total) {
+  const source = value && typeof value === "object" ? value : {};
+  if (payment === "Split") {
+    const cash = Math.max(0, Number(source.cash || 0));
+    const online = Math.max(0, Number(source.online || 0));
+    return { cash, online };
+  }
+  if (payment === "Online") return { cash: 0, online: total };
+  if (payment === "Cancel") return { cash: 0, online: 0 };
+  return { cash: total, online: 0 };
 }
 
 async function saveOrder(payload) {
@@ -544,12 +589,28 @@ function paymentTotals(orders) {
   return orders.reduce((totals, order) => {
     const amount = Number(order.total || 0);
     totals.totalSales += amount;
-    if (order.payment === "Cash") totals.cash += amount;
-    else if (order.payment === "Card") totals.card += amount;
-    else totals.upi += amount;
+    const breakup = normalizePaymentBreakup(order.paymentBreakup, order.payment, amount);
+    totals.cash += Number(breakup.cash || 0);
+    totals.upi += Number(breakup.online || 0);
     totals.online = totals.upi + totals.card;
     return totals;
   }, { totalSales: 0, cash: 0, upi: 0, card: 0, online: 0 });
+}
+
+function userSalesFromOrders(orders) {
+  const rows = new Map();
+  orders.forEach(order => {
+    const key = order.cashier || "Unknown";
+    const row = rows.get(key) || { user: key, orders: 0, total: 0, cash: 0, online: 0 };
+    const amount = Number(order.total || 0);
+    const breakup = normalizePaymentBreakup(order.paymentBreakup, order.payment, amount);
+    row.orders += 1;
+    row.total += amount;
+    row.cash += Number(breakup.cash || 0);
+    row.online += Number(breakup.online || 0);
+    rows.set(key, row);
+  });
+  return [...rows.values()].sort((a, b) => b.total - a.total);
 }
 
 async function reportData(reportType = "daily") {
@@ -675,6 +736,7 @@ async function dashboardData() {
     totalExpenses,
     netCollection: todayTotals.totalSales - totalExpenses,
     topItems: topItemsFromOrders(todayOrders),
+    userSales: userSalesFromOrders(todayOrders),
     lowStock: stock.filter(item => Number(item.stock || 0) <= Number(item.minStock || 0)),
     stock,
     expenses,
@@ -685,8 +747,117 @@ async function dashboardData() {
   };
 }
 
+// Extract WhatsApp messages, statuses, contacts, and errors from a Meta Cloud API webhook payload.
+function handleWhatsAppWebhook(payload) {
+  try {
+    const entries = Array.isArray(payload && payload.entry) ? payload.entry : [];
+
+    entries.forEach(entry => {
+      const changes = Array.isArray(entry && entry.changes) ? entry.changes : [];
+
+      changes.forEach(change => {
+        const value = change && change.value ? change.value : {};
+        const contacts = Array.isArray(value.contacts) ? value.contacts : [];
+        const messages = Array.isArray(value.messages) ? value.messages : [];
+        const statuses = Array.isArray(value.statuses) ? value.statuses : [];
+        const errors = Array.isArray(value.errors) ? value.errors : [];
+
+        // Log contact details when Meta includes profile/contact information.
+        contacts.forEach(contact => {
+          console.log("WhatsApp contact:", {
+            waId: contact.wa_id || "",
+            name: contact.profile && contact.profile.name ? contact.profile.name : ""
+          });
+        });
+
+        // Log each incoming WhatsApp message without assuming a fixed message shape.
+        messages.forEach(message => {
+          const senderPhone = message.from || "";
+          const messageId = message.id || "";
+          const messageType = message.type || "";
+          const timestamp = message.timestamp || "";
+
+          console.log("WhatsApp message event:", {
+            senderPhone,
+            messageId,
+            messageType,
+            timestamp
+          });
+
+          if (messageType === "text") {
+            const text = message.text && message.text.body ? message.text.body : "";
+            console.log(`Incoming WhatsApp message from ${senderPhone}: ${text}`);
+          }
+        });
+
+        // Log delivery, read, sent, and failed statuses from Meta status webhooks.
+        statuses.forEach(status => {
+          const deliveryStatus = status.status === "delivered" ? status.status : "";
+          const readStatus = status.status === "read" ? status.status : "";
+          const failedStatus = status.status === "failed" ? status.status : "";
+
+          console.log("WhatsApp status event:", {
+            recipientPhone: status.recipient_id || "",
+            messageId: status.id || "",
+            timestamp: status.timestamp || "",
+            status: status.status || "",
+            deliveryStatus,
+            readStatus,
+            failedStatus,
+            errors: status.errors || []
+          });
+        });
+
+        // Log webhook-level errors if Meta sends an error array in the change value.
+        errors.forEach(error => {
+          console.log("WhatsApp webhook error:", {
+            code: error.code || "",
+            title: error.title || "",
+            message: error.message || "",
+            details: error.error_data && error.error_data.details ? error.error_data.details : ""
+          });
+        });
+      });
+    });
+  } catch (error) {
+    console.warn("WhatsApp webhook payload handling failed:", error.message);
+  }
+}
+
+// Register Meta WhatsApp Cloud API webhook verification and event receiver routes.
+function registerWhatsAppWebhookRoutes(targetApp) {
+  targetApp.get("/webhook", (req, res) => {
+    const mode = req.query["hub.mode"];
+    const token = req.query["hub.verify_token"];
+    const challenge = req.query["hub.challenge"];
+
+    if (!VERIFY_TOKEN) {
+      console.warn("VERIFY_TOKEN is missing. Rejecting Meta webhook verification.");
+    }
+
+    if (mode === "subscribe" && token === VERIFY_TOKEN) {
+      console.log("Meta WhatsApp webhook verified successfully.");
+      return res.status(200).send(challenge);
+    }
+
+    console.warn("Meta WhatsApp webhook verification failed.");
+    return res.sendStatus(403);
+  });
+
+  targetApp.post("/webhook", (req, res) => {
+    const payload = req.body || {};
+
+    console.log("Meta WhatsApp webhook payload:", JSON.stringify(payload, null, 2));
+    res.sendStatus(200);
+
+    setImmediate(() => handleWhatsAppWebhook(payload));
+  });
+}
+
+registerWhatsAppWebhookRoutes(app);
+
 app.get("/", (req, res) => {
-  res.send(`<!DOCTYPE html><html><head><title>Axzen Hospitality</title><meta name="viewport" content="width=device-width, initial-scale=1.0"><style>body{font-family:Arial;margin:0;min-height:100vh;display:grid;place-items:center;background:#f6f8fb;color:#17212f}main{width:min(420px,90vw);background:white;border:1px solid #d9e0ea;border-radius:10px;padding:24px;box-shadow:0 12px 30px #0001}h1{margin:0 0 8px;font-size:26px}p{margin:0 0 18px;color:#687386}a{display:block;text-decoration:none;background:#0f766e;color:white;padding:13px 16px;border-radius:8px;font-weight:bold;margin-top:10px}.admin{background:#0b3d91}code{display:block;margin-top:18px;color:#687386}</style></head><body><main><h1>Axzen Hospitality</h1><p>Backend running successfully.</p><a href="/mobile/">Open Canteen Mobile App</a><a class="admin" href="/admin/">Open Admin Dashboard</a><code>API: /products, /orders, /dashboard</code></main></body></html>`);
+  res.redirect("/mobile/");
 });
 
 app.get("/health", (req, res) => {
@@ -694,6 +865,11 @@ app.get("/health", (req, res) => {
 });
 
 app.get("/products", async (req, res) => res.json(await allMenuItems()));
+
+app.get("/catalog/default-products", requireAdmin, async (req, res) => {
+  const liveIds = new Set((await allMenuItems()).map(item => Number(item.id)));
+  res.json(defaultCatalogItems.map(item => ({ ...item, active: liveIds.has(Number(item.id)) })));
+});
 
 app.post("/products", requireAdmin, async (req, res) => {
   try {
@@ -852,4 +1028,10 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, initializeApp, checkScheduledWhatsAppReport };
+module.exports = {
+  app,
+  initializeApp,
+  checkScheduledWhatsAppReport,
+  handleWhatsAppWebhook,
+  registerWhatsAppWebhookRoutes
+};
