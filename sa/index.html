@@ -163,7 +163,7 @@
       font-weight: 900;
     }
 
-    .content { padding: 14px 12px 360px; }
+    .content { padding: 14px 12px 292px; }
 
     .tabs {
       display: flex;
@@ -225,12 +225,12 @@
     }
     .item-icon.initials { font-size: 13px; background: linear-gradient(145deg, #eef7ff, #fff8e8); }
 
-    .item-card h3 { margin: 0; font-size: 14px; line-height: 1.18; overflow-wrap: anywhere; }
+    .item-card h3 { margin: 0; font-size: 18px; line-height: 1.12; overflow-wrap: anywhere; }
     .item-card p { margin: 0; color: var(--muted); font-size: 13px; font-weight: 900; }
     .count-badge {
       position: absolute;
       top: 6px;
-      right: 6px;
+      right: 8px;
       min-width: 30px;
       height: 30px;
       border-radius: 999px;
@@ -242,6 +242,22 @@
       font-size: 14px;
       font-weight: 950;
       box-shadow: 0 8px 18px #ef444455;
+    }
+    .remove-badge {
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      border: 2px solid white;
+      display: grid;
+      place-items: center;
+      background: #111827;
+      color: white;
+      font-size: 15px;
+      font-weight: 950;
+      box-shadow: 0 8px 18px #11182730;
     }
 
     .cart-sheet {
@@ -282,10 +298,9 @@
     .qty { display: grid; grid-template-columns: 28px 28px 28px; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; text-align: center; }
     .qty button { height: 28px; border: 0; background: #f3f6fb; color: var(--blue); font-weight: 900; }
 
-    .pay-toggle { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+    .pay-toggle { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
     .pay-toggle button { min-height: 40px; border: 1px solid var(--line); border-radius: 12px; background: white; font-weight: 900; }
     .pay-toggle button.active { background: var(--green); border-color: var(--green); color: white; }
-    .pay-toggle button[data-pay="Cancel"].active { background: var(--red); border-color: var(--red); }
     .split-box {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -295,6 +310,34 @@
     .split-box input { padding: 10px; border-radius: 10px; }
 
     .place { width: 100%; margin-top: 8px; }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      align-items: end;
+      justify-items: center;
+      background: #11182766;
+      backdrop-filter: blur(8px);
+      padding: 16px;
+    }
+    .payment-modal {
+      width: min(448px, 100%);
+      border: 1px solid #e8edf4;
+      border-radius: 18px;
+      background: white;
+      box-shadow: 0 24px 80px #11182740;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .payment-modal h2 { margin: 0; font-size: 18px; }
+    .payment-total { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-radius: 12px; background: #f8fafc; font-weight: 950; }
+    .payment-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .payment-actions button { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: white; font-weight: 950; }
+    .payment-actions button.primary-choice { background: var(--green); border-color: var(--green); color: white; }
+    .modal-close { width: 100%; }
 
     .bottom-nav {
       position: fixed;
@@ -396,16 +439,6 @@
             <strong>Total Amount</strong>
             <strong id="cartTotal">Rs 0</strong>
           </div>
-          <div class="pay-toggle">
-            <button class="active" data-pay="Cash">Cash</button>
-            <button data-pay="Online">Online</button>
-            <button data-pay="Split">Split</button>
-            <button data-pay="Cancel">Cancel</button>
-          </div>
-          <div class="split-box hidden" id="splitBox">
-            <label>Cash <input id="splitCash" type="number" min="0" inputmode="numeric"></label>
-            <label>Online <input id="splitOnline" type="number" min="0" inputmode="numeric"></label>
-          </div>
           <button class="primary place" id="placeOrder">Place Order</button>
           <button class="secondary place" id="testPrintBtn" type="button">Test Print</button>
           <div class="status" id="posMessage"></div>
@@ -436,6 +469,7 @@
       </div>
       <section class="admin-page" id="adminPage"></section>
     </section>
+    <div id="paymentModalMount"></div>
   </main>
 
   <script>
@@ -646,6 +680,7 @@
       const visible = activeCategory === "All" ? products : products.filter(item => item.category === activeCategory);
       $("menuGrid").innerHTML = visible.map(item => `
         <button class="item-card" data-item="${item.id}">
+          ${cartQty(item.id) ? `<span class="remove-badge" data-remove-item="${item.id}">X</span>` : ""}
           ${cartQty(item.id) ? `<span class="count-badge">${cartQty(item.id)}</span>` : ""}
           <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
           <h3>${item.name}</h3>
@@ -675,6 +710,12 @@
       renderProducts();
     }
 
+    function removeFromCart(id) {
+      cart = cart.filter(item => Number(item.id) !== Number(id));
+      renderCart();
+      renderProducts();
+    }
+
     function renderCart() {
       const total = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
       $("cartTitle").textContent = `Cart (${cart.reduce((sum, item) => sum + item.qty, 0)} items)`;
@@ -689,26 +730,17 @@
           </div>
         </div>
       `).join("") || `<div class="muted">Cart empty</div>`;
-      updateSplitDefaults(total);
     }
 
-    function paymentBreakup(total) {
-      if (payment === "Split") {
-        const cash = Math.max(0, Number($("splitCash").value || 0));
-        const online = Math.max(0, Number($("splitOnline").value || 0));
+    function paymentBreakup(total, selectedPayment = payment) {
+      if (selectedPayment === "Split") {
+        const cash = Math.max(0, Number($("modalSplitCash").value || 0));
+        const online = Math.max(0, Number($("modalSplitOnline").value || 0));
         return { cash, online };
       }
-      if (payment === "Online") return { cash: 0, online: total };
-      if (payment === "Cancel") return { cash: 0, online: 0 };
+      if (selectedPayment === "Online") return { cash: 0, online: total };
+      if (selectedPayment === "Cancel") return { cash: 0, online: 0 };
       return { cash: total, online: 0 };
-    }
-
-    function updateSplitDefaults(total) {
-      if (!$("splitCash") || document.activeElement === $("splitCash") || document.activeElement === $("splitOnline")) return;
-      if (payment === "Split") {
-        $("splitCash").value = Math.ceil(total / 2);
-        $("splitOnline").value = Math.max(0, total - Number($("splitCash").value || 0));
-      }
     }
 
     function receiptText(order) {
@@ -769,26 +801,64 @@
       }
     }
 
-    async function placeOrder() {
+    function openPaymentModal() {
       if (!cart.length) return;
       const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      $("paymentModalMount").innerHTML = `
+        <div class="modal-backdrop">
+          <div class="payment-modal">
+            <h2>Select Payment</h2>
+            <div class="payment-total"><span>Total Amount</span><strong>${money(orderTotal)}</strong></div>
+            <div class="payment-actions">
+              <button class="primary-choice" data-modal-pay="Cash">Cash</button>
+              <button data-modal-pay="Online">Online</button>
+              <button data-show-split>Split</button>
+              <button data-modal-pay="Cancel">Cancel</button>
+            </div>
+            <div class="split-box hidden" id="modalSplitBox">
+              <label>Cash <input id="modalSplitCash" type="number" min="0" inputmode="numeric" value="${Math.ceil(orderTotal / 2)}"></label>
+              <label>Online <input id="modalSplitOnline" type="number" min="0" inputmode="numeric" value="${Math.floor(orderTotal / 2)}"></label>
+              <button class="primary" data-modal-pay="Split" type="button">Confirm Split</button>
+            </div>
+            <button class="secondary modal-close" type="button" id="closePaymentModal">Close</button>
+            <div class="status" id="paymentModalStatus"></div>
+          </div>
+        </div>`;
+      document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", () => completeOrder(btn.dataset.modalPay)));
+      document.querySelector("[data-show-split]").addEventListener("click", () => $("modalSplitBox").classList.remove("hidden"));
+      $("closePaymentModal").addEventListener("click", closePaymentModal);
+      $("modalSplitCash").addEventListener("input", () => {
+        $("modalSplitOnline").value = Math.max(0, orderTotal - Number($("modalSplitCash").value || 0));
+      });
+    }
+
+    function closePaymentModal() {
+      $("paymentModalMount").innerHTML = "";
+    }
+
+    async function completeOrder(selectedPayment) {
+      if (!cart.length) return closePaymentModal();
+      const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      payment = selectedPayment;
       const payload = {
         id: Date.now(),
         clientOrderId: "mobile-" + Date.now() + "-" + Math.random().toString(16).slice(2),
         time: new Date().toLocaleString(),
         canteen: settings.canteenName,
         cashier: user.name,
-        payment,
-        paymentBreakup: paymentBreakup(orderTotal),
+        payment: selectedPayment,
+        paymentBreakup: paymentBreakup(orderTotal, selectedPayment),
         total: orderTotal,
         items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, qty: item.qty }))
       };
-      if (payment === "Split" && Math.round((payload.paymentBreakup.cash + payload.paymentBreakup.online) * 100) !== Math.round(payload.total * 100)) {
-        $("posMessage").textContent = `Split amount must equal ${money(payload.total)}`;
-        $("posMessage").className = "status error";
+      if (selectedPayment === "Split" && Math.round((payload.paymentBreakup.cash + payload.paymentBreakup.online) * 100) !== Math.round(payload.total * 100)) {
+        $("paymentModalStatus").textContent = `Split amount must equal ${money(payload.total)}`;
+        $("paymentModalStatus").className = "status error";
         return;
       }
-      if (payment === "Cancel") payload.total = 0;
+      if (selectedPayment === "Cancel") payload.total = 0;
+      $("paymentModalStatus").textContent = "Saving order...";
+      $("paymentModalStatus").className = "status";
 
       try {
         const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload) });
@@ -805,10 +875,13 @@
         await receipt(payload);
       }
 
+      $("paymentModalStatus").textContent = "Success";
+      $("paymentModalStatus").className = "status ok";
       cart = [];
       renderCart();
       renderProducts();
       await loadAdminData();
+      setTimeout(closePaymentModal, 650);
     }
 
     function dashboardStats() {
@@ -966,6 +1039,12 @@
       renderProducts();
     });
     $("menuGrid").addEventListener("click", event => {
+      const removeBtn = event.target.closest("[data-remove-item]");
+      if (removeBtn) {
+        event.stopPropagation();
+        removeFromCart(removeBtn.dataset.removeItem);
+        return;
+      }
       const btn = event.target.closest("[data-item]");
       if (btn) addToCart(btn.dataset.item);
     });
@@ -974,21 +1053,11 @@
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
     });
     $("clearCart").addEventListener("click", () => { cart = []; renderCart(); renderProducts(); });
-    $("placeOrder").addEventListener("click", placeOrder);
+    $("placeOrder").addEventListener("click", openPaymentModal);
     $("testPrintBtn").addEventListener("click", testPrint);
     $("profileBtn").addEventListener("click", () => {
       $("posMessage").textContent = `${user.name} | ${user.role} | ${API}`;
       $("posMessage").className = "status";
-    });
-    document.querySelectorAll("[data-pay]").forEach(btn => btn.addEventListener("click", () => {
-      payment = btn.dataset.pay;
-      document.querySelectorAll("[data-pay]").forEach(item => item.classList.toggle("active", item === btn));
-      $("splitBox").classList.toggle("hidden", payment !== "Split");
-      renderCart();
-    }));
-    $("splitCash").addEventListener("input", () => {
-      const total = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
-      $("splitOnline").value = Math.max(0, total - Number($("splitCash").value || 0));
     });
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
       adminTab = btn.dataset.adminTab;
