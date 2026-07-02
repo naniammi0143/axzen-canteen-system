@@ -233,7 +233,13 @@ function requireAdmin(req, res, next) {
 }
 
 async function seedDefaults() {
-  if (!await User.countDocuments()) await User.insertMany(defaultUsers);
+  for (const user of defaultUsers) {
+    await User.findOneAndUpdate(
+      { mobile: user.mobile },
+      { $setOnInsert: user },
+      { upsert: true }
+    );
+  }
   if (!await MenuItem.countDocuments()) await MenuItem.insertMany(defaultMenuItems);
   if (!await StockItem.countDocuments()) await StockItem.insertMany(defaultStockItems);
   await ReportSetting.findOneAndUpdate(
