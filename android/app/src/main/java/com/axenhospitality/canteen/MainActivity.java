@@ -12,6 +12,7 @@ import androidx.core.app.ActivityCompat;
 import com.getcapacitor.BridgeActivity;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,15 +28,28 @@ public class MainActivity extends BridgeActivity {
     }
 
     private void requestBluetoothPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                && ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{ Manifest.permission.BLUETOOTH_CONNECT }, BLUETOOTH_PERMISSION_REQUEST);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            ArrayList<String> permissions = new ArrayList<>();
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.BLUETOOTH_CONNECT);
+            }
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
+                permissions.add(Manifest.permission.BLUETOOTH_SCAN);
+            }
+            if (!permissions.isEmpty()) {
+                ActivityCompat.requestPermissions(this, permissions.toArray(new String[0]), BLUETOOTH_PERMISSION_REQUEST);
+            }
         }
     }
 
     private boolean hasBluetoothPermission() {
         return Build.VERSION.SDK_INT < Build.VERSION_CODES.S
                 || ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean hasBluetoothScanPermission() {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S
+                || ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED;
     }
 
     public class ThermalPrinterBridge {
@@ -63,7 +77,9 @@ public class MainActivity extends BridgeActivity {
             if (printer == null) printer = devices.iterator().next();
 
             try (BluetoothSocket socket = printer.createRfcommSocketToServiceRecord(SPP_UUID)) {
-                adapter.cancelDiscovery();
+                if (hasBluetoothScanPermission()) {
+                    adapter.cancelDiscovery();
+                }
                 socket.connect();
                 OutputStream output = socket.getOutputStream();
                 output.write(new byte[]{0x1B, 0x40});
