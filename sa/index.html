@@ -981,8 +981,8 @@
         const qty = Number(item.qty || 0);
         const rate = Number(item.price || 0);
         const amount = qty * rate;
-        const name = String(item.name || "Item").slice(0, 12).padEnd(12);
-        return `${String(index).padEnd(2)} ${name}${String(qty).padStart(3)} ${String(rate.toFixed(0)).padStart(4)} ${String(amount.toFixed(2)).padStart(8)}`;
+        const name = String(item.name || "Item").slice(0, 13).padEnd(13);
+        return `${String(index).padEnd(2)} ${name}${String(qty).padStart(2)} ${String(rate.toFixed(0)).padStart(4)} ${String(amount.toFixed(0)).padStart(5)}`;
       };
       const totalQty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const total = Number(order.total || 0);
@@ -1004,19 +1004,13 @@
         leftRight(`Cashier ${order.cashier || user?.name || "-"}`, `Token ${tokenNo}`),
         leftRight("Payment", paymentLabel),
         line,
-        "#  ITEM NAME     QTY RATE   AMOUNT",
+        "#  ITEM NAME      QTY RATE    Rs",
         line,
         ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
         line,
-        leftRight("Total Items", String(totalQty)),
-        leftRight("Subtotal", amountText(total)),
-        leftRight("Discount", amountText(0)),
-        thick,
         leftRight("TOTAL", amountText(total)),
-        leftRight("Paid", amountText(paid)),
-        leftRight("Balance", amountText(Math.max(0, total - paid))),
-        thick,
-        center("THANK YOU! VISIT AGAIN")
+        center("THANK YOU! VISIT AGAIN"),
+        ""
       ].join("\n");
     }
 
