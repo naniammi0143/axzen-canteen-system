@@ -759,14 +759,14 @@ async function dashboardData() {
 }
 
 // Extract WhatsApp messages, statuses, contacts, and errors from a Meta Cloud API webhook payload.
-function handleWhatsAppWebhook(payload) {
+async function handleWhatsAppWebhook(payload) {
   try {
     const entries = Array.isArray(payload && payload.entry) ? payload.entry : [];
 
-    entries.forEach(entry => {
+    for (const entry of entries) {
       const changes = Array.isArray(entry && entry.changes) ? entry.changes : [];
 
-      changes.forEach(change => {
+      for (const change of changes) {
         const value = change && change.value ? change.value : {};
         const contacts = Array.isArray(value.contacts) ? value.contacts : [];
         const messages = Array.isArray(value.messages) ? value.messages : [];
@@ -802,10 +802,14 @@ function handleWhatsAppWebhook(payload) {
         });
 
         // Log delivery, read, sent, and failed statuses from Meta status webhooks.
-        statuses.forEach(status => {
+        for (const status of statuses) {
           const deliveryStatus = status.status === "delivered" ? status.status : "";
           const readStatus = status.status === "read" ? status.status : "";
           const failedStatus = status.status === "failed" ? status.status : "";
+          const statusErrors = Array.isArray(status.errors) ? status.errors : [];
+          const errorText = statusErrors.map(item =>
+            item.message || item.title || item.error_data?.details || item.code || "Unknown status error"
+          ).join(" | ");
 
           console.log("WhatsApp status event:", {
             recipientPhone: status.recipient_id || "",
@@ -815,21 +819,37 @@ function handleWhatsAppWebhook(payload) {
             deliveryStatus,
             readStatus,
             failedStatus,
-            errors: status.errors || []
+            errors: statusErrors
           });
-        });
+
+          await addWhatsAppLog({
+            success: status.status !== "failed",
+            reason: `status:${status.status || "unknown"}`,
+            to: status.recipient_id || "",
+            error: errorText,
+            meta: status
+          });
+        }
 
         // Log webhook-level errors if Meta sends an error array in the change value.
-        errors.forEach(error => {
+        for (const error of errors) {
           console.log("WhatsApp webhook error:", {
             code: error.code || "",
             title: error.title || "",
             message: error.message || "",
             details: error.error_data && error.error_data.details ? error.error_data.details : ""
           });
-        });
-      });
-    });
+
+          await addWhatsAppLog({
+            success: false,
+            reason: "webhook:error",
+            to: "",
+            error: error.message || error.title || error.error_data?.details || "WhatsApp webhook error",
+            meta: error
+          });
+        }
+      }
+    }
   } catch (error) {
     console.warn("WhatsApp webhook payload handling failed:", error.message);
   }
@@ -861,7 +881,11 @@ function registerWhatsAppWebhookRoutes(targetApp) {
     console.log("Meta WhatsApp webhook payload:", JSON.stringify(payload, null, 2));
     res.sendStatus(200);
 
-    setImmediate(() => handleWhatsAppWebhook(payload));
+    setImmediate(() => {
+      handleWhatsAppWebhook(payload).catch(error => {
+        console.warn("WhatsApp webhook async handler failed:", error.message);
+      });
+    });
   });
 }
 
