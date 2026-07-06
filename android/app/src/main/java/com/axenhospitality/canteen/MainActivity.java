@@ -67,6 +67,7 @@ public class MainActivity extends BridgeActivity {
         private BluetoothSocket socket;
         private OutputStream output;
         private BluetoothDevice cachedPrinter;
+        private String selectedPrinterAddress = "";
 
         @JavascriptInterface
         public synchronized String wake() {
@@ -106,6 +107,49 @@ public class MainActivity extends BridgeActivity {
             }
         }
 
+        @JavascriptInterface
+        public synchronized String listPrinters() {
+            if (!hasBluetoothPermission()) {
+                requestBluetoothPermission();
+                return "[]";
+            }
+
+            try {
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (adapter == null || !adapter.isEnabled()) return "[]";
+
+                Set<BluetoothDevice> devices = adapter.getBondedDevices();
+                if (devices == null || devices.isEmpty()) return "[]";
+
+                StringBuilder json = new StringBuilder("[");
+                boolean first = true;
+                for (BluetoothDevice device : devices) {
+                    if (!first) json.append(",");
+                    first = false;
+                    json.append("{\"name\":\"")
+                            .append(jsonEscape(device.getName() == null ? "Bluetooth Device" : device.getName()))
+                            .append("\",\"address\":\"")
+                            .append(jsonEscape(device.getAddress()))
+                            .append("\"}");
+                }
+                json.append("]");
+                return json.toString();
+            } catch (Exception ignored) {
+                return "[]";
+            }
+        }
+
+        @JavascriptInterface
+        public synchronized String selectPrinter(String address) {
+            String nextAddress = address == null ? "" : address.trim();
+            if (!nextAddress.equals(selectedPrinterAddress)) {
+                selectedPrinterAddress = nextAddress;
+                cachedPrinter = null;
+                closePrinter();
+            }
+            return selectedPrinterAddress.isEmpty() ? "Auto select printer" : "Selected printer saved";
+        }
+
         private OutputStream ensurePrinterOutput() throws Exception {
             if (socket != null && socket.isConnected() && output != null) {
                 return output;
@@ -117,7 +161,7 @@ public class MainActivity extends BridgeActivity {
             Set<BluetoothDevice> devices = adapter.getBondedDevices();
             if (devices == null || devices.isEmpty()) throw new Exception("Pair the 58mm printer first");
 
-            cachedPrinter = cachedPrinter == null ? findPrinter(devices) : cachedPrinter;
+            cachedPrinter = cachedPrinter == null ? selectedOrDefaultPrinter(devices) : cachedPrinter;
             if (hasBluetoothScanPermission()) {
                 adapter.cancelDiscovery();
             }
@@ -138,6 +182,18 @@ public class MainActivity extends BridgeActivity {
             socket = null;
         }
 
+        private BluetoothDevice selectedOrDefaultPrinter(Set<BluetoothDevice> devices) throws Exception {
+            if (!selectedPrinterAddress.isEmpty()) {
+                for (BluetoothDevice device : devices) {
+                    if (selectedPrinterAddress.equals(device.getAddress())) {
+                        return device;
+                    }
+                }
+                throw new Exception("Selected printer not paired");
+            }
+            return findPrinter(devices);
+        }
+
         private BluetoothDevice findPrinter(Set<BluetoothDevice> devices) {
             for (BluetoothDevice device : devices) {
                 String name = device.getName() == null ? "" : device.getName().toLowerCase();
@@ -146,6 +202,14 @@ public class MainActivity extends BridgeActivity {
                 }
             }
             return devices.iterator().next();
+        }
+
+        private String jsonEscape(String value) {
+            return value == null ? "" : value
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r");
         }
     }
 }

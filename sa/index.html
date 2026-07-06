@@ -362,7 +362,7 @@
       gap: 8px;
     }
     .option-card h3 { margin: 0; font-size: 15px; }
-    .option-card input { width: 100%; padding: 11px; border: 1px solid var(--line); border-radius: 12px; font-weight: 850; }
+    .option-card input, .option-card select { width: 100%; padding: 11px; border: 1px solid var(--line); border-radius: 12px; font-weight: 850; }
     .option-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 850; }
     .bill-action {
       border: 1px solid var(--line);
@@ -448,6 +448,9 @@
     #posView .tab.active { background: #edf4ff; border-color: #c8d8ef; color: #172033; }
     #posView .menu-grid { gap: 16px 12px; }
     #posView .item-card { min-height: 206px; border-radius: 16px; grid-template-rows: 142px auto; gap: 8px; padding: 8px 8px 12px; text-align: left; box-shadow: 0 12px 28px #1118270d; }
+    #posView .item-card.selected { border-color: #2f7d26; background: #f1fbef; box-shadow: 0 16px 34px #2f7d2630; }
+    #posView .item-card.selected .item-icon { outline: 3px solid #2f7d26; outline-offset: -3px; }
+    #posView .item-card.selected .item-price { color: #2f7d26; }
     #posView .item-icon { height: 142px; border-radius: 12px; }
     #posView .item-card h3 { font-size: 19px; }
     #posView .item-card p { display: none; }
@@ -504,7 +507,7 @@
           <span>Good Food, Good Mood</span>
         </div>
         <div class="connection-pill"><span class="net-badge offline" id="connectionBadge"></span><span id="syncStatus">Connected</span></div>
-        <button class="icon-btn notif-dot" id="profileBtn" type="button" aria-label="Status"></button>
+        <button class="icon-btn" id="profileBtn" type="button" aria-label="Settings">&#8942;</button>
       </header>
       <section class="content">
         <div class="search-row">
@@ -597,6 +600,7 @@
     const sessionKey = "AXEN_SESSION";
     const tokenKey = "AXEN_TOKEN";
     const loginCacheKey = "AXEN_LOGIN_CACHE";
+    const selectedPrinterKey = "AXEN_SELECTED_PRINTER";
     let settings = { canteenName: "Main Canteen", brandName: "Axzen", tagline: "Infotech" };
     let user = null;
     let products = [];
@@ -609,9 +613,11 @@
     let adminTab = "dashboard";
     let serverOnline = navigator.onLine;
     let adminUnlocked = false;
+    let selectedPrinter = localStorage.getItem(selectedPrinterKey) || "";
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(0);
+    const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
     const readJson = (key, fallback) => {
       try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
     };
@@ -818,7 +824,7 @@
         .slice()
         .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
       $("menuGrid").innerHTML = visible.map(item => `
-        <button class="item-card" data-item="${item.id}">
+        <button class="item-card ${cartQty(item.id) ? "selected" : ""}" data-item="${item.id}">
           ${cartQty(item.id) ? `<span class="remove-badge" data-remove-item="${item.id}">X</span>` : ""}
           ${cartQty(item.id) ? `<span class="count-badge">${cartQty(item.id)}</span>` : ""}
           <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
@@ -1018,6 +1024,7 @@
       const text = receiptText(order);
       if (window.AxenPrinter && typeof window.AxenPrinter.print === "function") {
         try {
+          applySelectedPrinterToBridge();
           const result = window.AxenPrinter.print(text);
           $("posMessage").textContent = result || "Order saved and print sent";
           $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
@@ -1033,7 +1040,10 @@
 
     function wakePrinter() {
       if (window.AxenPrinter && typeof window.AxenPrinter.wake === "function") {
-        try { window.AxenPrinter.wake(); } catch {}
+        try {
+          applySelectedPrinterToBridge();
+          window.AxenPrinter.wake();
+        } catch {}
       }
     }
 
@@ -1044,6 +1054,7 @@
         return;
       }
       try {
+        applySelectedPrinterToBridge();
         const result = window.AxenPrinter.print(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n`);
         $("posMessage").textContent = result;
         $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
@@ -1124,16 +1135,63 @@
       return `<div class="option-card"><h3>Last 5 Bills</h3>${rows || `<div class="muted">No bills yet</div>`}</div>`;
     }
 
+    function printerOptionsHtml(printers) {
+      if (!window.AxenPrinter || typeof window.AxenPrinter.listPrinters !== "function") {
+        return `<option value="">Android APK lo matrame printer select avuthundi</option>`;
+      }
+      if (!printers.length) return `<option value="">Paired Bluetooth devices levu</option>`;
+      return [
+        `<option value="">Auto select printer</option>`,
+        ...printers.map(printer => {
+          const label = `${printer.name || "Bluetooth Device"}${printer.address ? ` (${printer.address})` : ""}`;
+          return `<option value="${esc(printer.address)}" ${printer.address === selectedPrinter ? "selected" : ""}>${esc(label)}</option>`;
+        })
+      ].join("");
+    }
+
+    function getPairedPrinters() {
+      if (!window.AxenPrinter || typeof window.AxenPrinter.listPrinters !== "function") return [];
+      try {
+        const raw = window.AxenPrinter.listPrinters();
+        const printers = JSON.parse(raw || "[]");
+        return Array.isArray(printers) ? printers : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function setSelectedPrinter(address) {
+      selectedPrinter = String(address || "");
+      if (selectedPrinter) localStorage.setItem(selectedPrinterKey, selectedPrinter);
+      else localStorage.removeItem(selectedPrinterKey);
+      if (window.AxenPrinter && typeof window.AxenPrinter.selectPrinter === "function") {
+        return window.AxenPrinter.selectPrinter(selectedPrinter);
+      }
+      return selectedPrinter ? "Printer selected" : "Auto select printer";
+    }
+
+    function applySelectedPrinterToBridge() {
+      if (window.AxenPrinter && typeof window.AxenPrinter.selectPrinter === "function") {
+        try { window.AxenPrinter.selectPrinter(selectedPrinter || ""); } catch {}
+      }
+    }
+
     async function openOptionsModal() {
       await loadAdminData();
+      const pairedPrinters = getPairedPrinters();
       $("optionsModalMount").innerHTML = `
         <div class="modal-backdrop">
           <div class="payment-modal">
-            <h2>Options</h2>
+            <h2>Settings</h2>
             <div class="option-actions">
               <div class="option-card">
+                <h3>Select connected printer</h3>
+                <select id="printerSelect">${printerOptionsHtml(pairedPrinters)}</select>
+                <div class="muted" id="printerStatus">${selectedPrinter ? "Selected printer saved" : "Auto printer selection active"}</div>
+              </div>
+              <div class="option-card">
                 <h3>Search Items</h3>
-                <input id="optionSearchInput" placeholder="Type item name" value="${itemSearch.replace(/"/g, "&quot;")}">
+                <input id="optionSearchInput" placeholder="Type item name" value="${esc(itemSearch)}">
               </div>
               <button class="secondary" id="menuTestPrint" type="button">Test Print</button>
               ${todaySaleHtml()}
@@ -1145,6 +1203,11 @@
           </div>
         </div>`;
       $("closeOptionsModal").addEventListener("click", closeOptionsModal);
+      $("printerSelect").addEventListener("change", event => {
+        const result = setSelectedPrinter(event.target.value);
+        $("printerStatus").textContent = result || "Printer saved";
+        $("printerStatus").className = result && result.includes("failed") ? "status error" : "status ok";
+      });
       $("optionSearchInput").addEventListener("input", event => {
         itemSearch = event.target.value;
         if ($("itemSearch")) $("itemSearch").value = itemSearch;
