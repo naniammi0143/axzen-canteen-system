@@ -126,6 +126,8 @@ const orderSchema = new mongoose.Schema({
   payment: String,
   paymentBreakup: mongoose.Schema.Types.Mixed,
   creditName: String,
+  subtotal: Number,
+  discount: Number,
   total: Number,
   items: [{ id: Number, lineId: String, parentId: Number, name: String, optionName: String, price: Number, qty: Number }],
   syncedAt: String
@@ -141,6 +143,8 @@ const saleSchema = new mongoose.Schema({
   payment: String,
   paymentBreakup: mongoose.Schema.Types.Mixed,
   creditName: String,
+  subtotal: Number,
+  discount: Number,
   total: Number,
   items: [{ id: Number, lineId: String, parentId: Number, name: String, optionName: String, price: Number, qty: Number }],
   syncedAt: String
@@ -553,6 +557,8 @@ function makeOrder(payload) {
     payment: payload.payment || "Cash",
     paymentBreakup,
     creditName: payload.creditName || "",
+    subtotal: Number(payload.subtotal || total),
+    discount: Number(payload.discount || 0),
     total,
     items: Array.isArray(payload.items) ? payload.items : [],
     syncedAt: new Date().toISOString()

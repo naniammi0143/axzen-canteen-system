@@ -334,6 +334,17 @@
       gap: 12px;
     }
     .payment-modal h2 { margin: 0; font-size: 18px; }
+    .modal-title-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .modal-x {
+      width: 38px;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      color: var(--ink);
+      font-size: 18px;
+      font-weight: 950;
+    }
     .payment-total { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-radius: 12px; background: #f8fafc; font-weight: 950; }
     .payment-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .payment-actions button { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: white; font-weight: 950; }
@@ -496,7 +507,7 @@
     .item-foot { display: block; padding: 0; }
     .item-price { color: #27364a; font-size: 18px; font-weight: 950; white-space: nowrap; }
     .variant-hint { color: #007aff; font-size: 11px; font-weight: 950; }
-    .item-action-row { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; padding: 2px 6px 0; }
+    .item-action-row { display: none; }
     .mini-qty { display: grid; grid-template-columns: 38px 1fr 38px; align-items: center; min-height: 38px; border: 1px solid #dfe5ee; border-radius: 8px; overflow: hidden; text-align: center; font-weight: 900; }
     .mini-qty span:first-child, .mini-qty span:last-child { display: grid; place-items: center; height: 38px; background: #fbfcff; color: #082653; font-size: 20px; }
     .add-mini { display: grid; place-items: center; min-height: 38px; border-radius: 8px; background: #082653; color: white; font-size: 13px; font-weight: 950; }
@@ -539,12 +550,29 @@
       #posView .content { padding: 10px 14px 110px; }
       .search-row { grid-template-columns: 1fr; gap: 10px; margin-bottom: 14px; }
       .pos-layout { grid-template-columns: 1fr; }
-      #posView .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      #posView .item-card { min-height: 236px; grid-template-rows: 132px auto auto; }
-      #posView .item-icon { height: 132px; }
-      .item-action-row { grid-template-columns: 1fr; }
+      #posView .menu-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+      #posView .item-card { min-height: 132px; grid-template-rows: 74px auto; gap: 5px; padding: 5px; border-radius: 10px; }
+      #posView .item-icon { height: 74px; border-radius: 8px; }
+      #posView .item-card h3 { font-size: 11px; line-height: 1.1; }
+      .item-body { gap: 3px; padding: 2px 1px 0; }
+      .item-name-line { display: grid; gap: 2px; }
+      .item-name-wrap { gap: 3px; }
+      .item-emoji, .variant-hint { display: none; }
+      .item-price { font-size: 12px; }
       .mini-qty { display: none; }
-      #posView .cart-sheet { top: auto; left: 50%; bottom: 84px; width: min(480px, calc(100% - 20px)); max-height: 260px; transform: translateX(-50%); }
+      #posView .count-badge, #posView .remove-badge { width: 22px; height: 22px; min-width: 22px; font-size: 11px; top: 4px; right: 5px; }
+      #posView .remove-badge { left: 5px; }
+      #posView .cart-sheet { top: auto; left: 50%; bottom: 84px; width: min(480px, calc(100% - 20px)); max-height: 184px; transform: translateX(-50%); }
+      #posView .cart-inner { padding: 10px 14px; }
+      #posView .cart-head strong { font-size: 17px; }
+      #posView .cart-head .muted { display: none; }
+      #posView .cart-list { max-height: 44px; overflow: auto; margin: 4px 0; }
+      #posView .cart-row { grid-template-columns: 1fr auto; gap: 6px; padding-bottom: 4px; font-size: 12px; }
+      #posView .cart-row .cart-thumb, #posView .cart-row .cart-remove { display: none; }
+      #posView .cart-row .qty { grid-column: auto; width: 84px; }
+      .cart-summary { display: none; }
+      #posView #cartTotal { font-size: 22px; }
+      #posView .place { min-height: 44px; font-size: 15px; margin-top: 8px; }
       .quick-panel { display: none; }
       #posView .bottom-nav { width: min(480px, calc(100% - 20px)); }
     }
@@ -584,7 +612,7 @@
         </div>
         <div class="top-actions-pos">
           <button class="icon-btn" type="button" aria-label="Notifications">!</button>
-          <button class="admin-chip" id="profileBtn" type="button" aria-label="Profile"><span class="avatar-chip">A</span><span>Admin</span> v</button>
+          <button class="admin-chip" id="profileBtn" type="button" aria-label="Profile"><span class="avatar-chip">A</span><span id="posUserLabel">Admin</span> v</button>
         </div>
       </header>
       <section class="content">
@@ -634,9 +662,9 @@
       <section class="quick-panel">
         <h3>Quick Actions</h3>
         <div class="quick-grid">
-          <button class="quick-btn" type="button">QR Scan</button>
+          <button class="quick-btn" id="quickQrScan" type="button">QR Scan</button>
           <button class="quick-btn orange" id="quickHoldOrder" type="button">Hold Order</button>
-          <button class="quick-btn green" type="button">Discount</button>
+          <button class="quick-btn green" id="quickDiscount" type="button">Discount</button>
           <button class="quick-btn purple" id="quickPrintLast" type="button">Print Last Bill</button>
         </div>
       </section>
@@ -704,6 +732,7 @@
     let cart = [];
     let payment = "";
     let itemSearch = "";
+    let cartDiscount = 0;
     let adminTab = "dashboard";
     let serverOnline = navigator.onLine;
     let adminUnlocked = false;
@@ -786,6 +815,12 @@
       $("adminCanteen").textContent = settings.canteenName;
     }
 
+    function renderUserChrome() {
+      if ($("posUserLabel")) $("posUserLabel").textContent = user?.name || "User";
+      const avatar = document.querySelector(".avatar-chip");
+      if (avatar) avatar.textContent = String(user?.name || "U").slice(0, 1).toUpperCase();
+    }
+
     function show(view) {
       ["loginView", "posView", "adminView"].forEach(id => $(id).classList.add("hidden"));
       $(view).classList.remove("hidden");
@@ -795,6 +830,7 @@
       user = nextUser;
       writeJson(sessionKey, user);
       if (token) localStorage.setItem(tokenKey, token);
+      renderUserChrome();
     }
 
     function cacheLogin(mobile, password, nextUser) {
@@ -990,11 +1026,15 @@
     }
 
     function renderCart() {
-      const total = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      cartDiscount = Math.min(subtotal, Math.max(0, Number(cartDiscount || 0)));
+      const total = Math.max(0, subtotal - cartDiscount);
       const qty = cart.reduce((sum, item) => sum + item.qty, 0);
       $("cartTitle").textContent = `Cart (${cart.reduce((sum, item) => sum + item.qty, 0)} items)`;
       $("cartSubtitle").textContent = qty ? cart.map(item => `${item.name} x ${item.qty}`).join(", ") : "Cart empty";
-      if ($("cartSubtotal")) $("cartSubtotal").textContent = money(total);
+      if ($("cartSubtotal")) $("cartSubtotal").textContent = money(subtotal);
+      const discountNode = document.querySelector(".cart-summary .green strong");
+      if (discountNode) discountNode.textContent = `- ${money(cartDiscount)}`;
       $("cartTotal").textContent = money(total);
       $("cartList").innerHTML = cart.map(item => `
         <div class="cart-row">
@@ -1071,6 +1111,8 @@
       };
       const totalQty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const total = Number(order.total || 0);
+      const subtotal = Number(order.subtotal || total);
+      const discount = Number(order.discount || 0);
       const paid = order.payment === "Cancel" ? 0 : total;
       const paymentLabel = order.payment === "Credit" && order.creditName ? `Credit - ${order.creditName}` : order.payment || "Cash";
       const billNo = `BILL-${String(order.id || Date.now()).slice(-6).padStart(6, "0")}`;
@@ -1144,6 +1186,8 @@
       };
       const totalQty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const total = Number(order.total || 0);
+      const subtotal = Number(order.subtotal || total);
+      const discount = Number(order.discount || 0);
       const paid = order.payment === "Cancel" ? 0 : total;
       const tokenNo = String(order.id || Date.now()).slice(-4).padStart(4, "0");
       const paymentLabel = order.payment === "Credit" && order.creditName ? `Credit - ${order.creditName}` : order.payment || "Cash";
@@ -1166,6 +1210,8 @@
         line,
         ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
         line,
+        leftRight("SUBTOTAL", amountText(subtotal)),
+        leftRight("DISCOUNT", amountText(discount)),
         leftRight("TOTAL", amountText(total)),
         center("THANK YOU! VISIT AGAIN"),
         ""
@@ -1256,6 +1302,25 @@
         </div>`;
     }
 
+    function cashSummaryHtml() {
+      const rows = todayOrders();
+      const totals = rows.reduce((sum, order) => {
+        const pay = orderBreakup(order);
+        sum.cash += pay.cash;
+        sum.online += pay.online;
+        sum.credit += pay.credit;
+        return sum;
+      }, { cash: 0, online: 0, credit: 0 });
+      return `
+        <div class="option-card">
+          <h3>Cash Summary</h3>
+          <div class="option-row"><span>Cash in drawer</span><strong>${money(totals.cash)}</strong></div>
+          <div class="option-row"><span>Online collected</span><strong>${money(totals.online)}</strong></div>
+          <div class="option-row"><span>Credit pending</span><strong>${money(totals.credit)}</strong></div>
+          <div class="option-row"><span>Total collection</span><strong>${money(totals.cash + totals.online + totals.credit)}</strong></div>
+        </div>`;
+    }
+
     function hasAdminAccess() {
       return adminUnlocked || (user && user.role === "admin");
     }
@@ -1324,7 +1389,7 @@
       if (!cart.length) {
         $("posMessage").textContent = "Cart empty. Items add chesi hold cheyyandi.";
         $("posMessage").className = "status error";
-        return;
+        return false;
       }
       const next = [{
         id: Date.now(),
@@ -1334,10 +1399,12 @@
       }, ...heldOrders()].slice(0, 20);
       setHeldOrders(next);
       cart = [];
+      cartDiscount = 0;
       renderCart();
       renderProducts();
       $("posMessage").textContent = "Order held";
       $("posMessage").className = "status ok";
+      return true;
     }
 
     function heldOrdersHtml() {
@@ -1358,6 +1425,7 @@
       const order = rows.find(row => String(row.id) === String(id));
       if (!order) return;
       cart = (order.items || []).map(item => ({ ...item }));
+      cartDiscount = 0;
       setHeldOrders(rows.filter(row => String(row.id) !== String(id)));
       renderCart();
       renderProducts();
@@ -1379,6 +1447,31 @@
       printCopyBill(recent.id || recent.clientOrderId);
     }
 
+    function applyDiscountFlow() {
+      if (!cart.length) {
+        $("posMessage").textContent = "Cart empty. Discount apply cheyyadaniki items add cheyyandi.";
+        $("posMessage").className = "status error";
+        return;
+      }
+      const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const raw = prompt("Discount amount enter cheyyandi", String(cartDiscount || 0));
+      if (raw === null) return;
+      cartDiscount = Math.min(subtotal, Math.max(0, Number(raw || 0)));
+      renderCart();
+      $("posMessage").textContent = cartDiscount ? `Discount applied: ${money(cartDiscount)}` : "Discount cleared";
+      $("posMessage").className = "status ok";
+    }
+
+    function qrScanFlow() {
+      const input = $("itemSearch");
+      if (input) {
+        input.focus();
+        input.select();
+      }
+      $("posMessage").textContent = "QR scan ready. Scanner code search box lo capture avuthundi.";
+      $("posMessage").className = "status ok";
+    }
+
     function setSelectedPrinter(address) {
       selectedPrinter = String(address || "");
       if (selectedPrinter) localStorage.setItem(selectedPrinterKey, selectedPrinter);
@@ -1398,6 +1491,7 @@
     async function openOptionsModal(section = "menu") {
       await loadAdminData();
       const pairedPrinters = getPairedPrinters();
+      const modalTitle = ({ menu: "Profile", profile: "Profile", held: "Hold Orders", report: "Today's Report", cash: "Cash Summary", printer: "Printer Settings", settings: "Settings", help: "Help" })[section] || "Profile";
       const sectionHtml = section === "printer" ? `
         <div class="option-card">
           <h3>Printer Settings</h3>
@@ -1411,16 +1505,19 @@
           <button class="secondary" id="holdCurrentOrder" type="button">Hold Current Cart</button>
           ${heldOrdersHtml()}
         </div>
-      ` : section === "report" ? todaySaleHtml() : section === "cash" ? todaySaleHtml() : section === "settings" ? `
+      ` : section === "report" ? todaySaleHtml() : section === "cash" ? cashSummaryHtml() : section === "settings" ? `
         <div class="option-card">
           <h3>Settings</h3>
           <input id="optionSearchInput" placeholder="Search item name / code" value="${esc(itemSearch)}">
+          <button class="secondary" id="clearSearchBtn" type="button">Clear Search</button>
+          <button class="secondary" id="refreshMenuBtn" type="button">Refresh Menu</button>
+          <button class="secondary" id="clearCartSettingsBtn" type="button">Clear Cart</button>
         </div>
       ` : "";
       $("optionsModalMount").innerHTML = `
         <div class="modal-backdrop">
           <div class="payment-modal">
-            <h2>Profile</h2>
+            <div class="modal-title-row"><h2>${modalTitle}</h2><button class="modal-x" id="closeOptionsTop" type="button">X</button></div>
             <div class="option-actions">
               <div class="option-card menu-list">
                 <button class="menu-action" data-menu-section="profile" type="button">Profile</button>
@@ -1447,6 +1544,7 @@
           </div>
         </div>`;
       $("closeOptionsModal").addEventListener("click", closeOptionsModal);
+      $("closeOptionsTop").addEventListener("click", closeOptionsModal);
       if ($("printerSelect")) $("printerSelect").addEventListener("change", event => {
         const result = setSelectedPrinter(event.target.value);
         $("printerStatus").textContent = result || "Printer saved";
@@ -1459,9 +1557,31 @@
       });
       document.querySelectorAll("[data-menu-section]").forEach(btn => btn.addEventListener("click", () => openOptionsModal(btn.dataset.menuSection)));
       if ($("menuTestPrint")) $("menuTestPrint").addEventListener("click", testPrint);
-      if ($("holdCurrentOrder")) $("holdCurrentOrder").addEventListener("click", () => { holdCurrentOrder(); openOptionsModal("held"); });
+      if ($("holdCurrentOrder")) $("holdCurrentOrder").addEventListener("click", () => { if (holdCurrentOrder()) openOptionsModal("held"); });
       if ($("reprintLastBill")) $("reprintLastBill").addEventListener("click", reprintLastBill);
-      if ($("syncNowBtn")) $("syncNowBtn").addEventListener("click", syncPendingOrders);
+      if ($("syncNowBtn")) $("syncNowBtn").addEventListener("click", async () => {
+        const before = pendingOrders().length;
+        await syncPendingOrders();
+        $("posMessage").textContent = before ? "Sync complete" : "No pending data to sync";
+        $("posMessage").className = "status ok";
+      });
+      if ($("clearSearchBtn")) $("clearSearchBtn").addEventListener("click", () => {
+        itemSearch = "";
+        if ($("itemSearch")) $("itemSearch").value = "";
+        if ($("optionSearchInput")) $("optionSearchInput").value = "";
+        renderProducts();
+      });
+      if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => {
+        await loadProducts();
+        $("posMessage").textContent = "Menu refreshed";
+        $("posMessage").className = "status ok";
+      });
+      if ($("clearCartSettingsBtn")) $("clearCartSettingsBtn").addEventListener("click", () => {
+        cart = [];
+        cartDiscount = 0;
+        renderCart();
+        renderProducts();
+      });
       $("menuLogout").addEventListener("click", logout);
       if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
       document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
@@ -1475,13 +1595,12 @@
     }
 
     async function printCopyBill(orderId) {
-      if (!hasAdminAccess()) {
-        $("posMessage").textContent = "Admin access required";
+      const order = orders.find(row => String(row.id || row.clientOrderId) === String(orderId));
+      if (!order) {
+        $("posMessage").textContent = "Bill not found";
         $("posMessage").className = "status error";
         return;
       }
-      const order = orders.find(row => String(row.id || row.clientOrderId) === String(orderId));
-      if (!order) return;
       if (window.AxenPrinter && typeof window.AxenPrinter.print === "function") {
         const result = window.AxenPrinter.print(receiptText(order, true));
         $("posMessage").textContent = result || "Copy receipt sent";
@@ -1557,7 +1676,7 @@
       $("paymentModalMount").innerHTML = `
         <div class="modal-backdrop">
           <div class="payment-modal">
-            <h2>Select Payment</h2>
+            <div class="modal-title-row"><h2>Select Payment</h2><button class="modal-x" id="closePaymentTop" type="button">X</button></div>
             <div class="payment-total"><span>Total Amount</span><strong>${money(orderTotal)}</strong></div>
             <div class="payment-actions">
               <button data-modal-pay="Cash" type="button">Cash</button>
@@ -1599,6 +1718,7 @@
         $("creditNameInput").focus();
       });
       $("closePaymentModal").addEventListener("click", closePaymentModal);
+      $("closePaymentTop").addEventListener("click", closePaymentModal);
       $("modalSplitCash").addEventListener("input", () => {
         $("modalSplitOnline").value = Math.max(0, orderTotal - Number($("modalSplitCash").value || 0));
       });
@@ -1610,7 +1730,9 @@
 
     async function completeOrder(selectedPayment) {
       if (!cart.length) return closePaymentModal();
-      const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const orderSubtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      cartDiscount = Math.min(orderSubtotal, Math.max(0, Number(cartDiscount || 0)));
+      const orderTotal = Math.max(0, orderSubtotal - cartDiscount);
       const creditInput = $("creditNameInput");
       const creditName = selectedPayment === "Credit" ? String((creditInput && creditInput.value) || "").trim() : "";
       if (selectedPayment === "Credit" && !creditName) {
@@ -1627,6 +1749,8 @@
         payment: selectedPayment,
         paymentBreakup: paymentBreakup(orderTotal, selectedPayment),
         creditName,
+        subtotal: orderSubtotal,
+        discount: cartDiscount,
         total: orderTotal,
         items: cart.map(item => ({
           id: item.id,
@@ -1643,7 +1767,9 @@
         return;
       }
       if (selectedPayment === "Cancel") payload.total = 0;
-      setPaymentStatus("Saving order...");
+      setPaymentStatus("Printing receipt...");
+      await receipt(payload);
+      setPaymentStatus("Receipt sent. Saving order...");
 
       try {
         const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload) });
@@ -1651,17 +1777,16 @@
         updateSyncStatus();
         $("posMessage").textContent = "Order saved";
         $("posMessage").className = "status ok";
-        await receipt(saved.order || payload);
       } catch {
         serverOnline = false;
         setPendingOrders([...pendingOrders(), payload]);
         $("posMessage").textContent = "Offline saved. Auto sync pending.";
         $("posMessage").className = "status ok";
-        await receipt(payload);
       }
 
       setPaymentStatus("Success", "status ok");
       cart = [];
+      cartDiscount = 0;
       payment = "";
       renderCart();
       renderProducts();
@@ -1836,6 +1961,7 @@
 
     async function enterApp() {
       if (!user) return show("loginView");
+      renderUserChrome();
       if (user.role === "admin") {
         $("adminRole").textContent = `${user.name} | Admin`;
         show("adminView");
@@ -1866,11 +1992,20 @@
       openOptionsModal("held");
     });
     if ($("todaySaleBtn")) $("todaySaleBtn").addEventListener("click", () => openOptionsModal("report"));
-    if ($("quickHoldOrder")) $("quickHoldOrder").addEventListener("click", () => { holdCurrentOrder(); openOptionsModal("held"); });
+    if ($("quickQrScan")) $("quickQrScan").addEventListener("click", qrScanFlow);
+    if ($("quickHoldOrder")) $("quickHoldOrder").addEventListener("click", () => { if (holdCurrentOrder()) openOptionsModal("held"); });
+    if ($("quickDiscount")) $("quickDiscount").addEventListener("click", applyDiscountFlow);
     if ($("quickPrintLast")) $("quickPrintLast").addEventListener("click", reprintLastBill);
     $("userNav").addEventListener("click", event => {
       const label = String(event.target.textContent || "").trim();
       document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn === event.target));
+      if (label === "Home") {
+        closeOptionsModal();
+        activeCategory = "All";
+        itemSearch = "";
+        if ($("itemSearch")) $("itemSearch").value = "";
+        renderProducts();
+      }
       if (label === "Orders") openOptionsModal("held");
       if (label === "Reports") openOptionsModal("report");
       if (label === "Settings") openOptionsModal("settings");
@@ -1919,7 +2054,7 @@
       const btn = event.target.closest("[data-qty]");
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
     });
-    $("clearCart").addEventListener("click", () => { cart = []; renderCart(); renderProducts(); });
+    $("clearCart").addEventListener("click", () => { cart = []; cartDiscount = 0; renderCart(); renderProducts(); });
     $("placeOrder").addEventListener("click", placeOrderFlow);
     $("profileBtn").addEventListener("click", openOptionsModal);
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
