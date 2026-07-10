@@ -296,16 +296,17 @@
       return `<div class="list">${rows.slice(0, 8).map(row => `<div class="list-row"><div><strong>${esc(row.title)}</strong><br><span class="muted">${esc(row.canteenName || "-")} | ${esc(row.priority || "Normal")}</span></div><span class="pill ${row.status === "Open" ? "orange" : "green"}">${esc(row.status)}</span></div>`).join("") || `<span class="muted">No support tickets</span>`}</div>`;
     }
     function canteensTable(rows, actions = true) {
-      return `<div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map(item => `<tr>
+      return `<div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map(item => `<tr>
         <td><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.city)}, ${esc(item.state)}</span></td>
         <td>${esc(item.ownerName)}<br><span class="muted">${esc(item.ownerMobile)}</span></td>
         <td>${esc(item.selectedPlan)}<br><span class="muted">${esc(item.planType)}</span></td>
         <td>${money(item.paidAmount)}<br><span class="muted">Pending ${money(item.pendingAmount)}</span></td>
         <td>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</td>
         <td><span class="pill ${statusClass(item.status)}">${esc(item.status)}</span></td>
+        <td>${item.canteenLoginId ? `<strong>${esc(item.canteenLoginId)}</strong><br><span class="muted">Pass: ${esc(item.defaultPassword || "-")}</span>` : `<span class="muted">After approval</span>`}</td>
         <td>${esc(item.submittedByName || item.submittedBy)}</td>
         ${actions ? `<td><div class="row-actions">${actionButtons(item)}</div></td>` : ""}
-      </tr>`).join("") || `<tr><td colspan="${actions ? 8 : 7}">No canteens found</td></tr>`}</tbody></table></div>`;
+      </tr>`).join("") || `<tr><td colspan="${actions ? 9 : 8}">No canteens found</td></tr>`}</tbody></table></div>`;
     }
     function actionButtons(item) {
       if (user.role !== "super_admin") return "";
@@ -317,7 +318,7 @@
         <button class="${item.status === "Blocked" ? "secondary" : "danger"}" data-block="${item.id}" data-blocked="${item.status !== "Blocked"}" type="button">${item.status === "Blocked" ? "Unblock" : "Block"}</button>`;
     }
     function bindTableActions() {
-      document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => updateAction(`/marketing-api/canteens/${btn.dataset.approve}/approve`, { status: "Active" }, "Canteen activated")));
+      document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => updateAction(`/marketing-api/canteens/${btn.dataset.approve}/approve`, { status: "Active" }, "Canteen activated. Login ID and default password generated.")));
       document.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", () => {
         const reason = prompt("Reject reason");
         if (reason) updateAction(`/marketing-api/canteens/${btn.dataset.reject}/reject`, { reason }, "Canteen rejected");

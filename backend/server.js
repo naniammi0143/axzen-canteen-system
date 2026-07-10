@@ -145,6 +145,9 @@ const defaultMarketingCanteens = [
     documents: "agreement.pdf",
     status: "Active",
     online: true,
+    activatedCanteenId: "AXC-1002",
+    canteenLoginId: "AXC1002",
+    defaultPassword: "AXZEN1002",
     submittedBy: "MKT002",
     submittedByName: "Sravani",
     approvedBy: "SUPER",
@@ -352,6 +355,9 @@ const marketingCanteenSchema = new mongoose.Schema({
   documents: String,
   status: { type: String, index: true },
   rejectionReason: String,
+  activatedCanteenId: String,
+  canteenLoginId: String,
+  defaultPassword: String,
   online: Boolean,
   blocked: Boolean,
   printersAssigned: Number,
@@ -735,11 +741,13 @@ async function allUsers() {
 async function saveUser(payload) {
   const user = {
     id: payload.id ? Number(payload.id) : nextId(await allUsers()),
+    canteenId: payload.canteenId || DEFAULT_CANTEEN_ID,
     name: payload.name || "User",
     mobile: normalizeMobile(payload.mobile),
     password: String(payload.password || "1234"),
     role: payload.role === "admin" ? "admin" : "user",
-    active: payload.active !== false
+    active: payload.active !== false,
+    mustChangePassword: payload.mustChangePassword === true
   };
 
   if (!user.mobile) throw new Error("Mobile is required");
@@ -1152,6 +1160,55 @@ async function updateMarketingCanteen(id, patch, actor) {
   const saved = await MarketingCanteen.findOneAndUpdate({ id: Number(id) }, { $set: next }, { new: true }).lean();
   if (!saved) throw new Error("Canteen not found");
   return saved;
+}
+
+function marketingCredentialSeed(canteen) {
+  const id = String(canteen.id || Date.now()).replace(/\D/g, "").slice(-6).padStart(4, "0");
+  return {
+    activatedCanteenId: canteen.activatedCanteenId || `AXC-${id}`,
+    canteenLoginId: canteen.canteenLoginId || `AXC${id}`,
+    defaultPassword: canteen.defaultPassword || `AXZEN${id}`
+  };
+}
+
+async function activateApprovedCanteen(canteen, actor) {
+  const credentials = marketingCredentialSeed(canteen);
+  const coreCanteen = {
+    canteenId: credentials.activatedCanteenId,
+    name: canteen.canteenName,
+    ownerName: canteen.ownerName,
+    phone: canteen.ownerMobile,
+    address: [canteen.address, canteen.city, canteen.state].filter(Boolean).join(", "),
+    plan: canteen.selectedPlan,
+    paymentStatus: Number(canteen.pendingAmount || 0) > 0 ? "pending" : "paid",
+    paymentReference: canteen.paymentMode,
+    active: true,
+    createdByMarketingUser: canteen.submittedBy
+  };
+
+  if (!mongoReady) {
+    const index = memory.canteens.findIndex(item => item.canteenId === coreCanteen.canteenId);
+    if (index >= 0) memory.canteens[index] = { ...memory.canteens[index], ...coreCanteen };
+    else memory.canteens.push(coreCanteen);
+  } else {
+    await Canteen.findOneAndUpdate(
+      { canteenId: coreCanteen.canteenId },
+      { $set: coreCanteen },
+      { upsert: true, new: true }
+    );
+  }
+
+  await saveUser({
+    canteenId: credentials.activatedCanteenId,
+    name: `${canteen.canteenName} Admin`,
+    mobile: credentials.canteenLoginId,
+    password: credentials.defaultPassword,
+    role: "admin",
+    active: true,
+    mustChangePassword: true
+  });
+
+  return updateMarketingCanteen(canteen.id, credentials, actor);
 }
 
 function isToday(dateValue) {
@@ -1593,12 +1650,13 @@ app.post("/marketing-api/canteens", requireMarketingAuth, async (req, res) => {
 
 app.post("/marketing-api/canteens/:id/approve", requireSuperAdmin, async (req, res) => {
   try {
-    const canteen = await updateMarketingCanteen(req.params.id, {
+    const approved = await updateMarketingCanteen(req.params.id, {
       status: req.body.status || "Active",
       approvedBy: req.marketingUser.employeeId,
       approvedAt: new Date().toISOString(),
       online: true
     }, req.marketingUser);
+    const canteen = await activateApprovedCanteen(approved, req.marketingUser);
     await addMarketingActivity({ type: "approved", text: `${canteen.canteenName} approved and activated`, actor: req.marketingUser.name, canteenId: canteen.id });
     res.json({ success: true, canteen });
   } catch (error) {
