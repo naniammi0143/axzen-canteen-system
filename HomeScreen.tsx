@@ -21,9 +21,30 @@ const LINE = "#e5eaf0";
 const MUTED = "#667085";
 const GREEN = "#22c55e";
 
-const categories = ["All", "Meals", "Tiffins", "Tea"];
+const categories = ["All", "Meals", "Tiffins", "Tea"] as const;
 
-const drawerSections = [
+type Category = (typeof categories)[number];
+type DrawerOption =
+  | "Dashboard"
+  | "New Billing"
+  | "Orders"
+  | "Today's Sales"
+  | "Cash Summary"
+  | "Add Item"
+  | "Edit Price"
+  | "Stock Availability"
+  | "Printer Settings"
+  | "Counter User"
+  | "Settings"
+  | "Sync Data"
+  | "Logout";
+
+type DrawerSection = {
+  title: "SALES" | "ITEMS" | "SETTINGS";
+  items: DrawerOption[];
+};
+
+const drawerSections: DrawerSection[] = [
   {
     title: "SALES",
     items: ["Dashboard", "New Billing", "Orders", "Today's Sales", "Cash Summary"]
@@ -38,7 +59,15 @@ const drawerSections = [
   }
 ];
 
-const products = [
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  category: Category;
+  image: string;
+};
+
+const products: Product[] = [
   {
     id: "1",
     name: "Chicken Pakodi",
@@ -83,9 +112,6 @@ const products = [
   }
 ];
 
-type Product = (typeof products)[number];
-type DrawerOption = (typeof drawerSections)[number]["items"][number] | "Logout";
-
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
   const isTablet = width >= 720;
@@ -97,7 +123,7 @@ export default function HomeScreen() {
     [columns, horizontalPadding, width]
   );
 
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [cartCount, setCartCount] = useState(0);
   const [total, setTotal] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -559,7 +585,7 @@ function StatsCard({ tone, icon, label, value }: { tone: "green" | "blue"; icon:
   );
 }
 
-function CategoryTabs({ active, onChange }: { active: string; onChange: (value: string) => void }) {
+function CategoryTabs({ active, onChange }: { active: Category; onChange: (value: Category) => void }) {
   return (
     <View style={styles.tabs}>
       {categories.map(category => (
