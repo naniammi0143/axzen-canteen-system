@@ -36,7 +36,7 @@
     .hidden { display: none !important; }
 
     .app {
-      max-width: 520px;
+      max-width: 1024px;
       min-height: 100vh;
       margin: 0 auto;
       background: #ffffff;
@@ -440,37 +440,53 @@
     .form-grid { display: grid; gap: 10px; }
 
     /* POS visual style matching the supplied mobile mockup. */
+    #posView {
+      position: relative;
+      min-height: 100vh;
+      background: #ffffff;
+    }
     #posView .topbar {
-      gap: 10px;
-      padding: 10px 14px;
+      gap: 14px;
+      padding: 18px 20px;
       background: #ffffff;
       border-bottom: 1px solid #edf1f5;
     }
     #posView .title-block { flex: 1; }
-    #posView .title-block strong { font-size: 20px; line-height: 1.05; }
-    #posView .title-block span { margin-top: 4px; color: #667085; font-size: 13px; font-weight: 650; }
-    #posView .net-badge { display: none; }
-    #posView .icon-btn { width: 42px; height: 42px; border-radius: 15px; border-color: #edf1f5; box-shadow: 0 8px 18px #1118270a; font-size: 20px; }
-    .brand-mark { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: #172033; background: #f3f6fb; box-shadow: 0 10px 20px #1118270a; font-size: 22px; }
-    .connection-pill { display: none; }
+    #posView .title-block strong { display: inline-flex; align-items: center; gap: 10px; font-size: 28px; line-height: 1.05; }
+    #posView .title-block span { margin-top: 7px; color: #667085; font-size: 13px; font-weight: 650; }
+    .counter-pill { display: inline-flex; min-height: 28px; align-items: center; border-radius: 999px; background: #f0f2f5; color: #4b5563; padding: 0 13px; font-size: 13px; font-weight: 850; }
+    .shift-line { display: flex !important; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .shift-line b { color: #22b447; }
+    #posView .net-badge { width: 11px; height: 11px; box-shadow: none; }
+    #posView .net-badge::before { content: ""; }
+    #posView .icon-btn { width: 48px; height: 48px; border-radius: 15px; border-color: #edf1f5; box-shadow: 0 8px 18px #1118270a; font-size: 24px; }
+    .brand-mark { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: white; background: #082653; box-shadow: 0 10px 20px #1118270a; font-size: 28px; }
+    .connection-pill { display: inline-flex; align-items: center; gap: 7px; }
+    .top-actions-pos { display: flex; align-items: center; gap: 14px; }
+    .admin-chip { display: inline-flex; align-items: center; gap: 10px; border: 0; background: white; color: #0f172a; font-weight: 950; }
+    .avatar-chip { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #f3f4f6, #d8dce3); color: #64748b; font-size: 24px; }
     .notif-dot { position: relative; }
     .notif-dot::after { content: ""; position: absolute; top: 15px; left: 15px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); border: 2px solid white; }
     .notif-dot.online::after { background: #16a34a; }
     .notif-dot.offline::after { background: #ef4444; }
-    #posView .content { padding: 10px 14px 300px; }
-    .search-row { display: none; }
+    #posView .content { padding: 24px 336px 90px 20px; }
+    .search-row { display: grid; grid-template-columns: minmax(260px, 1fr) 158px 126px; gap: 18px; align-items: center; margin-bottom: 26px; }
     .search-box { display: flex; align-items: center; gap: 10px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; padding: 0 14px; color: #667085; box-shadow: 0 10px 24px #11182708; }
     .search-box input { border: 0; box-shadow: none; background: transparent; padding: 0; font-size: 16px; font-weight: 650; }
-    .filter-btn { display: none; }
+    .filter-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 64px; border: 1px solid #e5eaf0; border-radius: 14px; background: #eef5ff; color: #0f62d5; font-weight: 950; }
+    .sale-btn { background: #edf9ef; color: #11942b; }
+    .pos-layout { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+    .menu-pane { min-width: 0; }
+    .side-pane { display: grid; gap: 16px; }
     #posView .tabs { gap: 12px; padding: 4px 0 16px; }
     #posView .tab { min-height: 52px; border-radius: 18px; padding: 0 16px; border-color: #e5eaf0; font-size: 15px; font-weight: 850; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 8px 18px #11182708; }
     #posView .tab.active { background: #edf4ff; border-color: #c8d8ef; color: #172033; }
-    #posView .menu-grid { gap: 16px 12px; }
-    #posView .item-card { min-height: 206px; border-radius: 16px; grid-template-rows: 142px auto; gap: 8px; padding: 8px 8px 12px; text-align: left; box-shadow: 0 12px 28px #1118270d; }
+    #posView .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px; }
+    #posView .item-card { min-height: 296px; border-radius: 12px; grid-template-rows: 174px auto auto; gap: 8px; padding: 8px 8px 12px; text-align: left; box-shadow: 0 12px 28px #1118270d; }
     #posView .item-card.selected { border-color: #2f7d26; background: #f1fbef; box-shadow: 0 16px 34px #2f7d2630; }
     #posView .item-card.selected .item-icon { outline: 3px solid #2f7d26; outline-offset: -3px; }
     #posView .item-card.selected .item-price { color: #2f7d26; }
-    #posView .item-icon { height: 142px; border-radius: 12px; }
+    #posView .item-icon { height: 174px; border-radius: 10px; }
     #posView .item-card h3 { font-size: 19px; }
     #posView .item-card p { display: none; }
     .item-body { display: grid; gap: 7px; padding: 4px 6px 0; }
@@ -480,18 +496,58 @@
     .item-foot { display: block; padding: 0; }
     .item-price { color: #27364a; font-size: 18px; font-weight: 950; white-space: nowrap; }
     .variant-hint { color: #007aff; font-size: 11px; font-weight: 950; }
-    .add-mini { display: none; }
+    .item-action-row { display: grid; grid-template-columns: 112px 1fr; gap: 12px; align-items: center; padding: 2px 6px 0; }
+    .mini-qty { display: grid; grid-template-columns: 38px 1fr 38px; align-items: center; min-height: 38px; border: 1px solid #dfe5ee; border-radius: 8px; overflow: hidden; text-align: center; font-weight: 900; }
+    .mini-qty span:first-child, .mini-qty span:last-child { display: grid; place-items: center; height: 38px; background: #fbfcff; color: #082653; font-size: 20px; }
+    .add-mini { display: grid; place-items: center; min-height: 38px; border-radius: 8px; background: #082653; color: white; font-size: 13px; font-weight: 950; }
     #posView .count-badge { top: 10px; right: 12px; }
     #posView .remove-badge { top: 10px; left: 12px; }
-    #posView .cart-sheet { width: min(520px, calc(100% - 20px)); bottom: 10px; border: 1px solid #e8edf4; border-radius: 18px; background: #fffffff5; box-shadow: 0 -18px 45px #11182716; }
-    #posView .cart-inner { padding: 14px; }
+    #posView .cart-sheet { position: fixed; z-index: 6; top: 312px; left: calc(50% + 192px); bottom: 200px; width: 300px; transform: none; border: 1px solid #e8edf4; border-radius: 12px; background: #fffffff5; box-shadow: 0 14px 36px #11182712; overflow: auto; }
+    #posView .cart-inner { padding: 16px; }
     .cart-title-wrap { display: flex; align-items: center; gap: 12px; }
     .cart-icon { display: none; }
-    #posView .cart-head strong { display: block; font-size: 17px; }
+    #posView .cart-head strong { display: block; font-size: 20px; }
     #posView .cart-head button { font-size: 14px; }
     #posView #cartTotal { font-size: 22px; }
     #posView .row-between strong:first-child { font-size: 16px; }
-    #posView .place { margin-top: 10px; background: linear-gradient(180deg, #24384f, #172033); box-shadow: 0 12px 26px #17203326; }
+    #posView .cart-list { max-height: 430px; gap: 14px; }
+    #posView .cart-row { grid-template-columns: 72px 1fr auto; gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+    #posView .cart-row .qty { grid-column: 2 / 3; width: 94px; }
+    .cart-thumb { width: 70px; height: 70px; border-radius: 8px; background: #eef2f7 center / cover; }
+    .cart-remove { border: 0; background: transparent; color: var(--red); font-size: 22px; }
+    .cart-summary { display: grid; gap: 10px; padding: 12px 0; border-bottom: 1px dashed #cbd5e1; }
+    .cart-summary .green { color: #16a34a; }
+    #posView .place { min-height: 60px; margin-top: 14px; background: linear-gradient(180deg, #2fc152, #20a83d); box-shadow: 0 12px 26px #22c55e30; font-size: 18px; }
+    .quick-panel { position: fixed; z-index: 6; left: calc(50% + 192px); bottom: 86px; width: 300px; border: 1px solid #e8edf4; border-radius: 12px; background: white; padding: 16px; box-shadow: 0 14px 36px #1118270d; }
+    .quick-panel h3 { margin: 0 0 14px; font-size: 18px; }
+    .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .quick-btn { min-height: 62px; border: 0; border-radius: 8px; background: #eef5ff; color: #0f62d5; font-size: 13px; font-weight: 950; }
+    .quick-btn.orange { background: #fff4eb; color: #dd5f0b; }
+    .quick-btn.green { background: #effaf0; color: #16a34a; }
+    .quick-btn.purple { background: #f5edff; color: #6d28d9; }
+    #posView .bottom-nav { display: grid; width: min(964px, calc(100% - 40px)); bottom: 16px; border: 0; border-radius: 18px; overflow: hidden; background: #082653; box-shadow: 0 12px 28px #08265333; }
+    #posView .bottom-nav.user-nav { bottom: 16px; }
+    #posView .bottom-nav button { min-height: 58px; background: #082653; color: white; font-size: 16px; }
+    #posView .bottom-nav button.active { margin: 8px; min-height: 42px; border-radius: 10px; background: #ffffff1c; color: white; }
+
+    @media (max-width: 760px) {
+      .app { max-width: 520px; }
+      #posView .topbar { padding: 10px 14px; gap: 10px; }
+      #posView .title-block strong { font-size: 20px; }
+      .counter-pill, .top-actions-pos .icon-btn, .admin-chip span, .shift-line .date-part, .shift-line .shift-part { display: none; }
+      .brand-mark { width: 46px; height: 46px; font-size: 22px; }
+      #posView .content { padding: 10px 14px 110px; }
+      .search-row { grid-template-columns: 1fr; gap: 10px; margin-bottom: 14px; }
+      .pos-layout { grid-template-columns: 1fr; }
+      #posView .menu-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #posView .item-card { min-height: 236px; grid-template-rows: 132px auto auto; }
+      #posView .item-icon { height: 132px; }
+      .item-action-row { grid-template-columns: 1fr; }
+      .mini-qty { display: none; }
+      #posView .cart-sheet { top: auto; left: 50%; bottom: 84px; width: min(480px, calc(100% - 20px)); max-height: 260px; transform: translateX(-50%); }
+      .quick-panel { display: none; }
+      #posView .bottom-nav { width: min(480px, calc(100% - 20px)); }
+    }
 
     @media (max-width: 360px) {
       .brand-name { font-size: 36px; }
@@ -523,19 +579,22 @@
         <button class="icon-btn" id="logoutPos" type="button">☰</button>
         <div class="brand-mark">🍴</div>
         <div class="title-block">
-          <strong id="posCanteen">Axzen Canteen</strong>
-          <span>Good Food, Good Mood</span>
+          <strong><span id="posCanteen">Axzen Canteen</span><span class="counter-pill">Counter 01</span></strong>
+          <span class="shift-line"><span class="connection-pill"><span class="net-badge offline" id="connectionBadge"></span><b id="syncStatus">Online</b></span><span class="date-part">7 May 2025, Wed</span><span class="shift-part">Morning Shift</span></span>
         </div>
-        <div class="connection-pill"><span class="net-badge offline" id="connectionBadge"></span><span id="syncStatus">Connected</span></div>
-        <button class="icon-btn" id="profileBtn" type="button" aria-label="Settings">&#8942;</button>
+        <div class="top-actions-pos">
+          <button class="icon-btn" type="button" aria-label="Notifications">!</button>
+          <button class="admin-chip" id="profileBtn" type="button" aria-label="Profile"><span class="avatar-chip">A</span><span>Admin</span> v</button>
+        </div>
       </header>
       <section class="content">
         <div class="search-row">
           <label class="search-box" aria-label="Search for items">
             <span>⌕</span>
-            <input id="itemSearch" placeholder="Search for items...">
+            <input id="itemSearch" placeholder="Search item by name / code">
           </label>
-          <button class="filter-btn" id="filterBtn" type="button">Filter</button>
+          <button class="filter-btn sale-btn" id="todaySaleBtn" type="button">Today's Sale</button>
+          <button class="filter-btn" id="filterBtn" type="button">Orders</button>
         </div>
         <div class="tabs" id="categoryTabs"></div>
         <div class="menu-grid" id="menuGrid"></div>
@@ -543,8 +602,8 @@
       <nav class="bottom-nav user-nav" id="userNav">
         <button class="active">Home</button>
         <button>Orders</button>
-        <button>Sales</button>
-        <button>Profile</button>
+        <button>Reports</button>
+        <button>Settings</button>
       </nav>
       <section class="cart-sheet">
         <div class="cart-inner">
@@ -559,12 +618,26 @@
             <button id="clearCart">🗑 Clear</button>
           </div>
           <div class="cart-list" id="cartList"></div>
+          <div class="cart-summary">
+            <div class="row-between"><span>Subtotal</span><strong id="cartSubtotal">Rs 0</strong></div>
+            <div class="row-between green"><span>Discount</span><strong>- Rs 0</strong></div>
+            <div class="row-between"><span>GST (0%)</span><strong>Rs 0</strong></div>
+          </div>
           <div class="row-between">
             <strong>Total Amount</strong>
             <strong id="cartTotal">Rs 0</strong>
           </div>
-          <button class="primary place" id="placeOrder">Place Order</button>
+          <button class="primary place" id="placeOrder">Proceed to Payment -></button>
           <div class="status" id="posMessage"></div>
+        </div>
+      </section>
+      <section class="quick-panel">
+        <h3>Quick Actions</h3>
+        <div class="quick-grid">
+          <button class="quick-btn" type="button">QR Scan</button>
+          <button class="quick-btn orange" id="quickHoldOrder" type="button">Hold Order</button>
+          <button class="quick-btn green" type="button">Discount</button>
+          <button class="quick-btn purple" id="quickPrintLast" type="button">Print Last Bill</button>
         </div>
       </section>
     </section>
@@ -614,7 +687,7 @@
       ? productionApi
       : (storedApi || `http://${nativeHost}:5000`);
 
-    const categoryOrder = ["All", "Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner"];
+    const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
     const heldOrdersKey = "AXEN_HELD_ORDERS";
@@ -660,6 +733,10 @@
 
     function categoryIcon(category) {
       return ({ All: "▦", Tiffin: "▤", Meals: "🍽", Tea: "☕", Snacks: "△", Juice: "🥤", Drinks: "🥤", Lunch: "🍛", Dinner: "🍽" })[category] || "□";
+    }
+
+    function categoryLabel(category) {
+      return ({ Tiffin: "Tiffins", Lunch: "Rice" })[category] || category;
     }
 
     function itemEmoji(item) {
@@ -835,7 +912,7 @@
       const found = new Set(products.map(item => item.category || "Other"));
       const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
       $("categoryTabs").innerHTML = categories.map(category => `
-        <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${category}"><span>${categoryIcon(category)}</span>${category}</button>
+        <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${category}"><span>${categoryIcon(category)}</span>${categoryLabel(category)}</button>
       `).join("");
     }
 
@@ -857,7 +934,10 @@
               <span class="item-price">${money(item.price)}</span>
             </span>
             ${productSubItems(item).length ? `<span class="variant-hint">Hold for sub items</span>` : ""}
-            <span class="add-mini"></span>
+          </span>
+          <span class="item-action-row">
+            <span class="mini-qty"><span>-</span><span>${cartQty(item.id) || 1}</span><span>+</span></span>
+            <span class="add-mini">+ ADD</span>
           </span>
         </button>
       `).join("") || `<div class="panel">No menu items</div>`;
@@ -914,10 +994,13 @@
       const qty = cart.reduce((sum, item) => sum + item.qty, 0);
       $("cartTitle").textContent = `Cart (${cart.reduce((sum, item) => sum + item.qty, 0)} items)`;
       $("cartSubtitle").textContent = qty ? cart.map(item => `${item.name} x ${item.qty}`).join(", ") : "Cart empty";
+      if ($("cartSubtotal")) $("cartSubtotal").textContent = money(total);
       $("cartTotal").textContent = money(total);
       $("cartList").innerHTML = cart.map(item => `
         <div class="cart-row">
+          <span class="cart-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
           <div><strong>${item.name}</strong><small>${item.qty} x ${money(item.price)}</small></div>
+          <button class="cart-remove" data-remove-line="${item.lineId}" type="button">x</button>
           <div class="qty">
             <button data-qty="-1" data-id="${item.lineId}">-</button>
             <span>${item.qty}</span>
@@ -925,6 +1008,12 @@
           </div>
         </div>
       `).join("") || `<div class="muted">Cart empty</div>`;
+    }
+
+    function removeCartLine(id) {
+      cart = cart.filter(item => item.lineId !== id);
+      renderCart();
+      renderProducts();
     }
 
     function openSubItemModal(product) {
@@ -1774,10 +1863,17 @@
       renderProducts();
     });
     $("filterBtn").addEventListener("click", () => {
-      activeCategory = "All";
-      itemSearch = "";
-      $("itemSearch").value = "";
-      renderProducts();
+      openOptionsModal("held");
+    });
+    if ($("todaySaleBtn")) $("todaySaleBtn").addEventListener("click", () => openOptionsModal("report"));
+    if ($("quickHoldOrder")) $("quickHoldOrder").addEventListener("click", () => { holdCurrentOrder(); openOptionsModal("held"); });
+    if ($("quickPrintLast")) $("quickPrintLast").addEventListener("click", reprintLastBill);
+    $("userNav").addEventListener("click", event => {
+      const label = String(event.target.textContent || "").trim();
+      document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn === event.target));
+      if (label === "Orders") openOptionsModal("held");
+      if (label === "Reports") openOptionsModal("report");
+      if (label === "Settings") openOptionsModal("settings");
     });
     $("categoryTabs").addEventListener("click", event => {
       const btn = event.target.closest("[data-category]");
@@ -1815,6 +1911,11 @@
       clearTimeout(longPressTimer);
     }));
     $("cartList").addEventListener("click", event => {
+      const removeLine = event.target.closest("[data-remove-line]");
+      if (removeLine) {
+        removeCartLine(removeLine.dataset.removeLine);
+        return;
+      }
       const btn = event.target.closest("[data-qty]");
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
     });
