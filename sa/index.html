@@ -529,13 +529,6 @@
     .cart-summary { display: grid; gap: 10px; padding: 12px 0; border-bottom: 1px dashed #cbd5e1; }
     .cart-summary .green { color: #16a34a; }
     #posView .place { min-height: 60px; margin-top: 14px; background: linear-gradient(180deg, #2fc152, #20a83d); box-shadow: 0 12px 26px #22c55e30; font-size: 18px; }
-    .quick-panel { position: fixed; z-index: 6; left: calc(50% + 192px); bottom: 86px; width: 300px; border: 1px solid #e8edf4; border-radius: 12px; background: white; padding: 16px; box-shadow: 0 14px 36px #1118270d; }
-    .quick-panel h3 { margin: 0 0 14px; font-size: 18px; }
-    .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .quick-btn { min-height: 62px; border: 0; border-radius: 8px; background: #eef5ff; color: #0f62d5; font-size: 13px; font-weight: 950; }
-    .quick-btn.orange { background: #fff4eb; color: #dd5f0b; }
-    .quick-btn.green { background: #effaf0; color: #16a34a; }
-    .quick-btn.purple { background: #f5edff; color: #6d28d9; }
     #posView .bottom-nav { display: grid; width: min(964px, calc(100% - 40px)); bottom: 16px; border: 0; border-radius: 18px; overflow: hidden; background: #082653; box-shadow: 0 12px 28px #08265333; }
     #posView .bottom-nav.user-nav { bottom: 16px; }
     #posView .bottom-nav button { min-height: 58px; background: #082653; color: white; font-size: 16px; }
@@ -573,7 +566,6 @@
       .cart-summary { display: none; }
       #posView #cartTotal { font-size: 22px; }
       #posView .place { min-height: 44px; font-size: 15px; margin-top: 8px; }
-      .quick-panel { display: none; }
       #posView .bottom-nav { width: min(480px, calc(100% - 20px)); }
     }
 
@@ -657,15 +649,6 @@
           </div>
           <button class="primary place" id="placeOrder">Proceed to Payment -></button>
           <div class="status" id="posMessage"></div>
-        </div>
-      </section>
-      <section class="quick-panel">
-        <h3>Quick Actions</h3>
-        <div class="quick-grid">
-          <button class="quick-btn" id="quickQrScan" type="button">QR Scan</button>
-          <button class="quick-btn orange" id="quickHoldOrder" type="button">Hold Order</button>
-          <button class="quick-btn green" id="quickDiscount" type="button">Discount</button>
-          <button class="quick-btn purple" id="quickPrintLast" type="button">Print Last Bill</button>
         </div>
       </section>
     </section>
@@ -1992,10 +1975,6 @@
       openOptionsModal("held");
     });
     if ($("todaySaleBtn")) $("todaySaleBtn").addEventListener("click", () => openOptionsModal("report"));
-    if ($("quickQrScan")) $("quickQrScan").addEventListener("click", qrScanFlow);
-    if ($("quickHoldOrder")) $("quickHoldOrder").addEventListener("click", () => { if (holdCurrentOrder()) openOptionsModal("held"); });
-    if ($("quickDiscount")) $("quickDiscount").addEventListener("click", applyDiscountFlow);
-    if ($("quickPrintLast")) $("quickPrintLast").addEventListener("click", reprintLastBill);
     $("userNav").addEventListener("click", event => {
       const label = String(event.target.textContent || "").trim();
       document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn === event.target));
