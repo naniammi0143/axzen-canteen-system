@@ -49,7 +49,15 @@ Open:
 
 - Admin: `http://localhost:5000/admin/`
 - Mobile POS: `http://localhost:5000/mobile/`
+- Marketing / Super Admin: `http://localhost:5000/marketing/`
 - Health check: `http://localhost:5000/health`
+
+Marketing console demo logins:
+
+```text
+Super Admin: SUPER / admin123
+Marketing Employee: MKT001 / 1234
+```
 
 For phone testing on the same Wi-Fi, open `http://192.168.29.115:5000/mobile/` or build the Android app after `npm run android:sync`.
 

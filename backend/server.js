@@ -40,6 +40,7 @@ app.use((error, req, res, next) => {
 
 app.use("/mobile", express.static(path.join(__dirname, "../sa")));
 app.use("/admin", express.static(path.join(__dirname, "../admin-web")));
+app.use("/marketing", express.static(path.join(__dirname, "../marketing-web")));
 
 const defaultMenuItems = [
   { id: 1, name: "Tea", price: 10, category: "Tea", image: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=500&q=80" },
@@ -88,6 +89,71 @@ const defaultSettings = {
   reportType: "daily"
 };
 
+const defaultMarketingUsers = [
+  { employeeId: "MKT001", name: "Venkatesh", password: "1234", role: "marketing", active: true, target: 20 },
+  { employeeId: "MKT002", name: "Sravani", password: "1234", role: "marketing", active: true, target: 18 },
+  { employeeId: "SUPER", name: "Super Admin", password: "admin123", role: "super_admin", active: true, target: 0 }
+];
+
+const defaultMarketingCanteens = [
+  {
+    id: 1001,
+    canteenName: "Sri Lakshmi Foods",
+    ownerName: "Ramesh Kumar",
+    ownerMobile: "9876543210",
+    alternateMobile: "9876500001",
+    address: "Madhapur Main Road",
+    city: "Hyderabad",
+    state: "Telangana",
+    counters: 2,
+    printersRequired: 2,
+    selectedPlan: "Professional",
+    planType: "Paid",
+    planStartDate: new Date().toISOString().slice(0, 10),
+    planExpiryDate: new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10),
+    paymentMode: "UPI",
+    paidAmount: 12000,
+    pendingAmount: 3000,
+    notes: "Needs two thermal printers and menu setup.",
+    documents: "trade-license.jpg",
+    status: "Pending Approval",
+    online: true,
+    submittedBy: "MKT001",
+    submittedByName: "Venkatesh",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  },
+  {
+    id: 1002,
+    canteenName: "Metro Staff Canteen",
+    ownerName: "Kiran",
+    ownerMobile: "9000011111",
+    alternateMobile: "",
+    address: "Industrial Area",
+    city: "Vijayawada",
+    state: "Andhra Pradesh",
+    counters: 4,
+    printersRequired: 4,
+    selectedPlan: "Enterprise",
+    planType: "Paid",
+    planStartDate: new Date(Date.now() - 20 * 86400000).toISOString().slice(0, 10),
+    planExpiryDate: new Date(Date.now() + 345 * 86400000).toISOString().slice(0, 10),
+    paymentMode: "Bank Transfer",
+    paidAmount: 30000,
+    pendingAmount: 0,
+    notes: "Approved pilot customer.",
+    documents: "agreement.pdf",
+    status: "Active",
+    online: true,
+    submittedBy: "MKT002",
+    submittedByName: "Sravani",
+    approvedBy: "SUPER",
+    approvedAt: new Date(Date.now() - 18 * 86400000).toISOString(),
+    createdAt: new Date(Date.now() - 20 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 18 * 86400000).toISOString()
+  }
+];
+
 let mongoReady = false;
 let mongoError = "";
 let initialized = false;
@@ -113,7 +179,17 @@ let memory = {
   sales: [],
   users: [...defaultUsers],
   settings: { ...defaultSettings },
-  whatsappLogs: []
+  whatsappLogs: [],
+  marketingUsers: [...defaultMarketingUsers],
+  marketingCanteens: [...defaultMarketingCanteens],
+  marketingActivities: [
+    { id: 1, type: "approved", text: "Metro Staff Canteen approved by Super Admin", actor: "Super Admin", createdAt: new Date(Date.now() - 18 * 86400000).toISOString() },
+    { id: 2, type: "created", text: "Sri Lakshmi Foods submitted for approval", actor: "Venkatesh", createdAt: new Date().toISOString() }
+  ],
+  supportTickets: [
+    { id: 1, title: "Printer pairing help", status: "Open", canteenName: "Metro Staff Canteen" },
+    { id: 2, title: "Plan upgrade request", status: "Open", canteenName: "Sri Lakshmi Foods" }
+  ]
 };
 
 const orderSchema = new mongoose.Schema({
@@ -227,6 +303,55 @@ const printerSchema = new mongoose.Schema({
   installedAt: String
 }, { timestamps: true, collection: "printers" });
 
+const marketingUserSchema = new mongoose.Schema({
+  employeeId: { type: String, unique: true, index: true },
+  name: String,
+  password: String,
+  role: { type: String, enum: ["marketing", "super_admin"], default: "marketing" },
+  active: { type: Boolean, default: true },
+  target: Number
+}, { timestamps: true, collection: "marketing_users" });
+
+const marketingCanteenSchema = new mongoose.Schema({
+  id: { type: Number, index: true },
+  canteenName: String,
+  ownerName: String,
+  ownerMobile: String,
+  alternateMobile: String,
+  address: String,
+  city: String,
+  state: String,
+  counters: Number,
+  printersRequired: Number,
+  selectedPlan: String,
+  planType: String,
+  planStartDate: String,
+  planExpiryDate: String,
+  paymentMode: String,
+  paidAmount: Number,
+  pendingAmount: Number,
+  notes: String,
+  documents: String,
+  status: { type: String, index: true },
+  rejectionReason: String,
+  online: Boolean,
+  blocked: Boolean,
+  printersAssigned: Number,
+  submittedBy: { type: String, index: true },
+  submittedByName: String,
+  approvedBy: String,
+  approvedAt: String
+}, { timestamps: true, collection: "marketing_canteens" });
+
+const marketingActivitySchema = new mongoose.Schema({
+  id: Number,
+  type: String,
+  text: String,
+  actor: String,
+  canteenId: Number,
+  createdAt: String
+}, { timestamps: true, collection: "marketing_activities" });
+
 const whatsappLogSchema = new mongoose.Schema({
   time: String,
   success: Boolean,
@@ -246,6 +371,9 @@ const Expense = mongoose.models.Expense || mongoose.model("Expense", expenseSche
 const ReportSetting = mongoose.models.ReportSetting || mongoose.model("ReportSetting", reportSettingSchema);
 const Canteen = mongoose.models.Canteen || mongoose.model("Canteen", canteenSchema);
 const Printer = mongoose.models.Printer || mongoose.model("Printer", printerSchema);
+const MarketingUser = mongoose.models.MarketingUser || mongoose.model("MarketingUser", marketingUserSchema);
+const MarketingCanteen = mongoose.models.MarketingCanteen || mongoose.model("MarketingCanteen", marketingCanteenSchema);
+const MarketingActivity = mongoose.models.MarketingActivity || mongoose.model("MarketingActivity", marketingActivitySchema);
 const WhatsappLog = mongoose.models.WhatsappLog || mongoose.model("WhatsappLog", whatsappLogSchema);
 
 function nextId(items) {
@@ -270,6 +398,49 @@ function publicUser(user) {
 function signToken(user) {
   if (!process.env.JWT_SECRET) return null;
   return jwt.sign(publicUser(user), process.env.JWT_SECRET, { expiresIn: "7d" });
+}
+
+function publicMarketingUser(user) {
+  if (!user) return null;
+  return {
+    id: String(user._id || user.employeeId),
+    employeeId: user.employeeId,
+    name: user.name,
+    role: user.role,
+    active: user.active !== false,
+    target: Number(user.target || 0)
+  };
+}
+
+function signMarketingToken(user) {
+  if (!process.env.JWT_SECRET) return null;
+  return jwt.sign({ ...publicMarketingUser(user), authType: "marketing" }, process.env.JWT_SECRET, { expiresIn: "7d" });
+}
+
+function requireMarketingAuth(req, res, next) {
+  if (!process.env.JWT_SECRET) {
+    req.marketingUser = publicMarketingUser(memory.marketingUsers.find(user => user.role === "super_admin"));
+    return next();
+  }
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!token) return res.status(401).json({ success: false, message: "Login token missing" });
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET);
+    if (user.authType !== "marketing") return res.status(401).json({ success: false, message: "Invalid marketing token" });
+    req.marketingUser = user;
+    return next();
+  } catch {
+    return res.status(401).json({ success: false, message: "Invalid or expired login token" });
+  }
+}
+
+function requireSuperAdmin(req, res, next) {
+  return requireMarketingAuth(req, res, () => {
+    if (req.marketingUser.role !== "super_admin") {
+      return res.status(403).json({ success: false, message: "Super admin access required" });
+    }
+    return next();
+  });
 }
 
 function requireAdmin(req, res, next) {
@@ -303,6 +474,15 @@ async function seedDefaults() {
     { $setOnInsert: defaultSettings },
     { upsert: true }
   );
+  for (const user of defaultMarketingUsers) {
+    await MarketingUser.findOneAndUpdate(
+      { employeeId: user.employeeId },
+      { $setOnInsert: user },
+      { upsert: true }
+    );
+  }
+  if (!await MarketingCanteen.countDocuments()) await MarketingCanteen.insertMany(defaultMarketingCanteens);
+  if (!await MarketingActivity.countDocuments()) await MarketingActivity.insertMany(memory.marketingActivities);
 }
 
 async function connectDatabase() {
@@ -800,6 +980,152 @@ async function allWhatsappLogs() {
   return WhatsappLog.find({}).sort({ createdAt: -1 }).limit(100).lean();
 }
 
+async function allMarketingUsers() {
+  if (!mongoReady) return memory.marketingUsers;
+  return MarketingUser.find({}).sort({ createdAt: 1 }).lean();
+}
+
+async function allMarketingCanteens() {
+  if (!mongoReady) return memory.marketingCanteens;
+  return MarketingCanteen.find({}).sort({ createdAt: -1 }).lean();
+}
+
+async function addMarketingActivity(activity) {
+  const entry = {
+    id: Date.now(),
+    type: activity.type || "update",
+    text: activity.text,
+    actor: activity.actor || "System",
+    canteenId: activity.canteenId,
+    createdAt: new Date().toISOString()
+  };
+  if (!mongoReady) {
+    memory.marketingActivities.unshift(entry);
+    memory.marketingActivities = memory.marketingActivities.slice(0, 100);
+    return entry;
+  }
+  return MarketingActivity.create(entry);
+}
+
+async function allMarketingActivities() {
+  if (!mongoReady) return memory.marketingActivities;
+  return MarketingActivity.find({}).sort({ createdAt: -1 }).limit(100).lean();
+}
+
+function normalizeMarketingCanteen(payload, user) {
+  return {
+    id: Number(payload.id || Date.now()),
+    canteenName: String(payload.canteenName || "").trim(),
+    ownerName: String(payload.ownerName || "").trim(),
+    ownerMobile: String(payload.ownerMobile || "").trim(),
+    alternateMobile: String(payload.alternateMobile || "").trim(),
+    address: String(payload.address || "").trim(),
+    city: String(payload.city || "").trim(),
+    state: String(payload.state || "").trim(),
+    counters: Number(payload.counters || 1),
+    printersRequired: Number(payload.printersRequired || 0),
+    selectedPlan: String(payload.selectedPlan || "Starter"),
+    planType: String(payload.planType || "Trial"),
+    planStartDate: String(payload.planStartDate || new Date().toISOString().slice(0, 10)),
+    planExpiryDate: String(payload.planExpiryDate || ""),
+    paymentMode: String(payload.paymentMode || "Cash"),
+    paidAmount: Number(payload.paidAmount || 0),
+    pendingAmount: Number(payload.pendingAmount || 0),
+    notes: String(payload.notes || ""),
+    documents: String(payload.documents || ""),
+    status: "Pending Approval",
+    online: false,
+    blocked: false,
+    printersAssigned: 0,
+    submittedBy: user.employeeId,
+    submittedByName: user.name,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function createMarketingCanteen(payload, user) {
+  const canteen = normalizeMarketingCanteen(payload, user);
+  if (!canteen.canteenName || !canteen.ownerName || !canteen.ownerMobile) {
+    throw new Error("Canteen name, owner name, and owner mobile are required");
+  }
+  if (!mongoReady) memory.marketingCanteens.unshift(canteen);
+  else await MarketingCanteen.create(canteen);
+  await addMarketingActivity({
+    type: "created",
+    text: `${canteen.canteenName} submitted for approval`,
+    actor: user.name,
+    canteenId: canteen.id
+  });
+  return canteen;
+}
+
+async function updateMarketingCanteen(id, patch, actor) {
+  const next = { ...patch, updatedAt: new Date().toISOString() };
+  if (!mongoReady) {
+    const index = memory.marketingCanteens.findIndex(item => Number(item.id) === Number(id));
+    if (index === -1) throw new Error("Canteen not found");
+    memory.marketingCanteens[index] = { ...memory.marketingCanteens[index], ...next };
+    return memory.marketingCanteens[index];
+  }
+  const saved = await MarketingCanteen.findOneAndUpdate({ id: Number(id) }, { $set: next }, { new: true }).lean();
+  if (!saved) throw new Error("Canteen not found");
+  return saved;
+}
+
+function isToday(dateValue) {
+  const date = new Date(dateValue || Date.now());
+  const today = new Date();
+  return date.toDateString() === today.toDateString();
+}
+
+function marketingSummary(canteens, users, activities) {
+  const active = canteens.filter(item => item.status === "Active");
+  const trial = canteens.filter(item => item.status === "Trial");
+  const expired = canteens.filter(item => item.status === "Expired" || (item.planExpiryDate && new Date(item.planExpiryDate) < new Date() && item.status !== "Blocked"));
+  const blocked = canteens.filter(item => item.status === "Blocked" || item.blocked);
+  const pendingPayments = canteens.reduce((sum, item) => sum + Number(item.pendingAmount || 0), 0);
+  const monthlyRevenue = canteens
+    .filter(item => new Date(item.createdAt || Date.now()).getMonth() === new Date().getMonth())
+    .reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
+  const printersAssigned = canteens.reduce((sum, item) => sum + Number(item.printersAssigned || 0), 0);
+  const printersRequired = canteens.reduce((sum, item) => sum + Number(item.printersRequired || 0), 0);
+  const performance = users.filter(user => user.role === "marketing").map(user => {
+    const mine = canteens.filter(item => item.submittedBy === user.employeeId);
+    return {
+      employeeId: user.employeeId,
+      name: user.name,
+      registrations: mine.length,
+      approved: mine.filter(item => item.status === "Active" || item.status === "Trial").length,
+      rejected: mine.filter(item => item.status === "Rejected").length,
+      collection: mine.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0),
+      pending: mine.reduce((sum, item) => sum + Number(item.pendingAmount || 0), 0),
+      target: Number(user.target || 0)
+    };
+  });
+  return {
+    cards: {
+      totalCanteens: canteens.length,
+      activeCanteens: active.length,
+      trialCanteens: trial.length,
+      expiredCanteens: expired.length,
+      blockedCanteens: blocked.length,
+      onlineCanteens: canteens.filter(item => item.online).length,
+      offlineCanteens: canteens.filter(item => !item.online).length,
+      todaysRegistrations: canteens.filter(item => isToday(item.createdAt)).length,
+      todaysCollections: canteens.filter(item => isToday(item.updatedAt)).reduce((sum, item) => sum + Number(item.paidAmount || 0), 0),
+      monthlyRevenue,
+      pendingPayments,
+      printersAssigned,
+      printersAvailable: Math.max(0, printersRequired - printersAssigned),
+      openSupportTickets: memory.supportTickets.filter(item => item.status === "Open").length,
+      pendingInstallations: canteens.filter(item => ["Active", "Trial"].includes(item.status) && Number(item.printersAssigned || 0) < Number(item.printersRequired || 0)).length
+    },
+    marketingPerformance: performance,
+    recentActivities: activities.slice(0, 12)
+  };
+}
+
 async function sendReportNow(reason = "manual") {
   const appSettings = await getSettings();
   const to = appSettings.adminWhatsAppNumber || appSettings.reportPhone;
@@ -1126,6 +1452,129 @@ app.delete("/orders/:id", requireAdmin, async (req, res) => {
 });
 
 app.get("/dashboard", requireAdmin, async (req, res) => res.json(await dashboardData()));
+
+app.post("/marketing-api/login", async (req, res) => {
+  const employeeId = String(req.body.employeeId || "").trim();
+  const password = String(req.body.password || "");
+  const user = (await allMarketingUsers()).find(item =>
+    item.active !== false &&
+    String(item.employeeId) === employeeId &&
+    String(item.password) === password
+  );
+  if (!user) return res.status(401).json({ success: false, message: "Invalid employee ID or password" });
+  res.json({ success: true, user: publicMarketingUser(user), token: signMarketingToken(user) });
+});
+
+app.get("/marketing-api/me", requireMarketingAuth, async (req, res) => {
+  res.json({ success: true, user: req.marketingUser });
+});
+
+app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
+  const allCanteens = await allMarketingCanteens();
+  const users = await allMarketingUsers();
+  const activities = await allMarketingActivities();
+  const canteens = req.marketingUser.role === "super_admin"
+    ? allCanteens
+    : allCanteens.filter(item => item.submittedBy === req.marketingUser.employeeId);
+  res.json({
+    success: true,
+    canteens,
+    users: users.map(publicMarketingUser),
+    activities: req.marketingUser.role === "super_admin"
+      ? activities
+      : activities.filter(item => canteens.some(canteen => Number(canteen.id) === Number(item.canteenId))),
+    summary: marketingSummary(canteens, users, activities)
+  });
+});
+
+app.post("/marketing-api/canteens", requireMarketingAuth, async (req, res) => {
+  if (req.marketingUser.role !== "marketing") {
+    return res.status(403).json({ success: false, message: "Only marketing employees can submit canteens" });
+  }
+  try {
+    const canteen = await createMarketingCanteen(req.body, req.marketingUser);
+    res.json({ success: true, canteen });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/canteens/:id/approve", requireSuperAdmin, async (req, res) => {
+  try {
+    const canteen = await updateMarketingCanteen(req.params.id, {
+      status: req.body.status || "Active",
+      approvedBy: req.marketingUser.employeeId,
+      approvedAt: new Date().toISOString(),
+      online: true
+    }, req.marketingUser);
+    await addMarketingActivity({ type: "approved", text: `${canteen.canteenName} approved and activated`, actor: req.marketingUser.name, canteenId: canteen.id });
+    res.json({ success: true, canteen });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/canteens/:id/reject", requireSuperAdmin, async (req, res) => {
+  try {
+    const reason = String(req.body.reason || "").trim();
+    if (!reason) return res.status(400).json({ success: false, message: "Rejection reason is required" });
+    const canteen = await updateMarketingCanteen(req.params.id, { status: "Rejected", rejectionReason: reason, online: false }, req.marketingUser);
+    await addMarketingActivity({ type: "rejected", text: `${canteen.canteenName} rejected: ${reason}`, actor: req.marketingUser.name, canteenId: canteen.id });
+    res.json({ success: true, canteen });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/canteens/:id/block", requireSuperAdmin, async (req, res) => {
+  try {
+    const blocked = req.body.blocked !== false;
+    const canteen = await updateMarketingCanteen(req.params.id, { status: blocked ? "Blocked" : "Active", blocked, online: !blocked }, req.marketingUser);
+    await addMarketingActivity({ type: "blocked", text: `${canteen.canteenName} ${blocked ? "blocked" : "unblocked"}`, actor: req.marketingUser.name, canteenId: canteen.id });
+    res.json({ success: true, canteen });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/canteens/:id/payment", requireSuperAdmin, async (req, res) => {
+  try {
+    const canteen = await updateMarketingCanteen(req.params.id, {
+      paidAmount: Number(req.body.paidAmount || 0),
+      pendingAmount: Number(req.body.pendingAmount || 0),
+      paymentMode: req.body.paymentMode || "UPI"
+    }, req.marketingUser);
+    await addMarketingActivity({ type: "payment", text: `${canteen.canteenName} payment updated`, actor: req.marketingUser.name, canteenId: canteen.id });
+    res.json({ success: true, canteen });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/canteens/:id/plan", requireSuperAdmin, async (req, res) => {
+  try {
+    const canteen = await updateMarketingCanteen(req.params.id, {
+      status: req.body.status || "Trial",
+      planType: req.body.planType || req.body.status || "Trial",
+      selectedPlan: req.body.selectedPlan || "Professional",
+      planExpiryDate: req.body.planExpiryDate || ""
+    }, req.marketingUser);
+    await addMarketingActivity({ type: "plan", text: `${canteen.canteenName} plan updated`, actor: req.marketingUser.name, canteenId: canteen.id });
+    res.json({ success: true, canteen });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/canteens/:id/printers", requireSuperAdmin, async (req, res) => {
+  try {
+    const canteen = await updateMarketingCanteen(req.params.id, { printersAssigned: Number(req.body.printersAssigned || 0) }, req.marketingUser);
+    await addMarketingActivity({ type: "printer", text: `${canteen.canteenName} printers assigned`, actor: req.marketingUser.name, canteenId: canteen.id });
+    res.json({ success: true, canteen });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
 
 app.post("/whatsapp/send-test-report", requireAdmin, async (req, res) => {
   try {

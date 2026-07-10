@@ -388,6 +388,194 @@
     .option-card h3 { margin: 0; font-size: 15px; }
     .option-card input, .option-card select { width: 100%; padding: 11px; border: 1px solid var(--line); border-radius: 12px; font-weight: 850; }
     .option-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; font-weight: 850; }
+    .drawer-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: stretch;
+      background: #1118278f;
+    }
+    .side-drawer {
+      width: min(82vw, 314px);
+      max-width: 314px;
+      min-height: 100vh;
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 24px 0 60px #11182738;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+    }
+    .drawer-scroll {
+      overflow-y: auto;
+      padding: 22px 14px 16px;
+      display: grid;
+      gap: 14px;
+    }
+    .drawer-brand {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 0 4px;
+    }
+    .drawer-logo {
+      width: 54px;
+      height: 54px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: #102653;
+      color: white;
+      font-size: 22px;
+      font-weight: 950;
+    }
+    .drawer-title strong { display: block; font-size: 16px; }
+    .drawer-title span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      margin-top: 5px;
+      padding: 0 11px;
+      border-radius: 999px;
+      background: #eef3ff;
+      color: #1d3f77;
+      font-size: 12px;
+      font-weight: 950;
+    }
+    .drawer-connected {
+      grid-column: 2;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: -7px;
+      color: #34824a;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .drawer-connected::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #38a169;
+    }
+    .drawer-user {
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 58px;
+      border: 1px solid #e8edf4;
+      border-radius: 12px;
+      padding: 9px;
+      box-shadow: 0 8px 24px #1118270a;
+    }
+    .drawer-user-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #f1f5ff;
+      color: #244c8f;
+      font-weight: 950;
+    }
+    .drawer-user small,
+    .drawer-section-title {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+    .drawer-user strong { display: block; font-size: 14px; }
+    .drawer-online {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: #eaf8ed;
+      color: #2f7d26;
+      font-size: 12px;
+      font-weight: 950;
+    }
+    .drawer-section {
+      display: grid;
+      gap: 5px;
+      padding-top: 4px;
+      border-top: 1px solid #eef1f5;
+    }
+    .drawer-section:first-of-type { border-top: 0; }
+    .drawer-item {
+      width: 100%;
+      min-height: 42px;
+      display: grid;
+      grid-template-columns: 28px 1fr 18px;
+      align-items: center;
+      gap: 8px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      padding: 0 8px;
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .drawer-item.active {
+      background: linear-gradient(90deg, #102653, #2f72d8);
+      color: white;
+      box-shadow: 0 12px 22px #1f5fb633;
+    }
+    .drawer-item.soft-active {
+      background: #eef5ff;
+      color: #1d4e91;
+    }
+    .drawer-item .drawer-arrow { color: #94a3b8; font-size: 20px; }
+    .drawer-item.active .drawer-arrow { color: white; }
+    .drawer-footer {
+      border-top: 1px solid #eef1f5;
+      padding: 12px 14px 18px;
+      display: grid;
+      gap: 10px;
+      background: #fff;
+    }
+    .drawer-logout {
+      min-height: 44px;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: #c2414b;
+      text-align: left;
+      padding: 0 10px;
+      font-weight: 950;
+    }
+    .drawer-version {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 0 10px;
+    }
+    .drawer-detail {
+      width: min(420px, calc(100vw - min(82vw, 314px)));
+      max-height: calc(100vh - 32px);
+      margin: 16px;
+      overflow-y: auto;
+      align-self: flex-start;
+      display: grid;
+      gap: 10px;
+    }
+    .drawer-detail:empty { display: none; }
+    .drawer-close-zone { flex: 1; min-width: 20px; }
+    .drawer-close-zone {
+      border: 0;
+      background: transparent;
+      min-height: 100vh;
+    }
+    @media (max-width: 640px) {
+      .side-drawer { width: min(86vw, 330px); }
+      .drawer-detail { display: none; }
+    }
     .bill-action {
       border: 1px solid var(--line);
       border-radius: 10px;
@@ -449,6 +637,108 @@
     .muted { color: var(--muted); font-size: 12px; font-weight: 800; }
 
     .form-grid { display: grid; gap: 10px; }
+    .option-page {
+      display: grid;
+      gap: 16px;
+      min-height: 420px;
+    }
+    .work-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 18px;
+      border: 1px solid #e8edf4;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #ffffff, #f4f8ff);
+      box-shadow: 0 12px 28px #1118270d;
+    }
+    .work-header h2 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+    .work-header p {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-weight: 750;
+    }
+    .work-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .work-card {
+      border: 1px solid #e8edf4;
+      border-radius: 12px;
+      background: white;
+      padding: 16px;
+      box-shadow: 0 12px 28px #1118270d;
+    }
+    .work-card h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+    .metric-card span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+    .metric-card strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 26px;
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    .data-table th {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: left;
+      text-transform: uppercase;
+      padding: 0 8px 10px;
+    }
+    .data-table td {
+      border-top: 1px solid #eef1f5;
+      padding: 12px 8px;
+      font-weight: 850;
+      vertical-align: middle;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      border-radius: 999px;
+      padding: 0 10px;
+      background: #edf9ef;
+      color: #15803d;
+      font-size: 12px;
+      font-weight: 950;
+    }
+    .status-pill.warn { background: #fff6df; color: #b45309; }
+    .status-pill.danger { background: #fff1f2; color: #be123c; }
+    .page-action {
+      min-height: 40px;
+      border: 0;
+      border-radius: 10px;
+      background: #082653;
+      color: white;
+      padding: 0 14px;
+      font-weight: 950;
+    }
+    .ghost-action {
+      min-height: 40px;
+      border: 1px solid #dbe5f3;
+      border-radius: 10px;
+      background: white;
+      color: #082653;
+      padding: 0 14px;
+      font-weight: 950;
+    }
 
     /* POS visual style matching the supplied mobile mockup. */
     #posView {
@@ -481,6 +771,8 @@
     .notif-dot.online::after { background: #16a34a; }
     .notif-dot.offline::after { background: #ef4444; }
     #posView .content { padding: 24px 336px 90px 20px; }
+    #posView.option-mode .content { padding-right: 20px; }
+    #posView.option-mode .cart-sheet { display: none; }
     .search-row { display: grid; grid-template-columns: minmax(260px, 1fr) 158px 126px; gap: 18px; align-items: center; margin-bottom: 26px; }
     .search-box { display: flex; align-items: center; gap: 10px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; padding: 0 14px; color: #667085; box-shadow: 0 10px 24px #11182708; }
     .search-box input { border: 0; box-shadow: none; background: transparent; padding: 0; font-size: 16px; font-weight: 650; }
@@ -541,6 +833,12 @@
       .counter-pill, .top-actions-pos .icon-btn, .admin-chip span, .shift-line .date-part, .shift-line .shift-part { display: none; }
       .brand-mark { width: 46px; height: 46px; font-size: 22px; }
       #posView .content { padding: 10px 14px 188px; }
+      #posView.option-mode .content { padding: 10px 14px 90px; }
+      .work-header { display: grid; padding: 14px; }
+      .work-header h2 { font-size: 20px; }
+      .work-grid { grid-template-columns: 1fr; }
+      .data-table { font-size: 12px; }
+      .data-table th, .data-table td { padding: 9px 5px; }
       .search-row { grid-template-columns: 1fr; gap: 10px; margin-bottom: 14px; }
       .pos-layout { grid-template-columns: 1fr; }
       #posView .menu-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -608,16 +906,19 @@
         </div>
       </header>
       <section class="content">
-        <div class="search-row">
-          <label class="search-box" aria-label="Search for items">
-            <span>⌕</span>
-            <input id="itemSearch" placeholder="Search item by name / code">
-          </label>
-          <button class="filter-btn sale-btn" id="todaySaleBtn" type="button">Today's Sale</button>
-          <button class="filter-btn" id="filterBtn" type="button">Orders</button>
+        <div id="billingPanel">
+          <div class="search-row">
+            <label class="search-box" aria-label="Search for items">
+              <span>⌕</span>
+              <input id="itemSearch" placeholder="Search item by name / code">
+            </label>
+            <button class="filter-btn sale-btn" id="todaySaleBtn" type="button">Today's Sale</button>
+            <button class="filter-btn" id="filterBtn" type="button">Orders</button>
+          </div>
+          <div class="tabs" id="categoryTabs"></div>
+          <div class="menu-grid" id="menuGrid"></div>
         </div>
-        <div class="tabs" id="categoryTabs"></div>
-        <div class="menu-grid" id="menuGrid"></div>
+        <div class="option-page hidden" id="optionPage"></div>
       </section>
       <nav class="bottom-nav user-nav" id="userNav">
         <button class="active">Home</button>
@@ -699,6 +1000,8 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
+    const appBuild = "1.7.0";
+    const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
     const heldOrdersKey = "AXEN_HELD_ORDERS";
@@ -717,6 +1020,7 @@
     let itemSearch = "";
     let cartDiscount = 0;
     let adminTab = "dashboard";
+    let activePosSection = "billing";
     let serverOnline = navigator.onLine;
     let adminUnlocked = false;
     let selectedPrinter = localStorage.getItem(selectedPrinterKey) || "";
@@ -732,6 +1036,11 @@
     const writeJson = (key, value) => localStorage.setItem(key, JSON.stringify(value));
     const pendingOrders = () => readJson(pendingOrdersKey, []);
     const setPendingOrders = value => { writeJson(pendingOrdersKey, value); updateSyncStatus(); };
+
+    if (localStorage.getItem(appBuildKey) !== appBuild) {
+      localStorage.removeItem(productCacheKey);
+      localStorage.setItem(appBuildKey, appBuild);
+    }
 
     function setConnectionState(state, text) {
       const badge = $("connectionBadge");
@@ -1412,12 +1721,12 @@
       setHeldOrders(rows.filter(row => String(row.id) !== String(id)));
       renderCart();
       renderProducts();
-      closeOptionsModal();
+      setPosSection("billing");
     }
 
     function deleteHeldOrder(id) {
       setHeldOrders(heldOrders().filter(row => String(row.id) !== String(id)));
-      openOptionsModal("held");
+      setPosSection("held");
     }
 
     function reprintLastBill() {
@@ -1471,110 +1780,321 @@
       }
     }
 
-    async function openOptionsModal(section = "menu") {
-      await loadAdminData();
+    function drawerItem(section, label, icon, activeSection) {
+      const active = section === activeSection ? "active" : "";
+      return `<button class="drawer-item ${active}" data-menu-section="${section}" type="button"><span>${icon}</span><strong>${label}</strong><span class="drawer-arrow">›</span></button>`;
+    }
+
+    function stockAvailabilityHtml() {
+      const rows = products.slice(0, 12).map(item => {
+        const qty = Number(item.stock ?? item.quantity ?? item.quantityOnHand ?? item.qty ?? 0);
+        const status = qty > 10 ? "In Stock" : "Low Stock";
+        return `<div class="option-row"><span>${esc(item.name || "Item")}<br><small>${esc(item.category || "")}</small></span><strong>${qty || "-"} ${status}</strong></div>`;
+      }).join("");
+      return `<div class="option-card"><h3>Item Inventory</h3>${rows || `<div class="muted">Menu load ayyaka inventory kanipisthundi.</div>`}</div>`;
+    }
+
+    function pageTitle(section) {
+      return ({
+        held: "Orders",
+        report: "Today's Sales",
+        cash: "Cash Summary",
+        stock: "Stock Availability",
+        printer: "Printer Settings",
+        add: "Add Item",
+        edit: "Edit Price",
+        counter: "Counter User",
+        settings: "Settings"
+      })[section] || "Dashboard";
+    }
+
+    function pageSubtitle(section) {
+      return ({
+        held: "Held orders and quick return to billing.",
+        report: "Today's bills, payment mode and sale totals.",
+        cash: "Cash, online and credit collection split.",
+        stock: "Inventory view with low-stock status.",
+        printer: "Bluetooth printer selection and test print.",
+        add: "Admin item creation shortcut.",
+        edit: "Menu price management shortcut.",
+        counter: "Cashier and counter user management.",
+        settings: "Search, menu refresh and admin access."
+      })[section] || "Overview";
+    }
+
+    function sectionHeader(section, actionHtml = "") {
+      return `<div class="work-header"><div><h2>${pageTitle(section)}</h2><p>${pageSubtitle(section)}</p></div>${actionHtml}</div>`;
+    }
+
+    function ordersPageHtml() {
+      const held = heldOrders();
+      const recent = orders.slice().reverse().slice(0, 8);
+      const heldRows = held.map(order => `
+        <tr>
+          <td>${esc(order.time || "-")}</td>
+          <td>${(order.items || []).length} items</td>
+          <td>${money(order.total)}</td>
+          <td><button class="ghost-action" data-restore-held="${order.id}" type="button">Open</button></td>
+        </tr>`).join("");
+      const recentRows = recent.map(order => `
+        <tr>
+          <td>${esc(order.id || order.clientOrderId || "-")}</td>
+          <td>${esc(order.cashier || user?.name || "-")}</td>
+          <td>${money(order.total)}</td>
+          <td><span class="status-pill">${esc(order.payment || "Cash")}</span></td>
+        </tr>`).join("");
+      return `
+        ${sectionHeader("held", `<button class="page-action" data-go-billing type="button">New Billing</button>`)}
+        <div class="work-grid">
+          <div class="work-card metric-card"><span>Held Orders</span><strong>${held.length}</strong></div>
+          <div class="work-card metric-card"><span>Recent Bills</span><strong>${recent.length}</strong></div>
+          <div class="work-card metric-card"><span>Cart Items</span><strong>${cart.reduce((sum, item) => sum + item.qty, 0)}</strong></div>
+        </div>
+        <div class="work-card">
+          <h3>Held Orders</h3>
+          <table class="data-table"><thead><tr><th>Time</th><th>Items</th><th>Total</th><th>Action</th></tr></thead><tbody>${heldRows || `<tr><td colspan="4">No held orders</td></tr>`}</tbody></table>
+        </div>
+        <div class="work-card">
+          <h3>Recent Orders</h3>
+          <table class="data-table"><thead><tr><th>Bill</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${recentRows || `<tr><td colspan="4">No orders yet</td></tr>`}</tbody></table>
+        </div>`;
+    }
+
+    function reportPageHtml() {
+      const rows = todayOrders();
+      const totals = rows.reduce((sum, order) => {
+        const pay = orderBreakup(order);
+        sum.total += Number(order.total || 0);
+        sum.cash += pay.cash;
+        sum.online += pay.online;
+        sum.credit += pay.credit;
+        return sum;
+      }, { total: 0, cash: 0, online: 0, credit: 0 });
+      const tableRows = rows.slice().reverse().slice(0, 12).map(order => `
+        <tr>
+          <td>${esc(order.id || order.clientOrderId || "-")}</td>
+          <td>${esc(order.time || "-")}</td>
+          <td>${esc(order.cashier || user?.name || "-")}</td>
+          <td>${money(order.total)}</td>
+          <td>${esc(order.payment || "Cash")}</td>
+        </tr>`).join("");
+      return `
+        ${sectionHeader("report")}
+        <div class="work-grid">
+          <div class="work-card metric-card"><span>Total Sale</span><strong>${money(totals.total)}</strong></div>
+          <div class="work-card metric-card"><span>Total Bills</span><strong>${rows.length}</strong></div>
+          <div class="work-card metric-card"><span>Cash</span><strong>${money(totals.cash)}</strong></div>
+        </div>
+        <div class="work-card">
+          <h3>Today Bills</h3>
+          <table class="data-table"><thead><tr><th>Bill ID</th><th>Time</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${tableRows || `<tr><td colspan="5">No sales today</td></tr>`}</tbody></table>
+        </div>`;
+    }
+
+    function cashPageHtml() {
+      const rows = todayOrders();
+      const totals = rows.reduce((sum, order) => {
+        const pay = orderBreakup(order);
+        sum.cash += pay.cash;
+        sum.online += pay.online;
+        sum.credit += pay.credit;
+        return sum;
+      }, { cash: 0, online: 0, credit: 0 });
+      return `
+        ${sectionHeader("cash")}
+        <div class="work-grid">
+          <div class="work-card metric-card"><span>Cash In Drawer</span><strong>${money(totals.cash)}</strong></div>
+          <div class="work-card metric-card"><span>Online Collected</span><strong>${money(totals.online)}</strong></div>
+          <div class="work-card metric-card"><span>Credit Pending</span><strong>${money(totals.credit)}</strong></div>
+        </div>
+        <div class="work-card"><h3>Collection Summary</h3><div class="option-row"><span>Total collection</span><strong>${money(totals.cash + totals.online + totals.credit)}</strong></div><div class="option-row"><span>Bill count</span><strong>${rows.length}</strong></div></div>`;
+    }
+
+    function stockPageHtml() {
+      const rows = products.map(item => {
+        const qty = Number(item.stock ?? item.quantity ?? item.quantityOnHand ?? item.qty ?? 0);
+        const low = qty > 0 && qty <= 10;
+        return `<tr><td>${esc(item.name || "Item")}</td><td>${esc(item.category || "-")}</td><td>${qty || "-"}</td><td><span class="status-pill ${low ? "warn" : ""}">${low ? "Low Stock" : "In Stock"}</span></td></tr>`;
+      }).join("");
+      return `${sectionHeader("stock", `<button class="ghost-action" id="refreshMenuBtn" type="button">Refresh</button>`)}<div class="work-card"><h3>Item Inventory</h3><table class="data-table"><thead><tr><th>Item Name</th><th>Category</th><th>Qty</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="4">No items found</td></tr>`}</tbody></table></div>`;
+    }
+
+    function printerPageHtml() {
       const pairedPrinters = getPairedPrinters();
-      const modalTitle = ({ menu: "Profile", profile: "Profile", held: "Hold Orders", report: "Today's Report", cash: "Cash Summary", printer: "Printer Settings", settings: "Settings", help: "Help" })[section] || "Profile";
-      const sectionHtml = section === "printer" ? `
-        <div class="option-card">
-          <h3>Printer Settings</h3>
+      return `
+        ${sectionHeader("printer")}
+        <div class="work-card">
+          <h3>Available Printers</h3>
           <select id="printerSelect">${printerOptionsHtml(pairedPrinters)}</select>
           <div class="muted" id="printerStatus">${selectedPrinter ? "Selected printer saved" : "Auto printer selection active"}</div>
         </div>
-        <button class="secondary" id="menuTestPrint" type="button">Test Print</button>
-      ` : section === "held" ? `
-        <div class="option-card">
-          <h3>Hold Orders</h3>
-          <button class="secondary" id="holdCurrentOrder" type="button">Hold Current Cart</button>
-          ${heldOrdersHtml()}
-        </div>
-      ` : section === "report" ? todaySaleHtml() : section === "cash" ? cashSummaryHtml() : section === "settings" ? `
-        <div class="option-card">
-          <h3>Settings</h3>
-          <input id="optionSearchInput" placeholder="Search item name / code" value="${esc(itemSearch)}">
-          <button class="secondary" id="clearSearchBtn" type="button">Clear Search</button>
-          <button class="secondary" id="refreshMenuBtn" type="button">Refresh Menu</button>
-          <button class="secondary" id="clearCartSettingsBtn" type="button">Clear Cart</button>
-        </div>
-      ` : "";
-      $("optionsModalMount").innerHTML = `
-        <div class="modal-backdrop">
-          <div class="payment-modal">
-            <div class="modal-title-row"><h2>${modalTitle}</h2><button class="modal-x" id="closeOptionsTop" type="button">X</button></div>
-            <div class="option-actions">
-              <div class="option-card menu-list">
-                <button class="menu-action" data-menu-section="profile" type="button">Profile</button>
-                <div class="menu-divider"></div>
-                <button class="menu-action" data-menu-section="held" type="button">Hold Orders</button>
-                <button class="menu-action" id="reprintLastBill" type="button">Reprint Last Bill</button>
-                <button class="menu-action" data-menu-section="report" type="button">Today's Report</button>
-                <button class="menu-action" data-menu-section="cash" type="button">Cash Summary</button>
-                <div class="menu-divider"></div>
-                <button class="menu-action" data-menu-section="printer" type="button">Printer Settings</button>
-                <button class="menu-action" id="syncNowBtn" type="button">Sync Data</button>
-                <button class="menu-action" data-menu-section="settings" type="button">Settings</button>
-                <div class="menu-divider"></div>
-                <button class="menu-action" data-menu-section="help" type="button">Help</button>
-                <button class="menu-action" id="menuLogout" type="button">Logout</button>
-              </div>
-              ${section === "profile" ? `<div class="option-card"><h3>${esc(user?.name || "User")}</h3><div class="option-row"><span>Role</span><strong>${esc(user?.role || "user")}</strong></div><div class="option-row"><span>Canteen</span><strong>${esc(settings.canteenName)}</strong></div></div>` : ""}
-              ${sectionHtml}
-              ${section === "help" ? `<div class="option-card"><h3>Help</h3><div class="muted">Item ni normal tap chesthe cart lo add avuthundi. Item ni hold chesi pattukunte sub items open avuthayi.</div></div>` : ""}
-              ${adminUnlockHtml()}
-              ${lastBillsHtml()}
-            </div>
-            <button class="secondary modal-close" type="button" id="closeOptionsModal">Close</button>
-          </div>
+        <div class="work-grid">
+          <button class="page-action" id="menuTestPrint" type="button">Test Print</button>
+          <button class="ghost-action" id="refreshPrinterPage" type="button">Scan for Printers</button>
         </div>`;
-      $("closeOptionsModal").addEventListener("click", closeOptionsModal);
-      $("closeOptionsTop").addEventListener("click", closeOptionsModal);
+    }
+
+    function settingsPageHtml() {
+      return `
+        ${sectionHeader("settings")}
+        <div class="work-grid">
+          <button class="ghost-action" id="clearSearchBtn" type="button">Clear Search</button>
+          <button class="ghost-action" id="refreshMenuBtn" type="button">Refresh Menu</button>
+          <button class="ghost-action" id="clearCartSettingsBtn" type="button">Clear Cart</button>
+        </div>
+        ${adminUnlockHtml()}
+        ${lastBillsHtml()}`;
+    }
+
+    function simpleAdminPageHtml(section) {
+      return `${sectionHeader(section)}<div class="work-card"><h3>${pageTitle(section)}</h3><p class="muted">Admin panel lo manage cheyyandi. Billing ki vellali ante below button click cheyyandi.</p><button class="page-action" data-go-billing type="button">Go to Billing Panel</button></div>${adminUnlockHtml()}`;
+    }
+
+    function renderOptionPage() {
+      const page = $("optionPage");
+      if (!page) return;
+      const html = activePosSection === "held" ? ordersPageHtml()
+        : activePosSection === "report" ? reportPageHtml()
+        : activePosSection === "cash" ? cashPageHtml()
+        : activePosSection === "stock" ? stockPageHtml()
+        : activePosSection === "printer" ? printerPageHtml()
+        : activePosSection === "settings" ? settingsPageHtml()
+        : simpleAdminPageHtml(activePosSection);
+      page.innerHTML = html;
+      bindOptionPageActions();
+    }
+
+    function setPosSection(section) {
+      activePosSection = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
+      closeOptionsModal();
+      const billingMode = activePosSection === "billing";
+      $("posView").classList.toggle("option-mode", !billingMode);
+      $("billingPanel").classList.toggle("hidden", !billingMode);
+      $("optionPage").classList.toggle("hidden", billingMode);
+      document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn.textContent.trim() === (billingMode ? "Home" : pageTitle(activePosSection).split(" ")[0])));
+      if (billingMode) {
+        activeCategory = "All";
+        itemSearch = "";
+        if ($("itemSearch")) $("itemSearch").value = "";
+        renderProducts();
+      } else {
+        renderOptionPage();
+      }
+    }
+
+    function bindOptionPageActions() {
       if ($("printerSelect")) $("printerSelect").addEventListener("change", event => {
         const result = setSelectedPrinter(event.target.value);
         $("printerStatus").textContent = result || "Printer saved";
         $("printerStatus").className = result && result.includes("failed") ? "status error" : "status ok";
       });
-      if ($("optionSearchInput")) $("optionSearchInput").addEventListener("input", event => {
-        itemSearch = event.target.value;
-        if ($("itemSearch")) $("itemSearch").value = itemSearch;
-        renderProducts();
-      });
-      document.querySelectorAll("[data-menu-section]").forEach(btn => btn.addEventListener("click", () => openOptionsModal(btn.dataset.menuSection)));
       if ($("menuTestPrint")) $("menuTestPrint").addEventListener("click", testPrint);
-      if ($("holdCurrentOrder")) $("holdCurrentOrder").addEventListener("click", () => { if (holdCurrentOrder()) openOptionsModal("held"); });
-      if ($("reprintLastBill")) $("reprintLastBill").addEventListener("click", reprintLastBill);
+      if ($("refreshPrinterPage")) $("refreshPrinterPage").addEventListener("click", () => renderOptionPage());
+      if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => { await loadProducts(); renderOptionPage(); });
+      if ($("clearSearchBtn")) $("clearSearchBtn").addEventListener("click", () => { itemSearch = ""; if ($("itemSearch")) $("itemSearch").value = ""; });
+      if ($("clearCartSettingsBtn")) $("clearCartSettingsBtn").addEventListener("click", () => { cart = []; cartDiscount = 0; renderCart(); renderProducts(); });
+      if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
+      document.querySelectorAll("[data-go-billing]").forEach(btn => btn.addEventListener("click", () => setPosSection("billing")));
+      document.querySelectorAll("[data-restore-held]").forEach(btn => btn.addEventListener("click", () => restoreHeldOrder(btn.dataset.restoreHeld)));
+      document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
+      document.querySelectorAll("[data-delete-held]").forEach(btn => btn.addEventListener("click", () => deleteHeldOrder(btn.dataset.deleteHeld)));
+    }
+
+    function drawerDetailHtml(section, pairedPrinters) {
+      if (section === "profile") {
+        return `<div class="option-card"><h3>${esc(user?.name || "User")}</h3><div class="option-row"><span>Role</span><strong>${esc(user?.role || "user")}</strong></div><div class="option-row"><span>Canteen</span><strong>${esc(settings.canteenName)}</strong></div></div>`;
+      }
+      if (section === "held") {
+        return `<div class="option-card"><h3>Hold Orders</h3><button class="secondary" id="holdCurrentOrder" type="button">Hold Current Cart</button>${heldOrdersHtml()}</div>`;
+      }
+      if (section === "report") return todaySaleHtml();
+      if (section === "cash") return cashSummaryHtml();
+      if (section === "printer") {
+        return `<div class="option-card"><h3>Available Printers</h3><select id="printerSelect">${printerOptionsHtml(pairedPrinters)}</select><div class="muted" id="printerStatus">${selectedPrinter ? "Selected printer saved" : "Auto printer selection active"}</div></div><button class="secondary" id="menuTestPrint" type="button">Test Print</button>`;
+      }
+      if (section === "stock") return stockAvailabilityHtml();
+      if (section === "settings") {
+        return `<div class="option-card"><h3>Settings</h3><input id="optionSearchInput" placeholder="Search item name / code" value="${esc(itemSearch)}"><button class="secondary" id="clearSearchBtn" type="button">Clear Search</button><button class="secondary" id="refreshMenuBtn" type="button">Refresh Menu</button><button class="secondary" id="clearCartSettingsBtn" type="button">Clear Cart</button></div>${adminUnlockHtml()}${lastBillsHtml()}`;
+      }
+      if (section === "add" || section === "edit" || section === "counter") {
+        return `<div class="option-card"><h3>${section === "add" ? "Add Item" : section === "edit" ? "Edit Price" : "Counter User"}</h3><div class="muted">Admin panel lo ee option manage cheyyandi.</div>${adminUnlockHtml()}</div>`;
+      }
+      if (section === "help") {
+        return `<div class="option-card"><h3>Help</h3><div class="muted">Item ni normal tap chesthe cart lo add avuthundi. Item ni hold chesi pattukunte sub items open avuthayi.</div></div>`;
+      }
+      return "";
+    }
+
+    async function openOptionsModal(section = "menu") {
+      if (section !== "menu") {
+        setPosSection(section);
+        return;
+      }
+      await loadAdminData();
+      const activeSection = activePosSection === "billing" ? "dashboard" : activePosSection;
+      $("optionsModalMount").innerHTML = `
+        <div class="drawer-backdrop">
+          <aside class="side-drawer">
+            <div class="drawer-scroll">
+              <div class="drawer-brand">
+                <div class="drawer-logo">A</div>
+                <div class="drawer-title"><strong>${esc(settings.canteenName || "Main Canteen")}</strong><span>Counter 01</span></div>
+                <div class="drawer-connected">Connected</div>
+              </div>
+              <div class="drawer-user">
+                <div class="drawer-user-icon">U</div>
+                <div><small>${esc(user?.role || "Cashier")}</small><strong>${esc(user?.name || "Venkatesh")}</strong></div>
+                <span class="drawer-online">Online</span>
+              </div>
+              <section class="drawer-section">
+                <span class="drawer-section-title">Sales</span>
+                ${drawerItem("dashboard", "Dashboard", "H", activeSection)}
+                ${drawerItem("billing", "New Billing", "B", activeSection)}
+                ${drawerItem("held", "Orders", "O", activeSection)}
+                ${drawerItem("report", "Today's Sales", "S", activeSection)}
+                ${drawerItem("cash", "Cash Summary", "C", activeSection)}
+              </section>
+              <section class="drawer-section">
+                <span class="drawer-section-title">Items</span>
+                ${drawerItem("add", "Add Item", "+", activeSection)}
+                ${drawerItem("edit", "Edit Price", "E", activeSection)}
+                ${drawerItem("stock", "Stock Availability", "I", activeSection)}
+              </section>
+              <section class="drawer-section">
+                <span class="drawer-section-title">Settings</span>
+                ${drawerItem("printer", "Printer Settings", "P", activeSection)}
+                ${drawerItem("counter", "Counter User", "U", activeSection)}
+                ${drawerItem("settings", "Settings", "G", activeSection)}
+                <button class="drawer-item" id="syncNowBtn" type="button"><span>Y</span><strong>Sync Data</strong><span class="drawer-arrow">›</span></button>
+              </section>
+            </div>
+            <div class="drawer-footer">
+              <button class="drawer-logout" id="menuLogout" type="button">Logout</button>
+              <div class="drawer-version">App Version ${appBuild}</div>
+            </div>
+          </aside>
+          <button class="drawer-close-zone" id="closeOptionsModal" type="button" aria-label="Close menu"></button>
+        </div>`;
+      $("closeOptionsModal").addEventListener("click", closeOptionsModal);
+      document.querySelectorAll("[data-menu-section]").forEach(btn => btn.addEventListener("click", () => setPosSection(btn.dataset.menuSection)));
       if ($("syncNowBtn")) $("syncNowBtn").addEventListener("click", async () => {
         const before = pendingOrders().length;
         await syncPendingOrders();
+        closeOptionsModal();
         $("posMessage").textContent = before ? "Sync complete" : "No pending data to sync";
         $("posMessage").className = "status ok";
       });
-      if ($("clearSearchBtn")) $("clearSearchBtn").addEventListener("click", () => {
-        itemSearch = "";
-        if ($("itemSearch")) $("itemSearch").value = "";
-        if ($("optionSearchInput")) $("optionSearchInput").value = "";
-        renderProducts();
-      });
-      if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => {
-        await loadProducts();
-        $("posMessage").textContent = "Menu refreshed";
-        $("posMessage").className = "status ok";
-      });
-      if ($("clearCartSettingsBtn")) $("clearCartSettingsBtn").addEventListener("click", () => {
-        cart = [];
-        cartDiscount = 0;
-        renderCart();
-        renderProducts();
-      });
       $("menuLogout").addEventListener("click", logout);
-      if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
-      document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
-      document.querySelectorAll("[data-restore-held]").forEach(btn => btn.addEventListener("click", () => restoreHeldOrder(btn.dataset.restoreHeld)));
-      document.querySelectorAll("[data-delete-held]").forEach(btn => btn.addEventListener("click", () => deleteHeldOrder(btn.dataset.deleteHeld)));
     }
 
     function closeOptionsModal() {
       longPressHandled = false;
       $("optionsModalMount").innerHTML = "";
+    }
+
+    function openMainMenu(event) {
+      if (event && typeof event.preventDefault === "function") event.preventDefault();
+      openOptionsModal("menu");
     }
 
     async function printCopyBill(orderId) {
@@ -1606,7 +2126,7 @@
         adminUnlocked = true;
         if (data.token) localStorage.setItem(tokenKey, data.token);
         await loadAdminData();
-        openOptionsModal();
+        renderOptionPage();
       } catch {
         $("posMessage").textContent = "Admin unlock failed";
         $("posMessage").className = "status error";
@@ -1960,34 +2480,31 @@
         await loadProducts();
         await loadAdminData();
         await syncPendingOrders();
+        setPosSection(activePosSection);
       }
     }
 
     $("loginForm").addEventListener("submit", login);
     $("testServerBtn").addEventListener("click", testServerFromLogin);
-    $("logoutPos").addEventListener("click", openOptionsModal);
+    $("logoutPos").addEventListener("click", openMainMenu);
     $("logoutAdmin").addEventListener("click", logout);
     $("itemSearch").addEventListener("input", event => {
       itemSearch = event.target.value;
       renderProducts();
     });
     $("filterBtn").addEventListener("click", () => {
-      openOptionsModal("held");
+      setPosSection("held");
     });
-    if ($("todaySaleBtn")) $("todaySaleBtn").addEventListener("click", () => openOptionsModal("report"));
+    if ($("todaySaleBtn")) $("todaySaleBtn").addEventListener("click", () => setPosSection("report"));
     $("userNav").addEventListener("click", event => {
       const label = String(event.target.textContent || "").trim();
       document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn === event.target));
       if (label === "Home") {
-        closeOptionsModal();
-        activeCategory = "All";
-        itemSearch = "";
-        if ($("itemSearch")) $("itemSearch").value = "";
-        renderProducts();
+        setPosSection("billing");
       }
-      if (label === "Orders") openOptionsModal("held");
-      if (label === "Reports") openOptionsModal("report");
-      if (label === "Settings") openOptionsModal("settings");
+      if (label === "Orders") setPosSection("held");
+      if (label === "Reports") setPosSection("report");
+      if (label === "Settings") setPosSection("settings");
     });
     $("categoryTabs").addEventListener("click", event => {
       const btn = event.target.closest("[data-category]");
@@ -2035,7 +2552,7 @@
     });
     $("clearCart").addEventListener("click", () => { cart = []; cartDiscount = 0; renderCart(); renderProducts(); });
     $("placeOrder").addEventListener("click", placeOrderFlow);
-    $("profileBtn").addEventListener("click", openOptionsModal);
+    $("profileBtn").addEventListener("click", openMainMenu);
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
       adminTab = btn.dataset.adminTab;
       renderAdmin();

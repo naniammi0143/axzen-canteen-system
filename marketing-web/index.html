@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Axzen Marketing Console</title>
+  <style>
+    :root {
+      --ink: #111827;
+      --muted: #667085;
+      --line: #e6ebf2;
+      --page: #f6f8fb;
+      --panel: #ffffff;
+      --navy: #082653;
+      --blue: #2563eb;
+      --green: #16a34a;
+      --orange: #f59e0b;
+      --red: #dc2626;
+      --teal: #0f766e;
+      --shadow: 0 12px 32px #11182710;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--page);
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+    .login {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: linear-gradient(140deg, #f8fbff, #eef5f3 52%, #f6f8fb);
+    }
+    .login-card {
+      width: min(440px, 100%);
+      display: grid;
+      gap: 16px;
+      padding: 30px;
+      border: 1px solid #fff;
+      border-radius: 8px;
+      background: #ffffffed;
+      box-shadow: 0 24px 70px #11182717;
+    }
+    .brand { display: grid; gap: 6px; text-align: center; }
+    .brand h1 { margin: 0; color: var(--navy); font-size: 34px; }
+    .brand p { margin: 0; color: var(--muted); font-weight: 800; }
+    label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid #d8e0ea;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcff;
+      outline: none;
+    }
+    textarea { min-height: 92px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 4px #2563eb18; background: white; }
+    .primary, .secondary, .danger, .ghost {
+      min-height: 40px;
+      border-radius: 8px;
+      border: 0;
+      padding: 0 13px;
+      font-weight: 900;
+    }
+    .primary { background: var(--blue); color: white; box-shadow: 0 10px 22px #2563eb28; }
+    .secondary { background: #ecfdf5; color: var(--green); border: 1px solid #bbf7d0; }
+    .danger { background: #fff1f2; color: var(--red); border: 1px solid #fecdd3; }
+    .ghost { background: white; color: var(--ink); border: 1px solid var(--line); }
+    .status { min-height: 20px; color: var(--muted); font-size: 13px; font-weight: 800; }
+    .status.error { color: var(--red); }
+    .status.ok { color: var(--green); }
+    .shell { display: grid; grid-template-columns: 280px 1fr; min-height: 100vh; }
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 22px 16px;
+      background: #0b1f3f;
+      color: white;
+    }
+    .side-brand strong { display: block; font-size: 22px; }
+    .side-brand span, .profile span { color: #b7c3d8; font-size: 13px; font-weight: 750; }
+    .profile {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 11px;
+      align-items: center;
+      padding: 12px;
+      border-radius: 8px;
+      background: #ffffff10;
+      border: 1px solid #ffffff18;
+    }
+    .avatar { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: white; color: var(--navy); font-weight: 950; }
+    nav { display: grid; gap: 6px; }
+    nav button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #dbe6f5;
+      text-align: left;
+      padding: 0 12px;
+      font-weight: 850;
+    }
+    nav button.active { background: #2563eb; color: white; }
+    nav button:hover { background: #ffffff12; }
+    .logout { margin-top: auto; background: #ffffff10; color: #fecaca; border: 1px solid #ffffff18; }
+    main { min-width: 0; padding: 24px; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+      margin: -24px -24px 20px;
+      padding: 20px 24px;
+      background: #ffffffcc;
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+      position: sticky;
+      top: 0;
+      z-index: 3;
+    }
+    .topbar h1 { margin: 0; font-size: 28px; }
+    .topbar p { margin: 4px 0 0; color: var(--muted); font-weight: 750; }
+    .chip { border: 1px solid var(--line); border-radius: 8px; background: white; padding: 10px 12px; font-weight: 900; }
+    .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .card, .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      box-shadow: var(--shadow);
+    }
+    .card { padding: 16px; min-height: 104px; }
+    .card span { display: block; color: var(--muted); font-size: 12px; font-weight: 950; text-transform: uppercase; }
+    .card strong { display: block; margin-top: 10px; font-size: 26px; }
+    .card small { display: block; margin-top: 10px; color: var(--teal); font-weight: 850; }
+    .panel { padding: 18px; margin-bottom: 16px; }
+    .panel h2 { margin: 0 0 14px; font-size: 18px; }
+    .grid-2 { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(340px, .75fr); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: end; }
+    .form-grid .wide { grid-column: span 2; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .toolbar-left, .row-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { color: var(--muted); font-size: 12px; text-align: left; background: #f8fafc; border-bottom: 1px solid var(--line); padding: 10px; }
+    td { border-bottom: 1px solid var(--line); padding: 11px 10px; vertical-align: top; font-weight: 650; }
+    tr:last-child td { border-bottom: 0; }
+    .table-wrap { overflow: auto; }
+    .pill { display: inline-flex; min-height: 24px; align-items: center; border-radius: 999px; padding: 0 9px; font-size: 12px; font-weight: 950; background: #eef4ff; color: var(--blue); }
+    .pill.green { background: #ecfdf5; color: var(--green); }
+    .pill.orange { background: #fff7ed; color: #c2410c; }
+    .pill.red { background: #fff1f2; color: var(--red); }
+    .pill.gray { background: #f3f4f6; color: #475467; }
+    .list { display: grid; gap: 10px; }
+    .list-row { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+    .list-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .muted { color: var(--muted); font-weight: 750; }
+    .activity { display: grid; gap: 10px; }
+    .activity-item { display: grid; grid-template-columns: 10px 1fr; gap: 10px; align-items: start; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; background: var(--blue); }
+    @media (max-width: 980px) {
+      .shell { grid-template-columns: 1fr; }
+      aside { position: static; height: auto; }
+      .kpis, .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr; }
+      .form-grid .wide, .form-grid .full { grid-column: auto; }
+      .topbar { position: static; }
+    }
+  </style>
+</head>
+<body>
+  <section class="login" id="loginView">
+    <form class="login-card" id="loginForm">
+      <div class="brand">
+        <h1>Axzen Marketing</h1>
+        <p>Canteen onboarding and approval console</p>
+      </div>
+      <label>Employee ID <input id="employeeId" autocomplete="username" value="SUPER" required></label>
+      <label>Password <input id="password" type="password" autocomplete="current-password" value="admin123" required></label>
+      <button class="primary" type="submit">Login</button>
+      <div class="status" id="loginStatus">Super: SUPER / admin123 | Marketing: MKT001 / 1234</div>
+    </form>
+  </section>
+
+  <section class="shell hidden" id="appView">
+    <aside>
+      <div class="side-brand"><strong>Axzen Console</strong><span>Marketing Operations</span></div>
+      <div class="profile"><div class="avatar" id="avatar">A</div><div><strong id="profileName">User</strong><span id="profileRole">Role</span></div></div>
+      <nav id="nav"></nav>
+      <button class="logout" id="logoutBtn" type="button">Logout</button>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub">Track canteen onboarding, payments and approvals.</p></div>
+        <div class="chip" id="roleChip">Super Admin</div>
+      </header>
+      <div class="status" id="pageStatus"></div>
+      <section id="page"></section>
+    </main>
+  </section>
+
+  <script>
+    const API = "";
+    const $ = id => document.getElementById(id);
+    const money = value => "Rs " + Number(value || 0).toLocaleString("en-IN");
+    const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    const today = () => new Date().toISOString().slice(0, 10);
+    const tokenKey = "AXZEN_MARKETING_TOKEN";
+    let token = localStorage.getItem(tokenKey) || "";
+    let user = null;
+    let tab = "dashboard";
+    let state = { canteens: [], users: [], activities: [], summary: { cards: {}, marketingPerformance: [], recentActivities: [] } };
+
+    const superTabs = [
+      ["dashboard", "Dashboard"],
+      ["approvals", "Approval Queue"],
+      ["canteens", "Canteens"],
+      ["payments", "Payments"],
+      ["printers", "Printer Inventory"],
+      ["performance", "Marketing Performance"],
+      ["activities", "Recent Activities"]
+    ];
+    const marketingTabs = [
+      ["dashboard", "My Dashboard"],
+      ["add", "Add Canteen"],
+      ["my", "My Registrations"],
+      ["payments", "Payment Pending"],
+      ["performance", "My Performance"]
+    ];
+
+    async function api(path, options = {}) {
+      const res = await fetch(API + path, {
+        ...options,
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) }
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) throw new Error(data.message || "Request failed");
+      return data;
+    }
+    function status(text, type = "ok") {
+      $("pageStatus").textContent = text || "";
+      $("pageStatus").className = `status ${type}`;
+    }
+    function statusClass(value) {
+      if (value === "Active") return "green";
+      if (value === "Pending Approval" || value === "Trial") return "orange";
+      if (value === "Rejected" || value === "Blocked" || value === "Expired") return "red";
+      return "gray";
+    }
+    function setPage(title, sub) {
+      $("pageTitle").textContent = title;
+      $("pageSub").textContent = sub || "Track canteen onboarding, payments and approvals.";
+      document.querySelectorAll("#nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
+    }
+    function renderNav() {
+      const tabs = user.role === "super_admin" ? superTabs : marketingTabs;
+      $("nav").innerHTML = tabs.map(([id, label]) => `<button data-tab="${id}" type="button">${label}</button>`).join("");
+      document.querySelectorAll("#nav button").forEach(btn => btn.addEventListener("click", () => { tab = btn.dataset.tab; render(); }));
+    }
+    async function refresh() {
+      const data = await api("/marketing-api/dashboard");
+      state = data;
+    }
+    function cardsHtml(cards, compact = false) {
+      const labels = [
+        ["totalCanteens", "Total Canteens"], ["activeCanteens", "Active Canteens"], ["trialCanteens", "Trial Canteens"], ["expiredCanteens", "Expired Canteens"],
+        ["blockedCanteens", "Blocked Canteens"], ["onlineCanteens", "Online Canteens"], ["offlineCanteens", "Offline Canteens"], ["todaysRegistrations", "Today's Registrations"],
+        ["todaysCollections", "Today's Collections"], ["monthlyRevenue", "Monthly Revenue"], ["pendingPayments", "Pending Payments"], ["printersAssigned", "Printers Assigned"],
+        ["printersAvailable", "Printers Available"], ["openSupportTickets", "Open Support Tickets"], ["pendingInstallations", "Pending Installations"]
+      ];
+      return `<div class="kpis">${labels.slice(0, compact ? 6 : labels.length).map(([key, label]) => `<div class="card"><span>${label}</span><strong>${key.toLowerCase().includes("revenue") || key.toLowerCase().includes("payment") || key.toLowerCase().includes("collection") ? money(cards[key]) : Number(cards[key] || 0)}</strong><small>Live operations</small></div>`).join("")}</div>`;
+    }
+    function activitiesHtml(limit = 12) {
+      const rows = (state.summary.recentActivities || state.activities || []).slice(0, limit).map(item => `<div class="activity-item"><span class="dot"></span><div><strong>${esc(item.text)}</strong><br><span class="muted">${esc(item.actor || "System")} | ${new Date(item.createdAt).toLocaleString("en-IN")}</span></div></div>`).join("");
+      return `<div class="activity">${rows || `<span class="muted">No activities yet</span>`}</div>`;
+    }
+    function performanceTable(rows) {
+      return `<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Registrations</th><th>Approved</th><th>Rejected</th><th>Collection</th><th>Pending</th><th>Target</th></tr></thead><tbody>${rows.map(row => `<tr><td><strong>${esc(row.name)}</strong><br><span class="muted">${esc(row.employeeId)}</span></td><td>${row.registrations}</td><td>${row.approved}</td><td>${row.rejected}</td><td>${money(row.collection)}</td><td>${money(row.pending)}</td><td>${row.target}</td></tr>`).join("") || `<tr><td colspan="7">No performance data</td></tr>`}</tbody></table></div>`;
+    }
+    function canteensTable(rows, actions = true) {
+      return `<div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map(item => `<tr>
+        <td><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.city)}, ${esc(item.state)}</span></td>
+        <td>${esc(item.ownerName)}<br><span class="muted">${esc(item.ownerMobile)}</span></td>
+        <td>${esc(item.selectedPlan)}<br><span class="muted">${esc(item.planType)}</span></td>
+        <td>${money(item.paidAmount)}<br><span class="muted">Pending ${money(item.pendingAmount)}</span></td>
+        <td>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</td>
+        <td><span class="pill ${statusClass(item.status)}">${esc(item.status)}</span></td>
+        <td>${esc(item.submittedByName || item.submittedBy)}</td>
+        ${actions ? `<td><div class="row-actions">${actionButtons(item)}</div></td>` : ""}
+      </tr>`).join("") || `<tr><td colspan="${actions ? 8 : 7}">No canteens found</td></tr>`}</tbody></table></div>`;
+    }
+    function actionButtons(item) {
+      if (user.role !== "super_admin") return "";
+      return `
+        ${item.status === "Pending Approval" ? `<button class="secondary" data-approve="${item.id}" type="button">Approve</button><button class="danger" data-reject="${item.id}" type="button">Reject</button>` : ""}
+        <button class="ghost" data-plan="${item.id}" type="button">Plan</button>
+        <button class="ghost" data-payment="${item.id}" type="button">Payment</button>
+        <button class="ghost" data-printer="${item.id}" type="button">Printers</button>
+        <button class="${item.status === "Blocked" ? "secondary" : "danger"}" data-block="${item.id}" data-blocked="${item.status !== "Blocked"}" type="button">${item.status === "Blocked" ? "Unblock" : "Block"}</button>`;
+    }
+    function bindTableActions() {
+      document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => updateAction(`/marketing-api/canteens/${btn.dataset.approve}/approve`, { status: "Active" }, "Canteen activated")));
+      document.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", () => {
+        const reason = prompt("Reject reason");
+        if (reason) updateAction(`/marketing-api/canteens/${btn.dataset.reject}/reject`, { reason }, "Canteen rejected");
+      }));
+      document.querySelectorAll("[data-block]").forEach(btn => btn.addEventListener("click", () => updateAction(`/marketing-api/canteens/${btn.dataset.block}/block`, { blocked: btn.dataset.blocked === "true" }, "Block status updated")));
+      document.querySelectorAll("[data-payment]").forEach(btn => btn.addEventListener("click", () => {
+        const item = state.canteens.find(row => Number(row.id) === Number(btn.dataset.payment));
+        const paidAmount = prompt("Paid amount", item.paidAmount || 0);
+        if (paidAmount === null) return;
+        const pendingAmount = prompt("Pending amount", item.pendingAmount || 0);
+        if (pendingAmount === null) return;
+        updateAction(`/marketing-api/canteens/${item.id}/payment`, { paidAmount, pendingAmount, paymentMode: item.paymentMode || "UPI" }, "Payment updated");
+      }));
+      document.querySelectorAll("[data-printer]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const item = state.canteens.find(row => Number(row.id) === Number(btn.dataset.printer));
+          const printersAssigned = prompt("Printers assigned", item.printersAssigned || 0);
+          if (printersAssigned !== null) updateAction(`/marketing-api/canteens/${item.id}/printers`, { printersAssigned }, "Printers updated");
+        });
+      });
+      document.querySelectorAll("[data-plan]").forEach(btn => btn.addEventListener("click", () => {
+        const item = state.canteens.find(row => Number(row.id) === Number(btn.dataset.plan));
+        const statusValue = prompt("Status: Active / Trial / Expired", item.status || "Trial");
+        if (statusValue) updateAction(`/marketing-api/canteens/${item.id}/plan`, { status: statusValue, planType: statusValue, selectedPlan: item.selectedPlan, planExpiryDate: item.planExpiryDate }, "Plan updated");
+      }));
+    }
+    async function updateAction(path, body, message) {
+      await api(path, { method: "POST", body: JSON.stringify(body) });
+      await refresh();
+      status(message);
+      render();
+    }
+    function renderDashboard() {
+      if (user.role === "super_admin") {
+        $("page").innerHTML = `${cardsHtml(state.summary.cards)}<div class="grid-2"><section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section></div><section class="panel"><h2>Approval Queue</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
+        bindTableActions();
+      } else {
+        const cards = state.summary.cards;
+        $("page").innerHTML = `${cardsHtml(cards, true)}<div class="grid-2"><section class="panel"><h2>My Registrations</h2>${canteensTable(state.canteens, false)}</section><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section></div>`;
+      }
+    }
+    function renderAdd() {
+      $("page").innerHTML = `<section class="panel"><h2>Add Canteen Registration</h2><form class="form-grid" id="canteenForm">
+        <label>Canteen name <input id="canteenName" required></label>
+        <label>Owner name <input id="ownerName" required></label>
+        <label>Owner mobile <input id="ownerMobile" required></label>
+        <label>Alternate mobile <input id="alternateMobile"></label>
+        <label class="wide">Address <input id="address"></label>
+        <label>City <input id="city"></label>
+        <label>State <input id="state"></label>
+        <label>Counters <input id="counters" type="number" min="1" value="1"></label>
+        <label>Printers required <input id="printersRequired" type="number" min="0" value="1"></label>
+        <label>Selected plan <select id="selectedPlan"><option>Starter</option><option>Professional</option><option>Enterprise</option></select></label>
+        <label>Trial or paid <select id="planType"><option>Trial</option><option>Paid</option></select></label>
+        <label>Plan start <input id="planStartDate" type="date" value="${today()}"></label>
+        <label>Plan expiry <input id="planExpiryDate" type="date"></label>
+        <label>Payment mode <select id="paymentMode"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option></select></label>
+        <label>Paid amount <input id="paidAmount" type="number" min="0" value="0"></label>
+        <label>Pending amount <input id="pendingAmount" type="number" min="0" value="0"></label>
+        <label class="wide">Documents/images <input id="documents" placeholder="File names or links"></label>
+        <label class="full">Notes <textarea id="notes"></textarea></label>
+        <button class="primary" type="submit">Submit for Approval</button>
+      </form></section>`;
+      $("canteenForm").addEventListener("submit", submitCanteen);
+    }
+    async function submitCanteen(event) {
+      event.preventDefault();
+      const fields = ["canteenName", "ownerName", "ownerMobile", "alternateMobile", "address", "city", "state", "counters", "printersRequired", "selectedPlan", "planType", "planStartDate", "planExpiryDate", "paymentMode", "paidAmount", "pendingAmount", "documents", "notes"];
+      const body = Object.fromEntries(fields.map(id => [id, $(id).value]));
+      await api("/marketing-api/canteens", { method: "POST", body: JSON.stringify(body) });
+      await refresh();
+      status("Canteen submitted for Super Admin approval");
+      tab = "my";
+      render();
+    }
+    function render() {
+      const titles = {
+        dashboard: ["Dashboard", "Live canteen onboarding and revenue overview."],
+        approvals: ["Approval Queue", "Approve or reject submitted canteens."],
+        canteens: ["Canteen Management", "Manage active, trial, blocked and expired canteens."],
+        payments: ["Payment Management", "Track collections and pending payments."],
+        printers: ["Printer Inventory", "Assign and track printer installation."],
+        performance: ["Marketing Performance", "Employee-wise registration and collection results."],
+        activities: ["Recent Activities", "Audit trail for onboarding actions."],
+        add: ["Add Canteen", "Submit a new canteen for approval."],
+        my: ["My Registrations", "Your submitted canteens and approval status."]
+      };
+      const [title, sub] = titles[tab] || titles.dashboard;
+      setPage(title, sub);
+      if (tab === "dashboard") return renderDashboard();
+      if (tab === "add") return renderAdd();
+      if (tab === "approvals") $("page").innerHTML = `<section class="panel"><h2>Pending Approval</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
+      else if (tab === "canteens" || tab === "my") $("page").innerHTML = `<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Canteens" : "All Canteens"}</h2><input id="searchBox" placeholder="Search canteen or owner"></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
+      else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section>`;
+      else if (tab === "printers") $("page").innerHTML = `<section class="panel"><h2>Printer Inventory</h2>${canteensTable(state.canteens.filter(item => Number(item.printersRequired || 0) > 0), user.role === "super_admin")}</section>`;
+      else if (tab === "performance") $("page").innerHTML = `<section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section>`;
+      else if (tab === "activities") $("page").innerHTML = `<section class="panel"><h2>Recent Activities</h2>${activitiesHtml(60)}</section>`;
+      bindTableActions();
+      if ($("searchBox")) $("searchBox").addEventListener("input", event => {
+        const q = event.target.value.toLowerCase();
+        const filtered = state.canteens.filter(item => `${item.canteenName} ${item.ownerName} ${item.city}`.toLowerCase().includes(q));
+        $("page").querySelector(".table-wrap").outerHTML = canteensTable(filtered, user.role === "super_admin");
+        bindTableActions();
+      });
+    }
+    async function enterApp(nextUser) {
+      user = nextUser;
+      $("loginView").classList.add("hidden");
+      $("appView").classList.remove("hidden");
+      $("profileName").textContent = user.name;
+      $("profileRole").textContent = user.role === "super_admin" ? "Super Admin" : "Marketing Employee";
+      $("roleChip").textContent = $("profileRole").textContent;
+      $("avatar").textContent = String(user.name || "A").slice(0, 1).toUpperCase();
+      renderNav();
+      await refresh();
+      render();
+    }
+    $("loginForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      $("loginStatus").textContent = "Checking...";
+      try {
+        const data = await api("/marketing-api/login", { method: "POST", body: JSON.stringify({ employeeId: $("employeeId").value, password: $("password").value }) });
+        token = data.token || "";
+        if (token) localStorage.setItem(tokenKey, token);
+        await enterApp(data.user);
+      } catch (error) {
+        $("loginStatus").textContent = error.message || "Login failed";
+        $("loginStatus").className = "status error";
+      }
+    });
+    $("logoutBtn").addEventListener("click", () => {
+      token = "";
+      user = null;
+      localStorage.removeItem(tokenKey);
+      $("appView").classList.add("hidden");
+      $("loginView").classList.remove("hidden");
+    });
+    (async function boot() {
+      if (!token) return;
+      try {
+        const data = await api("/marketing-api/me");
+        await enterApp(data.user);
+      } catch {
+        localStorage.removeItem(tokenKey);
+      }
+    })();
+  </script>
+</body>
+</html>
