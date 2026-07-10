@@ -353,6 +353,19 @@
       font-weight: 850;
     }
     .option-actions { display: grid; gap: 10px; }
+    .menu-list { display: grid; gap: 2px; }
+    .menu-divider { height: 1px; margin: 6px 0; background: var(--line); }
+    .menu-action {
+      min-height: 44px;
+      border: 0;
+      border-radius: 10px;
+      background: white;
+      color: var(--ink);
+      text-align: left;
+      padding: 0 10px;
+      font-weight: 900;
+    }
+    .menu-action:active { background: #f2f7ff; }
     .option-card {
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -374,6 +387,8 @@
     }
     .bill-row { display: grid; grid-template-columns: 1fr 46px; gap: 8px; align-items: stretch; }
     .bill-print { border: 1px solid var(--line); border-radius: 10px; background: white; font-size: 19px; }
+    .variant-list { display: grid; gap: 8px; }
+    .variant-choice { display: flex; justify-content: space-between; align-items: center; min-height: 48px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcff; padding: 0 12px; font-weight: 950; }
 
     .bottom-nav {
       position: fixed;
@@ -413,9 +428,13 @@
 
     .panel { padding: 14px; }
     .panel h2 { margin: 0 0 12px; font-size: 17px; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .panel-head h2 { margin: 0; }
     .stack { display: grid; gap: 10px; }
     .order-line, .user-line { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line); }
     .order-line:last-child, .user-line:last-child { border-bottom: 0; }
+    .order-line.with-action { grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+    .mini-danger { min-height: 34px; border: 1px solid #ffd9d9; border-radius: 10px; background: #fff5f5; color: var(--red); padding: 0 10px; font-size: 12px; font-weight: 950; }
     .muted { color: var(--muted); font-size: 12px; font-weight: 800; }
 
     .form-grid { display: grid; gap: 10px; }
@@ -460,6 +479,7 @@
     .item-name-wrap { display: inline-flex; align-items: center; min-width: 0; gap: 7px; }
     .item-foot { display: block; padding: 0; }
     .item-price { color: #27364a; font-size: 18px; font-weight: 950; white-space: nowrap; }
+    .variant-hint { color: #007aff; font-size: 11px; font-weight: 950; }
     .add-mini { display: none; }
     #posView .count-badge { top: 10px; right: 12px; }
     #posView .remove-badge { top: 10px; left: 12px; }
@@ -597,6 +617,7 @@
     const categoryOrder = ["All", "Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner"];
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
+    const heldOrdersKey = "AXEN_HELD_ORDERS";
     const sessionKey = "AXEN_SESSION";
     const tokenKey = "AXEN_TOKEN";
     const loginCacheKey = "AXEN_LOGIN_CACHE";
@@ -614,6 +635,8 @@
     let serverOnline = navigator.onLine;
     let adminUnlocked = false;
     let selectedPrinter = localStorage.getItem(selectedPrinterKey) || "";
+    let longPressTimer = null;
+    let longPressHandled = false;
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(0);
@@ -833,35 +856,55 @@
               <span class="item-name-wrap"><span class="item-emoji">${itemEmoji(item)}</span><h3>${item.name}</h3></span>
               <span class="item-price">${money(item.price)}</span>
             </span>
+            ${productSubItems(item).length ? `<span class="variant-hint">Hold for sub items</span>` : ""}
             <span class="add-mini"></span>
           </span>
         </button>
       `).join("") || `<div class="panel">No menu items</div>`;
     }
 
-    function cartQty(id) {
-      const item = cart.find(row => Number(row.id) === Number(id));
-      return item ? Number(item.qty || 0) : 0;
+    function productSubItems(item) {
+      return Array.isArray(item && item.subItems) ? item.subItems.filter(row => row && row.name) : [];
     }
 
-    function addToCart(id) {
+    function cartLineId(product, option) {
+      const suffix = option && option.name ? String(option.name).toLowerCase().replace(/[^a-z0-9]+/g, "-") : "base";
+      return `${product.id}:${suffix}`;
+    }
+
+    function cartQty(id) {
+      return cart
+        .filter(row => Number(row.parentId || row.id) === Number(id))
+        .reduce((sum, item) => sum + Number(item.qty || 0), 0);
+    }
+
+    function addToCart(id, option = null) {
       const product = products.find(item => Number(item.id) === Number(id));
       if (!product) return;
-      const existing = cart.find(item => Number(item.id) === Number(id));
+      const lineId = cartLineId(product, option);
+      const existing = cart.find(item => item.lineId === lineId);
       if (existing) existing.qty += 1;
-      else cart.push({ ...product, qty: 1 });
+      else cart.push({
+        ...product,
+        lineId,
+        parentId: Number(product.id),
+        optionName: option && option.name ? option.name : "",
+        name: option && option.name ? `${product.name} - ${option.name}` : product.name,
+        price: option && option.name ? Number(option.price || 0) : Number(product.price || 0),
+        qty: 1
+      });
       renderCart();
       renderProducts();
     }
 
     function changeQty(id, amount) {
-      cart = cart.map(item => Number(item.id) === Number(id) ? { ...item, qty: item.qty + amount } : item).filter(item => item.qty > 0);
+      cart = cart.map(item => item.lineId === id ? { ...item, qty: item.qty + amount } : item).filter(item => item.qty > 0);
       renderCart();
       renderProducts();
     }
 
     function removeFromCart(id) {
-      cart = cart.filter(item => Number(item.id) !== Number(id));
+      cart = cart.filter(item => Number(item.parentId || item.id) !== Number(id));
       renderCart();
       renderProducts();
     }
@@ -876,12 +919,32 @@
         <div class="cart-row">
           <div><strong>${item.name}</strong><small>${item.qty} x ${money(item.price)}</small></div>
           <div class="qty">
-            <button data-qty="-1" data-id="${item.id}">-</button>
+            <button data-qty="-1" data-id="${item.lineId}">-</button>
             <span>${item.qty}</span>
-            <button data-qty="1" data-id="${item.id}">+</button>
+            <button data-qty="1" data-id="${item.lineId}">+</button>
           </div>
         </div>
       `).join("") || `<div class="muted">Cart empty</div>`;
+    }
+
+    function openSubItemModal(product) {
+      const options = productSubItems(product);
+      if (!options.length) return;
+      $("optionsModalMount").innerHTML = `
+        <div class="modal-backdrop">
+          <div class="payment-modal">
+            <h2>${esc(product.name)} Sub Items</h2>
+            <div class="variant-list">
+              ${options.map((option, index) => `<button class="variant-choice" data-sub-index="${index}" type="button"><span>${esc(option.name)}</span><strong>${money(option.price)}</strong></button>`).join("")}
+            </div>
+            <button class="secondary modal-close" type="button" id="closeVariantModal">Close</button>
+          </div>
+        </div>`;
+      document.querySelectorAll("[data-sub-index]").forEach(btn => btn.addEventListener("click", () => {
+        addToCart(product.id, options[Number(btn.dataset.subIndex)]);
+        closeOptionsModal();
+      }));
+      $("closeVariantModal").addEventListener("click", closeOptionsModal);
     }
 
     function paymentBreakup(total, selectedPayment = payment) {
@@ -1160,6 +1223,73 @@
       }
     }
 
+    function heldOrders() {
+      return readJson(heldOrdersKey, []);
+    }
+
+    function setHeldOrders(value) {
+      writeJson(heldOrdersKey, value);
+    }
+
+    function holdCurrentOrder() {
+      if (!cart.length) {
+        $("posMessage").textContent = "Cart empty. Items add chesi hold cheyyandi.";
+        $("posMessage").className = "status error";
+        return;
+      }
+      const next = [{
+        id: Date.now(),
+        time: new Date().toLocaleString("en-IN"),
+        items: cart,
+        total: cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0)
+      }, ...heldOrders()].slice(0, 20);
+      setHeldOrders(next);
+      cart = [];
+      renderCart();
+      renderProducts();
+      $("posMessage").textContent = "Order held";
+      $("posMessage").className = "status ok";
+    }
+
+    function heldOrdersHtml() {
+      const rows = heldOrders();
+      if (!rows.length) return `<div class="muted">No held orders</div>`;
+      return rows.map(order => `
+        <div class="bill-row">
+          <button class="bill-action" data-restore-held="${order.id}" type="button">
+            <div>${esc(order.time)} | ${money(order.total)}</div>
+            <small>${(order.items || []).map(item => `${item.name} x ${item.qty}`).join(", ")}</small>
+          </button>
+          <button class="bill-print" data-delete-held="${order.id}" type="button" title="Delete">X</button>
+        </div>`).join("");
+    }
+
+    function restoreHeldOrder(id) {
+      const rows = heldOrders();
+      const order = rows.find(row => String(row.id) === String(id));
+      if (!order) return;
+      cart = (order.items || []).map(item => ({ ...item }));
+      setHeldOrders(rows.filter(row => String(row.id) !== String(id)));
+      renderCart();
+      renderProducts();
+      closeOptionsModal();
+    }
+
+    function deleteHeldOrder(id) {
+      setHeldOrders(heldOrders().filter(row => String(row.id) !== String(id)));
+      openOptionsModal("held");
+    }
+
+    function reprintLastBill() {
+      const recent = orders.slice().reverse()[0];
+      if (!recent) {
+        $("posMessage").textContent = "No bill found";
+        $("posMessage").className = "status error";
+        return;
+      }
+      printCopyBill(recent.id || recent.clientOrderId);
+    }
+
     function setSelectedPrinter(address) {
       selectedPrinter = String(address || "");
       if (selectedPrinter) localStorage.setItem(selectedPrinterKey, selectedPrinter);
@@ -1176,50 +1306,82 @@
       }
     }
 
-    async function openOptionsModal() {
+    async function openOptionsModal(section = "menu") {
       await loadAdminData();
       const pairedPrinters = getPairedPrinters();
+      const sectionHtml = section === "printer" ? `
+        <div class="option-card">
+          <h3>Printer Settings</h3>
+          <select id="printerSelect">${printerOptionsHtml(pairedPrinters)}</select>
+          <div class="muted" id="printerStatus">${selectedPrinter ? "Selected printer saved" : "Auto printer selection active"}</div>
+        </div>
+        <button class="secondary" id="menuTestPrint" type="button">Test Print</button>
+      ` : section === "held" ? `
+        <div class="option-card">
+          <h3>Hold Orders</h3>
+          <button class="secondary" id="holdCurrentOrder" type="button">Hold Current Cart</button>
+          ${heldOrdersHtml()}
+        </div>
+      ` : section === "report" ? todaySaleHtml() : section === "cash" ? todaySaleHtml() : section === "settings" ? `
+        <div class="option-card">
+          <h3>Settings</h3>
+          <input id="optionSearchInput" placeholder="Search item name / code" value="${esc(itemSearch)}">
+        </div>
+      ` : "";
       $("optionsModalMount").innerHTML = `
         <div class="modal-backdrop">
           <div class="payment-modal">
-            <h2>Settings</h2>
+            <h2>Profile</h2>
             <div class="option-actions">
-              <div class="option-card">
-                <h3>Select connected printer</h3>
-                <select id="printerSelect">${printerOptionsHtml(pairedPrinters)}</select>
-                <div class="muted" id="printerStatus">${selectedPrinter ? "Selected printer saved" : "Auto printer selection active"}</div>
+              <div class="option-card menu-list">
+                <button class="menu-action" data-menu-section="profile" type="button">Profile</button>
+                <div class="menu-divider"></div>
+                <button class="menu-action" data-menu-section="held" type="button">Hold Orders</button>
+                <button class="menu-action" id="reprintLastBill" type="button">Reprint Last Bill</button>
+                <button class="menu-action" data-menu-section="report" type="button">Today's Report</button>
+                <button class="menu-action" data-menu-section="cash" type="button">Cash Summary</button>
+                <div class="menu-divider"></div>
+                <button class="menu-action" data-menu-section="printer" type="button">Printer Settings</button>
+                <button class="menu-action" id="syncNowBtn" type="button">Sync Data</button>
+                <button class="menu-action" data-menu-section="settings" type="button">Settings</button>
+                <div class="menu-divider"></div>
+                <button class="menu-action" data-menu-section="help" type="button">Help</button>
+                <button class="menu-action" id="menuLogout" type="button">Logout</button>
               </div>
-              <div class="option-card">
-                <h3>Search Items</h3>
-                <input id="optionSearchInput" placeholder="Type item name" value="${esc(itemSearch)}">
-              </div>
-              <button class="secondary" id="menuTestPrint" type="button">Test Print</button>
-              ${todaySaleHtml()}
+              ${section === "profile" ? `<div class="option-card"><h3>${esc(user?.name || "User")}</h3><div class="option-row"><span>Role</span><strong>${esc(user?.role || "user")}</strong></div><div class="option-row"><span>Canteen</span><strong>${esc(settings.canteenName)}</strong></div></div>` : ""}
+              ${sectionHtml}
+              ${section === "help" ? `<div class="option-card"><h3>Help</h3><div class="muted">Item ni normal tap chesthe cart lo add avuthundi. Item ni hold chesi pattukunte sub items open avuthayi.</div></div>` : ""}
               ${adminUnlockHtml()}
               ${lastBillsHtml()}
-              <button class="danger" id="menuLogout" type="button">Logout</button>
             </div>
             <button class="secondary modal-close" type="button" id="closeOptionsModal">Close</button>
           </div>
         </div>`;
       $("closeOptionsModal").addEventListener("click", closeOptionsModal);
-      $("printerSelect").addEventListener("change", event => {
+      if ($("printerSelect")) $("printerSelect").addEventListener("change", event => {
         const result = setSelectedPrinter(event.target.value);
         $("printerStatus").textContent = result || "Printer saved";
         $("printerStatus").className = result && result.includes("failed") ? "status error" : "status ok";
       });
-      $("optionSearchInput").addEventListener("input", event => {
+      if ($("optionSearchInput")) $("optionSearchInput").addEventListener("input", event => {
         itemSearch = event.target.value;
         if ($("itemSearch")) $("itemSearch").value = itemSearch;
         renderProducts();
       });
-      $("menuTestPrint").addEventListener("click", testPrint);
+      document.querySelectorAll("[data-menu-section]").forEach(btn => btn.addEventListener("click", () => openOptionsModal(btn.dataset.menuSection)));
+      if ($("menuTestPrint")) $("menuTestPrint").addEventListener("click", testPrint);
+      if ($("holdCurrentOrder")) $("holdCurrentOrder").addEventListener("click", () => { holdCurrentOrder(); openOptionsModal("held"); });
+      if ($("reprintLastBill")) $("reprintLastBill").addEventListener("click", reprintLastBill);
+      if ($("syncNowBtn")) $("syncNowBtn").addEventListener("click", syncPendingOrders);
       $("menuLogout").addEventListener("click", logout);
       if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
       document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
+      document.querySelectorAll("[data-restore-held]").forEach(btn => btn.addEventListener("click", () => restoreHeldOrder(btn.dataset.restoreHeld)));
+      document.querySelectorAll("[data-delete-held]").forEach(btn => btn.addEventListener("click", () => deleteHeldOrder(btn.dataset.deleteHeld)));
     }
 
     function closeOptionsModal() {
+      longPressHandled = false;
       $("optionsModalMount").innerHTML = "";
     }
 
@@ -1377,7 +1539,15 @@
         paymentBreakup: paymentBreakup(orderTotal, selectedPayment),
         creditName,
         total: orderTotal,
-        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, qty: item.qty }))
+        items: cart.map(item => ({
+          id: item.id,
+          lineId: item.lineId,
+          parentId: item.parentId || item.id,
+          name: item.name,
+          optionName: item.optionName || "",
+          price: item.price,
+          qty: item.qty
+        }))
       };
       if (selectedPayment === "Split" && Math.round((payload.paymentBreakup.cash + payload.paymentBreakup.online) * 100) !== Math.round(payload.total * 100)) {
         setPaymentStatus(`Split amount must equal ${money(payload.total)}`, "status error");
@@ -1439,9 +1609,22 @@
           <div class="panel"><h2>Top Items</h2>${topItemsHtml()}</div>
         `;
       } else if (adminTab === "orders") {
-        page.innerHTML = `<div class="panel"><h2>Recent Sales</h2>${orders.slice().reverse().map(order => `
-          <div class="order-line"><strong>${order.canteen || settings.canteenName} - ${money(order.total)}</strong><span class="muted">${order.time} | ${order.payment} | ${order.cashier || "-"}</span></div>
-        `).join("") || `<div class="muted">No orders</div>`}</div>`;
+        page.innerHTML = `<div class="panel">
+          <div class="panel-head">
+            <h2>Recent Sales</h2>
+            ${orders.length ? `<button class="mini-danger" id="deleteAllBills" type="button">Delete All</button>` : ""}
+          </div>
+          ${orders.slice().reverse().map(order => {
+            const orderId = order.clientOrderId || order.id;
+            return `
+              <div class="order-line with-action">
+                <div><strong>${order.canteen || settings.canteenName} - ${money(order.total)}</strong><span class="muted">${order.time} | ${order.payment} | ${order.cashier || "-"}</span></div>
+                <button class="mini-danger" data-delete-bill="${orderId}" type="button">Delete</button>
+              </div>`;
+          }).join("") || `<div class="muted">No orders</div>`}
+        </div>`;
+        document.querySelectorAll("[data-delete-bill]").forEach(btn => btn.addEventListener("click", () => deleteBill(btn.dataset.deleteBill)));
+        if ($("deleteAllBills")) $("deleteAllBills").addEventListener("click", deleteAllBills);
       } else if (adminTab === "users") {
         page.innerHTML = `
           <div class="panel">
@@ -1471,6 +1654,28 @@
           </div>
         `;
         $("settingsForm").addEventListener("submit", saveSettings);
+      }
+    }
+
+    async function deleteBill(orderId) {
+      if (!confirm("Ee bill delete cheyyala?")) return;
+      try {
+        await api(`/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+        orders = orders.filter(order => String(order.clientOrderId || order.id) !== String(orderId));
+        renderAdmin();
+      } catch {
+        alert("Bill delete failed. Internet/server check cheyyandi.");
+      }
+    }
+
+    async function deleteAllBills() {
+      if (!confirm("All bills delete cheyyala? Reports total kuda clear avuthayi.")) return;
+      try {
+        await api("/orders", { method: "DELETE" });
+        orders = [];
+        renderAdmin();
+      } catch {
+        alert("Bills delete failed. Internet/server check cheyyandi.");
       }
     }
 
@@ -1587,9 +1792,28 @@
         removeFromCart(removeBtn.dataset.removeItem);
         return;
       }
+      if (longPressHandled) {
+        event.preventDefault();
+        longPressHandled = false;
+        return;
+      }
       const btn = event.target.closest("[data-item]");
       if (btn) addToCart(btn.dataset.item);
     });
+    $("menuGrid").addEventListener("pointerdown", event => {
+      const btn = event.target.closest("[data-item]");
+      if (!btn) return;
+      const product = products.find(item => Number(item.id) === Number(btn.dataset.item));
+      if (!productSubItems(product).length) return;
+      clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(() => {
+        longPressHandled = true;
+        openSubItemModal(product);
+      }, 520);
+    });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(name => $("menuGrid").addEventListener(name, () => {
+      clearTimeout(longPressTimer);
+    }));
     $("cartList").addEventListener("click", event => {
       const btn = event.target.closest("[data-qty]");
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));

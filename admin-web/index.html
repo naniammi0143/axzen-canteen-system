@@ -35,7 +35,7 @@
       -webkit-font-smoothing: antialiased;
       text-rendering: geometricPrecision;
     }
-    button, input, select { font: inherit; }
+    button, input, select, textarea { font: inherit; }
     button { cursor: pointer; }
     .hidden { display: none !important; }
 
@@ -65,7 +65,7 @@
     .tagline { margin: 8px 0 0; color: var(--blue); font-size: 15px; font-weight: 900; text-transform: uppercase; }
 
     label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; }
-    input, select {
+    input, select, textarea {
       width: 100%;
       border: 1px solid #dfe3eb;
       border-radius: 12px;
@@ -75,7 +75,8 @@
       outline: none;
       transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
     }
-    input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px #007aff1c; background: white; }
+    textarea { min-height: 92px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 4px #007aff1c; background: white; }
 
     .primary, .secondary, .danger, .ghost {
       min-height: 42px;
@@ -437,9 +438,9 @@
 
     function salesTable(limit = 100) {
       const rows = dashboard.orders.slice().reverse().slice(0, limit).map(order => `
-        <tr><td>${esc(order.time || "-")}</td><td>${esc((order.items || []).map(i => i.name + " x " + i.qty).join(", "))}</td><td>${money(order.total)}</td><td><span class="pill green">${esc(order.payment || "-")}</span></td><td>${esc(order.cashier || "-")}</td></tr>
+        <tr><td>${esc(order.time || "-")}</td><td>${esc((order.items || []).map(i => i.name + " x " + i.qty).join(", "))}</td><td>${money(order.total)}</td><td><span class="pill green">${esc(order.payment || "-")}</span></td><td>${esc(order.cashier || "-")}</td><td><button class="danger" data-delete-bill="${esc(order.clientOrderId || order.id)}" type="button">Delete</button></td></tr>
       `).join("");
-      return `<table><thead><tr><th>Time</th><th>Items</th><th>Amount</th><th>Payment</th><th>User</th></tr></thead><tbody>${rows || `<tr><td colspan="5">No sales</td></tr>`}</tbody></table>`;
+      return `<table><thead><tr><th>Time</th><th>Items</th><th>Amount</th><th>Payment</th><th>User</th><th>Action</th></tr></thead><tbody>${rows || `<tr><td colspan="6">No sales</td></tr>`}</tbody></table>`;
     }
 
     function lowStockRows() {
@@ -456,7 +457,9 @@
         <div class="card green"><span>Cash</span><strong>${money(dashboard.cash)}</strong></div>
         <div class="card"><span>Online</span><strong>${money(dashboard.online + dashboard.upi)}</strong></div>
         <div class="card orange"><span>Bills</span><strong>${dashboard.totalBills}</strong></div>
-      </section><section class="panel" style="margin-top:16px"><h2>All Sales</h2>${salesTable(200)}</section>`;
+      </section><section class="panel" style="margin-top:16px"><div class="toolbar"><h2>All Sales</h2>${dashboard.orders.length ? `<button class="danger" id="deleteAllBills" type="button">Delete All Bills</button>` : ""}</div>${salesTable(200)}</section>`;
+      document.querySelectorAll("[data-delete-bill]").forEach(btn => btn.addEventListener("click", deleteBill));
+      if ($("deleteAllBills")) $("deleteAllBills").addEventListener("click", deleteAllBills);
     }
 
     function renderMenu() {
@@ -515,7 +518,7 @@
       const rows = visible.map((item, index) => `<tr>
         <td><div class="name-cell"><img class="item-thumb" src="${esc(item.image || "")}" alt=""><strong>${esc(item.name)}</strong></div></td>
         <td><span class="pill">${esc(item.category)}</span></td>
-        <td>${money(item.price)}</td>
+        <td>${money(item.price)}${Array.isArray(item.subItems) && item.subItems.length ? `<br><span class="muted">${item.subItems.length} sub items</span>` : ""}</td>
         <td>${productSortValue(item, index)}</td>
         <td><div class="row-actions"><button class="ghost" data-move-product="${item.id}" data-direction="up" type="button">↑</button><button class="ghost" data-move-product="${item.id}" data-direction="down" type="button">↓</button><button class="secondary" data-edit-product="${item.id}" type="button">Edit</button><button class="danger" data-delete-product="${item.id}" type="button">Delete</button></div></td>
       </tr>`).join("");
@@ -524,9 +527,30 @@
 
     async function saveProduct(event) {
       event.preventDefault();
-      await api("/products", { method: "POST", body: JSON.stringify({ id: $("productId").value || undefined, name: $("productName").value, price: $("productPrice").value, category: $("productCategory").value || "Snacks", image: $("productImage").value, sortOrder: $("productSortOrder").value || undefined }) });
+      await api("/products", { method: "POST", body: JSON.stringify({
+        id: $("productId").value || undefined,
+        name: $("productName").value,
+        price: $("productPrice").value,
+        category: $("productCategory").value || "Snacks",
+        image: $("productImage").value,
+        sortOrder: $("productSortOrder").value || undefined,
+        subItems: parseSubItems($("productSubItems").value)
+      }) });
       pageMessage("Menu item saved");
       await loadData();
+    }
+
+    function parseSubItems(text) {
+      return String(text || "").split(/\r?\n/).map(line => {
+        const [name, price] = line.split(":");
+        return { name: String(name || "").trim(), price: Number(price || 0) };
+      }).filter(item => item.name && item.price >= 0);
+    }
+
+    function subItemsText(item = {}) {
+      return (Array.isArray(item.subItems) ? item.subItems : [])
+        .map(row => `${row.name}: ${Number(row.price || 0)}`)
+        .join("\n");
     }
 
     async function moveProduct(event) {
@@ -574,6 +598,7 @@
                 <label>Category <select id="productCategory">${categories.map(category => `<option value="${category}" ${String(item.category || "Snacks") === category ? "selected" : ""}>${category}</option>`).join("")}</select></label>
                 <label>Display Order <input id="productSortOrder" type="number" min="0" value="${Number(item.sortOrder ?? item.id ?? (dashboard.products.length + 1))}"></label>
                 <label>Image URL <input id="productImage" value="${esc(item.image || "")}"></label>
+                <label>Sub Items <textarea id="productSubItems" placeholder="Single: 15&#10;Half Plate: 30&#10;Full Plate: 50">${esc(subItemsText(item))}</textarea></label>
               </div>
               <div class="modal-actions">
                 <button class="ghost" type="button" data-close-modal>Cancel</button>
@@ -739,6 +764,21 @@
     async function deleteUser(event) {
       await api(`/users/${encodeURIComponent(event.target.dataset.deleteUser)}`, { method: "DELETE" });
       pageMessage("User deleted");
+      await loadData();
+    }
+
+    async function deleteBill(event) {
+      const orderId = event.target.dataset.deleteBill;
+      if (!confirm("Delete this bill?")) return;
+      await api(`/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+      pageMessage("Bill deleted");
+      await loadData();
+    }
+
+    async function deleteAllBills() {
+      if (!confirm("Delete all bills? Sales reports will be cleared.")) return;
+      await api("/orders", { method: "DELETE" });
+      pageMessage("All bills deleted");
       await loadData();
     }
 

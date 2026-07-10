@@ -18,6 +18,8 @@ const PORT = Number(process.env.PORT || 5000);
 const DB_NAME = process.env.MONGODB_DB_NAME || "axzen_canteen";
 const INDIA_TZ = "Asia/Kolkata";
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
+const DEFAULT_CANTEEN_ID = "AXC-0001";
+const DEFAULT_ADMIN_PASSWORD = "Axzen@123";
 
 // Warn during startup when the Meta webhook verification token is not configured.
 if (!VERIFY_TOKEN) {
@@ -43,7 +45,7 @@ const defaultMenuItems = [
   { id: 1, name: "Tea", price: 10, category: "Tea", image: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=500&q=80" },
   { id: 2, name: "Coffee", price: 20, category: "Tea", image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=500&q=80" },
   { id: 3, name: "Meals", price: 80, category: "Meals", image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=500&q=80" },
-  { id: 4, name: "Idly", price: 30, category: "Tiffin", image: "https://images.unsplash.com/photo-1630409351241-e90e7f5e434d?auto=format&fit=crop&w=500&q=80" },
+  { id: 4, name: "Idly", price: 30, category: "Tiffin", image: "https://images.unsplash.com/photo-1630409351241-e90e7f5e434d?auto=format&fit=crop&w=500&q=80", subItems: [{ name: "Single", price: 15 }, { name: "Half Plate", price: 30 }, { name: "Full Plate", price: 50 }] },
   { id: 5, name: "Dosa", price: 45, category: "Tiffin", image: "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=500&q=80" },
   { id: 6, name: "Samosa", price: 15, category: "Snacks", image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=500&q=80" },
   { id: 7, name: "Veg Puff", price: 25, category: "Snacks", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=500&q=80" },
@@ -93,6 +95,17 @@ let schedulerStarted = false;
 let lastScheduledReportKey = "";
 
 let memory = {
+  canteens: [{
+    canteenId: DEFAULT_CANTEEN_ID,
+    name: "Main Canteen",
+    ownerName: "Admin",
+    phone: "admin",
+    address: "",
+    plan: "default",
+    paymentStatus: "paid",
+    active: true
+  }],
+  printers: [],
   menuItems: [...defaultMenuItems],
   stockItems: [...defaultStockItems],
   expenses: [],
@@ -104,6 +117,7 @@ let memory = {
 };
 
 const orderSchema = new mongoose.Schema({
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   id: { type: Number, index: true },
   clientOrderId: { type: String, unique: true, sparse: true, index: true },
   time: String,
@@ -113,11 +127,12 @@ const orderSchema = new mongoose.Schema({
   paymentBreakup: mongoose.Schema.Types.Mixed,
   creditName: String,
   total: Number,
-  items: [{ id: Number, name: String, price: Number, qty: Number }],
+  items: [{ id: Number, lineId: String, parentId: Number, name: String, optionName: String, price: Number, qty: Number }],
   syncedAt: String
 }, { timestamps: true, collection: "orders" });
 
 const saleSchema = new mongoose.Schema({
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   orderId: Number,
   clientOrderId: { type: String, unique: true, sparse: true, index: true },
   time: String,
@@ -127,30 +142,35 @@ const saleSchema = new mongoose.Schema({
   paymentBreakup: mongoose.Schema.Types.Mixed,
   creditName: String,
   total: Number,
-  items: [{ id: Number, name: String, price: Number, qty: Number }],
+  items: [{ id: Number, lineId: String, parentId: Number, name: String, optionName: String, price: Number, qty: Number }],
   syncedAt: String
 }, { timestamps: true, collection: "sales" });
 
 const userSchema = new mongoose.Schema({
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   id: Number,
   name: String,
-  mobile: { type: String, unique: true, index: true },
+  mobile: { type: String, index: true },
   password: String,
   role: { type: String, enum: ["admin", "user"], default: "user" },
-  active: { type: Boolean, default: true }
+  active: { type: Boolean, default: true },
+  mustChangePassword: { type: Boolean, default: false }
 }, { timestamps: true, collection: "users" });
 
 const menuItemSchema = new mongoose.Schema({
-  id: { type: Number, unique: true, sparse: true, index: true },
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
+  id: { type: Number, sparse: true, index: true },
   name: String,
   price: Number,
   category: String,
   image: String,
+  subItems: [{ name: String, price: Number }],
   sortOrder: Number
 }, { timestamps: true, collection: "menu_items" });
 
 const stockItemSchema = new mongoose.Schema({
-  id: { type: Number, unique: true, sparse: true, index: true },
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
+  id: { type: Number, sparse: true, index: true },
   item: String,
   stock: Number,
   unit: String,
@@ -158,7 +178,8 @@ const stockItemSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "stock_items" });
 
 const expenseSchema = new mongoose.Schema({
-  id: { type: Number, unique: true, sparse: true, index: true },
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
+  id: { type: Number, sparse: true, index: true },
   title: String,
   amount: Number,
   category: String,
@@ -166,7 +187,8 @@ const expenseSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "expenses" });
 
 const reportSettingSchema = new mongoose.Schema({
-  key: { type: String, unique: true, index: true, default: "app" },
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
+  key: { type: String, index: true, default: "app" },
   canteenName: String,
   brandName: String,
   tagline: String,
@@ -176,6 +198,30 @@ const reportSettingSchema = new mongoose.Schema({
   autoReport: Boolean,
   reportType: String
 }, { timestamps: true, collection: "report_settings" });
+
+const canteenSchema = new mongoose.Schema({
+  canteenId: { type: String, unique: true, index: true },
+  name: String,
+  ownerName: String,
+  phone: String,
+  address: String,
+  plan: String,
+  paymentStatus: String,
+  paymentReference: String,
+  active: { type: Boolean, default: true },
+  createdByMarketingUser: String
+}, { timestamps: true, collection: "canteens" });
+
+const printerSchema = new mongoose.Schema({
+  canteenId: { type: String, index: true },
+  provider: String,
+  model: String,
+  serialNumber: String,
+  bluetoothName: String,
+  macAddress: String,
+  installedBy: String,
+  installedAt: String
+}, { timestamps: true, collection: "printers" });
 
 const whatsappLogSchema = new mongoose.Schema({
   time: String,
@@ -194,6 +240,8 @@ const MenuItem = mongoose.models.MenuItem || mongoose.model("MenuItem", menuItem
 const StockItem = mongoose.models.StockItem || mongoose.model("StockItem", stockItemSchema);
 const Expense = mongoose.models.Expense || mongoose.model("Expense", expenseSchema);
 const ReportSetting = mongoose.models.ReportSetting || mongoose.model("ReportSetting", reportSettingSchema);
+const Canteen = mongoose.models.Canteen || mongoose.model("Canteen", canteenSchema);
+const Printer = mongoose.models.Printer || mongoose.model("Printer", printerSchema);
 const WhatsappLog = mongoose.models.WhatsappLog || mongoose.model("WhatsappLog", whatsappLogSchema);
 
 function nextId(items) {
@@ -293,6 +341,25 @@ async function allMenuItems() {
   return (await MenuItem.find({}).lean()).sort(byOrder);
 }
 
+function normalizeSubItems(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map(item => ({
+        name: String(item && item.name || "").trim(),
+        price: Number(item && item.price || 0)
+      }))
+      .filter(item => item.name && item.price >= 0);
+  }
+
+  return String(value || "")
+    .split(/\r?\n/)
+    .map(line => {
+      const [name, price] = line.split(":");
+      return { name: String(name || "").trim(), price: Number(price || 0) };
+    })
+    .filter(item => item.name && item.price >= 0);
+}
+
 async function saveMenuItem(payload) {
   const current = await allMenuItems();
   const item = {
@@ -301,6 +368,7 @@ async function saveMenuItem(payload) {
     price: Number(payload.price || 0),
     category: payload.category || "Snacks",
     image: payload.image || "",
+    subItems: normalizeSubItems(payload.subItems),
     sortOrder: payload.sortOrder !== undefined && payload.sortOrder !== "" ? Number(payload.sortOrder) : Number(payload.id || nextId(current))
   };
 
@@ -546,6 +614,28 @@ async function clearOrders() {
     return;
   }
   await Promise.all([Order.deleteMany({}), Sale.deleteMany({})]);
+}
+
+async function deleteOrder(id) {
+  const key = String(id || "").trim();
+  if (!key) throw new Error("Order id is required");
+  const numericId = Number(key);
+  const numericMatch = Number.isFinite(numericId) ? numericId : -1;
+
+  if (!mongoReady) {
+    memory.orders = memory.orders.filter(order =>
+      String(order.clientOrderId || "") !== key && Number(order.id) !== numericMatch
+    );
+    memory.sales = memory.sales.filter(sale =>
+      String(sale.clientOrderId || "") !== key && Number(sale.orderId) !== numericMatch
+    );
+    return;
+  }
+
+  await Promise.all([
+    Order.deleteOne({ $or: [{ clientOrderId: key }, { id: numericMatch }] }),
+    Sale.deleteOne({ $or: [{ clientOrderId: key }, { orderId: numericMatch }] })
+  ]);
 }
 
 function indiaParts(date = new Date()) {
@@ -1020,6 +1110,12 @@ app.get("/orders", requireAdmin, async (req, res) => res.json(await allOrders())
 app.delete("/orders", requireAdmin, async (req, res) => {
   await clearOrders();
   io.emit("orders-cleared");
+  res.json({ success: true });
+});
+
+app.delete("/orders/:id", requireAdmin, async (req, res) => {
+  await deleteOrder(req.params.id);
+  io.emit("order-deleted", req.params.id);
   res.json({ success: true });
 });
 
