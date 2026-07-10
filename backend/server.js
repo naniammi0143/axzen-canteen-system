@@ -154,6 +154,26 @@ const defaultMarketingCanteens = [
   }
 ];
 
+const defaultMarketingPayments = defaultMarketingCanteens
+  .filter(item => Number(item.paidAmount || 0) > 0)
+  .map(item => ({
+    id: item.id,
+    canteenId: item.id,
+    canteenName: item.canteenName,
+    amount: Number(item.paidAmount || 0),
+    pendingAmount: Number(item.pendingAmount || 0),
+    paymentMode: item.paymentMode,
+    collectedBy: item.submittedBy,
+    collectedByName: item.submittedByName,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt
+  }));
+
+const defaultMarketingSupportTickets = [
+  { id: 1, title: "Printer pairing help", status: "Open", canteenName: "Metro Staff Canteen", priority: "High", createdAt: new Date(Date.now() - 2 * 86400000).toISOString() },
+  { id: 2, title: "Plan upgrade request", status: "Open", canteenName: "Sri Lakshmi Foods", priority: "Medium", createdAt: new Date().toISOString() }
+];
+
 let mongoReady = false;
 let mongoError = "";
 let initialized = false;
@@ -186,10 +206,8 @@ let memory = {
     { id: 1, type: "approved", text: "Metro Staff Canteen approved by Super Admin", actor: "Super Admin", createdAt: new Date(Date.now() - 18 * 86400000).toISOString() },
     { id: 2, type: "created", text: "Sri Lakshmi Foods submitted for approval", actor: "Venkatesh", createdAt: new Date().toISOString() }
   ],
-  supportTickets: [
-    { id: 1, title: "Printer pairing help", status: "Open", canteenName: "Metro Staff Canteen" },
-    { id: 2, title: "Plan upgrade request", status: "Open", canteenName: "Sri Lakshmi Foods" }
-  ]
+  marketingPayments: [...defaultMarketingPayments],
+  supportTickets: [...defaultMarketingSupportTickets]
 };
 
 const orderSchema = new mongoose.Schema({
@@ -352,6 +370,25 @@ const marketingActivitySchema = new mongoose.Schema({
   createdAt: String
 }, { timestamps: true, collection: "marketing_activities" });
 
+const marketingPaymentSchema = new mongoose.Schema({
+  id: Number,
+  canteenId: { type: Number, index: true },
+  canteenName: String,
+  amount: Number,
+  pendingAmount: Number,
+  paymentMode: String,
+  collectedBy: String,
+  collectedByName: String
+}, { timestamps: true, collection: "marketing_payments" });
+
+const marketingSupportTicketSchema = new mongoose.Schema({
+  id: Number,
+  title: String,
+  status: { type: String, index: true },
+  canteenName: String,
+  priority: String
+}, { timestamps: true, collection: "marketing_support_tickets" });
+
 const whatsappLogSchema = new mongoose.Schema({
   time: String,
   success: Boolean,
@@ -374,6 +411,8 @@ const Printer = mongoose.models.Printer || mongoose.model("Printer", printerSche
 const MarketingUser = mongoose.models.MarketingUser || mongoose.model("MarketingUser", marketingUserSchema);
 const MarketingCanteen = mongoose.models.MarketingCanteen || mongoose.model("MarketingCanteen", marketingCanteenSchema);
 const MarketingActivity = mongoose.models.MarketingActivity || mongoose.model("MarketingActivity", marketingActivitySchema);
+const MarketingPayment = mongoose.models.MarketingPayment || mongoose.model("MarketingPayment", marketingPaymentSchema);
+const MarketingSupportTicket = mongoose.models.MarketingSupportTicket || mongoose.model("MarketingSupportTicket", marketingSupportTicketSchema);
 const WhatsappLog = mongoose.models.WhatsappLog || mongoose.model("WhatsappLog", whatsappLogSchema);
 
 function nextId(items) {
@@ -483,6 +522,8 @@ async function seedDefaults() {
   }
   if (!await MarketingCanteen.countDocuments()) await MarketingCanteen.insertMany(defaultMarketingCanteens);
   if (!await MarketingActivity.countDocuments()) await MarketingActivity.insertMany(memory.marketingActivities);
+  if (!await MarketingPayment.countDocuments()) await MarketingPayment.insertMany(defaultMarketingPayments);
+  if (!await MarketingSupportTicket.countDocuments()) await MarketingSupportTicket.insertMany(defaultMarketingSupportTickets);
 }
 
 async function connectDatabase() {
@@ -1012,6 +1053,37 @@ async function allMarketingActivities() {
   return MarketingActivity.find({}).sort({ createdAt: -1 }).limit(100).lean();
 }
 
+async function allMarketingPayments() {
+  if (!mongoReady) return memory.marketingPayments;
+  return MarketingPayment.find({}).sort({ createdAt: -1 }).limit(500).lean();
+}
+
+async function addMarketingPayment(payment) {
+  const entry = {
+    id: Date.now(),
+    canteenId: Number(payment.canteenId),
+    canteenName: payment.canteenName,
+    amount: Number(payment.amount || 0),
+    pendingAmount: Number(payment.pendingAmount || 0),
+    paymentMode: payment.paymentMode || "UPI",
+    collectedBy: payment.collectedBy || "",
+    collectedByName: payment.collectedByName || "",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  if (!entry.amount && !entry.pendingAmount) return null;
+  if (!mongoReady) {
+    memory.marketingPayments.unshift(entry);
+    return entry;
+  }
+  return MarketingPayment.create(entry);
+}
+
+async function allMarketingSupportTickets() {
+  if (!mongoReady) return memory.supportTickets;
+  return MarketingSupportTicket.find({}).sort({ createdAt: -1 }).limit(200).lean();
+}
+
 function normalizeMarketingCanteen(payload, user) {
   return {
     id: Number(payload.id || Date.now()),
@@ -1051,6 +1123,15 @@ async function createMarketingCanteen(payload, user) {
   }
   if (!mongoReady) memory.marketingCanteens.unshift(canteen);
   else await MarketingCanteen.create(canteen);
+  await addMarketingPayment({
+    canteenId: canteen.id,
+    canteenName: canteen.canteenName,
+    amount: canteen.paidAmount,
+    pendingAmount: canteen.pendingAmount,
+    paymentMode: canteen.paymentMode,
+    collectedBy: user.employeeId,
+    collectedByName: user.name
+  });
   await addMarketingActivity({
     type: "created",
     text: `${canteen.canteenName} submitted for approval`,
@@ -1079,15 +1160,17 @@ function isToday(dateValue) {
   return date.toDateString() === today.toDateString();
 }
 
-function marketingSummary(canteens, users, activities) {
+function marketingSummary(canteens, users, activities, payments = [], supportTickets = []) {
   const active = canteens.filter(item => item.status === "Active");
   const trial = canteens.filter(item => item.status === "Trial");
   const expired = canteens.filter(item => item.status === "Expired" || (item.planExpiryDate && new Date(item.planExpiryDate) < new Date() && item.status !== "Blocked"));
   const blocked = canteens.filter(item => item.status === "Blocked" || item.blocked);
   const pendingPayments = canteens.reduce((sum, item) => sum + Number(item.pendingAmount || 0), 0);
-  const monthlyRevenue = canteens
+  const visibleIds = new Set(canteens.map(item => Number(item.id)));
+  const visiblePayments = payments.filter(item => visibleIds.has(Number(item.canteenId)));
+  const monthlyRevenue = visiblePayments
     .filter(item => new Date(item.createdAt || Date.now()).getMonth() === new Date().getMonth())
-    .reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const printersAssigned = canteens.reduce((sum, item) => sum + Number(item.printersAssigned || 0), 0);
   const printersRequired = canteens.reduce((sum, item) => sum + Number(item.printersRequired || 0), 0);
   const performance = users.filter(user => user.role === "marketing").map(user => {
@@ -1113,12 +1196,12 @@ function marketingSummary(canteens, users, activities) {
       onlineCanteens: canteens.filter(item => item.online).length,
       offlineCanteens: canteens.filter(item => !item.online).length,
       todaysRegistrations: canteens.filter(item => isToday(item.createdAt)).length,
-      todaysCollections: canteens.filter(item => isToday(item.updatedAt)).reduce((sum, item) => sum + Number(item.paidAmount || 0), 0),
+      todaysCollections: visiblePayments.filter(item => isToday(item.createdAt)).reduce((sum, item) => sum + Number(item.amount || 0), 0),
       monthlyRevenue,
       pendingPayments,
       printersAssigned,
       printersAvailable: Math.max(0, printersRequired - printersAssigned),
-      openSupportTickets: memory.supportTickets.filter(item => item.status === "Open").length,
+      openSupportTickets: supportTickets.filter(item => item.status === "Open").length,
       pendingInstallations: canteens.filter(item => ["Active", "Trial"].includes(item.status) && Number(item.printersAssigned || 0) < Number(item.printersRequired || 0)).length
     },
     marketingPerformance: performance,
@@ -1473,17 +1556,26 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   const allCanteens = await allMarketingCanteens();
   const users = await allMarketingUsers();
   const activities = await allMarketingActivities();
+  const payments = await allMarketingPayments();
+  const supportTickets = await allMarketingSupportTickets();
   const canteens = req.marketingUser.role === "super_admin"
     ? allCanteens
     : allCanteens.filter(item => item.submittedBy === req.marketingUser.employeeId);
+  const visibleIds = new Set(canteens.map(item => Number(item.id)));
   res.json({
     success: true,
     canteens,
     users: users.map(publicMarketingUser),
+    payments: req.marketingUser.role === "super_admin"
+      ? payments
+      : payments.filter(item => visibleIds.has(Number(item.canteenId))),
+    supportTickets: req.marketingUser.role === "super_admin"
+      ? supportTickets
+      : supportTickets.filter(item => canteens.some(canteen => canteen.canteenName === item.canteenName)),
     activities: req.marketingUser.role === "super_admin"
       ? activities
       : activities.filter(item => canteens.some(canteen => Number(canteen.id) === Number(item.canteenId))),
-    summary: marketingSummary(canteens, users, activities)
+    summary: marketingSummary(canteens, users, activities, payments, supportTickets)
   });
 });
 
@@ -1539,11 +1631,23 @@ app.post("/marketing-api/canteens/:id/block", requireSuperAdmin, async (req, res
 
 app.post("/marketing-api/canteens/:id/payment", requireSuperAdmin, async (req, res) => {
   try {
+    const before = (await allMarketingCanteens()).find(item => Number(item.id) === Number(req.params.id));
+    const nextPaidAmount = Number(req.body.paidAmount || 0);
+    const paymentDelta = Math.max(0, nextPaidAmount - Number(before?.paidAmount || 0));
     const canteen = await updateMarketingCanteen(req.params.id, {
-      paidAmount: Number(req.body.paidAmount || 0),
+      paidAmount: nextPaidAmount,
       pendingAmount: Number(req.body.pendingAmount || 0),
       paymentMode: req.body.paymentMode || "UPI"
     }, req.marketingUser);
+    await addMarketingPayment({
+      canteenId: canteen.id,
+      canteenName: canteen.canteenName,
+      amount: paymentDelta || nextPaidAmount,
+      pendingAmount: canteen.pendingAmount,
+      paymentMode: canteen.paymentMode,
+      collectedBy: req.marketingUser.employeeId,
+      collectedByName: req.marketingUser.name
+    });
     await addMarketingActivity({ type: "payment", text: `${canteen.canteenName} payment updated`, actor: req.marketingUser.name, canteenId: canteen.id });
     res.json({ success: true, canteen });
   } catch (error) {

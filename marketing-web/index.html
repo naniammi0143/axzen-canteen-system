@@ -221,7 +221,7 @@
     let token = localStorage.getItem(tokenKey) || "";
     let user = null;
     let tab = "dashboard";
-    let state = { canteens: [], users: [], activities: [], summary: { cards: {}, marketingPerformance: [], recentActivities: [] } };
+    let state = { canteens: [], users: [], activities: [], payments: [], supportTickets: [], summary: { cards: {}, marketingPerformance: [], recentActivities: [] } };
 
     const superTabs = [
       ["dashboard", "Dashboard"],
@@ -289,6 +289,12 @@
     function performanceTable(rows) {
       return `<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Registrations</th><th>Approved</th><th>Rejected</th><th>Collection</th><th>Pending</th><th>Target</th></tr></thead><tbody>${rows.map(row => `<tr><td><strong>${esc(row.name)}</strong><br><span class="muted">${esc(row.employeeId)}</span></td><td>${row.registrations}</td><td>${row.approved}</td><td>${row.rejected}</td><td>${money(row.collection)}</td><td>${money(row.pending)}</td><td>${row.target}</td></tr>`).join("") || `<tr><td colspan="7">No performance data</td></tr>`}</tbody></table></div>`;
     }
+    function paymentsTable(rows) {
+      return `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Canteen</th><th>Mode</th><th>Collected</th><th>Pending</th><th>By</th></tr></thead><tbody>${rows.map(row => `<tr><td>${new Date(row.createdAt).toLocaleString("en-IN")}</td><td><strong>${esc(row.canteenName)}</strong></td><td>${esc(row.paymentMode || "-")}</td><td>${money(row.amount)}</td><td>${money(row.pendingAmount)}</td><td>${esc(row.collectedByName || row.collectedBy || "-")}</td></tr>`).join("") || `<tr><td colspan="6">No payment records</td></tr>`}</tbody></table></div>`;
+    }
+    function supportTicketsHtml(rows) {
+      return `<div class="list">${rows.slice(0, 8).map(row => `<div class="list-row"><div><strong>${esc(row.title)}</strong><br><span class="muted">${esc(row.canteenName || "-")} | ${esc(row.priority || "Normal")}</span></div><span class="pill ${row.status === "Open" ? "orange" : "green"}">${esc(row.status)}</span></div>`).join("") || `<span class="muted">No support tickets</span>`}</div>`;
+    }
     function canteensTable(rows, actions = true) {
       return `<div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map(item => `<tr>
         <td><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.city)}, ${esc(item.state)}</span></td>
@@ -346,7 +352,7 @@
     }
     function renderDashboard() {
       if (user.role === "super_admin") {
-        $("page").innerHTML = `${cardsHtml(state.summary.cards)}<div class="grid-2"><section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section></div><section class="panel"><h2>Approval Queue</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
+        $("page").innerHTML = `${cardsHtml(state.summary.cards)}<div class="grid-2"><section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section><section class="panel"><h2>Open Support Tickets</h2>${supportTicketsHtml(state.supportTickets || [])}</section></div><div class="grid-2"><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section><section class="panel"><h2>Recent Payments</h2>${paymentsTable((state.payments || []).slice(0, 6))}</section></div><section class="panel"><h2>Approval Queue</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
         bindTableActions();
       } else {
         const cards = state.summary.cards;
@@ -405,7 +411,7 @@
       if (tab === "add") return renderAdd();
       if (tab === "approvals") $("page").innerHTML = `<section class="panel"><h2>Pending Approval</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
       else if (tab === "canteens" || tab === "my") $("page").innerHTML = `<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Canteens" : "All Canteens"}</h2><input id="searchBox" placeholder="Search canteen or owner"></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
-      else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section>`;
+      else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section><section class="panel"><h2>Payment History</h2>${paymentsTable(state.payments || [])}</section>`;
       else if (tab === "printers") $("page").innerHTML = `<section class="panel"><h2>Printer Inventory</h2>${canteensTable(state.canteens.filter(item => Number(item.printersRequired || 0) > 0), user.role === "super_admin")}</section>`;
       else if (tab === "performance") $("page").innerHTML = `<section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section>`;
       else if (tab === "activities") $("page").innerHTML = `<section class="panel"><h2>Recent Activities</h2>${activitiesHtml(60)}</section>`;
