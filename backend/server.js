@@ -436,13 +436,18 @@ function publicUser(user) {
     name: user.name,
     mobile: user.mobile,
     role: user.role,
-    active: user.active !== false
+    active: user.active !== false,
+    canteenId: user.canteenId || DEFAULT_CANTEEN_ID,
+    mustChangePassword: user.mustChangePassword === true
   };
 }
 
 function signToken(user) {
-  if (!process.env.JWT_SECRET) return null;
-  return jwt.sign(publicUser(user), process.env.JWT_SECRET, { expiresIn: "7d" });
+  const payload = { ...publicUser(user), authType: "canteen" };
+  if (!process.env.JWT_SECRET) {
+    return `local.${encodeLocalToken({ ...payload, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 })}`;
+  }
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 }
 
 function encodeLocalToken(payload) {
@@ -501,12 +506,16 @@ function requireSuperAdmin(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (!process.env.JWT_SECRET) return next();
   const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   if (!token) return res.status(401).json({ success: false, message: "Login token missing" });
 
   try {
-    req.authUser = jwt.verify(token, process.env.JWT_SECRET);
+    req.authUser = process.env.JWT_SECRET
+      ? jwt.verify(token, process.env.JWT_SECRET)
+      : decodeLocalToken(token.replace(/^local\./, ""));
+    if (!process.env.JWT_SECRET && Number(req.authUser.exp || 0) < Date.now()) {
+      return res.status(401).json({ success: false, message: "Invalid or expired login token" });
+    }
     if (req.authUser.role !== "admin") {
       return res.status(403).json({ success: false, message: "Admin access required" });
     }
@@ -1553,7 +1562,12 @@ app.get("/users", requireAdmin, async (req, res) => res.json((await allUsers()).
 
 app.post("/users", requireAdmin, async (req, res) => {
   try {
-    res.json({ success: true, user: publicUser(await saveUser(req.body)) });
+    const payload = {
+      ...req.body,
+      canteenId: req.body.canteenId || req.authUser.canteenId || DEFAULT_CANTEEN_ID,
+      mustChangePassword: req.body.mustChangePassword === true
+    };
+    res.json({ success: true, user: publicUser(await saveUser(payload)) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }

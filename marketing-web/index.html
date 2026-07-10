@@ -160,6 +160,33 @@
     td { border-bottom: 1px solid var(--line); padding: 11px 10px; vertical-align: top; font-weight: 650; }
     tr:last-child td { border-bottom: 0; }
     .table-wrap { overflow: auto; }
+    .mobile-canteens { display: none; }
+    .canteen-result { display: block; }
+    .canteen-card {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: white;
+      box-shadow: 0 10px 26px #1118270d;
+    }
+    .canteen-card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .canteen-card h3 { margin: 0; font-size: 17px; }
+    .canteen-card .meta { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .canteen-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .fact { padding: 10px; border-radius: 10px; background: #f8fafc; border: 1px solid #eef2f7; }
+    .fact span { display: block; color: var(--muted); font-size: 11px; font-weight: 950; text-transform: uppercase; }
+    .fact strong { display: block; margin-top: 4px; font-size: 14px; overflow-wrap: anywhere; }
+    .credential-box {
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 12px;
+      background: #eef6ff;
+      border: 1px solid #cfe4ff;
+    }
+    .credential-box strong { overflow-wrap: anywhere; }
     .pill { display: inline-flex; min-height: 24px; align-items: center; border-radius: 999px; padding: 0 9px; font-size: 12px; font-weight: 950; background: #eef4ff; color: var(--blue); }
     .pill.green { background: #ecfdf5; color: var(--green); }
     .pill.orange { background: #fff7ed; color: #c2410c; }
@@ -238,7 +265,9 @@
       .card small { margin-top: 6px; }
       .panel { padding: 14px; border-radius: 12px; margin-bottom: 12px; }
       .panel h2 { font-size: 16px; }
-      .table-wrap table { min-width: 820px; }
+      .canteen-result .table-wrap { display: none; }
+      .mobile-canteens { display: grid; gap: 10px; }
+      .canteen-facts { grid-template-columns: 1fr 1fr; }
       .primary, .secondary, .danger, .ghost { min-height: 44px; }
       input, select, textarea { min-height: 44px; }
     }
@@ -377,17 +406,34 @@
       return `<div class="list">${rows.slice(0, 8).map(row => `<div class="list-row"><div><strong>${esc(row.title)}</strong><br><span class="muted">${esc(row.canteenName || "-")} | ${esc(row.priority || "Normal")}</span></div><span class="pill ${row.status === "Open" ? "orange" : "green"}">${esc(row.status)}</span></div>`).join("") || `<span class="muted">No support tickets</span>`}</div>`;
     }
     function canteensTable(rows, actions = true) {
-      return `<div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map(item => `<tr>
+      const mobileCards = rows.map(item => `<article class="canteen-card">
+        <div class="canteen-card-head">
+          <div><h3>${esc(item.canteenName)}</h3><div class="meta">${esc(item.city || "-")}, ${esc(item.state || "-")} | ${esc(item.ownerName || "-")}</div></div>
+          <span class="pill ${statusClass(item.status)}">${esc(item.status)}</span>
+        </div>
+        <div class="canteen-facts">
+          <div class="fact"><span>Canteen ID</span><strong>${esc(item.activatedCanteenId || "After approval")}</strong></div>
+          <div class="fact"><span>Payment</span><strong>${money(item.paidAmount)} / Pending ${money(item.pendingAmount)}</strong></div>
+          <div class="fact"><span>Plan</span><strong>${esc(item.selectedPlan)} - ${esc(item.planType)}</strong></div>
+          <div class="fact"><span>Printers</span><strong>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</strong></div>
+        </div>
+        <div class="credential-box">
+          <div><span class="muted">Activation login</span><br><strong>${item.canteenLoginId ? esc(item.canteenLoginId) : "After approval"}</strong></div>
+          <div><span class="muted">Default password</span><br><strong>${item.defaultPassword ? esc(item.defaultPassword) : "After approval"}</strong></div>
+        </div>
+        ${actions ? `<div class="row-actions">${actionButtons(item)}</div>` : ""}
+      </article>`).join("") || `<div class="muted">No canteens found</div>`;
+      return `<div class="canteen-result"><div class="mobile-canteens">${mobileCards}</div><div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map(item => `<tr>
         <td><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.city)}, ${esc(item.state)}</span></td>
         <td>${esc(item.ownerName)}<br><span class="muted">${esc(item.ownerMobile)}</span></td>
         <td>${esc(item.selectedPlan)}<br><span class="muted">${esc(item.planType)}</span></td>
         <td>${money(item.paidAmount)}<br><span class="muted">Pending ${money(item.pendingAmount)}</span></td>
         <td>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</td>
         <td><span class="pill ${statusClass(item.status)}">${esc(item.status)}</span></td>
-        <td>${item.canteenLoginId ? `<strong>${esc(item.canteenLoginId)}</strong><br><span class="muted">Pass: ${esc(item.defaultPassword || "-")}</span>` : `<span class="muted">After approval</span>`}</td>
+        <td>${item.canteenLoginId ? `<strong>ID: ${esc(item.activatedCanteenId || "-")}</strong><br><span class="muted">Login: ${esc(item.canteenLoginId)} | Pass: ${esc(item.defaultPassword || "-")}</span>` : `<span class="muted">After approval</span>`}</td>
         <td>${esc(item.submittedByName || item.submittedBy)}</td>
         ${actions ? `<td><div class="row-actions">${actionButtons(item)}</div></td>` : ""}
-      </tr>`).join("") || `<tr><td colspan="${actions ? 9 : 8}">No canteens found</td></tr>`}</tbody></table></div>`;
+      </tr>`).join("") || `<tr><td colspan="${actions ? 9 : 8}">No canteens found</td></tr>`}</tbody></table></div></div>`;
     }
     function actionButtons(item) {
       if (user.role !== "super_admin") return "";
@@ -515,7 +561,7 @@
       if ($("searchBox")) $("searchBox").addEventListener("input", event => {
         const q = event.target.value.toLowerCase();
         const filtered = state.canteens.filter(item => `${item.canteenName} ${item.ownerName} ${item.city}`.toLowerCase().includes(q));
-        $("page").querySelector(".table-wrap").outerHTML = canteensTable(filtered, user.role === "super_admin");
+        $("page").querySelector(".canteen-result").outerHTML = canteensTable(filtered, user.role === "super_admin");
         bindTableActions();
       });
     }

@@ -69,6 +69,18 @@
     .login-card { padding: 22px; display: grid; gap: 14px; }
     .login-card h1 { margin: 0; font-size: 26px; letter-spacing: 0; }
     .login-card p { margin: -6px 0 4px; color: var(--muted); font-size: 14px; }
+    .activation-card { gap: 16px; }
+    .activation-id {
+      display: grid;
+      gap: 6px;
+      padding: 14px;
+      border: 1px solid #d7e8ff;
+      border-radius: 14px;
+      background: #f2f7ff;
+      color: var(--navy);
+      font-weight: 900;
+    }
+    .activation-id span { color: var(--muted); font-size: 12px; text-transform: uppercase; }
 
     label {
       display: grid;
@@ -892,6 +904,26 @@
       </form>
     </section>
 
+    <section class="login hidden" id="setupView">
+      <div class="brand-lockup">
+        <p class="powered">Canteen Activation</p>
+        <h1 class="brand-name">Axzen</h1>
+        <p class="tagline">Create owner login</p>
+      </div>
+      <form class="login-card activation-card" id="ownerSetupForm">
+        <h1>Activate Canteen</h1>
+        <p>Marketing employee ichina credentials verify ayyayi. Ippudu canteen owner login create cheyyandi.</p>
+        <div class="activation-id"><span>Canteen ID</span><strong id="setupCanteenId">AXC-0000</strong></div>
+        <label>Owner/Admin name <input id="ownerSetupName" autocomplete="name" required></label>
+        <label>New login mobile / user ID <input id="ownerSetupMobile" autocomplete="username" required></label>
+        <label>New password <input id="ownerSetupPassword" type="password" autocomplete="new-password" required minlength="4"></label>
+        <label>Confirm password <input id="ownerSetupConfirm" type="password" autocomplete="new-password" required minlength="4"></label>
+        <button class="primary" type="submit">Activate & Open App</button>
+        <button class="secondary" type="button" id="setupLogout">Use Another Login</button>
+        <div class="status" id="setupStatus"></div>
+      </form>
+    </section>
+
     <section id="posView" class="hidden">
       <header class="topbar">
         <button class="icon-btn" id="logoutPos" type="button">☰</button>
@@ -1114,7 +1146,7 @@
     }
 
     function show(view) {
-      ["loginView", "posView", "adminView"].forEach(id => $(id).classList.add("hidden"));
+      ["loginView", "setupView", "posView", "adminView"].forEach(id => $(id).classList.add("hidden"));
       $(view).classList.remove("hidden");
     }
 
@@ -2414,10 +2446,59 @@
           name: $("newName").value,
           mobile: $("newMobile").value,
           password: $("newPassword").value,
-          role: $("newRole").value
+          role: $("newRole").value,
+          canteenId: user?.canteenId
         })
       });
       await loadAdminData();
+    }
+
+    function showOwnerSetup() {
+      $("setupCanteenId").textContent = user?.canteenId || "AXC-0000";
+      $("ownerSetupName").value = user?.name && user.name !== "Owner" ? user.name : "";
+      $("ownerSetupMobile").value = "";
+      $("ownerSetupPassword").value = "";
+      $("ownerSetupConfirm").value = "";
+      $("setupStatus").textContent = "Create your permanent owner login.";
+      $("setupStatus").className = "status";
+      show("setupView");
+    }
+
+    async function createOwnerLogin(event) {
+      event.preventDefault();
+      const password = $("ownerSetupPassword").value;
+      const confirm = $("ownerSetupConfirm").value;
+      if (password !== confirm) {
+        $("setupStatus").textContent = "Passwords do not match";
+        $("setupStatus").className = "status error";
+        return;
+      }
+      $("setupStatus").textContent = "Activating...";
+      $("setupStatus").className = "status";
+      try {
+        await api("/users", {
+          method: "POST",
+          body: JSON.stringify({
+            name: $("ownerSetupName").value.trim(),
+            mobile: $("ownerSetupMobile").value.trim(),
+            password,
+            role: "admin",
+            canteenId: user?.canteenId,
+            mustChangePassword: false
+          })
+        });
+        const data = await api("/login", {
+          method: "POST",
+          body: JSON.stringify({ mobile: $("ownerSetupMobile").value.trim(), password })
+        });
+        setSession(data.user, data.token);
+        cacheLogin($("ownerSetupMobile").value.trim(), password, data.user);
+        applySettings(data.settings);
+        await enterApp();
+      } catch (error) {
+        $("setupStatus").textContent = "Activation failed. Check server and try again.";
+        $("setupStatus").className = "status error";
+      }
     }
 
     async function saveSettings(event) {
@@ -2446,6 +2527,10 @@
         setSession(data.user, data.token);
         cacheLogin(mobile, password, data.user);
         applySettings(data.settings);
+        if (data.user?.mustChangePassword) {
+          showOwnerSetup();
+          return;
+        }
         await enterApp();
       } catch (error) {
         const cachedUser = offlineLogin(mobile, password);
@@ -2464,6 +2549,7 @@
 
     async function enterApp() {
       if (!user) return show("loginView");
+      if (user.mustChangePassword) return showOwnerSetup();
       renderUserChrome();
       if (user.role === "admin") {
         $("adminRole").textContent = `${user.name} | Admin`;
@@ -2485,6 +2571,8 @@
     }
 
     $("loginForm").addEventListener("submit", login);
+    $("ownerSetupForm").addEventListener("submit", createOwnerLogin);
+    $("setupLogout").addEventListener("click", logout);
     $("testServerBtn").addEventListener("click", testServerFromLogin);
     $("logoutPos").addEventListener("click", openMainMenu);
     $("logoutAdmin").addEventListener("click", logout);
