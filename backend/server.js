@@ -445,6 +445,14 @@ function signToken(user) {
   return jwt.sign(publicUser(user), process.env.JWT_SECRET, { expiresIn: "7d" });
 }
 
+function encodeLocalToken(payload) {
+  return Buffer.from(JSON.stringify(payload)).toString("base64url");
+}
+
+function decodeLocalToken(token) {
+  return JSON.parse(Buffer.from(token, "base64url").toString("utf8"));
+}
+
 function publicMarketingUser(user) {
   if (!user) return null;
   return {
@@ -458,20 +466,24 @@ function publicMarketingUser(user) {
 }
 
 function signMarketingToken(user) {
-  if (!process.env.JWT_SECRET) return null;
-  return jwt.sign({ ...publicMarketingUser(user), authType: "marketing" }, process.env.JWT_SECRET, { expiresIn: "7d" });
+  const payload = { ...publicMarketingUser(user), authType: "marketing" };
+  if (!process.env.JWT_SECRET) {
+    return `local.${encodeLocalToken({ ...payload, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 })}`;
+  }
+  return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: "7d" });
 }
 
 function requireMarketingAuth(req, res, next) {
-  if (!process.env.JWT_SECRET) {
-    req.marketingUser = publicMarketingUser(memory.marketingUsers.find(user => user.role === "super_admin"));
-    return next();
-  }
   const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   if (!token) return res.status(401).json({ success: false, message: "Login token missing" });
   try {
-    const user = jwt.verify(token, process.env.JWT_SECRET);
+    const user = process.env.JWT_SECRET
+      ? jwt.verify(token, process.env.JWT_SECRET)
+      : decodeLocalToken(token.replace(/^local\./, ""));
     if (user.authType !== "marketing") return res.status(401).json({ success: false, message: "Invalid marketing token" });
+    if (!process.env.JWT_SECRET && Number(user.exp || 0) < Date.now()) {
+      return res.status(401).json({ success: false, message: "Invalid or expired login token" });
+    }
     req.marketingUser = user;
     return next();
   } catch {
