@@ -84,6 +84,7 @@ const products = [
 ];
 
 type Product = (typeof products)[number];
+type DrawerOption = (typeof drawerSections)[number]["items"][number] | "Logout";
 
 export default function HomeScreen() {
   const { width } = useWindowDimensions();
@@ -100,6 +101,7 @@ export default function HomeScreen() {
   const [cartCount, setCartCount] = useState(0);
   const [total, setTotal] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [activeOption, setActiveOption] = useState<DrawerOption>("Dashboard");
   const drawerProgress = useRef(new Animated.Value(0)).current;
 
   const visibleProducts = useMemo(
@@ -131,36 +133,47 @@ export default function HomeScreen() {
     });
   };
 
+  const selectOption = (option: DrawerOption) => {
+    setActiveOption(option);
+    closeDrawer();
+  };
+
+  const showBillingGrid = activeOption === "Dashboard" || activeOption === "New Billing";
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.page}>
         <Header onMenuPress={openDrawer} />
 
-        <FlatList
-          data={visibleProducts}
-          key={columns}
-          numColumns={columns}
-          keyExtractor={item => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={[
-            styles.content,
-            { paddingHorizontal: horizontalPadding, paddingBottom: 184 }
-          ]}
-          columnWrapperStyle={columns > 1 ? { gap: cardGap } : undefined}
-          ListHeaderComponent={
-            <>
-              <SearchBar />
-              <View style={styles.statsRow}>
-                <StatsCard tone="green" icon="▤" label="Today's Sale" value="Rs 0" />
-                <StatsCard tone="blue" icon="◷" label="Orders" value="0" />
-              </View>
-              <CategoryTabs active={activeCategory} onChange={setActiveCategory} />
-            </>
-          }
-          renderItem={({ item }) => (
-            <ProductCard product={item} width={productWidth} onPress={() => addProduct(item)} />
-          )}
-        />
+        {showBillingGrid ? (
+          <FlatList
+            data={visibleProducts}
+            key={columns}
+            numColumns={columns}
+            keyExtractor={item => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[
+              styles.content,
+              { paddingHorizontal: horizontalPadding, paddingBottom: 184 }
+            ]}
+            columnWrapperStyle={columns > 1 ? { gap: cardGap } : undefined}
+            ListHeaderComponent={
+              <>
+                <SearchBar />
+                <View style={styles.statsRow}>
+                  <StatsCard tone="green" icon="▤" label="Today's Sale" value="Rs 8,245" />
+                  <StatsCard tone="blue" icon="◷" label="Orders" value="112" />
+                </View>
+                <CategoryTabs active={activeCategory} onChange={setActiveCategory} />
+              </>
+            }
+            renderItem={({ item }) => (
+              <ProductCard product={item} width={productWidth} onPress={() => addProduct(item)} />
+            )}
+          />
+        ) : (
+          <OptionContent option={activeOption} horizontalPadding={horizontalPadding} />
+        )}
 
         <CartPanel count={cartCount} total={total} onClear={() => { setCartCount(0); setTotal(0); }} />
         <BottomNav />
@@ -169,6 +182,8 @@ export default function HomeScreen() {
             width={Math.min(width * 0.82, 340)}
             progress={drawerProgress}
             onClose={closeDrawer}
+            activeOption={activeOption}
+            onSelect={selectOption}
           />
         )}
       </View>
@@ -206,11 +221,15 @@ function Header({ onMenuPress }: { onMenuPress: () => void }) {
 function Drawer({
   width,
   progress,
-  onClose
+  onClose,
+  activeOption,
+  onSelect
 }: {
   width: number;
   progress: Animated.Value;
   onClose: () => void;
+  activeOption: DrawerOption;
+  onSelect: (option: DrawerOption) => void;
 }) {
   const translateX = progress.interpolate({
     inputRange: [0, 1],
@@ -265,11 +284,12 @@ function Drawer({
               <Text style={styles.sectionTitle}>{section.title}</Text>
               <View style={styles.sectionCard}>
                 {section.items.map((item, index) => {
-                  const selected = item === "Dashboard";
+                  const selected = item === activeOption;
                   return (
                     <TouchableOpacity
                       key={item}
                       activeOpacity={0.86}
+                      onPress={() => onSelect(item)}
                       style={[
                         styles.drawerItem,
                         selected && styles.drawerItemSelected,
@@ -291,7 +311,7 @@ function Drawer({
         </ScrollView>
 
         <View style={styles.drawerBottom}>
-          <TouchableOpacity activeOpacity={0.86} style={styles.logoutButton}>
+          <TouchableOpacity activeOpacity={0.86} style={styles.logoutButton} onPress={() => onSelect("Logout")}>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
           <Text style={styles.versionText}>App Version 1.0.0</Text>
@@ -310,6 +330,216 @@ function SearchBar() {
         placeholderTextColor="#8a94a6"
         style={styles.searchInput}
       />
+    </View>
+  );
+}
+
+function OptionContent({ option, horizontalPadding }: { option: DrawerOption; horizontalPadding: number }) {
+  return (
+    <ScrollView
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={[styles.optionContent, { paddingHorizontal: horizontalPadding, paddingBottom: 184 }]}
+    >
+      <Text style={styles.optionTitle}>{option}</Text>
+      {option === "Orders" && <OrdersScreen />}
+      {option === "Today's Sales" && <TodaysSalesScreen />}
+      {option === "Cash Summary" && <CashSummaryScreen />}
+      {option === "Add Item" && <AddItemScreen />}
+      {option === "Edit Price" && <EditPriceScreen />}
+      {option === "Stock Availability" && <StockAvailabilityScreen />}
+      {option === "Printer Settings" && <PrinterSettingsScreen />}
+      {option === "Counter User" && <CounterUserScreen />}
+      {option === "Settings" && <SettingsScreen />}
+      {option === "Sync Data" && <SyncDataScreen />}
+      {option === "Logout" && <LogoutScreen />}
+    </ScrollView>
+  );
+}
+
+function OrdersScreen() {
+  return (
+    <View style={styles.optionStack}>
+      {[
+        ["#10131", "2 items", "Rs 8,245", "Paid"],
+        ["#10122", "1 item", "Rs 235", "Pending"],
+        ["#10144", "4 items", "Rs 530", "Paid"]
+      ].map(row => (
+        <View key={row[0]} style={styles.listCard}>
+          <View>
+            <Text style={styles.listTitle}>{row[0]}</Text>
+            <Text style={styles.listSub}>20:13 • {row[1]}</Text>
+          </View>
+          <View style={styles.rightInfo}>
+            <Text style={styles.listAmount}>{row[2]}</Text>
+            <Text style={styles.badgeText}>{row[3]}</Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function TodaysSalesScreen() {
+  return (
+    <View style={styles.optionStack}>
+      <View style={styles.statsRow}>
+        <StatsCard tone="green" icon="▤" label="Total Sales" value="Rs 8,245" />
+        <StatsCard tone="blue" icon="◷" label="Orders" value="112" />
+      </View>
+      <View style={styles.tableCard}>
+        {["10131  Cash   Rs 8,245", "10122  UPI    Rs 235", "10144  Cash   Rs 530", "10127  UPI    Rs 520"].map(item => (
+          <Text key={item} style={styles.tableLine}>{item}</Text>
+        ))}
+      </View>
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Today's Sale Summary</Text>
+        <InfoRow label="Cash" value="Rs 5,530" />
+        <InfoRow label="Online" value="Rs 2,715" />
+        <InfoRow label="Total" value="Rs 8,245" />
+      </View>
+    </View>
+  );
+}
+
+function CashSummaryScreen() {
+  return (
+    <View style={styles.summaryCard}>
+      <Text style={styles.summaryTitle}>Counter 01 Settlement</Text>
+      <InfoRow label="Opening Cash" value="Rs 1,000" />
+      <InfoRow label="Cash Sales" value="Rs 5,530" />
+      <InfoRow label="Refunds" value="Rs 0" />
+      <InfoRow label="Expected Cash" value="Rs 6,530" />
+      <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Print Summary</Text></TouchableOpacity>
+    </View>
+  );
+}
+
+function AddItemScreen() {
+  return (
+    <View style={styles.formCard}>
+      {["Item name", "Category", "Price", "Item code"].map(label => (
+        <View key={label} style={styles.fakeInput}><Text style={styles.fakeInputText}>{label}</Text></View>
+      ))}
+      <InfoRow label="Available for sale" value="ON" />
+      <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Save Item</Text></TouchableOpacity>
+    </View>
+  );
+}
+
+function EditPriceScreen() {
+  return (
+    <View style={styles.optionStack}>
+      <SearchBar />
+      {products.slice(0, 4).map(item => (
+        <View key={item.id} style={styles.listCard}>
+          <View>
+            <Text style={styles.listTitle}>{item.name}</Text>
+            <Text style={styles.listSub}>{item.category}</Text>
+          </View>
+          <View style={styles.priceBox}><Text style={styles.priceBoxText}>Rs {item.price}</Text></View>
+        </View>
+      ))}
+      <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Save Changes</Text></TouchableOpacity>
+    </View>
+  );
+}
+
+function StockAvailabilityScreen() {
+  return (
+    <View style={styles.optionStack}>
+      <SearchBar />
+      {products.map((item, index) => (
+        <View key={item.id} style={styles.inventoryRow}>
+          <Image source={{ uri: item.image }} style={styles.inventoryImage} />
+          <View style={styles.inventoryText}>
+            <Text style={styles.listTitle}>{item.name}</Text>
+            <Text style={styles.listSub}>Rs {item.price}</Text>
+          </View>
+          <Text style={[styles.stockText, index % 3 === 0 && styles.lowStockText]}>{index % 3 === 0 ? "Low Stock" : "In Stock"}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function PrinterSettingsScreen() {
+  return (
+    <View style={styles.optionStack}>
+      {[1, 2, 3, 4].map(item => (
+        <View key={item} style={styles.listCard}>
+          <View style={styles.drawerItemIcon}><Text style={styles.drawerItemIconText}>P</Text></View>
+          <View style={styles.profileTextBlock}>
+            <Text style={styles.listTitle}>Thermal Receipt Printer {item}</Text>
+            <Text style={styles.connected}>Connected</Text>
+          </View>
+          <Text style={styles.checkText}>✓</Text>
+        </View>
+      ))}
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Settings</Text>
+        <InfoRow label="Paper Width" value="58mm" />
+        <InfoRow label="Default Printer" value="ON" />
+        <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Test Print</Text></TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function CounterUserScreen() {
+  return (
+    <View style={styles.summaryCard}>
+      <Text style={styles.summaryTitle}>Counter User</Text>
+      <InfoRow label="Cashier" value="Venkatesh" />
+      <InfoRow label="Role" value="Cashier" />
+      <InfoRow label="Counter" value="Counter 01" />
+      <InfoRow label="Login Time" value="09:00 AM" />
+      <TouchableOpacity style={styles.secondaryAction}><Text style={styles.secondaryActionText}>Switch User</Text></TouchableOpacity>
+    </View>
+  );
+}
+
+function SettingsScreen() {
+  return (
+    <View style={styles.summaryCard}>
+      <Text style={styles.summaryTitle}>Operational Settings</Text>
+      <InfoRow label="Outlet" value="Main Canteen" />
+      <InfoRow label="Currency" value="Rs" />
+      <InfoRow label="Tax" value="0%" />
+      <InfoRow label="Compact Mode" value="ON" />
+      <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Save Changes</Text></TouchableOpacity>
+    </View>
+  );
+}
+
+function SyncDataScreen() {
+  return (
+    <View style={styles.summaryCard}>
+      <Text style={styles.summaryTitle}>All data synced</Text>
+      <InfoRow label="Last Sync" value="Just now" />
+      <InfoRow label="Pending Bills" value="0" />
+      <InfoRow label="Pending Items" value="0" />
+      <InfoRow label="Network" value="Connected" />
+      <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Sync Now</Text></TouchableOpacity>
+    </View>
+  );
+}
+
+function LogoutScreen() {
+  return (
+    <View style={styles.logoutPanel}>
+      <Text style={styles.logoutTitle}>Logout from this counter?</Text>
+      <Text style={styles.listSub}>Cashier Venkatesh • Counter 01</Text>
+      <Text style={styles.warningText}>All data is synced. You can safely logout.</Text>
+      <TouchableOpacity style={styles.logoutConfirm}><Text style={styles.logoutConfirmText}>Logout</Text></TouchableOpacity>
+    </View>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.infoRow}>
+      <Text style={styles.infoLabel}>{label}</Text>
+      <Text style={styles.infoValue}>{value}</Text>
     </View>
   );
 }
@@ -503,6 +733,18 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: 16
   },
+  optionContent: {
+    paddingTop: 18
+  },
+  optionTitle: {
+    color: "#111827",
+    fontSize: 22,
+    fontWeight: "900",
+    marginBottom: 14
+  },
+  optionStack: {
+    gap: 12
+  },
   searchBar: {
     minHeight: 58,
     borderRadius: 18,
@@ -563,7 +805,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     color: "#111827",
     fontSize: 22,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   textGreen: {
     color: "#168a2f"
@@ -629,7 +871,230 @@ const styles = StyleSheet.create({
     marginTop: 5,
     color: NAVY,
     fontSize: 15,
-    fontWeight: "950"
+    fontWeight: "900"
+  },
+  listCard: {
+    minHeight: 72,
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#101828",
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2
+  },
+  listTitle: {
+    color: "#111827",
+    fontSize: 15,
+    fontWeight: "900"
+  },
+  listSub: {
+    marginTop: 4,
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  rightInfo: {
+    alignItems: "flex-end"
+  },
+  listAmount: {
+    color: "#111827",
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  badgeText: {
+    marginTop: 5,
+    color: "#168a2f",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  tableCard: {
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE
+  },
+  tableLine: {
+    minHeight: 34,
+    color: "#111827",
+    fontSize: 13,
+    fontWeight: "800"
+  },
+  summaryCard: {
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    shadowColor: "#101828",
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3
+  },
+  summaryTitle: {
+    color: "#111827",
+    fontSize: 17,
+    fontWeight: "900",
+    marginBottom: 12
+  },
+  infoRow: {
+    minHeight: 36,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderBottomWidth: 1,
+    borderBottomColor: "#eef2f7"
+  },
+  infoLabel: {
+    color: MUTED,
+    fontSize: 13,
+    fontWeight: "800"
+  },
+  infoValue: {
+    color: "#111827",
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  primaryAction: {
+    minHeight: 52,
+    marginTop: 14,
+    borderRadius: 16,
+    backgroundColor: GREEN,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  primaryActionText: {
+    color: CARD,
+    fontSize: 15,
+    fontWeight: "900"
+  },
+  secondaryAction: {
+    minHeight: 50,
+    marginTop: 14,
+    borderRadius: 16,
+    backgroundColor: "#edf4ff",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  secondaryActionText: {
+    color: NAVY,
+    fontSize: 15,
+    fontWeight: "900"
+  },
+  formCard: {
+    gap: 10,
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE
+  },
+  fakeInput: {
+    minHeight: 52,
+    borderRadius: 16,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: LINE,
+    justifyContent: "center",
+    paddingHorizontal: 14
+  },
+  fakeInputText: {
+    color: MUTED,
+    fontSize: 14,
+    fontWeight: "800"
+  },
+  priceBox: {
+    minWidth: 78,
+    minHeight: 40,
+    borderRadius: 14,
+    backgroundColor: "#f8fafc",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: LINE
+  },
+  priceBoxText: {
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  inventoryRow: {
+    minHeight: 78,
+    borderRadius: 18,
+    padding: 10,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    flexDirection: "row",
+    alignItems: "center"
+  },
+  inventoryImage: {
+    width: 58,
+    height: 58,
+    borderRadius: 14,
+    backgroundColor: "#eef2f7"
+  },
+  inventoryText: {
+    flex: 1,
+    marginLeft: 12
+  },
+  stockText: {
+    color: "#168a2f",
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  lowStockText: {
+    color: "#b42318"
+  },
+  checkText: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "#dcfce7",
+    color: "#168a2f",
+    textAlign: "center",
+    lineHeight: 28,
+    fontSize: 16,
+    fontWeight: "900"
+  },
+  logoutPanel: {
+    borderRadius: 22,
+    padding: 18,
+    backgroundColor: "#fff7f7",
+    borderWidth: 1,
+    borderColor: "#ffd5dc"
+  },
+  logoutTitle: {
+    color: "#991b1b",
+    fontSize: 19,
+    fontWeight: "900"
+  },
+  warningText: {
+    marginTop: 16,
+    color: MUTED,
+    fontSize: 13,
+    fontWeight: "800"
+  },
+  logoutConfirm: {
+    minHeight: 52,
+    marginTop: 16,
+    borderRadius: 16,
+    backgroundColor: "#e11d48",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  logoutConfirmText: {
+    color: CARD,
+    fontSize: 15,
+    fontWeight: "900"
   },
   cartPanel: {
     position: "absolute",
@@ -653,7 +1118,7 @@ const styles = StyleSheet.create({
   cartTitle: {
     color: "#111827",
     fontSize: 18,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   clearText: {
     color: "#ef4444",
@@ -674,7 +1139,7 @@ const styles = StyleSheet.create({
   totalValue: {
     color: "#111827",
     fontSize: 24,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   payButton: {
     minHeight: 54,
@@ -687,7 +1152,7 @@ const styles = StyleSheet.create({
   payText: {
     color: CARD,
     fontSize: 16,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   bottomNav: {
     position: "absolute",
@@ -786,7 +1251,7 @@ const styles = StyleSheet.create({
   drawerTitle: {
     color: "#111827",
     fontSize: 20,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   drawerMetaRow: {
     marginTop: 10,
@@ -838,7 +1303,7 @@ const styles = StyleSheet.create({
   cashierIconText: {
     color: NAVY,
     fontSize: 19,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   profileTextBlock: {
     flex: 1,
@@ -847,7 +1312,7 @@ const styles = StyleSheet.create({
   profileName: {
     color: "#111827",
     fontSize: 16,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   onlineBadge: {
     alignSelf: "flex-start",
@@ -879,7 +1344,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     color: "#8a94a6",
     fontSize: 12,
-    fontWeight: "950",
+    fontWeight: "900",
     letterSpacing: 0
   },
   sectionCard: {
@@ -922,7 +1387,7 @@ const styles = StyleSheet.create({
   drawerItemIconText: {
     color: NAVY,
     fontSize: 13,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   drawerItemIconTextSelected: {
     color: CARD
@@ -930,11 +1395,11 @@ const styles = StyleSheet.create({
   drawerItemText: {
     color: "#111827",
     fontSize: 15,
-    fontWeight: "850"
+    fontWeight: "800"
   },
   drawerItemTextSelected: {
     color: NAVY,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   drawerBottom: {
     position: "absolute",
@@ -956,7 +1421,7 @@ const styles = StyleSheet.create({
   logoutText: {
     color: "#e11d48",
     fontSize: 16,
-    fontWeight: "950"
+    fontWeight: "900"
   },
   versionText: {
     marginTop: 10,
