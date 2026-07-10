@@ -211,7 +211,8 @@
   </section>
 
   <script>
-    const API = "";
+    const liveApi = "https://canteen.axzen.in";
+    const API = window.Capacitor || window.location.protocol === "capacitor:" ? liveApi : "";
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toLocaleString("en-IN");
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
