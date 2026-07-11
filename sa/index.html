@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Axzen Infotech POS</title>
+  <title>axzen Infotech POS</title>
   <style>
     :root {
       --ink: #111827;
@@ -1054,7 +1054,7 @@
     <section class="login" id="loginView">
       <div class="brand-lockup">
         <p class="powered">Powered by</p>
-        <h1 class="brand-name">Axzen</h1>
+        <h1 class="brand-name">axzen</h1>
         <p class="tagline">Infotech</p>
       </div>
       <form class="login-card" id="loginForm">
@@ -1075,7 +1075,7 @@
     <section class="login hidden" id="setupView">
       <div class="brand-lockup">
         <p class="powered">Canteen Activation</p>
-        <h1 class="brand-name">Axzen</h1>
+        <h1 class="brand-name">axzen</h1>
         <p class="tagline">Create owner login</p>
       </div>
       <form class="login-card activation-card" id="ownerSetupForm">
@@ -1100,7 +1100,7 @@
           <span class="brand-logo-fallback" id="posLogoFallback">&#127860;</span>
         </div>
         <div class="title-block">
-          <strong><span id="posCanteen">Axzen Canteen</span></strong>
+          <strong><span id="posCanteen">axzen Canteen</span></strong>
           <span class="shift-line"><span class="connection-pill"><span class="status-dot offline" id="connectionBadge"></span><b id="syncStatus">Disconnected</b></span></span>
         </div>
         <div class="top-actions-pos">
@@ -1154,7 +1154,7 @@
       <div class="admin-hero">
         <div class="brand-lockup">
           <p class="powered">Powered by</p>
-          <h1 class="brand-name">Axzen</h1>
+          <h1 class="brand-name">axzen</h1>
           <p class="tagline">Infotech</p>
         </div>
         <div class="row-between" style="margin-top:16px">
@@ -1205,7 +1205,7 @@
     const tokenKey = "AXEN_TOKEN";
     const loginCacheKey = "AXEN_LOGIN_CACHE";
     const selectedPrinterKey = "AXEN_SELECTED_PRINTER";
-    let settings = { canteenName: "Main Canteen", brandName: "Axzen", tagline: "Infotech", logoUrl: "" };
+    let settings = { canteenName: "Main Canteen", brandName: "axzen", tagline: "Infotech", logoUrl: "" };
     let user = null;
     let products = [];
     let orders = [];
@@ -1659,7 +1659,7 @@
       const dateText = billDate.toLocaleDateString("en-IN");
       const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
       const header = [
-        center("AXZEN CANTEEN"),
+        center("axzen CANTEEN"),
         center("GOOD FOOD, GOOD MOOD"),
         center(order.canteen || settings.canteenName || "Main Canteen"),
         center("Address Line"),
@@ -1734,8 +1734,8 @@
       const dateText = billDate.toLocaleDateString("en-IN");
       const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
       const header = [
-        center(String(order.canteen || settings.canteenName || "AXZEN CANTEEN").toUpperCase()),
-        center("AXZEN INFOTECH")
+        center(String(order.canteen || settings.canteenName || "axzen Canteen")),
+        center("axzen INFOTECH")
       ];
       if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
       return [

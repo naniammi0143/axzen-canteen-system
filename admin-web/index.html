@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Axzen Infotech Admin</title>
+  <title>axzen Infotech Admin</title>
   <style>
     :root {
       --ink: #111827;
@@ -278,7 +278,7 @@
     <form class="login-card" id="loginForm">
       <div class="brand-lockup">
         <p class="powered">Powered by</p>
-        <h1 class="brand-name">Axzen</h1>
+        <h1 class="brand-name">axzen</h1>
         <p class="tagline">Infotech</p>
       </div>
       <label>Mobile number <input id="mobileInput" required></label>
@@ -290,7 +290,7 @@
 
   <section class="shell hidden" id="appView">
     <aside>
-      <div class="side-brand"><strong>Axzen Infotech</strong><span id="sideCanteen">Admin Panel</span></div>
+      <div class="side-brand"><strong>axzen Infotech</strong><span id="sideCanteen">Admin Panel</span></div>
       <div class="profile"><div class="avatar">A</div><div><strong id="profileName">Admin</strong><br><span>Super Admin</span></div></div>
       <nav>
         <button class="active" data-tab="dashboard">Dashboard</button>
@@ -323,7 +323,7 @@
     const apiHost = isLocalHost ? "localhost" : window.location.hostname;
     const API = window.location.protocol === "https:" ? window.location.origin : `http://${apiHost}:5000`;
     let session = JSON.parse(localStorage.getItem("AXEN_ADMIN_SESSION") || "null");
-    let settings = { canteenName: "Main Canteen", brandName: "Axzen", tagline: "Infotech", reportTime: "22:00", adminWhatsAppNumber: "", autoReport: false, reportType: "daily" };
+    let settings = { canteenName: "Main Canteen", brandName: "axzen", tagline: "Infotech", reportTime: "22:00", adminWhatsAppNumber: "", autoReport: false, reportType: "daily" };
     let dashboard = emptyDashboard();
     let whatsappLogs = [];
     let whatsappStatus = {};
@@ -1151,7 +1151,7 @@
     function renderSettings() {
       $("page").innerHTML = `<section class="panel"><h2>Settings</h2><form class="settings-grid" id="settingsForm">
         <label>Canteen Name <input id="canteenNameInput" value="${esc(settings.canteenName)}"></label>
-        <label>Brand <input id="brandNameInput" value="${esc(settings.brandName || "Axzen")}"></label>
+        <label>Brand <input id="brandNameInput" value="${esc(settings.brandName || "axzen")}"></label>
         <label>Tagline <input id="taglineInput" value="${esc(settings.tagline || "Infotech")}"></label>
         <label>Logo URL <input id="logoUrlInput" value="${esc(settings.logoUrl || "")}" placeholder="https://..."></label>
         <button class="primary">Save Settings</button>
@@ -1161,7 +1161,7 @@
 
     async function saveSettings(event) {
       event.preventDefault();
-      const data = await api("/settings", { method: "POST", body: JSON.stringify({ canteenName: $("canteenNameInput").value || "Main Canteen", brandName: $("brandNameInput").value || "Axzen", tagline: $("taglineInput").value || "Infotech", logoUrl: $("logoUrlInput").value || "" }) });
+      const data = await api("/settings", { method: "POST", body: JSON.stringify({ canteenName: $("canteenNameInput").value || "Main Canteen", brandName: $("brandNameInput").value || "axzen", tagline: $("taglineInput").value || "Infotech", logoUrl: $("logoUrlInput").value || "" }) });
       applySettings(data.settings);
       pageMessage("Settings saved");
       renderSettings();

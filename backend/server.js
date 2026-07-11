@@ -80,7 +80,7 @@ const defaultUsers = [
 const defaultSettings = {
   key: "app",
   canteenName: "Main Canteen",
-  brandName: "Axzen",
+  brandName: "axzen",
   tagline: "Infotech",
   logoUrl: "",
   reportTime: "22:00",
@@ -1242,7 +1242,7 @@ async function buildWhatsAppReport(reportType = "daily", canteenId = DEFAULT_CAN
     : "- No low stock";
 
   return [
-    `🍽 ${appSettings.canteenName || "Axzen Canteen"} ${titleType} Report`,
+    `🍽 ${appSettings.canteenName || "axzen Canteen"} ${titleType} Report`,
     `📅 Date: ${indiaDateKey()}`,
     "",
     `💰 Total Sale: ₹${data.totalSales.toFixed(0)}`,
@@ -2151,7 +2151,7 @@ async function initializeApp(options = {}) {
 if (require.main === module) {
   initializeApp({ scheduler: true }).finally(() => {
     server.listen(PORT, "0.0.0.0", () => {
-      console.log(`Axzen Hospitality Backend running on http://localhost:${PORT}`);
+      console.log(`axzen Hospitality Backend running on http://localhost:${PORT}`);
     });
   });
 }
