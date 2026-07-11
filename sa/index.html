@@ -897,18 +897,19 @@
       box-shadow: 0 18px 42px #0f172a14;
       overflow: hidden;
     }
-    #posView .topbar::after {
-      content: "\1F374";
+    #posView .decor-cutlery {
       position: absolute;
-      right: -8px;
-      bottom: -48px;
+      right: -16px;
+      bottom: -42px;
+      width: 150px;
+      height: 150px;
       color: #082653;
-      font-size: 148px;
-      line-height: 1;
-      opacity: .055;
+      opacity: .06;
       transform: rotate(-12deg);
       pointer-events: none;
     }
+    #posView .decor-cutlery svg,
+    .brand-logo-fallback svg { width: 100%; height: 100%; display: block; }
     #posView .topbar .icon-btn,
     #posView .brand-mark,
     #posView .title-block { position: relative; z-index: 1; }
@@ -928,7 +929,7 @@
     #posView .icon-btn.menu-trigger::before { content: ""; width: 26px; height: 18px; display: block; background: linear-gradient(#082653 0 0) 0 0 / 100% 4px no-repeat, linear-gradient(#082653 0 0) 0 50% / 100% 4px no-repeat, linear-gradient(#082653 0 0) 0 100% / 100% 4px no-repeat; border-radius: 8px; }
     .brand-mark { width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: #082653; background: #ffffff; border: 7px solid #f6f8fb; box-shadow: 0 12px 26px #0f172a10; font-size: 26px; font-weight: 950; letter-spacing: 0; overflow: hidden; }
     .brand-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
-    .brand-logo-fallback { color: #24324a; font-size: 28px; line-height: 1; }
+    .brand-logo-fallback { width: 32px; height: 32px; color: #24324a; line-height: 1; }
     .connection-pill { display: inline-flex; align-items: center; gap: 9px; line-height: 1; }
     .top-actions-pos { display: flex; align-items: center; gap: 14px; }
     .admin-chip { display: inline-flex; align-items: center; gap: 10px; border: 0; background: white; color: #0f172a; font-weight: 950; }
@@ -999,14 +1000,16 @@
 
     @media (max-width: 760px) {
       .app { max-width: 520px; }
-      #posView .topbar { min-height: 104px; margin: 10px 12px 0; padding: 14px; gap: 12px; border-radius: 24px; }
-      #posView .topbar::after { right: -18px; bottom: -38px; font-size: 120px; }
-      #posView .title-block { gap: 7px; }
-      #posView .title-block strong { font-size: 18px; }
-      #posView .title-block span { font-size: 14px; }
+      #posView .topbar { min-height: 124px; margin: 10px 10px 0; padding: 18px 16px; gap: 13px; border-radius: 28px; box-shadow: 0 20px 46px #0f172a17; }
+      #posView .decor-cutlery { right: -26px; bottom: -38px; width: 138px; height: 138px; opacity: .07; }
+      #posView .title-block { gap: 9px; }
+      #posView .title-block strong { font-size: 19px; line-height: 1.05; }
+      #posView .title-block span { font-size: 16px; }
       .counter-pill, .top-actions-pos .icon-btn, .admin-chip span, .shift-line .date-part, .shift-line .shift-part { display: none; }
-      #posView .icon-btn { width: 54px; height: 54px; border-radius: 17px; }
-      .brand-mark { width: 58px; height: 58px; border-width: 6px; font-size: 24px; }
+      #posView .icon-btn { width: 62px; height: 62px; border-radius: 20px; }
+      #posView .icon-btn.menu-trigger::before { width: 29px; height: 20px; }
+      .brand-mark { width: 70px; height: 70px; border-width: 7px; }
+      .brand-logo-fallback { width: 34px; height: 34px; }
       #posView .content { padding: 14px 14px 188px; }
       #posView.option-mode .content { padding: 10px 14px 90px; }
       .work-header { display: grid; padding: 14px; }
@@ -1094,10 +1097,21 @@
 
     <section id="posView" class="hidden">
       <header class="topbar">
+        <div class="decor-cutlery" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
+            <path d="M40 11c12 0 22 12 22 28 0 11-5 21-13 25l-6 44c-.3 3-3 5-6 5s-5.7-2-6-5l-6-44c-8-4-13-14-13-25 0-16 10-28 28-28Z" fill="currentColor"/>
+            <path d="M86 10c2 0 3.5 1.5 3.5 3.5V46h7V13.5c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5V46h6.5V13.5c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5v40c0 10-7 18-16.5 20l-5 34.5c-.4 3-3 5-6 5s-5.6-2-6-5L78.5 73.5C69 71.5 62 63.5 62 53.5v-40c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5V46h6.5V13.5c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5V46h7V13.5c0-2 1.5-3.5 3.5-3.5Z" fill="currentColor"/>
+          </svg>
+        </div>
         <button class="icon-btn menu-trigger" id="logoutPos" type="button" aria-label="Open menu"></button>
         <div class="brand-mark" id="posLogoMark">
           <img class="brand-logo-img hidden" id="posLogoImage" alt="">
-          <span class="brand-logo-fallback" id="posLogoFallback">&#127860;</span>
+          <span class="brand-logo-fallback" id="posLogoFallback">
+            <svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
+              <path d="M40 11c12 0 22 12 22 28 0 11-5 21-13 25l-6 44c-.3 3-3 5-6 5s-5.7-2-6-5l-6-44c-8-4-13-14-13-25 0-16 10-28 28-28Z" fill="currentColor"/>
+              <path d="M86 10c2 0 3.5 1.5 3.5 3.5V46h7V13.5c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5V46h6.5V13.5c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5v40c0 10-7 18-16.5 20l-5 34.5c-.4 3-3 5-6 5s-5.6-2-6-5L78.5 73.5C69 71.5 62 63.5 62 53.5v-40c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5V46h6.5V13.5c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5V46h7V13.5c0-2 1.5-3.5 3.5-3.5Z" fill="currentColor"/>
+            </svg>
+          </span>
         </div>
         <div class="title-block">
           <strong><span id="posCanteen">axzen Canteen</span></strong>
