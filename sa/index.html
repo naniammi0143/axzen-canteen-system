@@ -884,28 +884,52 @@
       background: #ffffff;
     }
     #posView .topbar {
-      gap: 14px;
+      position: sticky;
+      top: 0;
+      z-index: 7;
+      min-height: 112px;
+      gap: 16px;
+      margin: 12px 14px 0;
       padding: 18px 20px;
-      background: #ffffff;
-      border-bottom: 1px solid #e8edf4;
-      border-bottom-left-radius: 0;
-      border-bottom-right-radius: 0;
-      box-shadow: 0 10px 24px #1118270a;
+      background: linear-gradient(180deg, #ffffff, #fbfcff);
+      border: 1px solid #f1f4f8;
+      border-radius: 28px;
+      box-shadow: 0 18px 42px #0f172a14;
+      overflow: hidden;
+    }
+    #posView .topbar::after {
+      content: "\1F374";
+      position: absolute;
+      right: -8px;
+      bottom: -48px;
+      color: #082653;
+      font-size: 148px;
+      line-height: 1;
+      opacity: .055;
+      transform: rotate(-12deg);
+      pointer-events: none;
     }
     #posView .topbar .icon-btn,
-    #posView .brand-mark { display: grid; background: white; color: #0b1532; border-color: #e5eaf0; }
+    #posView .brand-mark,
+    #posView .title-block { position: relative; z-index: 1; }
+    #posView .topbar .icon-btn,
+    #posView .brand-mark { display: grid; background: white; color: #082653; border-color: #eef2f7; }
     #posView .top-actions-pos { display: none; }
-    #posView .title-block { flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0; }
-    #posView .title-block strong { display: block; min-width: 0; color: #111827; font-size: 24px; line-height: 1.05; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #posView .title-block span { margin-top: 0; color: #667085; font-size: 12px; font-weight: 900; }
+    #posView .title-block { flex: 1; display: grid; align-content: center; gap: 9px; min-width: 0; }
+    #posView .title-block strong { display: block; min-width: 0; color: #082653; font-size: 24px; line-height: 1.05; font-weight: 950; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #posView .title-block span { margin-top: 0; color: #20c55a; font-size: 16px; font-weight: 950; }
     .counter-pill { display: inline-flex; min-height: 28px; align-items: center; border-radius: 999px; background: #f0f2f5; color: #4b5563; padding: 0 13px; font-size: 13px; font-weight: 850; }
-    .shift-line { display: inline-flex !important; align-items: center; gap: 7px; flex: 0 0 auto; }
-    .shift-line b { color: #667085; }
-    #posView .net-badge { width: 11px; height: 11px; box-shadow: none; }
-    #posView .net-badge::before { content: ""; }
-    #posView .icon-btn { width: 48px; height: 48px; border-radius: 15px; border-color: #edf1f5; box-shadow: 0 8px 18px #1118270a; font-size: 24px; }
-    .brand-mark { width: 54px; height: 54px; border-radius: 16px; display: grid; place-items: center; flex: 0 0 auto; color: #111827; background: #ffffff; border: 1px solid #e5eaf0; box-shadow: 0 10px 20px #1118270a; font-size: 18px; font-weight: 950; letter-spacing: 0; }
-    .connection-pill { display: inline-flex; align-items: center; gap: 7px; }
+    .shift-line { display: inline-flex !important; align-items: center; gap: 8px; flex: 0 0 auto; }
+    .shift-line b { color: #20c55a; line-height: 1; }
+    #posView .status-dot { width: 13px; height: 13px; border-radius: 50%; flex: 0 0 13px; background: #20c55a; box-shadow: 0 0 0 5px #22c55e18; }
+    #posView .status-dot.offline { background: #ef4444; box-shadow: 0 0 0 5px #ef444418; }
+    #posView .status-dot.syncing { background: #f59e0b; box-shadow: 0 0 0 5px #f59e0b18; }
+    #posView .icon-btn { width: 58px; height: 58px; border-radius: 18px; border-color: #edf1f5; box-shadow: 0 12px 24px #0f172a0d; font-size: 0; }
+    #posView .icon-btn.menu-trigger::before { content: ""; width: 26px; height: 18px; display: block; background: linear-gradient(#082653 0 0) 0 0 / 100% 4px no-repeat, linear-gradient(#082653 0 0) 0 50% / 100% 4px no-repeat, linear-gradient(#082653 0 0) 0 100% / 100% 4px no-repeat; border-radius: 8px; }
+    .brand-mark { width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: #082653; background: #ffffff; border: 7px solid #f6f8fb; box-shadow: 0 12px 26px #0f172a10; font-size: 26px; font-weight: 950; letter-spacing: 0; overflow: hidden; }
+    .brand-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
+    .brand-logo-fallback { color: #24324a; font-size: 28px; line-height: 1; }
+    .connection-pill { display: inline-flex; align-items: center; gap: 9px; line-height: 1; }
     .top-actions-pos { display: flex; align-items: center; gap: 14px; }
     .admin-chip { display: inline-flex; align-items: center; gap: 10px; border: 0; background: white; color: #0f172a; font-weight: 950; }
     .avatar-chip { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #f3f4f6, #d8dce3); color: #64748b; font-size: 24px; }
@@ -975,12 +999,14 @@
 
     @media (max-width: 760px) {
       .app { max-width: 520px; }
-      #posView .topbar { padding: 14px; gap: 10px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-      #posView .title-block { gap: 8px; }
-      #posView .title-block strong { font-size: 17px; }
-      #posView .title-block span { font-size: 11px; }
+      #posView .topbar { min-height: 104px; margin: 10px 12px 0; padding: 14px; gap: 12px; border-radius: 24px; }
+      #posView .topbar::after { right: -18px; bottom: -38px; font-size: 120px; }
+      #posView .title-block { gap: 7px; }
+      #posView .title-block strong { font-size: 18px; }
+      #posView .title-block span { font-size: 14px; }
       .counter-pill, .top-actions-pos .icon-btn, .admin-chip span, .shift-line .date-part, .shift-line .shift-part { display: none; }
-      .brand-mark { width: 44px; height: 44px; border-radius: 14px; font-size: 15px; }
+      #posView .icon-btn { width: 54px; height: 54px; border-radius: 17px; }
+      .brand-mark { width: 58px; height: 58px; border-width: 6px; font-size: 24px; }
       #posView .content { padding: 14px 14px 188px; }
       #posView.option-mode .content { padding: 10px 14px 90px; }
       .work-header { display: grid; padding: 14px; }
@@ -1068,11 +1094,14 @@
 
     <section id="posView" class="hidden">
       <header class="topbar">
-        <button class="icon-btn" id="logoutPos" type="button">☰</button>
-        <div class="brand-mark">AX</div>
+        <button class="icon-btn menu-trigger" id="logoutPos" type="button" aria-label="Open menu"></button>
+        <div class="brand-mark" id="posLogoMark">
+          <img class="brand-logo-img hidden" id="posLogoImage" alt="">
+          <span class="brand-logo-fallback" id="posLogoFallback">&#127860;</span>
+        </div>
         <div class="title-block">
           <strong><span id="posCanteen">Axzen Canteen</span></strong>
-          <span class="shift-line"><span class="connection-pill"><span class="net-badge offline" id="connectionBadge"></span><b id="syncStatus">Disconnected</b></span></span>
+          <span class="shift-line"><span class="connection-pill"><span class="status-dot offline" id="connectionBadge"></span><b id="syncStatus">Disconnected</b></span></span>
         </div>
         <div class="top-actions-pos">
           <button class="icon-btn" type="button" aria-label="Notifications">!</button>
@@ -1176,7 +1205,7 @@
     const tokenKey = "AXEN_TOKEN";
     const loginCacheKey = "AXEN_LOGIN_CACHE";
     const selectedPrinterKey = "AXEN_SELECTED_PRINTER";
-    let settings = { canteenName: "Main Canteen", brandName: "Axzen", tagline: "Infotech" };
+    let settings = { canteenName: "Main Canteen", brandName: "Axzen", tagline: "Infotech", logoUrl: "" };
     let user = null;
     let products = [];
     let orders = [];
@@ -1212,7 +1241,7 @@
 
     function setConnectionState(state, text) {
       const badge = $("connectionBadge");
-      if (badge) badge.className = `net-badge ${state}`;
+      if (badge) badge.className = `status-dot ${state}`;
       if ($("syncStatus")) $("syncStatus").textContent = state === "offline" ? "Disconnected" : "Connected";
       if ($("profileBtn")) {
         $("profileBtn").classList.toggle("online", state === "online");
@@ -1269,11 +1298,32 @@
       return response.json();
     }
 
+    function applyHeaderLogo() {
+      const logoUrl = String(settings.logoUrl || settings.logo || settings.canteenLogo || "").trim();
+      const img = $("posLogoImage");
+      const fallback = $("posLogoFallback");
+      if (!img || !fallback) return;
+      if (logoUrl) {
+        img.onerror = () => {
+          img.classList.add("hidden");
+          fallback.classList.remove("hidden");
+        };
+        img.src = logoUrl;
+        img.classList.remove("hidden");
+        fallback.classList.add("hidden");
+      } else {
+        img.removeAttribute("src");
+        img.classList.add("hidden");
+        fallback.classList.remove("hidden");
+      }
+    }
+
     function applySettings(next = {}) {
       settings = { ...settings, ...next };
       $("loginCanteen").textContent = settings.canteenName;
       $("posCanteen").textContent = settings.canteenName;
       $("adminCanteen").textContent = settings.canteenName;
+      applyHeaderLogo();
     }
 
     function renderUserChrome() {
@@ -2774,6 +2824,7 @@
             <h2>Settings</h2>
             <form class="form-grid" id="settingsForm">
               <label>Canteen name <input id="canteenNameInput" value="${settings.canteenName}"></label>
+              <label>Logo URL <input id="logoUrlInput" value="${settings.logoUrl || ""}" placeholder="https://..."></label>
               <label>Server URL <input id="apiInput" value="${API}"></label>
               <button class="primary">Save Settings</button>
             </form>
@@ -2884,7 +2935,10 @@
       if (nextApi) localStorage.setItem("AXEN_API_URL", nextApi);
       const data = await api("/settings", {
         method: "POST",
-        body: JSON.stringify({ canteenName: $("canteenNameInput").value.trim() || "Main Canteen" })
+        body: JSON.stringify({
+          canteenName: $("canteenNameInput").value.trim() || "Main Canteen",
+          logoUrl: $("logoUrlInput")?.value.trim() || ""
+        })
       });
       applySettings(data.settings);
       await loadAdminData();

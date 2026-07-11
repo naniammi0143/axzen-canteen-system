@@ -23,6 +23,10 @@ const GREEN = "#22c55e";
 
 const itemCategories = ["Meals", "Tiffins", "Tea"] as const;
 const categories = ["All", ...itemCategories] as const;
+const registeredCanteen = {
+  name: "Main Canteen",
+  logoUri: ""
+};
 
 type Category = (typeof categories)[number];
 type BottomNavItem = "Home" | "Orders" | "Reports" | "Settings";
@@ -203,7 +207,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.page}>
-        <Header onMenuPress={openDrawer} />
+        <PremiumHeader onMenuPress={openDrawer} />
 
         {showBillingGrid ? (
           <FlatList
@@ -277,6 +281,47 @@ function Header({ onMenuPress }: { onMenuPress: () => void }) {
         </View>
       </View>
 
+    </View>
+  );
+}
+
+function PremiumHeader({
+  onMenuPress,
+  canteenName = registeredCanteen.name,
+  logoUri = registeredCanteen.logoUri
+}: {
+  onMenuPress: () => void;
+  canteenName?: string;
+  logoUri?: string;
+}) {
+  return (
+    <View style={styles.header}>
+      <Text style={styles.decorCutlery}>🍴</Text>
+      <TouchableOpacity style={styles.menuButton} activeOpacity={0.8} onPress={onMenuPress}>
+        <View style={styles.menuBars}>
+          <View style={styles.menuBar} />
+          <View style={styles.menuBar} />
+          <View style={styles.menuBar} />
+        </View>
+      </TouchableOpacity>
+
+      <View style={styles.logo}>
+        {logoUri ? (
+          <Image source={{ uri: logoUri }} style={styles.logoImage} />
+        ) : (
+          <Text style={styles.logoIcon}>🍴</Text>
+        )}
+      </View>
+
+      <View style={styles.headerTitle}>
+        <Text style={styles.title} numberOfLines={1}>
+          {canteenName.toUpperCase()}
+        </Text>
+        <View style={styles.statusRow}>
+          <View style={styles.statusDot} />
+          <Text style={styles.connected}>Connected</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -1065,24 +1110,36 @@ const styles = StyleSheet.create({
     backgroundColor: PAGE
   },
   header: {
-    minHeight: 110,
+    minHeight: 116,
     marginHorizontal: 14,
     marginTop: 10,
-    paddingHorizontal: 14,
-    borderRadius: 24,
-    backgroundColor: CARD,
+    paddingHorizontal: 16,
+    borderRadius: 28,
+    backgroundColor: "#fdfefe",
     flexDirection: "row",
     alignItems: "center",
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#f1f4f8",
     shadowColor: "#101828",
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 10 },
     elevation: 5
   },
+  decorCutlery: {
+    position: "absolute",
+    right: -4,
+    bottom: -34,
+    color: NAVY,
+    fontSize: 116,
+    opacity: 0.06,
+    transform: [{ rotate: "-12deg" }]
+  },
   menuButton: {
-    width: 54,
-    height: 54,
-    borderRadius: 16,
+    width: 58,
+    height: 58,
+    borderRadius: 18,
     backgroundColor: CARD,
     alignItems: "center",
     justifyContent: "center",
@@ -1094,30 +1151,51 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 2
   },
+  menuBars: {
+    width: 27,
+    gap: 6
+  },
+  menuBar: {
+    height: 4,
+    borderRadius: 4,
+    backgroundColor: NAVY
+  },
   menuIcon: {
     color: "#0f172a",
     fontSize: 28,
     fontWeight: "900"
   },
   logo: {
-    width: 58,
-    height: 58,
-    marginLeft: 12,
-    borderRadius: 29,
+    width: 66,
+    height: 66,
+    marginLeft: 14,
+    borderRadius: 33,
     backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: LINE,
+    borderWidth: 7,
+    borderColor: "#f6f8fb",
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    overflow: "hidden",
+    shadowColor: "#101828",
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2
+  },
+  logoImage: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 33
   },
   logoIcon: {
-    color: "#111827",
-    fontSize: 24,
+    color: "#24324a",
+    fontSize: 28,
     fontWeight: "900"
   },
   headerTitle: {
     flex: 1,
-    marginLeft: 12
+    marginLeft: 14,
+    justifyContent: "center"
   },
   headerNameRow: {
     flexDirection: "row",
@@ -1127,18 +1205,26 @@ const styles = StyleSheet.create({
     rowGap: 6
   },
   title: {
-    color: "#111827",
-    fontSize: 19,
+    color: NAVY,
+    fontSize: 20,
     fontWeight: "900"
   },
   statusRow: {
     flexDirection: "row",
-    alignItems: "center"
+    alignItems: "center",
+    marginTop: 9,
+    gap: 9
+  },
+  statusDot: {
+    width: 13,
+    height: 13,
+    borderRadius: 7,
+    backgroundColor: GREEN
   },
   connected: {
-    color: MUTED,
-    fontSize: 14,
-    fontWeight: "800"
+    color: GREEN,
+    fontSize: 16,
+    fontWeight: "900"
   },
   content: {
     paddingTop: 16
