@@ -216,7 +216,7 @@ let memory = {
 const orderSchema = new mongoose.Schema({
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   id: { type: Number, index: true },
-  clientOrderId: { type: String, unique: true, sparse: true, index: true },
+  clientOrderId: { type: String, sparse: true, index: true },
   time: String,
   canteen: String,
   cashier: String,
@@ -233,7 +233,7 @@ const orderSchema = new mongoose.Schema({
 const saleSchema = new mongoose.Schema({
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   orderId: Number,
-  clientOrderId: { type: String, unique: true, sparse: true, index: true },
+  clientOrderId: { type: String, sparse: true, index: true },
   time: String,
   canteen: String,
   cashier: String,
@@ -408,6 +408,20 @@ const whatsappLogSchema = new mongoose.Schema({
   meta: mongoose.Schema.Types.Mixed
 }, { timestamps: true, collection: "whatsapp_logs" });
 
+userSchema.index({ canteenId: 1, mobile: 1 }, { unique: true, name: "canteenId_1_mobile_1" });
+orderSchema.index(
+  { canteenId: 1, clientOrderId: 1 },
+  { unique: true, name: "canteenId_1_clientOrderId_1", partialFilterExpression: { clientOrderId: { $type: "string" } } }
+);
+saleSchema.index(
+  { canteenId: 1, clientOrderId: 1 },
+  { unique: true, name: "canteenId_1_clientOrderId_1", partialFilterExpression: { clientOrderId: { $type: "string" } } }
+);
+reportSettingSchema.index({ canteenId: 1, key: 1 }, { unique: true, name: "canteenId_1_key_1" });
+menuItemSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
+stockItemSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
+expenseSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
+
 const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
 const Sale = mongoose.models.Sale || mongoose.model("Sale", saleSchema);
 const User = mongoose.models.User || mongoose.model("User", userSchema);
@@ -530,22 +544,58 @@ function canteenUserFromRequest(req) {
   }
 }
 
-function requireAdmin(req, res, next) {
-  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
-  if (!token) return res.status(401).json({ success: false, message: "Login token missing" });
+async function canteenCanLogin(canteenId) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!targetCanteenId) return false;
+  if (!mongoReady) return false;
 
+  const core = await Canteen.findOne({ canteenId: targetCanteenId }).lean();
+  if (core && core.active === false) return false;
+
+  const marketing = await MarketingCanteen.findOne({ activatedCanteenId: targetCanteenId }).lean();
+  if (!marketing) return Boolean(core) || targetCanteenId === DEFAULT_CANTEEN_ID;
+  if (marketing.blocked || marketing.status === "Blocked" || marketing.status === "Rejected" || marketing.status === "Expired") {
+    return false;
+  }
+  return ["Active", "Trial"].includes(marketing.status) || Boolean(marketing.canteenLoginId);
+}
+
+async function tokenUserIsCurrent(user) {
+  if (!user || !mongoReady) return false;
+  const canteenId = normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID);
+  const current = await User.findOne({ canteenId, mobile: normalizeMobile(user.mobile), active: { $ne: false } }).lean();
+  if (!current) return false;
+  if (current.role !== user.role) return false;
+  return canteenCanLogin(canteenId);
+}
+
+function decodeCanteenAuthToken(req) {
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!token) return { error: "Login token missing" };
   try {
-    req.authUser = process.env.JWT_SECRET
+    const user = process.env.JWT_SECRET
       ? jwt.verify(token, process.env.JWT_SECRET)
       : decodeLocalToken(token.replace(/^local\./, ""));
-    if (req.authUser.authType !== "canteen") {
-      return res.status(401).json({ success: false, message: "Invalid canteen token" });
+    if (user.authType !== "canteen") return { error: "Invalid canteen token" };
+    if (!process.env.JWT_SECRET && Number(user.exp || 0) < Date.now()) {
+      return { error: "Invalid or expired login token" };
     }
-    if (!process.env.JWT_SECRET && Number(req.authUser.exp || 0) < Date.now()) {
-      return res.status(401).json({ success: false, message: "Invalid or expired login token" });
-    }
+    return { user };
+  } catch {
+    return { error: "Invalid or expired login token" };
+  }
+}
+
+async function requireAdmin(req, res, next) {
+  const decoded = decodeCanteenAuthToken(req);
+  if (decoded.error) return res.status(401).json({ success: false, message: decoded.error });
+  try {
+    req.authUser = decoded.user;
     if (req.authUser.role !== "admin") {
       return res.status(403).json({ success: false, message: "Admin access required" });
+    }
+    if (!await tokenUserIsCurrent(req.authUser)) {
+      return res.status(403).json({ success: false, message: "Canteen access is inactive or blocked" });
     }
     return next();
   } catch (error) {
@@ -553,27 +603,31 @@ function requireAdmin(req, res, next) {
   }
 }
 
-function requireCanteenAuth(req, res, next) {
-  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
-  if (!token) return res.status(401).json({ success: false, message: "Login token missing" });
-
+async function requireCanteenAuth(req, res, next) {
+  const decoded = decodeCanteenAuthToken(req);
+  if (decoded.error) return res.status(401).json({ success: false, message: decoded.error });
   try {
-    req.authUser = process.env.JWT_SECRET
-      ? jwt.verify(token, process.env.JWT_SECRET)
-      : decodeLocalToken(token.replace(/^local\./, ""));
-    if (req.authUser.authType !== "canteen") {
-      return res.status(401).json({ success: false, message: "Invalid canteen token" });
-    }
-    if (!process.env.JWT_SECRET && Number(req.authUser.exp || 0) < Date.now()) {
-      return res.status(401).json({ success: false, message: "Invalid or expired login token" });
-    }
+    req.authUser = decoded.user;
     if (!["admin", "user"].includes(req.authUser.role)) {
       return res.status(403).json({ success: false, message: "Canteen user access required" });
+    }
+    if (!await tokenUserIsCurrent(req.authUser)) {
+      return res.status(403).json({ success: false, message: "Canteen access is inactive or blocked" });
     }
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
   }
+}
+
+function requireDatabase(req, res, next) {
+  if (!mongoReady) {
+    return res.status(503).json({
+      success: false,
+      message: "Database not connected. Data was not saved. Please check MongoDB connection."
+    });
+  }
+  return next();
 }
 
 async function seedDefaults() {
@@ -602,6 +656,60 @@ async function seedDefaults() {
   if (!await MarketingActivity.countDocuments()) await MarketingActivity.insertMany(memory.marketingActivities);
   if (!await MarketingPayment.countDocuments()) await MarketingPayment.insertMany(defaultMarketingPayments);
   if (!await MarketingSupportTicket.countDocuments()) await MarketingSupportTicket.insertMany(defaultMarketingSupportTickets);
+  await reconcileApprovedCanteens();
+}
+
+async function dropIndexIfExists(collection, name) {
+  try {
+    const indexes = await collection.indexes();
+    if (indexes.some(index => index.name === name)) {
+      await collection.dropIndex(name);
+    }
+  } catch (error) {
+    if (error.codeName !== "IndexNotFound") throw error;
+  }
+}
+
+async function ensureDatabaseIndexes() {
+  await dropIndexIfExists(User.collection, "mobile_1");
+  await User.collection.createIndex(
+    { canteenId: 1, mobile: 1 },
+    { unique: true, name: "canteenId_1_mobile_1" }
+  );
+
+  await dropIndexIfExists(Order.collection, "clientOrderId_1");
+  await Order.collection.createIndex(
+    { canteenId: 1, clientOrderId: 1 },
+    {
+      unique: true,
+      name: "canteenId_1_clientOrderId_1",
+      partialFilterExpression: { clientOrderId: { $type: "string" } }
+    }
+  );
+
+  await dropIndexIfExists(Sale.collection, "clientOrderId_1");
+  await Sale.collection.createIndex(
+    { canteenId: 1, clientOrderId: 1 },
+    {
+      unique: true,
+      name: "canteenId_1_clientOrderId_1",
+      partialFilterExpression: { clientOrderId: { $type: "string" } }
+    }
+  );
+
+  await dropIndexIfExists(ReportSetting.collection, "key_1");
+  await ReportSetting.collection.createIndex(
+    { canteenId: 1, key: 1 },
+    { unique: true, name: "canteenId_1_key_1" }
+  );
+
+  for (const collection of [MenuItem.collection, StockItem.collection, Expense.collection]) {
+    await dropIndexIfExists(collection, "id_1");
+    await collection.createIndex(
+      { canteenId: 1, id: 1 },
+      { unique: true, name: "canteenId_1_id_1" }
+    );
+  }
 }
 
 async function connectDatabase() {
@@ -623,6 +731,7 @@ async function connectDatabase() {
     await mongoose.connect(uri, { dbName: DB_NAME, serverSelectionTimeoutMS: 8000 });
     mongoReady = true;
     mongoError = "";
+    await ensureDatabaseIndexes();
     await seedDefaults();
     console.log(`MongoDB Atlas connected: ${DB_NAME}`);
     return true;
@@ -1394,6 +1503,19 @@ async function activateApprovedCanteen(canteen, actor) {
   return updateMarketingCanteen(canteen.id, credentials, actor);
 }
 
+async function reconcileApprovedCanteens() {
+  const canteens = await allMarketingCanteens();
+  const approved = canteens.filter(item =>
+    item.status === "Active" ||
+    item.status === "Trial" ||
+    item.activatedCanteenId ||
+    item.canteenLoginId
+  );
+  for (const canteen of approved) {
+    await activateApprovedCanteen(canteen, { name: "System", employeeId: "SYSTEM" });
+  }
+}
+
 function isToday(dateValue) {
   const date = new Date(dateValue || Date.now());
   const today = new Date();
@@ -1664,7 +1786,7 @@ app.get("/catalog/default-products", requireAdmin, async (req, res) => {
   res.json(defaultCatalogItems.map(item => ({ ...item, active: liveIds.has(Number(item.id)) })));
 });
 
-app.post("/products", requireAdmin, async (req, res) => {
+app.post("/products", requireDatabase, requireAdmin, async (req, res) => {
   try {
     const product = await saveMenuItem({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
     res.json({ success: true, product, products: await allMenuItems(req.authUser.canteenId) });
@@ -1673,7 +1795,7 @@ app.post("/products", requireAdmin, async (req, res) => {
   }
 });
 
-app.delete("/products/:id", requireAdmin, async (req, res) => {
+app.delete("/products/:id", requireDatabase, requireAdmin, async (req, res) => {
   await deleteMenuItem(req.params.id, req.authUser.canteenId);
   res.json({ success: true, products: await allMenuItems(req.authUser.canteenId) });
 });
@@ -1683,7 +1805,7 @@ app.get("/stock", async (req, res) => {
   res.json(await allStockItems(authUser?.canteenId || DEFAULT_CANTEEN_ID));
 });
 
-app.post("/stock", requireAdmin, async (req, res) => {
+app.post("/stock", requireDatabase, requireAdmin, async (req, res) => {
   try {
     const item = await saveStockItem({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
     res.json({ success: true, item, stock: await allStockItems(req.authUser.canteenId) });
@@ -1694,7 +1816,7 @@ app.post("/stock", requireAdmin, async (req, res) => {
 
 app.get("/expenses", requireAdmin, async (req, res) => res.json(await allExpenses(req.authUser.canteenId)));
 
-app.post("/expenses", requireAdmin, async (req, res) => {
+app.post("/expenses", requireDatabase, requireAdmin, async (req, res) => {
   try {
     const expense = await saveExpense({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
     res.json({ success: true, expense, expenses: await allExpenses(req.authUser.canteenId) });
@@ -1708,7 +1830,7 @@ app.get("/settings", async (req, res) => {
   res.json(await getSettings(authUser?.canteenId || DEFAULT_CANTEEN_ID));
 });
 
-app.post("/settings", requireAdmin, async (req, res) => {
+app.post("/settings", requireDatabase, requireAdmin, async (req, res) => {
   try {
     res.json({ success: true, settings: await saveSettings(req.body, req.authUser.canteenId) });
   } catch (error) {
@@ -1716,7 +1838,7 @@ app.post("/settings", requireAdmin, async (req, res) => {
   }
 });
 
-app.post("/login", async (req, res) => {
+app.post("/login", requireDatabase, async (req, res) => {
   const loginId = normalizeMobile(req.body.loginId || req.body.mobile || req.body.restaurantId || req.body.canteenId);
   const mobile = normalizeMobile(req.body.mobile || req.body.loginId);
   const canteenHint = normalizeCanteenId(req.body.canteenId || req.body.restaurantId || "");
@@ -1736,9 +1858,13 @@ app.post("/login", async (req, res) => {
     return res.status(409).json({ success: false, message: "Restaurant ID required for this mobile number" });
   }
 
-  const user = matches.find(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === loginAsCanteenId) || matches[0];
+  const allowedMatches = [];
+  for (const item of matches) {
+    if (await canteenCanLogin(item.canteenId || DEFAULT_CANTEEN_ID)) allowedMatches.push(item);
+  }
+  const user = allowedMatches.find(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === loginAsCanteenId) || allowedMatches[0];
 
-  if (!user) return res.status(401).json({ success: false, message: "Invalid credentials" });
+  if (!user) return res.status(401).json({ success: false, message: "Invalid credentials or inactive canteen" });
   res.json({ success: true, user: publicUser(user), token: signToken(user), settings: await getSettings(user.canteenId) });
 });
 
@@ -1747,7 +1873,7 @@ app.get("/users", requireAdmin, async (req, res) => {
   res.json((await allUsers()).filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === canteenId).map(publicUser));
 });
 
-app.post("/users", requireAdmin, async (req, res) => {
+app.post("/users", requireDatabase, requireAdmin, async (req, res) => {
   try {
     const payload = {
       ...req.body,
@@ -1760,12 +1886,12 @@ app.post("/users", requireAdmin, async (req, res) => {
   }
 });
 
-app.delete("/users/:mobile", requireAdmin, async (req, res) => {
+app.delete("/users/:mobile", requireDatabase, requireAdmin, async (req, res) => {
   await deleteUser(req.params.mobile, req.authUser.canteenId);
   res.json({ success: true });
 });
 
-app.post("/orders", requireCanteenAuth, async (req, res) => {
+app.post("/orders", requireDatabase, requireCanteenAuth, async (req, res) => {
   try {
     const order = await saveOrder({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
     io.emit("new-order", order);
@@ -1775,7 +1901,7 @@ app.post("/orders", requireCanteenAuth, async (req, res) => {
   }
 });
 
-app.post("/orders/sync", requireCanteenAuth, async (req, res) => {
+app.post("/orders/sync", requireDatabase, requireCanteenAuth, async (req, res) => {
   try {
     const incoming = Array.isArray(req.body.orders) ? req.body.orders : [];
     const synced = [];
@@ -1792,13 +1918,13 @@ app.post("/orders/sync", requireCanteenAuth, async (req, res) => {
 
 app.get("/orders", requireAdmin, async (req, res) => res.json(await allOrders(req.authUser.canteenId)));
 
-app.delete("/orders", requireAdmin, async (req, res) => {
+app.delete("/orders", requireDatabase, requireAdmin, async (req, res) => {
   await clearOrders(req.authUser.canteenId);
   io.emit("orders-cleared");
   res.json({ success: true });
 });
 
-app.delete("/orders/:id", requireAdmin, async (req, res) => {
+app.delete("/orders/:id", requireDatabase, requireAdmin, async (req, res) => {
   await deleteOrder(req.params.id, req.authUser.canteenId);
   io.emit("order-deleted", req.params.id);
   res.json({ success: true });
@@ -1806,7 +1932,7 @@ app.delete("/orders/:id", requireAdmin, async (req, res) => {
 
 app.get("/dashboard", requireAdmin, async (req, res) => res.json(await dashboardData(req.authUser.canteenId)));
 
-app.post("/marketing-api/login", async (req, res) => {
+app.post("/marketing-api/login", requireDatabase, async (req, res) => {
   const employeeId = String(req.body.employeeId || "").trim();
   const password = String(req.body.password || "");
   const user = (await allMarketingUsers()).find(item =>
@@ -1849,7 +1975,7 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   });
 });
 
-app.post("/marketing-api/users", requireSuperAdmin, async (req, res) => {
+app.post("/marketing-api/users", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const employee = await saveMarketingUser(req.body, req.marketingUser);
     res.json({ success: true, user: publicMarketingUser(employee), users: (await allMarketingUsers()).map(publicMarketingUser) });
@@ -1858,7 +1984,7 @@ app.post("/marketing-api/users", requireSuperAdmin, async (req, res) => {
   }
 });
 
-app.post("/marketing-api/canteens", requireMarketingAuth, async (req, res) => {
+app.post("/marketing-api/canteens", requireDatabase, requireMarketingAuth, async (req, res) => {
   if (req.marketingUser.role !== "marketing") {
     return res.status(403).json({ success: false, message: "Only marketing employees can submit canteens" });
   }
@@ -1870,7 +1996,7 @@ app.post("/marketing-api/canteens", requireMarketingAuth, async (req, res) => {
   }
 });
 
-app.post("/marketing-api/canteens/:id/approve", requireSuperAdmin, async (req, res) => {
+app.post("/marketing-api/canteens/:id/approve", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const approved = await updateMarketingCanteen(req.params.id, {
       status: req.body.status || "Active",
@@ -1886,7 +2012,7 @@ app.post("/marketing-api/canteens/:id/approve", requireSuperAdmin, async (req, r
   }
 });
 
-app.post("/marketing-api/canteens/:id/reject", requireSuperAdmin, async (req, res) => {
+app.post("/marketing-api/canteens/:id/reject", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const reason = String(req.body.reason || "").trim();
     if (!reason) return res.status(400).json({ success: false, message: "Rejection reason is required" });
@@ -1898,10 +2024,16 @@ app.post("/marketing-api/canteens/:id/reject", requireSuperAdmin, async (req, re
   }
 });
 
-app.post("/marketing-api/canteens/:id/block", requireSuperAdmin, async (req, res) => {
+app.post("/marketing-api/canteens/:id/block", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const blocked = req.body.blocked !== false;
     const canteen = await updateMarketingCanteen(req.params.id, { status: blocked ? "Blocked" : "Active", blocked, online: !blocked }, req.marketingUser);
+    if (canteen.activatedCanteenId) {
+      await Canteen.findOneAndUpdate(
+        { canteenId: normalizeCanteenId(canteen.activatedCanteenId) },
+        { $set: { active: !blocked } }
+      );
+    }
     await addMarketingActivity({ type: "blocked", text: `${canteen.canteenName} ${blocked ? "blocked" : "unblocked"}`, actor: req.marketingUser.name, canteenId: canteen.id });
     res.json({ success: true, canteen });
   } catch (error) {
@@ -1909,7 +2041,7 @@ app.post("/marketing-api/canteens/:id/block", requireSuperAdmin, async (req, res
   }
 });
 
-app.post("/marketing-api/canteens/:id/payment", requireSuperAdmin, async (req, res) => {
+app.post("/marketing-api/canteens/:id/payment", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const before = (await allMarketingCanteens()).find(item => Number(item.id) === Number(req.params.id));
     const nextPaidAmount = Number(req.body.paidAmount || 0);
@@ -1935,7 +2067,7 @@ app.post("/marketing-api/canteens/:id/payment", requireSuperAdmin, async (req, r
   }
 });
 
-app.post("/marketing-api/canteens/:id/plan", requireSuperAdmin, async (req, res) => {
+app.post("/marketing-api/canteens/:id/plan", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const canteen = await updateMarketingCanteen(req.params.id, {
       status: req.body.status || "Trial",
@@ -1950,7 +2082,7 @@ app.post("/marketing-api/canteens/:id/plan", requireSuperAdmin, async (req, res)
   }
 });
 
-app.post("/marketing-api/canteens/:id/printers", requireSuperAdmin, async (req, res) => {
+app.post("/marketing-api/canteens/:id/printers", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const canteen = await updateMarketingCanteen(req.params.id, { printersAssigned: Number(req.body.printersAssigned || 0) }, req.marketingUser);
     await addMarketingActivity({ type: "printer", text: `${canteen.canteenName} printers assigned`, actor: req.marketingUser.name, canteenId: canteen.id });
@@ -1960,7 +2092,7 @@ app.post("/marketing-api/canteens/:id/printers", requireSuperAdmin, async (req, 
   }
 });
 
-app.post("/whatsapp/send-test-report", requireAdmin, async (req, res) => {
+app.post("/whatsapp/send-test-report", requireDatabase, requireAdmin, async (req, res) => {
   try {
     const result = await sendReportNow("manual", req.authUser.canteenId);
     res.json({ success: true, to: result.to, message: result.message, meta: result.meta });
