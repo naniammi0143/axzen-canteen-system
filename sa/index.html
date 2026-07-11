@@ -159,7 +159,7 @@
       width: 17px;
       height: 17px;
       border-radius: 999px;
-      display: inline-grid;
+      display: none;
       place-items: center;
       color: white;
       font-size: 11px;
@@ -482,7 +482,8 @@
       width: 10px;
       height: 10px;
       border-radius: 999px;
-      background: #38a169;
+      background: transparent;
+      display: none;
     }
     .drawer-user {
       display: grid;
@@ -885,18 +886,18 @@
     #posView .topbar {
       gap: 14px;
       padding: 26px 20px 30px;
-      background: radial-gradient(circle at top right, #18264c 0, #0b1532 48%, #071028 100%);
-      border-bottom: 0;
-      border-bottom-left-radius: 28px;
-      border-bottom-right-radius: 28px;
-      box-shadow: 0 18px 34px #0710282b;
+      background: #ffffff;
+      border-bottom: 1px solid #e8edf4;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+      box-shadow: 0 10px 24px #1118270a;
     }
     #posView .topbar .icon-btn,
     #posView .brand-mark { display: grid; background: white; color: #0b1532; border-color: #ffffff44; }
     #posView .top-actions-pos { display: none; }
     #posView .title-block { flex: 1; }
-    #posView .title-block strong { display: block; color: white; font-size: 28px; line-height: 1.05; }
-    #posView .title-block span { margin-top: 8px; color: #22c55e; font-size: 14px; font-weight: 900; }
+    #posView .title-block strong { display: block; color: #111827; font-size: 28px; line-height: 1.05; }
+    #posView .title-block span { margin-top: 8px; color: #667085; font-size: 14px; font-weight: 900; }
     .counter-pill { display: inline-flex; min-height: 28px; align-items: center; border-radius: 999px; background: #f0f2f5; color: #4b5563; padding: 0 13px; font-size: 13px; font-weight: 850; }
     .shift-line { display: flex !important; align-items: center; gap: 7px; flex-wrap: wrap; }
     .shift-line b { color: #22b447; }
@@ -909,7 +910,7 @@
     .admin-chip { display: inline-flex; align-items: center; gap: 10px; border: 0; background: white; color: #0f172a; font-weight: 950; }
     .avatar-chip { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #f3f4f6, #d8dce3); color: #64748b; font-size: 24px; }
     .notif-dot { position: relative; }
-    .notif-dot::after { content: ""; position: absolute; top: 15px; left: 15px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); border: 2px solid white; }
+    .notif-dot::after { content: none; }
     .notif-dot.online::after { background: #16a34a; }
     .notif-dot.offline::after { background: #ef4444; }
     #posView .content { padding: 28px 336px 90px 20px; }
@@ -1173,7 +1174,7 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
-    const appBuild = "1.7.0";
+    const appBuild = "1.8.0";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -2130,7 +2131,7 @@
         <div class="work-card report-filter">
           <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
           <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
-          <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button></div>
+          <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button><button data-report-range="year" type="button">Year</button></div>
         </div>
         <div class="work-grid">
           <div class="work-card metric-card"><span>Total Sale</span><strong>${money(totals.total)}</strong></div>
@@ -2199,6 +2200,34 @@
         ${lastBillsHtml()}`;
     }
 
+    function userManagementPageHtml() {
+      if (!hasAdminAccess()) {
+        return `${sectionHeader("counter")}${adminUnlockHtml()}`;
+      }
+      const rows = users.map(item => `
+        <tr>
+          <td>${esc(item.name || "-")}</td>
+          <td>${esc(item.mobile || "-")}</td>
+          <td><span class="status-pill ${item.role === "admin" ? "warn" : ""}">${esc(item.role || "user")}</span></td>
+        </tr>`).join("");
+      return `
+        ${sectionHeader("counter")}
+        <div class="work-card">
+          <h3>Create User</h3>
+          <form class="form-grid" id="posUserForm">
+            <input id="posNewName" placeholder="Name" required>
+            <input id="posNewMobile" placeholder="Mobile number / user ID" required>
+            <input id="posNewPassword" placeholder="Password" required>
+            <select id="posNewRole"><option value="user">User</option><option value="admin">Admin</option></select>
+            <button class="page-action">Save User</button>
+          </form>
+        </div>
+        <div class="work-card">
+          <h3>Canteen Users</h3>
+          <table class="data-table"><thead><tr><th>Name</th><th>Login</th><th>Role</th></tr></thead><tbody>${rows || `<tr><td colspan="3">No users yet</td></tr>`}</tbody></table>
+        </div>`;
+    }
+
     function itemManagerPageHtml(section) {
       if (!hasAdminAccess()) {
         return `${sectionHeader(section)}${adminUnlockHtml()}`;
@@ -2247,6 +2276,7 @@
         : activePosSection === "stock" ? stockPageHtml()
         : activePosSection === "printer" ? printerPageHtml()
         : activePosSection === "settings" ? settingsPageHtml()
+        : activePosSection === "counter" ? userManagementPageHtml()
         : activePosSection === "add" || activePosSection === "edit" ? itemManagerPageHtml(activePosSection)
         : simpleAdminPageHtml(activePosSection);
       page.innerHTML = html;
@@ -2287,6 +2317,7 @@
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderOptionPage(); });
       document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => setReportQuickRange(btn.dataset.reportRange)));
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
+      if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
       document.querySelectorAll("[data-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem, input.value)));
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       document.querySelectorAll("[data-go-billing]").forEach(btn => btn.addEventListener("click", () => setPosSection("billing")));
@@ -2300,6 +2331,10 @@
       const start = new Date(now);
       if (range === "week") start.setDate(now.getDate() - 6);
       if (range === "month") start.setDate(1);
+      if (range === "year") {
+        start.setMonth(0);
+        start.setDate(1);
+      }
       localStorage.setItem("AXEN_REPORT_FROM", dateInputValue(start));
       localStorage.setItem("AXEN_REPORT_TO", dateInputValue(now));
       renderOptionPage();
@@ -2351,6 +2386,29 @@
       await persistProductFromPos(product);
     }
 
+    async function savePosUser(event) {
+      event.preventDefault();
+      try {
+        await api("/users", {
+          method: "POST",
+          body: JSON.stringify({
+            name: $("posNewName").value.trim(),
+            mobile: $("posNewMobile").value.trim(),
+            password: $("posNewPassword").value,
+            role: $("posNewRole").value,
+            canteenId: user?.canteenId
+          })
+        });
+        $("posMessage").textContent = "User saved";
+        $("posMessage").className = "status ok";
+        await loadAdminData();
+        renderOptionPage();
+      } catch {
+        $("posMessage").textContent = "User save failed. Admin permission required.";
+        $("posMessage").className = "status error";
+      }
+    }
+
     function drawerDetailHtml(section, pairedPrinters) {
       if (section === "profile") {
         return `<div class="option-card"><h3>${esc(user?.name || "User")}</h3><div class="option-row"><span>Role</span><strong>${esc(user?.role || "user")}</strong></div><div class="option-row"><span>Canteen</span><strong>${esc(settings.canteenName)}</strong></div></div>`;
@@ -2371,7 +2429,7 @@
         return itemManagerPageHtml(section);
       }
       if (section === "counter") {
-        return `<div class="option-card"><h3>User</h3><div class="muted">Cashier profile and access details.</div>${adminUnlockHtml()}</div>`;
+        return userManagementPageHtml();
       }
       if (section === "help") {
         return `<div class="option-card"><h3>Help</h3><div class="muted">Item ni normal tap chesthe cart lo add avuthundi. Item ni hold chesi pattukunte sub items open avuthayi.</div></div>`;
@@ -2873,23 +2931,14 @@
       if (!user) return show("loginView");
       if (user.mustChangePassword) return showOwnerSetup();
       renderUserChrome();
-      if (user.role === "admin") {
-        $("adminRole").textContent = `${user.name} | Admin`;
-        show("adminView");
-        updateSyncStatus();
-        await loadSettings();
-        await loadAdminData();
-        await syncPendingOrders();
-      } else {
-        show("posView");
-        renderCart();
-        updateSyncStatus();
-        await loadSettings();
-        await loadProducts();
-        await loadAdminData();
-        await syncPendingOrders();
-        setPosSection(activePosSection);
-      }
+      show("posView");
+      renderCart();
+      updateSyncStatus();
+      await loadSettings();
+      await loadProducts();
+      await loadAdminData();
+      await syncPendingOrders();
+      setPosSection("billing");
     }
 
     $("loginForm").addEventListener("submit", login);

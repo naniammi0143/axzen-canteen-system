@@ -538,11 +538,37 @@ function requireAdmin(req, res, next) {
     req.authUser = process.env.JWT_SECRET
       ? jwt.verify(token, process.env.JWT_SECRET)
       : decodeLocalToken(token.replace(/^local\./, ""));
+    if (req.authUser.authType !== "canteen") {
+      return res.status(401).json({ success: false, message: "Invalid canteen token" });
+    }
     if (!process.env.JWT_SECRET && Number(req.authUser.exp || 0) < Date.now()) {
       return res.status(401).json({ success: false, message: "Invalid or expired login token" });
     }
     if (req.authUser.role !== "admin") {
       return res.status(403).json({ success: false, message: "Admin access required" });
+    }
+    return next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: "Invalid or expired login token" });
+  }
+}
+
+function requireCanteenAuth(req, res, next) {
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!token) return res.status(401).json({ success: false, message: "Login token missing" });
+
+  try {
+    req.authUser = process.env.JWT_SECRET
+      ? jwt.verify(token, process.env.JWT_SECRET)
+      : decodeLocalToken(token.replace(/^local\./, ""));
+    if (req.authUser.authType !== "canteen") {
+      return res.status(401).json({ success: false, message: "Invalid canteen token" });
+    }
+    if (!process.env.JWT_SECRET && Number(req.authUser.exp || 0) < Date.now()) {
+      return res.status(401).json({ success: false, message: "Invalid or expired login token" });
+    }
+    if (!["admin", "user"].includes(req.authUser.role)) {
+      return res.status(403).json({ success: false, message: "Canteen user access required" });
     }
     return next();
   } catch (error) {
@@ -1018,6 +1044,10 @@ function orderDate(order) {
 function reportOrdersForType(orders, reportType) {
   const now = new Date();
   const todayKey = indiaDateKey(now);
+  if (reportType === "yearly") {
+    const currentYear = todayKey.slice(6);
+    return orders.filter(order => indiaDateKey(orderDate(order)).slice(6) === currentYear);
+  }
   if (reportType === "monthly") {
     const currentMonth = todayKey.slice(3);
     return orders.filter(order => indiaDateKey(orderDate(order)).slice(3) === currentMonth);
@@ -1721,7 +1751,7 @@ app.post("/users", requireAdmin, async (req, res) => {
   try {
     const payload = {
       ...req.body,
-      canteenId: req.body.canteenId || req.authUser.canteenId || DEFAULT_CANTEEN_ID,
+      canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID,
       mustChangePassword: req.body.mustChangePassword === true
     };
     res.json({ success: true, user: publicUser(await saveUser(payload)) });
@@ -1735,10 +1765,9 @@ app.delete("/users/:mobile", requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
-app.post("/orders", async (req, res) => {
+app.post("/orders", requireCanteenAuth, async (req, res) => {
   try {
-    const authUser = canteenUserFromRequest(req);
-    const order = await saveOrder({ ...req.body, canteenId: authUser?.canteenId || req.body.canteenId || DEFAULT_CANTEEN_ID });
+    const order = await saveOrder({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
     io.emit("new-order", order);
     res.json({ success: true, order });
   } catch (error) {
@@ -1746,13 +1775,12 @@ app.post("/orders", async (req, res) => {
   }
 });
 
-app.post("/orders/sync", async (req, res) => {
+app.post("/orders/sync", requireCanteenAuth, async (req, res) => {
   try {
-    const authUser = canteenUserFromRequest(req);
     const incoming = Array.isArray(req.body.orders) ? req.body.orders : [];
     const synced = [];
     for (const payload of incoming) {
-      const order = await saveOrder({ ...payload, canteenId: authUser?.canteenId || payload.canteenId || DEFAULT_CANTEEN_ID });
+      const order = await saveOrder({ ...payload, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
       synced.push(order.clientOrderId || order.id);
     }
     if (synced.length) io.emit("orders-synced", synced);

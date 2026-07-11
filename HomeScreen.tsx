@@ -272,7 +272,6 @@ function Header({ onMenuPress }: { onMenuPress: () => void }) {
         <View style={styles.headerNameRow}>
           <Text style={styles.title}>Main Canteen</Text>
           <View style={styles.statusRow}>
-            <View style={styles.greenDot} />
             <Text style={styles.connected}>Connected</Text>
           </View>
         </View>
@@ -320,7 +319,6 @@ function Drawer({
               <Text style={styles.drawerTitle}>Main Canteen</Text>
               <View style={styles.drawerMetaRow}>
                 <View style={styles.drawerStatus}>
-                  <View style={styles.greenDot} />
                   <Text style={styles.connected}>Connected</Text>
                 </View>
               </View>
@@ -335,7 +333,6 @@ function Drawer({
               <View style={styles.profileNameRow}>
                 <Text style={styles.profileName}>Cashier Name</Text>
                 <View style={styles.onlineBadge}>
-                  <View style={styles.onlineDot} />
                   <Text style={styles.onlineBadgeText}>Online</Text>
                 </View>
               </View>
@@ -460,6 +457,7 @@ function ReportsScreen({ products }: { products: Product[] }) {
     Today: ["2026-07-11", "2026-07-11"],
     Week: ["2026-07-05", "2026-07-11"],
     Month: ["2026-07-01", "2026-07-11"],
+    Year: ["2026-01-01", "2026-07-11"],
     Custom: [fromDate, toDate]
   };
 
@@ -521,7 +519,7 @@ function ReportsScreen({ products }: { products: Product[] }) {
           </View>
         </View>
         <View style={styles.quickRangeRow}>
-          {["Today", "Week", "Month", "Custom"].map(item => (
+          {["Today", "Week", "Month", "Year", "Custom"].map(item => (
             <TouchableOpacity
               key={item}
               activeOpacity={0.85}
@@ -1106,12 +1104,14 @@ const styles = StyleSheet.create({
     height: 58,
     marginLeft: 12,
     borderRadius: 29,
-    backgroundColor: NAVY,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
     alignItems: "center",
     justifyContent: "center"
   },
   logoIcon: {
-    color: CARD,
+    color: "#111827",
     fontSize: 24,
     fontWeight: "900"
   },
@@ -1135,15 +1135,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center"
   },
-  greenDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: GREEN,
-    marginRight: 7
-  },
   connected: {
-    color: GREEN,
+    color: MUTED,
     fontSize: 14,
     fontWeight: "800"
   },
@@ -2111,13 +2104,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ecfdf3",
     flexDirection: "row",
     alignItems: "center"
-  },
-  onlineDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    marginRight: 6,
-    backgroundColor: GREEN
   },
   onlineBadgeText: {
     color: "#168a2f",
