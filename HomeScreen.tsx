@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -34,7 +34,7 @@ type DrawerOption =
   | "Edit Price"
   | "Stock Availability"
   | "Printer Settings"
-  | "Counter User"
+  | "User"
   | "Settings"
   | "Sync Data"
   | "Logout";
@@ -55,7 +55,7 @@ const drawerSections: DrawerSection[] = [
   },
   {
     title: "SETTINGS",
-    items: ["Printer Settings", "Counter User", "Settings", "Sync Data"]
+    items: ["Printer Settings", "User", "Settings", "Sync Data"]
   }
 ];
 
@@ -65,6 +65,7 @@ type Product = {
   price: number;
   category: Category;
   image: string;
+  subItems?: string[];
 };
 
 const products: Product[] = [
@@ -73,6 +74,7 @@ const products: Product[] = [
     name: "Chicken Pakodi",
     price: 50,
     category: "Meals",
+    subItems: ["Full plate", "Half plate", "Extra spicy"],
     image: "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=500&q=80"
   },
   {
@@ -80,6 +82,7 @@ const products: Product[] = [
     name: "Tea",
     price: 15,
     category: "Tea",
+    subItems: ["Regular", "Strong", "Less sugar"],
     image: "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?auto=format&fit=crop&w=500&q=80"
   },
   {
@@ -87,6 +90,7 @@ const products: Product[] = [
     name: "Meals",
     price: 80,
     category: "Meals",
+    subItems: ["Rice", "Dal", "Curry", "Curd"],
     image: "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=500&q=80"
   },
   {
@@ -101,6 +105,7 @@ const products: Product[] = [
     name: "Dosa",
     price: 40,
     category: "Tiffins",
+    subItems: ["Plain dosa", "Masala dosa", "Onion dosa"],
     image: "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=500&q=80"
   },
   {
@@ -108,6 +113,7 @@ const products: Product[] = [
     name: "Coffee",
     price: 20,
     category: "Tea",
+    subItems: ["Regular", "Strong", "Less sugar"],
     image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=500&q=80"
   }
 ];
@@ -128,6 +134,7 @@ export default function HomeScreen() {
   const [total, setTotal] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOption, setActiveOption] = useState<DrawerOption>("Dashboard");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const drawerProgress = useRef(new Animated.Value(0)).current;
 
   const visibleProducts = useMemo(
@@ -135,21 +142,34 @@ export default function HomeScreen() {
     [activeCategory]
   );
 
-  const addProduct = (product: Product) => {
+  const addProduct = useCallback((product: Product) => {
     setCartCount(count => count + 1);
     setTotal(amount => amount + product.price);
-  };
+  }, []);
 
-  const openDrawer = () => {
+  const clearCart = useCallback(() => {
+    setCartCount(0);
+    setTotal(0);
+  }, []);
+
+  const openSubItems = useCallback((product: Product) => {
+    setSelectedProduct(product);
+  }, []);
+
+  const closeSubItems = useCallback(() => {
+    setSelectedProduct(null);
+  }, []);
+
+  const openDrawer = useCallback(() => {
     setDrawerOpen(true);
     Animated.timing(drawerProgress, {
       toValue: 1,
       duration: 260,
       useNativeDriver: true
     }).start();
-  };
+  }, [drawerProgress]);
 
-  const closeDrawer = () => {
+  const closeDrawer = useCallback(() => {
     Animated.timing(drawerProgress, {
       toValue: 0,
       duration: 220,
@@ -157,12 +177,12 @@ export default function HomeScreen() {
     }).start(({ finished }) => {
       if (finished) setDrawerOpen(false);
     });
-  };
+  }, [drawerProgress]);
 
-  const selectOption = (option: DrawerOption) => {
+  const selectOption = useCallback((option: DrawerOption) => {
     setActiveOption(option);
     closeDrawer();
-  };
+  }, [closeDrawer]);
 
   const showBillingGrid = activeOption === "Dashboard" || activeOption === "New Billing";
 
@@ -186,23 +206,24 @@ export default function HomeScreen() {
             ListHeaderComponent={
               <>
                 <SearchBar />
-                <View style={styles.statsRow}>
-                  <StatsCard tone="green" icon="▤" label="Today's Sale" value="Rs 8,245" />
-                  <StatsCard tone="blue" icon="◷" label="Orders" value="112" />
-                </View>
                 <CategoryTabs active={activeCategory} onChange={setActiveCategory} />
               </>
             }
             renderItem={({ item }) => (
-              <ProductCard product={item} width={productWidth} onPress={() => addProduct(item)} />
+              <ProductCard product={item} width={productWidth} onPress={addProduct} onLongPress={openSubItems} />
             )}
+            initialNumToRender={8}
+            maxToRenderPerBatch={8}
+            windowSize={5}
+            removeClippedSubviews
           />
         ) : (
           <OptionContent option={activeOption} horizontalPadding={horizontalPadding} />
         )}
 
-        <CartPanel count={cartCount} total={total} onClear={() => { setCartCount(0); setTotal(0); }} />
+        <CartPanel count={cartCount} total={total} onClear={clearCart} />
         <BottomNav />
+        {selectedProduct && <SubItemsSheet product={selectedProduct} onClose={closeSubItems} />}
         {drawerOpen && (
           <Drawer
             width={Math.min(width * 0.82, 340)}
@@ -229,17 +250,15 @@ function Header({ onMenuPress }: { onMenuPress: () => void }) {
       </View>
 
       <View style={styles.headerTitle}>
-        <Text style={styles.title}>Main Canteen</Text>
-        <View style={styles.statusRow}>
-          <View style={styles.greenDot} />
-          <Text style={styles.connected}>Connected</Text>
+        <View style={styles.headerNameRow}>
+          <Text style={styles.title}>Main Canteen</Text>
+          <View style={styles.statusRow}>
+            <View style={styles.greenDot} />
+            <Text style={styles.connected}>Connected</Text>
+          </View>
         </View>
       </View>
 
-      <TouchableOpacity style={styles.counterButton} activeOpacity={0.85}>
-        <Text style={styles.counterText}>Counter 01</Text>
-        <Text style={styles.chevron}>⌄</Text>
-      </TouchableOpacity>
     </View>
   );
 }
@@ -281,9 +300,6 @@ function Drawer({
             <View style={styles.drawerTitleBlock}>
               <Text style={styles.drawerTitle}>Main Canteen</Text>
               <View style={styles.drawerMetaRow}>
-                <View style={styles.drawerBadge}>
-                  <Text style={styles.drawerBadgeText}>Counter 01</Text>
-                </View>
                 <View style={styles.drawerStatus}>
                   <View style={styles.greenDot} />
                   <Text style={styles.connected}>Connected</Text>
@@ -297,10 +313,12 @@ function Drawer({
               <Text style={styles.cashierIconText}>C</Text>
             </View>
             <View style={styles.profileTextBlock}>
-              <Text style={styles.profileName}>Cashier Name</Text>
-              <View style={styles.onlineBadge}>
-                <View style={styles.onlineDot} />
-                <Text style={styles.onlineBadgeText}>Online</Text>
+              <View style={styles.profileNameRow}>
+                <Text style={styles.profileName}>Cashier Name</Text>
+                <View style={styles.onlineBadge}>
+                  <View style={styles.onlineDot} />
+                  <Text style={styles.onlineBadgeText}>Online</Text>
+                </View>
               </View>
             </View>
           </View>
@@ -374,7 +392,7 @@ function OptionContent({ option, horizontalPadding }: { option: DrawerOption; ho
       {option === "Edit Price" && <EditPriceScreen />}
       {option === "Stock Availability" && <StockAvailabilityScreen />}
       {option === "Printer Settings" && <PrinterSettingsScreen />}
-      {option === "Counter User" && <CounterUserScreen />}
+      {option === "User" && <UserScreen />}
       {option === "Settings" && <SettingsScreen />}
       {option === "Sync Data" && <SyncDataScreen />}
       {option === "Logout" && <LogoutScreen />}
@@ -430,7 +448,7 @@ function TodaysSalesScreen() {
 function CashSummaryScreen() {
   return (
     <View style={styles.summaryCard}>
-      <Text style={styles.summaryTitle}>Counter 01 Settlement</Text>
+      <Text style={styles.summaryTitle}>Settlement</Text>
       <InfoRow label="Opening Cash" value="Rs 1,000" />
       <InfoRow label="Cash Sales" value="Rs 5,530" />
       <InfoRow label="Refunds" value="Rs 0" />
@@ -511,13 +529,12 @@ function PrinterSettingsScreen() {
   );
 }
 
-function CounterUserScreen() {
+function UserScreen() {
   return (
     <View style={styles.summaryCard}>
-      <Text style={styles.summaryTitle}>Counter User</Text>
+      <Text style={styles.summaryTitle}>User</Text>
       <InfoRow label="Cashier" value="Venkatesh" />
       <InfoRow label="Role" value="Cashier" />
-      <InfoRow label="Counter" value="Counter 01" />
       <InfoRow label="Login Time" value="09:00 AM" />
       <TouchableOpacity style={styles.secondaryAction}><Text style={styles.secondaryActionText}>Switch User</Text></TouchableOpacity>
     </View>
@@ -553,8 +570,8 @@ function SyncDataScreen() {
 function LogoutScreen() {
   return (
     <View style={styles.logoutPanel}>
-      <Text style={styles.logoutTitle}>Logout from this counter?</Text>
-      <Text style={styles.listSub}>Cashier Venkatesh • Counter 01</Text>
+      <Text style={styles.logoutTitle}>Logout from this user?</Text>
+      <Text style={styles.listSub}>Cashier Venkatesh</Text>
       <Text style={styles.warningText}>All data is synced. You can safely logout.</Text>
       <TouchableOpacity style={styles.logoutConfirm}><Text style={styles.logoutConfirmText}>Logout</Text></TouchableOpacity>
     </View>
@@ -585,7 +602,7 @@ function StatsCard({ tone, icon, label, value }: { tone: "green" | "blue"; icon:
   );
 }
 
-function CategoryTabs({ active, onChange }: { active: Category; onChange: (value: Category) => void }) {
+const CategoryTabs = memo(function CategoryTabs({ active, onChange }: { active: Category; onChange: (value: Category) => void }) {
   return (
     <View style={styles.tabs}>
       {categories.map(category => (
@@ -600,17 +617,68 @@ function CategoryTabs({ active, onChange }: { active: Category; onChange: (value
       ))}
     </View>
   );
-}
+});
 
-function ProductCard({ product, width, onPress }: { product: Product; width: number; onPress: () => void }) {
+const ProductCard = memo(function ProductCard({
+  product,
+  width,
+  onPress,
+  onLongPress
+}: {
+  product: Product;
+  width: number;
+  onPress: (product: Product) => void;
+  onLongPress: (product: Product) => void;
+}) {
   return (
-    <TouchableOpacity activeOpacity={0.85} onPress={onPress} style={[styles.productCard, { width }]}>
+    <TouchableOpacity
+      activeOpacity={0.85}
+      delayLongPress={260}
+      onPress={() => onPress(product)}
+      onLongPress={() => onLongPress(product)}
+      style={[styles.productCard, { width }]}
+    >
       <Image source={{ uri: product.image }} style={styles.productImage} />
       <View style={styles.productInfo}>
         <Text numberOfLines={1} style={styles.productName}>{product.name}</Text>
         <Text style={styles.productPrice}>Rs {product.price}</Text>
       </View>
     </TouchableOpacity>
+  );
+});
+
+function SubItemsSheet({ product, onClose }: { product: Product; onClose: () => void }) {
+  const subItems = product.subItems ?? [];
+
+  return (
+    <View style={styles.subSheetLayer} pointerEvents="box-none">
+      <Pressable style={styles.subSheetOverlay} onPress={onClose} />
+      <View style={styles.subSheet}>
+        <View style={styles.subSheetHeader}>
+          <View>
+            <Text style={styles.subSheetTitle}>{product.name}</Text>
+            <Text style={styles.subSheetSub}>Sub items</Text>
+          </View>
+          <TouchableOpacity activeOpacity={0.8} onPress={onClose} style={styles.subSheetClose}>
+            <Text style={styles.subSheetCloseText}>x</Text>
+          </TouchableOpacity>
+        </View>
+
+        {subItems.length > 0 ? (
+          <View style={styles.subItemList}>
+            {subItems.map(item => (
+              <View key={item} style={styles.subItemRow}>
+                <Text style={styles.subItemText}>{item}</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <View style={styles.emptySubItems}>
+            <Text style={styles.emptySubItemsText}>Empty</Text>
+          </View>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -715,6 +783,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12
   },
+  headerNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    columnGap: 12,
+    rowGap: 6
+  },
   title: {
     color: "#111827",
     fontSize: 19,
@@ -722,8 +797,7 @@ const styles = StyleSheet.create({
   },
   statusRow: {
     flexDirection: "row",
-    alignItems: "center",
-    marginTop: 9
+    alignItems: "center"
   },
   greenDot: {
     width: 12,
@@ -736,25 +810,6 @@ const styles = StyleSheet.create({
     color: GREEN,
     fontSize: 14,
     fontWeight: "800"
-  },
-  counterButton: {
-    minHeight: 42,
-    paddingHorizontal: 13,
-    borderRadius: 20,
-    backgroundColor: "#eef0f5",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6
-  },
-  counterText: {
-    color: "#667085",
-    fontSize: 13,
-    fontWeight: "900"
-  },
-  chevron: {
-    color: "#111827",
-    fontSize: 15,
-    fontWeight: "900"
   },
   content: {
     paddingTop: 16
@@ -897,6 +952,91 @@ const styles = StyleSheet.create({
     marginTop: 5,
     color: NAVY,
     fontSize: 15,
+    fontWeight: "900"
+  },
+  subSheetLayer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "flex-end",
+    zIndex: 30
+  },
+  subSheetOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(2,6,23,0.34)"
+  },
+  subSheet: {
+    marginHorizontal: 16,
+    marginBottom: 156,
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    shadowColor: "#101828",
+    shadowOpacity: 0.16,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 12
+  },
+  subSheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  subSheetTitle: {
+    color: "#111827",
+    fontSize: 17,
+    fontWeight: "900"
+  },
+  subSheetSub: {
+    marginTop: 3,
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  subSheetClose: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#f2f6fb",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  subSheetCloseText: {
+    color: "#111827",
+    fontSize: 16,
+    fontWeight: "900"
+  },
+  subItemList: {
+    marginTop: 14,
+    gap: 8
+  },
+  subItemRow: {
+    minHeight: 42,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: LINE,
+    justifyContent: "center"
+  },
+  subItemText: {
+    color: "#111827",
+    fontSize: 14,
+    fontWeight: "800"
+  },
+  emptySubItems: {
+    minHeight: 66,
+    marginTop: 14,
+    borderRadius: 14,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: LINE,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  emptySubItemsText: {
+    color: MUTED,
+    fontSize: 14,
     fontWeight: "900"
   },
   listCard: {
@@ -1335,6 +1475,13 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12
   },
+  profileNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    columnGap: 9,
+    rowGap: 7
+  },
   profileName: {
     color: "#111827",
     fontSize: 16,
@@ -1343,7 +1490,6 @@ const styles = StyleSheet.create({
   onlineBadge: {
     alignSelf: "flex-start",
     minHeight: 25,
-    marginTop: 7,
     paddingHorizontal: 9,
     borderRadius: 13,
     backgroundColor: "#ecfdf3",
