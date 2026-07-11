@@ -38,9 +38,17 @@ app.use((error, req, res, next) => {
   return next(error);
 });
 
-app.use("/mobile", express.static(path.join(__dirname, "../sa")));
-app.use("/admin", express.static(path.join(__dirname, "../admin-web")));
-app.use("/marketing", express.static(path.join(__dirname, "../marketing-web")));
+const staticPageOptions = {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith(".html")) {
+      res.setHeader("Cache-Control", "no-store, max-age=0");
+    }
+  }
+};
+
+app.use("/mobile", express.static(path.join(__dirname, "../sa"), staticPageOptions));
+app.use("/admin", express.static(path.join(__dirname, "../admin-web"), staticPageOptions));
+app.use("/marketing", express.static(path.join(__dirname, "../marketing-web"), staticPageOptions));
 
 const defaultMenuItems = [
   { id: 1, name: "Tea", price: 10, category: "Tea", image: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=500&q=80" },
