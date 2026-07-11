@@ -319,7 +319,7 @@ function PremiumHeader({
         </Text>
         <View style={styles.statusRow}>
           <View style={styles.statusDot} />
-          <Text style={styles.connected}>Connected</Text>
+          <Text style={styles.connected}>Online</Text>
         </View>
       </View>
     </View>
@@ -364,7 +364,7 @@ function Drawer({
               <Text style={styles.drawerTitle}>Main Canteen</Text>
               <View style={styles.drawerMetaRow}>
                 <View style={styles.drawerStatus}>
-                  <Text style={styles.connected}>Connected</Text>
+          <Text style={styles.connected}>Online</Text>
                 </View>
               </View>
             </View>
@@ -1205,25 +1205,32 @@ const styles = StyleSheet.create({
     rowGap: 6
   },
   title: {
-    color: NAVY,
-    fontSize: 20,
+    color: "#071a3d",
+    fontSize: 22,
     fontWeight: "900"
   },
   statusRow: {
     flexDirection: "row",
     alignItems: "center",
     marginTop: 9,
-    gap: 9
+    gap: 8,
+    alignSelf: "flex-start",
+    minHeight: 28,
+    paddingHorizontal: 11,
+    borderRadius: 999,
+    backgroundColor: "#ecfdf3",
+    borderWidth: 1,
+    borderColor: "#bbf7d0"
   },
   statusDot: {
-    width: 13,
-    height: 13,
-    borderRadius: 7,
-    backgroundColor: GREEN
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#16a34a"
   },
   connected: {
-    color: GREEN,
-    fontSize: 16,
+    color: "#16a34a",
+    fontSize: 14,
     fontWeight: "900"
   },
   content: {
