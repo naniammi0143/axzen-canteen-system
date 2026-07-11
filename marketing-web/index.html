@@ -405,11 +405,12 @@
     const money = value => "Rs " + Number(value || 0).toLocaleString("en-IN");
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
     const today = () => new Date().toISOString().slice(0, 10);
+    const formatDateTime = value => new Date(value || Date.now()).toLocaleString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
     const tokenKey = "AXZEN_MARKETING_TOKEN";
     let token = localStorage.getItem(tokenKey) || "";
     let user = null;
     let tab = "dashboard";
-    let state = { canteens: [], users: [], activities: [], payments: [], supportTickets: [], summary: { cards: {}, marketingPerformance: [], recentActivities: [] } };
+    let state = { canteens: [], users: [], printers: [], activities: [], payments: [], supportTickets: [], summary: { cards: {}, marketingPerformance: [], recentActivities: [] } };
 
     const superTabs = [
       ["dashboard", "Dashboard"],
@@ -500,20 +501,36 @@
         ["todaysCollections", "Today's Collections"], ["monthlyRevenue", "Monthly Revenue"], ["pendingPayments", "Pending Payments"], ["printersAssigned", "Printers Assigned"],
         ["printersAvailable", "Printers Available"], ["openSupportTickets", "Open Support Tickets"], ["pendingInstallations", "Pending Installations"]
       ];
-      return `<div class="kpis">${labels.slice(0, compact ? 6 : labels.length).map(([key, label]) => `<div class="card"><span>${label}</span><strong>${key.toLowerCase().includes("revenue") || key.toLowerCase().includes("payment") || key.toLowerCase().includes("collection") ? money(cards[key]) : Number(cards[key] || 0)}</strong><small>Live operations</small></div>`).join("")}</div>`;
+      return `<div class="kpis">${labels.slice(0, compact ? 6 : labels.length).map(([key, label]) => `<div class="card" ${key === "onlineCanteens" ? 'data-online-canteens="true" role="button" tabindex="0"' : ""}><span>${label}</span><strong>${key.toLowerCase().includes("revenue") || key.toLowerCase().includes("payment") || key.toLowerCase().includes("collection") ? money(cards[key]) : Number(cards[key] || 0)}</strong><small>${key === "onlineCanteens" ? "Click for list" : "Live operations"}</small></div>`).join("")}</div>`;
+    }
+    function bindOnlinePopup() {
+      document.querySelectorAll("[data-online-canteens]").forEach(card => card.addEventListener("click", openOnlineCanteens));
+    }
+    function openOnlineCanteens() {
+      const online = (state.canteens || []).filter(item => item.lastSeenAt && Date.now() - new Date(item.lastSeenAt).getTime() <= 120000);
+      $("page").insertAdjacentHTML("beforeend", `<div class="modal-backdrop" id="onlineModal"><div class="panel" style="max-width:720px;margin:8vh auto"><div class="toolbar"><h2>Online Canteens</h2><button class="ghost" id="closeOnlineModal" type="button">Close</button></div><input id="onlineSearch" placeholder="Search canteen"><div class="list" id="onlineList">${online.map(item => `<div class="list-row" data-online-row="${esc(`${item.canteenName} ${item.ownerName}`.toLowerCase())}"><strong>${esc(item.canteenName)}</strong><span class="muted">${esc(item.ownerName || "-")} | ${formatDateTime(item.lastSeenAt)}</span></div>`).join("") || `<span class="muted">No canteens connected now</span>`}</div></div></div>`);
+      $("closeOnlineModal").addEventListener("click", () => $("onlineModal").remove());
+      $("onlineSearch").addEventListener("input", event => {
+        const q = event.target.value.toLowerCase();
+        document.querySelectorAll("[data-online-row]").forEach(row => row.classList.toggle("hidden", q && !row.dataset.onlineRow.includes(q)));
+      });
     }
     function activitiesHtml(limit = 12) {
-      const rows = (state.summary.recentActivities || state.activities || []).slice(0, limit).map(item => `<div class="activity-item"><span class="dot"></span><div><strong>${esc(item.text)}</strong><br><span class="muted">${esc(item.actor || "System")} | ${new Date(item.createdAt).toLocaleString("en-IN")}</span></div></div>`).join("");
+      const rows = (state.summary.recentActivities || state.activities || []).slice(0, limit).map(item => `<div class="activity-item"><span class="dot"></span><div><strong>${esc(item.text)}</strong><br><span class="muted">${esc(item.actor || "System")} | ${formatDateTime(item.createdAt)}</span></div></div>`).join("");
       return `<div class="activity">${rows || `<span class="muted">No activities yet</span>`}</div>`;
     }
     function performanceTable(rows) {
       return `<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Registrations</th><th>Approved</th><th>Rejected</th><th>Collection</th><th>Pending</th><th>Target</th></tr></thead><tbody>${rows.map(row => `<tr><td><strong>${esc(row.name)}</strong><br><span class="muted">${esc(row.employeeId)}</span></td><td>${row.registrations}</td><td>${row.approved}</td><td>${row.rejected}</td><td>${money(row.collection)}</td><td>${money(row.pending)}</td><td>${row.target}</td></tr>`).join("") || `<tr><td colspan="7">No performance data</td></tr>`}</tbody></table></div>`;
     }
     function paymentsTable(rows) {
-      return `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Canteen</th><th>Mode</th><th>Collected</th><th>Pending</th><th>By</th></tr></thead><tbody>${rows.map(row => `<tr><td>${new Date(row.createdAt).toLocaleString("en-IN")}</td><td><strong>${esc(row.canteenName)}</strong></td><td>${esc(row.paymentMode || "-")}</td><td>${money(row.amount)}</td><td>${money(row.pendingAmount)}</td><td>${esc(row.collectedByName || row.collectedBy || "-")}</td></tr>`).join("") || `<tr><td colspan="6">No payment records</td></tr>`}</tbody></table></div>`;
+      return `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Canteen</th><th>Mode</th><th>Collected</th><th>Pending</th><th>By</th></tr></thead><tbody>${rows.map(row => `<tr><td>${formatDateTime(row.createdAt)}</td><td><strong>${esc(row.canteenName)}</strong></td><td>${esc(row.paymentMode || "-")}</td><td>${money(row.amount)}</td><td>${money(row.pendingAmount)}</td><td>${esc(row.collectedByName || row.collectedBy || "-")}</td></tr>`).join("") || `<tr><td colspan="6">No payment records</td></tr>`}</tbody></table></div>`;
     }
     function supportTicketsHtml(rows) {
       return `<div class="list">${rows.slice(0, 8).map(row => `<div class="list-row"><div><strong>${esc(row.title)}</strong><br><span class="muted">${esc(row.canteenName || "-")} | ${esc(row.priority || "Normal")}</span></div><span class="pill ${row.status === "Open" ? "orange" : "green"}">${esc(row.status)}</span></div>`).join("") || `<span class="muted">No support tickets</span>`}</div>`;
+    }
+    function printerModelOptions() {
+      const models = [...new Set((state.printers || []).map(item => item.model).filter(Boolean))];
+      return `<option value="">Select printer</option>${models.map(model => `<option value="${esc(model)}">${esc(model)}</option>`).join("")}`;
     }
     function employeeHtml(rows) {
       const cards = rows.map(item => `<article class="employee-card">
@@ -524,9 +541,29 @@
           <div class="fact"><span>Aadhaar</span><strong>${esc(item.aadhaarNumber || "-")}</strong></div>
           <div class="fact"><span>PAN</span><strong>${esc(item.panNumber || "-")}</strong></div>
         </div>
-        <span class="pill ${item.active === false ? "red" : "green"}">${item.active === false ? "Inactive" : "Active"}</span>
+        <div class="row-actions"><span class="pill ${item.active === false ? "red" : "green"}">${item.active === false ? "Inactive" : "Active"}</span>${user.role === "super_admin" ? `<button class="${item.active === false ? "secondary" : "danger"}" data-block-user="${esc(item.employeeId)}" data-blocked="${item.active !== false}" type="button">${item.active === false ? "Unblock" : "Block"}</button>` : ""}</div>
       </article>`).join("") || `<div class="muted">No employees found</div>`;
       return `<div class="employee-grid">${cards}</div>`;
+    }
+    function printerInventoryHtml() {
+      const printers = state.printers || [];
+      const stock = printers.filter(item => item.status !== "Allotted").length;
+      const allotted = printers.filter(item => item.status === "Allotted").length;
+      const employeeOptions = (state.users || []).filter(item => item.role === "marketing").map(item => `<option value="${esc(item.employeeId)}">${esc(item.name)} (${esc(item.employeeId)})</option>`).join("");
+      const rows = printers.map(item => `<tr data-printer-row="${esc(`${item.serialNumber} ${item.model} ${item.allottedToName || ""}`.toLowerCase())}">
+        <td><strong>${esc(item.serialNumber || "-")}</strong><br><span class="muted">${esc(item.model || item.provider || "-")}</span></td>
+        <td><span class="pill ${item.status === "Allotted" ? "green" : "gray"}">${esc(item.status || "Stock")}</span></td>
+        <td><select data-allot-printer="${esc(item.serialNumber || "")}"><option value="">Stock</option>${employeeOptions}</select></td>
+        <td>${esc(item.marketingCanteenName || "-")}</td>
+      </tr>`).join("");
+      return `<section class="grid-3"><div class="card green"><span>Stock</span><strong>${stock}</strong></div><div class="card blue"><span>Allotted</span><strong>${allotted}</strong></div><div class="card"><span>Total</span><strong>${printers.length}</strong></div></section>
+      <section class="panel"><h2>Add Printer</h2><form class="form-grid" id="printerForm">
+        <label>Printer model <input id="printerModelInput" required placeholder="Thermal 80mm"></label>
+        <label>Serial number <input id="printerSerialInput" required placeholder="PRN001"></label>
+        <label>Bluetooth name <input id="printerBluetoothInput"></label>
+        <button class="primary" type="submit">Add Printer</button>
+      </form></section>
+      <section class="panel"><div class="toolbar"><h2>Printer List</h2><input id="printerSearch" placeholder="Search serial, model, employee"></div><div class="table-wrap"><table><thead><tr><th>Printer</th><th>Status</th><th>Allotted To</th><th>Canteen</th></tr></thead><tbody>${rows || `<tr><td colspan="4">No printers</td></tr>`}</tbody></table></div></section>`;
     }
     function canteensTable(rows, actions = true) {
       const mobileCards = rows.map((item, index) => `<article class="canteen-card tone-${index % 6}">
@@ -609,10 +646,12 @@
     function renderDashboard() {
       if (user.role === "super_admin") {
         $("page").innerHTML = `${cardsHtml(state.summary.cards)}<div class="grid-2"><section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section><section class="panel"><h2>Open Support Tickets</h2>${supportTicketsHtml(state.supportTickets || [])}</section></div><div class="grid-2"><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section><section class="panel"><h2>Recent Payments</h2>${paymentsTable((state.payments || []).slice(0, 6))}</section></div><section class="panel"><h2>Approval Queue</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
+        bindOnlinePopup();
         bindTableActions();
       } else {
         const cards = state.summary.cards;
         $("page").innerHTML = `${cardsHtml(cards, true)}<div class="grid-2"><section class="panel"><h2>My Registrations</h2>${canteensTable(state.canteens, false)}</section><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section></div>`;
+        bindOnlinePopup();
       }
     }
     function renderAdd() {
@@ -626,6 +665,8 @@
         <label>State <input id="state"></label>
         <label>Counters <input id="counters" type="number" min="1" value="1"></label>
         <label>Printers required <input id="printersRequired" type="number" min="0" value="1"></label>
+        <label>Printer <select id="printerModel" required>${printerModelOptions()}</select></label>
+        <label>Printer serial number <input id="printerSerialNumber" placeholder="Enter stock serial number" required></label>
         <label>Selected plan <select id="selectedPlan"><option>Starter</option><option>Professional</option><option>Enterprise</option></select></label>
         <label>Trial or paid <select id="planType"><option>Trial</option><option>Paid</option></select></label>
         <label>Plan start <input id="planStartDate" type="date" value="${today()}"></label>
@@ -638,11 +679,18 @@
         <button class="primary" type="submit">Submit for Approval</button>
       </form></section>`;
       $("canteenForm").addEventListener("submit", submitCanteen);
+      $("printersRequired").addEventListener("input", syncPrinterRequired);
+      syncPrinterRequired();
+    }
+    function syncPrinterRequired() {
+      const required = Number($("printersRequired")?.value || 0) > 0;
+      if ($("printerModel")) $("printerModel").required = required;
+      if ($("printerSerialNumber")) $("printerSerialNumber").required = required;
     }
     async function submitCanteen(event) {
       event.preventDefault();
       const submitButton = event.submitter;
-      const fields = ["canteenName", "ownerName", "ownerMobile", "alternateMobile", "address", "city", "state", "counters", "printersRequired", "selectedPlan", "planType", "planStartDate", "planExpiryDate", "paymentMode", "paidAmount", "pendingAmount", "documents", "notes"];
+      const fields = ["canteenName", "ownerName", "ownerMobile", "alternateMobile", "address", "city", "state", "counters", "printersRequired", "printerModel", "printerSerialNumber", "selectedPlan", "planType", "planStartDate", "planExpiryDate", "paymentMode", "paidAmount", "pendingAmount", "documents", "notes"];
       const body = Object.fromEntries(fields.map(id => [id, $(id).value]));
       try {
         if (submitButton) submitButton.disabled = true;
@@ -699,6 +747,35 @@
         if (submitButton) submitButton.disabled = false;
       }
     }
+    function bindEmployeeActions() {
+      document.querySelectorAll("[data-block-user]").forEach(btn => btn.addEventListener("click", async () => {
+        await updateAction(`/marketing-api/users/${encodeURIComponent(btn.dataset.blockUser)}/block`, { blocked: btn.dataset.blocked === "true" }, "Employee status updated");
+      }));
+    }
+    function bindPrinterInventory() {
+      if ($("printerForm")) $("printerForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        await updateAction("/marketing-api/printers", {
+          model: $("printerModelInput").value,
+          serialNumber: $("printerSerialInput").value,
+          bluetoothName: $("printerBluetoothInput").value,
+          status: "Stock"
+        }, "Printer added");
+      });
+      document.querySelectorAll("[data-allot-printer]").forEach(select => select.addEventListener("change", async () => {
+        const employee = (state.users || []).find(item => item.employeeId === select.value);
+        await updateAction("/marketing-api/printers", {
+          serialNumber: select.dataset.allotPrinter,
+          status: employee ? "Allotted" : "Stock",
+          allottedTo: employee?.employeeId || "",
+          allottedToName: employee?.name || ""
+        }, "Printer allocation updated");
+      }));
+      if ($("printerSearch")) $("printerSearch").addEventListener("input", event => {
+        const q = event.target.value.toLowerCase();
+        document.querySelectorAll("[data-printer-row]").forEach(row => row.classList.toggle("hidden", q && !row.dataset.printerRow.includes(q)));
+      });
+    }
     function render() {
       const titles = {
         dashboard: ["Dashboard", "Live canteen onboarding and revenue overview."],
@@ -716,20 +793,25 @@
       setPage(title, sub);
       if (tab === "dashboard") return renderDashboard();
       if (tab === "add") return renderAdd();
-      if (tab === "employees") return renderEmployees();
+      if (tab === "employees") { renderEmployees(); bindEmployeeActions(); return; }
       if (tab === "approvals") $("page").innerHTML = `<section class="panel"><h2>Pending Approval</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
-      else if (tab === "canteens" || tab === "my") $("page").innerHTML = `<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Canteens" : "All Canteens"}</h2><input id="searchBox" placeholder="Search canteen or owner"></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
+      else if (tab === "canteens" || tab === "my") $("page").innerHTML = `<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Canteens" : "All Canteens"}</h2><div class="toolbar-left"><select id="searchCategory"><option value="all">All</option><option value="canteenName">Canteen</option><option value="ownerName">Owner</option><option value="city">City</option><option value="status">Status</option></select><input id="searchBox" placeholder="Search by category"></div></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
       else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section><section class="panel"><h2>Payment History</h2>${paymentsTable(state.payments || [])}</section>`;
-      else if (tab === "printers") $("page").innerHTML = `<section class="panel"><h2>Printer Inventory</h2>${canteensTable(state.canteens.filter(item => Number(item.printersRequired || 0) > 0), user.role === "super_admin")}</section>`;
+      else if (tab === "printers") { $("page").innerHTML = printerInventoryHtml(); bindPrinterInventory(); return; }
       else if (tab === "performance") $("page").innerHTML = `<section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section>`;
       else if (tab === "activities") $("page").innerHTML = `<section class="panel"><h2>Recent Activities</h2>${activitiesHtml(60)}</section>`;
       bindTableActions();
       if ($("searchBox")) $("searchBox").addEventListener("input", event => {
         const q = event.target.value.toLowerCase();
-        const filtered = state.canteens.filter(item => `${item.canteenName} ${item.ownerName} ${item.city}`.toLowerCase().includes(q));
+        const category = $("searchCategory")?.value || "all";
+        const filtered = state.canteens.filter(item => {
+          const hay = category === "all" ? `${item.canteenName} ${item.ownerName} ${item.city} ${item.status}` : String(item[category] || "");
+          return hay.toLowerCase().includes(q);
+        });
         $("page").querySelector(".canteen-result").outerHTML = canteensTable(filtered, user.role === "super_admin");
         bindTableActions();
       });
+      if ($("searchCategory")) $("searchCategory").addEventListener("change", () => $("searchBox").dispatchEvent(new Event("input")));
     }
     async function enterApp(nextUser) {
       user = nextUser;

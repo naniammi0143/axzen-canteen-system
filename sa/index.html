@@ -1100,8 +1100,9 @@
         <h1>Activate Canteen</h1>
         <p>Marketing employee ichina credentials verify ayyayi. Ippudu canteen owner login create cheyyandi.</p>
         <div class="activation-id"><span>Canteen ID</span><strong id="setupCanteenId">AXC-0000</strong></div>
-        <label>Owner/Admin name <input id="ownerSetupName" autocomplete="name" required></label>
-        <label>New login mobile / user ID <input id="ownerSetupMobile" autocomplete="username" required></label>
+        <div class="activation-id"><span>Canteen Name</span><strong id="setupCanteenName">Main Canteen</strong></div>
+        <label>Owner name <input id="ownerSetupName" autocomplete="name" required></label>
+        <label>Registered phone number <input id="ownerSetupMobile" autocomplete="username" required></label>
         <label>New password <input id="ownerSetupPassword" type="password" autocomplete="new-password" required minlength="4"></label>
         <label>Confirm password <input id="ownerSetupConfirm" type="password" autocomplete="new-password" required minlength="4"></label>
         <button class="primary" type="submit">Activate & Open App</button>
@@ -1476,7 +1477,8 @@
     async function loadAdminData() {
       try {
         const dashboard = await api("/dashboard", { timeoutMs: 2500 });
-        orders = dashboard.orders || [];
+        const allOrders = dashboard.orders || [];
+        orders = user?.role === "admin" ? allOrders : allOrders.filter(order => String(order.cashier || "") === String(user?.name || ""));
       } catch {}
       try {
         users = await api("/users", { timeoutMs: 2500 });
@@ -1788,6 +1790,11 @@
 
     async function receipt(order) {
       const text = receiptText(order);
+      if (!selectedPrinter) {
+        $("posMessage").textContent = "Order saved. Printer not connected.";
+        $("posMessage").className = "status error";
+        return;
+      }
       if (window.AxenPrinter && typeof window.AxenPrinter.print === "function") {
         try {
           applySelectedPrinterToBridge();
@@ -2654,7 +2661,6 @@
 
     function placeOrderFlow() {
       if (!cart.length) return;
-      wakePrinter();
       payment = "";
       renderCart();
       openPaymentModal();
@@ -2783,8 +2789,8 @@
       renderProducts();
       renderAdmin();
       setTimeout(closePaymentModal, 250);
-      setTimeout(() => receipt(payload), 60);
-      setTimeout(() => loadAdminData(), 350);
+      setTimeout(() => receipt(payload), 300);
+      setTimeout(() => loadAdminData(), 80);
       if (pendingOrders().length) setTimeout(syncPendingOrders, 900);
     }
 
@@ -2915,8 +2921,9 @@
 
     function showOwnerSetup() {
       $("setupCanteenId").textContent = user?.canteenId || "AXC-0000";
-      $("ownerSetupName").value = user?.name && user.name !== "Owner" ? user.name : "";
-      $("ownerSetupMobile").value = "";
+      $("setupCanteenName").textContent = settings.canteenName || user?.canteen?.name || "Main Canteen";
+      $("ownerSetupName").value = user?.canteen?.ownerName || (user?.name && !/admin/i.test(user.name) ? user.name : "");
+      $("ownerSetupMobile").value = user?.canteen?.phone || "";
       $("ownerSetupPassword").value = "";
       $("ownerSetupConfirm").value = "";
       $("setupStatus").textContent = "Create your permanent owner login.";
@@ -3113,9 +3120,6 @@
     });
     window.setInterval(syncPendingOrders, 15000);
     window.setInterval(checkServerConnection, 30000);
-    window.setInterval(() => {
-      if (user && !$("posView").classList.contains("hidden")) wakePrinter();
-    }, 45000);
 
     user = readJson(sessionKey, null);
     if (user) enterApp();

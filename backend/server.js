@@ -330,6 +330,11 @@ const printerSchema = new mongoose.Schema({
   serialNumber: String,
   bluetoothName: String,
   macAddress: String,
+  status: { type: String, default: "Stock", index: true },
+  allottedTo: String,
+  allottedToName: String,
+  marketingCanteenId: Number,
+  marketingCanteenName: String,
   installedBy: String,
   installedAt: String
 }, { timestamps: true, collection: "printers" });
@@ -357,6 +362,8 @@ const marketingCanteenSchema = new mongoose.Schema({
   state: String,
   counters: Number,
   printersRequired: Number,
+  printerModel: String,
+  printerSerialNumber: String,
   selectedPlan: String,
   planType: String,
   planStartDate: String,
@@ -372,6 +379,7 @@ const marketingCanteenSchema = new mongoose.Schema({
   canteenLoginId: String,
   defaultPassword: String,
   online: Boolean,
+  lastSeenAt: String,
   blocked: Boolean,
   printersAssigned: Number,
   submittedBy: { type: String, index: true },
@@ -579,6 +587,17 @@ async function tokenUserIsCurrent(user) {
   return canteenCanLogin(canteenId);
 }
 
+async function markCanteenSeen(canteenId) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  const seen = new Date().toISOString();
+  if (!mongoReady) {
+    const item = memory.marketingCanteens.find(row => normalizeCanteenId(row.activatedCanteenId) === targetCanteenId);
+    if (item) { item.online = true; item.lastSeenAt = seen; }
+    return;
+  }
+  await MarketingCanteen.findOneAndUpdate({ activatedCanteenId: targetCanteenId }, { $set: { online: true, lastSeenAt: seen } });
+}
+
 function decodeCanteenAuthToken(req) {
   const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   if (!token) return { error: "Login token missing" };
@@ -607,6 +626,7 @@ async function requireAdmin(req, res, next) {
     if (!await tokenUserIsCurrent(req.authUser)) {
       return res.status(403).json({ success: false, message: "Canteen access is inactive or blocked" });
     }
+    markCanteenSeen(req.authUser.canteenId).catch(() => {});
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
@@ -624,6 +644,7 @@ async function requireCanteenAuth(req, res, next) {
     if (!await tokenUserIsCurrent(req.authUser)) {
       return res.status(403).json({ success: false, message: "Canteen access is inactive or blocked" });
     }
+    markCanteenSeen(req.authUser.canteenId).catch(() => {});
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
@@ -1095,6 +1116,12 @@ async function allOrders(canteenId = DEFAULT_CANTEEN_ID) {
   return Order.find({ canteenId: targetCanteenId }).sort({ createdAt: 1 }).lean();
 }
 
+async function getCoreCanteen(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!mongoReady) return memory.canteens.find(item => normalizeCanteenId(item.canteenId) === targetCanteenId) || null;
+  return Canteen.findOne({ canteenId: targetCanteenId }).lean();
+}
+
 async function clearOrders(canteenId = DEFAULT_CANTEEN_ID) {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   if (!mongoReady) {
@@ -1297,16 +1324,17 @@ async function allMarketingUsers() {
 
 async function saveMarketingUser(payload, actor) {
   const current = await allMarketingUsers();
+  const existingEmployee = current.find(item => String(item.employeeId || "").toUpperCase() === String(payload.employeeId || "").trim().toUpperCase()) || {};
   const employee = {
-    employeeId: String(payload.employeeId || "").trim().toUpperCase(),
-    name: String(payload.name || "").trim(),
-    mobile: normalizeMobile(payload.mobile),
-    aadhaarNumber: String(payload.aadhaarNumber || "").trim(),
-    panNumber: String(payload.panNumber || "").trim().toUpperCase(),
-    password: String(payload.password || "1234"),
-    role: payload.role === "super_admin" ? "super_admin" : "marketing",
-    active: payload.active !== false,
-    target: Number(payload.target || 0),
+    employeeId: String(payload.employeeId || existingEmployee.employeeId || "").trim().toUpperCase(),
+    name: String(payload.name ?? existingEmployee.name ?? "").trim(),
+    mobile: normalizeMobile(payload.mobile ?? existingEmployee.mobile ?? ""),
+    aadhaarNumber: String(payload.aadhaarNumber ?? existingEmployee.aadhaarNumber ?? "").trim(),
+    panNumber: String(payload.panNumber ?? existingEmployee.panNumber ?? "").trim().toUpperCase(),
+    password: String(payload.password ?? existingEmployee.password ?? "1234"),
+    role: payload.role ? (payload.role === "super_admin" ? "super_admin" : "marketing") : (existingEmployee.role || "marketing"),
+    active: payload.active !== undefined ? payload.active !== false : existingEmployee.active !== false,
+    target: Number(payload.target ?? existingEmployee.target ?? 0),
     updatedAt: new Date().toISOString()
   };
 
@@ -1393,6 +1421,50 @@ async function allMarketingSupportTickets() {
   return MarketingSupportTicket.find({}).sort({ createdAt: -1 }).limit(200).lean();
 }
 
+async function allPrinters() {
+  if (!mongoReady) return memory.printers;
+  return Printer.find({}).sort({ createdAt: -1 }).lean();
+}
+
+async function savePrinterInventory(payload, actor) {
+  const serialNumber = String(payload.serialNumber || "").trim().toUpperCase();
+  if (!serialNumber) throw new Error("Printer serial number is required");
+  const existingPrinter = await findPrinterBySerial(serialNumber) || {};
+  const printer = {
+    provider: String(payload.provider ?? existingPrinter.provider ?? "Thermal Printer").trim(),
+    model: String(payload.model ?? existingPrinter.model ?? payload.provider ?? "Thermal Printer").trim(),
+    serialNumber,
+    bluetoothName: String(payload.bluetoothName ?? existingPrinter.bluetoothName ?? "").trim(),
+    macAddress: String(payload.macAddress ?? existingPrinter.macAddress ?? "").trim(),
+    status: String(payload.status ?? existingPrinter.status ?? "Stock"),
+    allottedTo: String(payload.allottedTo ?? existingPrinter.allottedTo ?? "").trim(),
+    allottedToName: String(payload.allottedToName ?? existingPrinter.allottedToName ?? "").trim(),
+    marketingCanteenId: Number(payload.marketingCanteenId ?? existingPrinter.marketingCanteenId ?? 0) || undefined,
+    marketingCanteenName: String(payload.marketingCanteenName ?? existingPrinter.marketingCanteenName ?? "").trim(),
+    installedBy: existingPrinter.installedBy || actor?.employeeId || actor?.name || "",
+    installedAt: existingPrinter.installedAt || new Date().toISOString()
+  };
+  if (printer.status !== "Allotted") {
+    printer.allottedTo = "";
+    printer.allottedToName = "";
+    printer.marketingCanteenId = undefined;
+    printer.marketingCanteenName = "";
+  }
+  if (!mongoReady) {
+    const existing = memory.printers.find(item => String(item.serialNumber || "").toUpperCase() === serialNumber);
+    if (existing) Object.assign(existing, printer);
+    else memory.printers.unshift({ id: Date.now(), ...printer });
+    return existing || memory.printers[0];
+  }
+  return Printer.findOneAndUpdate({ serialNumber }, { $set: printer }, { new: true, upsert: true }).lean();
+}
+
+async function findPrinterBySerial(serialNumber) {
+  const serial = String(serialNumber || "").trim().toUpperCase();
+  if (!serial) return null;
+  return (await allPrinters()).find(item => String(item.serialNumber || "").toUpperCase() === serial) || null;
+}
+
 function normalizeMarketingCanteen(payload, user) {
   return {
     id: Number(payload.id || Date.now()),
@@ -1405,6 +1477,8 @@ function normalizeMarketingCanteen(payload, user) {
     state: String(payload.state || "").trim(),
     counters: Number(payload.counters || 1),
     printersRequired: Number(payload.printersRequired || 0),
+    printerModel: String(payload.printerModel || "").trim(),
+    printerSerialNumber: String(payload.printerSerialNumber || "").trim().toUpperCase(),
     selectedPlan: String(payload.selectedPlan || "Starter"),
     planType: String(payload.planType || "Trial"),
     planStartDate: String(payload.planStartDate || new Date().toISOString().slice(0, 10)),
@@ -1429,6 +1503,18 @@ async function createMarketingCanteen(payload, user) {
   const canteen = normalizeMarketingCanteen(payload, user);
   if (!canteen.canteenName || !canteen.ownerName || !canteen.ownerMobile) {
     throw new Error("Canteen name, owner name, and owner mobile are required");
+  }
+  if (Number(canteen.printersRequired || 0) > 0) {
+    if (!canteen.printerModel || !canteen.printerSerialNumber) {
+      throw new Error("Printer model and serial number are required");
+    }
+    const printer = await findPrinterBySerial(canteen.printerSerialNumber);
+    if (!printer || String(printer.model || "") !== canteen.printerModel) {
+      throw new Error("Printer serial number does not match selected printer");
+    }
+    if (printer.status === "Allotted" && Number(printer.marketingCanteenId || 0) !== Number(canteen.id)) {
+      throw new Error("Printer serial number already allotted");
+    }
   }
   if (!mongoReady) memory.marketingCanteens.unshift(canteen);
   else await MarketingCanteen.create(canteen);
@@ -1501,7 +1587,7 @@ async function activateApprovedCanteen(canteen, actor) {
 
   await saveUser({
     canteenId: credentials.activatedCanteenId,
-    name: `${canteen.canteenName} Admin`,
+    name: canteen.ownerName || `${canteen.canteenName} Admin`,
     mobile: credentials.canteenLoginId,
     password: credentials.defaultPassword,
     role: "admin",
@@ -1509,6 +1595,17 @@ async function activateApprovedCanteen(canteen, actor) {
     mustChangePassword: true
   });
   await seedCanteenDefaults(credentials.activatedCanteenId, canteen.canteenName);
+  if (canteen.printerSerialNumber) {
+    await savePrinterInventory({
+      serialNumber: canteen.printerSerialNumber,
+      model: canteen.printerModel,
+      status: "Allotted",
+      allottedTo: canteen.submittedBy,
+      allottedToName: canteen.submittedByName,
+      marketingCanteenId: canteen.id,
+      marketingCanteenName: canteen.canteenName
+    }, actor);
+  }
 
   return updateMarketingCanteen(canteen.id, credentials, actor);
 }
@@ -1545,6 +1642,8 @@ function marketingSummary(canteens, users, activities, payments = [], supportTic
     .reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const printersAssigned = canteens.reduce((sum, item) => sum + Number(item.printersAssigned || 0), 0);
   const printersRequired = canteens.reduce((sum, item) => sum + Number(item.printersRequired || 0), 0);
+  const onlineRecentMs = 2 * 60 * 1000;
+  const onlineCanteens = canteens.filter(item => item.lastSeenAt && Date.now() - new Date(item.lastSeenAt).getTime() <= onlineRecentMs);
   const performance = users.filter(user => user.role === "marketing").map(user => {
     const mine = canteens.filter(item => item.submittedBy === user.employeeId);
     return {
@@ -1565,8 +1664,8 @@ function marketingSummary(canteens, users, activities, payments = [], supportTic
       trialCanteens: trial.length,
       expiredCanteens: expired.length,
       blockedCanteens: blocked.length,
-      onlineCanteens: canteens.filter(item => item.online).length,
-      offlineCanteens: canteens.filter(item => !item.online).length,
+      onlineCanteens: onlineCanteens.length,
+      offlineCanteens: Math.max(0, canteens.length - onlineCanteens.length),
       todaysRegistrations: canteens.filter(item => isToday(item.createdAt)).length,
       todaysCollections: visiblePayments.filter(item => isToday(item.createdAt)).reduce((sum, item) => sum + Number(item.amount || 0), 0),
       monthlyRevenue,
@@ -1875,7 +1974,8 @@ app.post("/login", requireDatabase, async (req, res) => {
   const user = allowedMatches.find(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === loginAsCanteenId) || allowedMatches[0];
 
   if (!user) return res.status(401).json({ success: false, message: "Invalid credentials or inactive canteen" });
-  res.json({ success: true, user: publicUser(user), token: signToken(user), settings: await getSettings(user.canteenId) });
+  const canteen = await getCoreCanteen(user.canteenId);
+  res.json({ success: true, user: { ...publicUser(user), canteen }, token: signToken(user), settings: await getSettings(user.canteenId) });
 });
 
 app.get("/users", requireCanteenAuth, async (req, res) => {
@@ -1972,16 +2072,15 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     success: true,
     canteens,
     users: users.map(publicMarketingUser),
+    printers: await allPrinters(),
     payments: req.marketingUser.role === "super_admin"
       ? payments
       : payments.filter(item => visibleIds.has(Number(item.canteenId))),
     supportTickets: req.marketingUser.role === "super_admin"
       ? supportTickets
       : supportTickets.filter(item => canteens.some(canteen => canteen.canteenName === item.canteenName)),
-    activities: req.marketingUser.role === "super_admin"
-      ? activities
-      : activities.filter(item => canteens.some(canteen => Number(canteen.id) === Number(item.canteenId))),
-    summary: marketingSummary(canteens, users, activities, payments, supportTickets)
+    activities: req.marketingUser.role === "super_admin" ? activities : [],
+    summary: marketingSummary(canteens, users, req.marketingUser.role === "super_admin" ? activities : [], payments, supportTickets)
   });
 });
 
@@ -1989,6 +2088,25 @@ app.post("/marketing-api/users", requireDatabase, requireSuperAdmin, async (req,
   try {
     const employee = await saveMarketingUser(req.body, req.marketingUser);
     res.json({ success: true, user: publicMarketingUser(employee), users: (await allMarketingUsers()).map(publicMarketingUser) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/users/:employeeId/block", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const active = req.body.blocked === true ? false : req.body.active !== false;
+    const employee = await saveMarketingUser({ employeeId: req.params.employeeId, active }, req.marketingUser);
+    res.json({ success: true, user: publicMarketingUser(employee), users: (await allMarketingUsers()).map(publicMarketingUser) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/printers", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const printer = await savePrinterInventory(req.body, req.marketingUser);
+    res.json({ success: true, printer, printers: await allPrinters() });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
