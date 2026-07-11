@@ -939,9 +939,10 @@
     #posView .item-card h3 { font-size: 19px; }
     #posView .item-card p { display: none; }
     .item-body { display: grid; gap: 7px; padding: 4px 6px 0; }
-    .item-name-line { display: flex; align-items: center; justify-content: space-between; gap: 7px; }
-    .item-emoji { font-size: 19px; }
-    .item-name-wrap { display: inline-flex; align-items: center; min-width: 0; gap: 7px; }
+    .item-name-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; width: 100%; }
+    .item-emoji { display: none; }
+    .item-name-wrap { display: flex; align-items: flex-start; min-width: 0; flex: 1; }
+    .item-name-wrap h3 { min-width: 0; overflow-wrap: anywhere; }
     .item-foot { display: block; padding: 0; }
     .item-price { color: #0b1532; font-size: 20px; font-weight: 950; white-space: nowrap; }
     .variant-hint { color: #007aff; font-size: 11px; font-weight: 950; }
@@ -993,11 +994,11 @@
       #posView .item-card { min-height: 162px; grid-template-rows: 90px auto; gap: 7px; padding: 6px; border-radius: 12px; }
       #posView .item-icon { height: 90px; border-radius: 9px; }
       #posView .item-card h3 { font-size: 13px; line-height: 1.15; }
-      .item-body { gap: 3px; padding: 2px 1px 0; }
-      .item-name-line { display: grid; gap: 2px; }
+      .item-body { gap: 4px; padding: 3px 2px 0; }
+      .item-name-line { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
       .item-name-wrap { gap: 3px; }
-      .item-emoji, .variant-hint { display: none; }
-      .item-price { font-size: 13px; }
+      .variant-hint { display: none; }
+      .item-price { font-size: 15px; }
       .section-title-row h2 { font-size: 18px; }
       .mini-qty { display: none; }
       #posView .count-badge, #posView .remove-badge { width: 22px; height: 22px; min-width: 22px; font-size: 11px; top: 4px; right: 5px; }
@@ -1253,14 +1254,15 @@
     async function api(path, options = {}) {
       const token = localStorage.getItem(tokenKey);
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
+      const timeout = setTimeout(() => controller.abort(), Number(options.timeoutMs || 3500));
+      const { timeoutMs, ...fetchOptions } = options;
       const response = await fetch(API + path, {
-        ...options,
+        ...fetchOptions,
         signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(options.headers || {})
+          ...(fetchOptions.headers || {})
         }
       }).finally(() => clearTimeout(timeout));
       if (!response.ok) throw new Error("Request failed");
@@ -1394,11 +1396,11 @@
 
     async function loadAdminData() {
       try {
-        const dashboard = await api("/dashboard");
+        const dashboard = await api("/dashboard", { timeoutMs: 2500 });
         orders = dashboard.orders || [];
       } catch {}
       try {
-        users = await api("/users");
+        users = await api("/users", { timeoutMs: 2500 });
       } catch {}
       renderAdmin();
     }
@@ -1711,7 +1713,7 @@
         try {
           applySelectedPrinterToBridge();
           const result = window.AxenPrinter.print(text);
-          $("posMessage").textContent = result || "Order saved and print sent";
+          $("posMessage").textContent = result === "Print sent" ? "Order saved and print sent" : (result || "Order saved. Printer not connected.");
           $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
           return;
         } catch (error) {
@@ -1721,6 +1723,8 @@
         }
       }
       console.log(text);
+      $("posMessage").textContent = "Order saved. Printer not connected.";
+      $("posMessage").className = "status error";
     }
 
     function wakePrinter() {
@@ -2535,8 +2539,9 @@
 
     async function syncPendingOrders() {
       const pending = pendingOrders();
-      const connected = await checkServerConnection();
       if (!pending.length) return updateSyncStatus();
+      if (!navigator.onLine) return updateSyncStatus("Connect internet", "offline");
+      const connected = await checkServerConnection();
       if (!connected) return updateSyncStatus("Connect internet", "offline");
       try {
         updateSyncStatus("Syncing...", "syncing");
@@ -2670,19 +2675,20 @@
         return;
       }
       if (selectedPayment === "Cancel") payload.total = 0;
-      setPaymentStatus("Printing receipt...");
-      await receipt(payload);
-      setPaymentStatus("Receipt sent. Saving order...");
+      setPaymentStatus("Saving order...");
 
       try {
-        const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload) });
+        if (!navigator.onLine) throw new Error("offline");
+        const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload), timeoutMs: 1800 });
         serverOnline = true;
+        orders.push(saved.order || payload);
         updateSyncStatus();
         $("posMessage").textContent = "Order saved";
         $("posMessage").className = "status ok";
       } catch {
         serverOnline = false;
         setPendingOrders([...pendingOrders(), payload]);
+        orders.push(payload);
         $("posMessage").textContent = "Offline saved. Auto sync pending.";
         $("posMessage").className = "status ok";
       }
@@ -2693,8 +2699,11 @@
       payment = "";
       renderCart();
       renderProducts();
-      await loadAdminData();
-      setTimeout(closePaymentModal, 650);
+      renderAdmin();
+      setTimeout(closePaymentModal, 250);
+      setTimeout(() => receipt(payload), 60);
+      setTimeout(() => loadAdminData(), 350);
+      if (pendingOrders().length) setTimeout(syncPendingOrders, 900);
     }
 
     function dashboardStats() {

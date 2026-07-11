@@ -1868,7 +1868,7 @@ app.post("/login", requireDatabase, async (req, res) => {
   res.json({ success: true, user: publicUser(user), token: signToken(user), settings: await getSettings(user.canteenId) });
 });
 
-app.get("/users", requireAdmin, async (req, res) => {
+app.get("/users", requireCanteenAuth, async (req, res) => {
   const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
   res.json((await allUsers()).filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === canteenId).map(publicUser));
 });
@@ -1916,7 +1916,7 @@ app.post("/orders/sync", requireDatabase, requireCanteenAuth, async (req, res) =
   }
 });
 
-app.get("/orders", requireAdmin, async (req, res) => res.json(await allOrders(req.authUser.canteenId)));
+app.get("/orders", requireCanteenAuth, async (req, res) => res.json(await allOrders(req.authUser.canteenId)));
 
 app.delete("/orders", requireDatabase, requireAdmin, async (req, res) => {
   await clearOrders(req.authUser.canteenId);
@@ -1930,7 +1930,7 @@ app.delete("/orders/:id", requireDatabase, requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
-app.get("/dashboard", requireAdmin, async (req, res) => res.json(await dashboardData(req.authUser.canteenId)));
+app.get("/dashboard", requireCanteenAuth, async (req, res) => res.json(await dashboardData(req.authUser.canteenId)));
 
 app.post("/marketing-api/login", requireDatabase, async (req, res) => {
   const employeeId = String(req.body.employeeId || "").trim();
