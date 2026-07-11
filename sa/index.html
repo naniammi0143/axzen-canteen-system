@@ -891,34 +891,21 @@
       font-weight: 950;
     }
 
-    /* POS visual style matching the supplied mobile mockup. */
+    /* POS header: clean billing-app shell. */
     #posView {
       position: relative;
       min-height: 100vh;
       background: #ffffff;
     }
-    #posView .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 7;
-      min-height: 112px;
-      gap: 16px;
-      margin: 12px 14px 0;
-      padding: 18px 20px;
-      background: linear-gradient(180deg, #ffffff, #fbfcff);
-      border: 1px solid #f1f4f8;
-      border-radius: 28px;
-      box-shadow: 0 18px 42px #0f172a14;
-      overflow: hidden;
-    }
+    #posView .topbar { position: sticky; top: 0; z-index: 7; display: grid; grid-template-columns: 48px 62px minmax(0, 1fr); align-items: center; column-gap: 14px; min-height: 112px; margin: 12px 14px 0; padding: 18px 20px; background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%); border: 1px solid #edf2f7; border-radius: 24px; box-shadow: 0 18px 40px #0f172a12; overflow: hidden; }
     #posView .decor-cutlery {
       position: absolute;
-      right: -16px;
-      bottom: -42px;
-      width: 150px;
-      height: 150px;
+      right: -22px;
+      bottom: -38px;
+      width: 156px;
+      height: 156px;
       color: #082653;
-      opacity: .06;
+      opacity: .045;
       transform: rotate(-12deg);
       pointer-events: none;
     }
@@ -928,26 +915,25 @@
     #posView .brand-mark,
     #posView .title-block { position: relative; z-index: 1; }
     #posView .topbar .icon-btn,
-    #posView .brand-mark { display: grid; background: white; color: #082653; border-color: #eef2f7; }
+    #posView .brand-mark { display: grid; color: #082653; }
     #posView .top-actions-pos { display: none; }
-    #posView .title-block { flex: 1; display: grid; align-content: center; gap: 10px; min-width: 0; }
-    #posView .title-block strong { display: block; min-width: 0; color: #071a3d; font-size: 27px; line-height: 1.06; font-weight: 800; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #posView .title-block span { margin-top: 0; color: #16a34a; font-size: 14px; font-weight: 700; }
+    #posView .title-block { display: flex; min-width: 0; flex-direction: column; justify-content: center; align-items: flex-start; gap: 7px; }
+    #posView .title-block strong { display: block; width: 100%; min-width: 0; color: #082653; font-size: 23px; line-height: 1.05; font-weight: 900; text-transform: uppercase; letter-spacing: .01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .counter-pill { display: inline-flex; min-height: 28px; align-items: center; border-radius: 999px; background: #f0f2f5; color: #4b5563; padding: 0 13px; font-size: 13px; font-weight: 850; }
-    .shift-line { display: inline-flex !important; align-items: center; gap: 8px; flex: 0 0 auto; }
-    .connection-pill { min-height: 28px; width: fit-content; display: inline-flex; align-items: center; gap: 8px; padding: 0 11px; border-radius: 999px; background: #ecfdf3; border: 1px solid #bbf7d0; line-height: 1; }
+    .shift-line { display: inline-flex !important; align-items: center; justify-content: flex-start; gap: 8px; flex: 0 0 auto; width: auto; max-width: 100%; }
+    .connection-pill { min-height: 30px; width: auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px; border-radius: 999px; background: #ecfdf3; border: 1px solid #bbf7d0; line-height: 1; white-space: nowrap; }
     .connection-pill.offline { background: #fff1f2; border-color: #fecdd3; }
     .connection-pill.syncing { background: #fff7ed; border-color: #fed7aa; }
-    .shift-line b { color: #16a34a; line-height: 1; }
+    .shift-line b { display: block; color: #16a34a; font-size: 14px; line-height: 1; font-weight: 800; }
     .connection-pill.offline b { color: #dc2626; }
     .connection-pill.syncing b { color: #c2410c; }
-    #posView .status-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; background: #16a34a; box-shadow: 0 0 0 4px #22c55e1f; }
+    #posView .status-dot { display: block; width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; background: #16a34a; box-shadow: 0 0 0 4px #22c55e1f; }
     #posView .status-dot.offline { background: #dc2626; box-shadow: 0 0 0 4px #ef44441f; }
     #posView .status-dot.syncing { background: #f59e0b; box-shadow: 0 0 0 4px #f59e0b20; }
-    #posView .icon-btn { width: 58px; height: 58px; border-radius: 18px; border-color: #edf1f5; box-shadow: 0 12px 24px #0f172a0d; font-size: 0; }
-    #posView .icon-btn.menu-trigger { width: 46px; height: 46px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-    #posView .icon-btn.menu-trigger::before { content: ""; width: 28px; height: 20px; display: block; background: linear-gradient(#071a3d 0 0) 0 0 / 100% 4px no-repeat, linear-gradient(#071a3d 0 0) 0 50% / 100% 4px no-repeat, linear-gradient(#071a3d 0 0) 0 100% / 100% 4px no-repeat; border-radius: 8px; }
-    .brand-mark { width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: #082653; background: #ffffff; border: 7px solid #f6f8fb; box-shadow: 0 12px 26px #0f172a10; font-size: 26px; font-weight: 950; letter-spacing: 0; overflow: hidden; }
+    #posView .icon-btn { width: 48px; height: 48px; border: 0; background: transparent; box-shadow: none; font-size: 0; }
+    #posView .icon-btn.menu-trigger { width: 48px; height: 48px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    #posView .icon-btn.menu-trigger::before { content: ""; width: 31px; height: 22px; display: block; background: linear-gradient(#082653 0 0) 0 0 / 100% 4px no-repeat, linear-gradient(#082653 0 0) 0 50% / 100% 4px no-repeat, linear-gradient(#082653 0 0) 0 100% / 100% 4px no-repeat; border-radius: 8px; }
+    .brand-mark { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: #082653; background: #ffffff; border: 7px solid #f5f8fc; box-shadow: 0 13px 28px #0f172a12; font-size: 26px; font-weight: 950; letter-spacing: 0; overflow: hidden; }
     .brand-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
     .brand-logo-fallback { width: 32px; height: 32px; color: #24324a; line-height: 1; }
     .top-actions-pos { display: flex; align-items: center; gap: 14px; }
@@ -1019,17 +1005,18 @@
 
     @media (max-width: 760px) {
       .app { max-width: 520px; }
-      #posView .topbar { min-height: 124px; margin: 10px 10px 0; padding: 18px 16px; gap: 13px; border-radius: 28px; box-shadow: 0 20px 46px #0f172a17; }
-      #posView .decor-cutlery { right: -26px; bottom: -38px; width: 138px; height: 138px; opacity: .07; }
-      #posView .title-block { gap: 8px; }
-      #posView .title-block strong { font-size: 22px; line-height: 1.08; color: #071a3d; }
-      #posView .title-block span { font-size: 13px; }
-      .connection-pill { min-height: 27px; padding: 0 10px; }
+      #posView .topbar { grid-template-columns: 46px 58px minmax(0, 1fr); min-height: 118px; margin: 10px 10px 0; padding: 18px 16px; column-gap: 12px; border-radius: 24px; box-shadow: 0 20px 46px #0f172a14; }
+      #posView .decor-cutlery { right: -34px; bottom: -40px; width: 142px; height: 142px; opacity: .045; }
+      #posView .title-block { gap: 7px; }
+      #posView .title-block strong { font-size: 20px; line-height: 1.08; color: #082653; letter-spacing: 0; }
+      .connection-pill { min-height: 28px; padding: 0 11px; gap: 8px; }
+      .shift-line b { font-size: 13px; }
+      #posView .status-dot { width: 9px; height: 9px; flex-basis: 9px; }
       .counter-pill, .top-actions-pos .icon-btn, .admin-chip span, .shift-line .date-part, .shift-line .shift-part { display: none; }
-      #posView .icon-btn { width: 62px; height: 62px; border-radius: 20px; }
-      #posView .icon-btn.menu-trigger::before { width: 29px; height: 20px; }
-      .brand-mark { width: 70px; height: 70px; border-width: 7px; }
-      .brand-logo-fallback { width: 34px; height: 34px; }
+      #posView .icon-btn, #posView .icon-btn.menu-trigger { width: 46px; height: 46px; }
+      #posView .icon-btn.menu-trigger::before { width: 31px; height: 22px; }
+      .brand-mark { width: 58px; height: 58px; border-width: 6px; }
+      .brand-logo-fallback { width: 31px; height: 31px; }
       #posView .content { padding: 14px 14px 188px; }
       #posView.option-mode .content { padding: 10px 14px 90px; }
       .work-header { display: grid; padding: 14px; }
