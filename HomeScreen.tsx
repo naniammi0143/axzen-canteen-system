@@ -21,13 +21,16 @@ const LINE = "#e5eaf0";
 const MUTED = "#667085";
 const GREEN = "#22c55e";
 
-const categories = ["All", "Meals", "Tiffins", "Tea"] as const;
+const itemCategories = ["Meals", "Tiffins", "Tea"] as const;
+const categories = ["All", ...itemCategories] as const;
 
 type Category = (typeof categories)[number];
+type BottomNavItem = "Home" | "Orders" | "Reports" | "Settings";
 type DrawerOption =
   | "Dashboard"
   | "New Billing"
   | "Orders"
+  | "Reports"
   | "Today's Sales"
   | "Cash Summary"
   | "Add Item"
@@ -47,7 +50,7 @@ type DrawerSection = {
 const drawerSections: DrawerSection[] = [
   {
     title: "SALES",
-    items: ["Dashboard", "New Billing", "Orders", "Today's Sales", "Cash Summary"]
+    items: ["Dashboard", "New Billing", "Orders", "Reports", "Today's Sales", "Cash Summary"]
   },
   {
     title: "ITEMS",
@@ -135,11 +138,12 @@ export default function HomeScreen() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOption, setActiveOption] = useState<DrawerOption>("Dashboard");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [catalog, setCatalog] = useState<Product[]>(products);
   const drawerProgress = useRef(new Animated.Value(0)).current;
 
   const visibleProducts = useMemo(
-    () => products.filter(item => activeCategory === "All" || item.category === activeCategory),
-    [activeCategory]
+    () => catalog.filter(item => activeCategory === "All" || item.category === activeCategory),
+    [activeCategory, catalog]
   );
 
   const addProduct = useCallback((product: Product) => {
@@ -184,6 +188,16 @@ export default function HomeScreen() {
     closeDrawer();
   }, [closeDrawer]);
 
+  const selectBottomNav = useCallback((item: BottomNavItem) => {
+    const nextOption: Record<BottomNavItem, DrawerOption> = {
+      Home: "Dashboard",
+      Orders: "Orders",
+      Reports: "Reports",
+      Settings: "Settings"
+    };
+    setActiveOption(nextOption[item]);
+  }, []);
+
   const showBillingGrid = activeOption === "Dashboard" || activeOption === "New Billing";
 
   return (
@@ -218,11 +232,16 @@ export default function HomeScreen() {
             removeClippedSubviews
           />
         ) : (
-          <OptionContent option={activeOption} horizontalPadding={horizontalPadding} />
+          <OptionContent
+            option={activeOption}
+            horizontalPadding={horizontalPadding}
+            products={catalog}
+            onProductsChange={setCatalog}
+          />
         )}
 
-        <CartPanel count={cartCount} total={total} onClear={clearCart} />
-        <BottomNav />
+        {showBillingGrid && <CartPanel count={cartCount} total={total} onClear={clearCart} />}
+        <BottomNav activeOption={activeOption} onSelect={selectBottomNav} />
         {selectedProduct && <SubItemsSheet product={selectedProduct} onClose={closeSubItems} />}
         {drawerOpen && (
           <Drawer
@@ -378,7 +397,17 @@ function SearchBar() {
   );
 }
 
-function OptionContent({ option, horizontalPadding }: { option: DrawerOption; horizontalPadding: number }) {
+function OptionContent({
+  option,
+  horizontalPadding,
+  products,
+  onProductsChange
+}: {
+  option: DrawerOption;
+  horizontalPadding: number;
+  products: Product[];
+  onProductsChange: (next: Product[]) => void;
+}) {
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
@@ -386,11 +415,12 @@ function OptionContent({ option, horizontalPadding }: { option: DrawerOption; ho
     >
       <Text style={styles.optionTitle}>{option}</Text>
       {option === "Orders" && <OrdersScreen />}
+      {option === "Reports" && <ReportsScreen products={products} />}
       {option === "Today's Sales" && <TodaysSalesScreen />}
       {option === "Cash Summary" && <CashSummaryScreen />}
-      {option === "Add Item" && <AddItemScreen />}
-      {option === "Edit Price" && <EditPriceScreen />}
-      {option === "Stock Availability" && <StockAvailabilityScreen />}
+      {option === "Add Item" && <ItemManagerScreen products={products} onProductsChange={onProductsChange} />}
+      {option === "Edit Price" && <ItemManagerScreen products={products} onProductsChange={onProductsChange} />}
+      {option === "Stock Availability" && <StockAvailabilityScreen products={products} />}
       {option === "Printer Settings" && <PrinterSettingsScreen />}
       {option === "User" && <UserScreen />}
       {option === "Settings" && <SettingsScreen />}
@@ -419,6 +449,174 @@ function OrdersScreen() {
           </View>
         </View>
       ))}
+    </View>
+  );
+}
+
+function ReportsScreen({ products }: { products: Product[] }) {
+  const [fromDate, setFromDate] = useState("2026-07-01");
+  const [toDate, setToDate] = useState("2026-07-11");
+  const quickRanges: Record<string, [string, string]> = {
+    Today: ["2026-07-11", "2026-07-11"],
+    Week: ["2026-07-05", "2026-07-11"],
+    Month: ["2026-07-01", "2026-07-11"],
+    Custom: [fromDate, toDate]
+  };
+
+  const itemReports = useMemo(() => products.map((item, index) => {
+    const quantity = (index + 2) * 4;
+    const discount = index % 2 === 0 ? 10 : 0;
+    const gross = quantity * item.price;
+    return {
+      ...item,
+      quantity,
+      gross,
+      discount,
+      net: gross - discount
+    };
+  }), [products]);
+
+  const totalSales = itemReports.reduce((sum, item) => sum + item.net, 0);
+  const totalQty = itemReports.reduce((sum, item) => sum + item.quantity, 0);
+  const avgBill = Math.round(totalSales / Math.max(itemReports.length, 1));
+  const cash = Math.round(totalSales * 0.52);
+  const upi = Math.round(totalSales * 0.38);
+  const card = totalSales - cash - upi;
+
+  const categoryReports = itemCategories.map(category => {
+    const rows = itemReports.filter(item => item.category === category);
+    return {
+      label: category,
+      qty: rows.reduce((sum, item) => sum + item.quantity, 0),
+      amount: rows.reduce((sum, item) => sum + item.net, 0)
+    };
+  });
+
+  const dailyReports = [
+    ["2026-07-07", "Rs 4,840", "62 bills"],
+    ["2026-07-08", "Rs 5,260", "71 bills"],
+    ["2026-07-09", "Rs 6,110", "78 bills"],
+    ["2026-07-10", "Rs 5,980", "74 bills"],
+    ["2026-07-11", `Rs ${totalSales}`, `${totalQty} qty`]
+  ];
+
+  const hourlyReports = [
+    ["07-09 AM", "Breakfast", "Rs 2,180"],
+    ["09-12 PM", "Tea Rush", "Rs 1,420"],
+    ["12-03 PM", "Lunch", "Rs 3,760"],
+    ["03-06 PM", "Snacks", "Rs 1,980"]
+  ];
+
+  return (
+    <View style={styles.optionStack}>
+      <View style={styles.reportFilterCard}>
+        <View style={styles.dateRow}>
+          <View style={styles.dateInputWrap}>
+            <Text style={styles.dateLabel}>From Date</Text>
+            <TextInput value={fromDate} onChangeText={setFromDate} style={styles.dateInput} />
+          </View>
+          <View style={styles.dateInputWrap}>
+            <Text style={styles.dateLabel}>To Date</Text>
+            <TextInput value={toDate} onChangeText={setToDate} style={styles.dateInput} />
+          </View>
+        </View>
+        <View style={styles.quickRangeRow}>
+          {["Today", "Week", "Month", "Custom"].map(item => (
+            <TouchableOpacity
+              key={item}
+              activeOpacity={0.85}
+              onPress={() => {
+                setFromDate(quickRanges[item][0]);
+                setToDate(quickRanges[item][1]);
+              }}
+              style={styles.quickRangeChip}
+            >
+              <Text style={styles.quickRangeText}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.reportGrid}>
+        <ReportMetric label="Total Sale" value={`Rs ${totalSales}`} />
+        <ReportMetric label="Items Sold" value={String(totalQty)} />
+        <ReportMetric label="Avg Bill" value={`Rs ${avgBill}`} />
+        <ReportMetric label="Reports" value="8" />
+      </View>
+
+      <ReportSection title="Date Wise Report">
+        {dailyReports.map(row => <ReportRow key={row[0]} label={row[0]} value={row[1]} detail={row[2]} />)}
+      </ReportSection>
+
+      <ReportSection title="Item Wise Report">
+        {itemReports.map(item => (
+          <View key={item.id} style={styles.itemReportRow}>
+            <View style={styles.itemReportName}>
+              <Text style={styles.listTitle}>{item.name}</Text>
+              <Text style={styles.listSub}>{item.quantity} qty - {item.category}</Text>
+            </View>
+            <View style={styles.itemReportMoney}>
+              <Text style={styles.listAmount}>Rs {item.net}</Text>
+              <Text style={styles.listSub}>Rate Rs {item.price}</Text>
+            </View>
+          </View>
+        ))}
+      </ReportSection>
+
+      <ReportSection title="Payment Report">
+        <ReportRow label="Cash" value={`Rs ${cash}`} detail="52%" />
+        <ReportRow label="UPI / Online" value={`Rs ${upi}`} detail="38%" />
+        <ReportRow label="Card" value={`Rs ${card}`} detail="10%" />
+      </ReportSection>
+
+      <ReportSection title="Category Report">
+        {categoryReports.map(row => <ReportRow key={row.label} label={row.label} value={`Rs ${row.amount}`} detail={`${row.qty} qty`} />)}
+      </ReportSection>
+
+      <ReportSection title="Cashier Report">
+        <ReportRow label="Venkatesh" value={`Rs ${Math.round(totalSales * 0.58)}`} detail="Morning shift" />
+        <ReportRow label="Cashier 2" value={`Rs ${Math.round(totalSales * 0.42)}`} detail="Evening shift" />
+      </ReportSection>
+
+      <ReportSection title="Hourly Sales">
+        {hourlyReports.map(row => <ReportRow key={row[0]} label={row[0]} value={row[2]} detail={row[1]} />)}
+      </ReportSection>
+
+      <ReportSection title="Stock & Profit">
+        <ReportRow label="Low Stock Items" value="2" detail="Need refill" />
+        <ReportRow label="Estimated Profit" value={`Rs ${Math.round(totalSales * 0.32)}`} detail="After cost" />
+        <ReportRow label="Discount Given" value={`Rs ${itemReports.reduce((sum, item) => sum + item.discount, 0)}`} detail="Selected bills" />
+      </ReportSection>
+    </View>
+  );
+}
+
+function ReportMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.reportMetric}>
+      <Text style={styles.reportMetricValue}>{value}</Text>
+      <Text style={styles.reportMetricLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function ReportSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <View style={styles.reportSection}>
+      <Text style={styles.summaryTitle}>{title}</Text>
+      <View style={styles.reportRows}>{children}</View>
+    </View>
+  );
+}
+
+function ReportRow({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <View style={styles.reportRow}>
+      <View>
+        <Text style={styles.listTitle}>{label}</Text>
+        <Text style={styles.listSub}>{detail}</Text>
+      </View>
+      <Text style={styles.listAmount}>{value}</Text>
     </View>
   );
 }
@@ -458,37 +656,164 @@ function CashSummaryScreen() {
   );
 }
 
-function AddItemScreen() {
-  return (
-    <View style={styles.formCard}>
-      {["Item name", "Category", "Price", "Item code"].map(label => (
-        <View key={label} style={styles.fakeInput}><Text style={styles.fakeInputText}>{label}</Text></View>
-      ))}
-      <InfoRow label="Available for sale" value="ON" />
-      <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Save Item</Text></TouchableOpacity>
-    </View>
-  );
-}
+function ItemManagerScreen({
+  products,
+  onProductsChange
+}: {
+  products: Product[];
+  onProductsChange: (next: Product[]) => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
+  const [error, setError] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newCategory, setNewCategory] = useState<Category>("Meals");
+  const [newPrice, setNewPrice] = useState("");
+  const [newSubItem, setNewSubItem] = useState("");
+  const [subInputs, setSubInputs] = useState<Record<string, string>>({});
 
-function EditPriceScreen() {
+  const unlock = () => {
+    if (password.trim() === "1234" || password.trim().toLowerCase() === "admin123") {
+      setUnlocked(true);
+      setError("");
+      return;
+    }
+    setError("Invalid admin password");
+  };
+
+  const updateProduct = (id: string, changes: Partial<Product>) => {
+    onProductsChange(products.map(item => item.id === id ? { ...item, ...changes } : item));
+  };
+
+  const addSubItem = (id: string) => {
+    const value = (subInputs[id] || "").trim();
+    if (!value) return;
+    onProductsChange(products.map(item => (
+      item.id === id ? { ...item, subItems: [...(item.subItems ?? []), value] } : item
+    )));
+    setSubInputs(inputs => ({ ...inputs, [id]: "" }));
+  };
+
+  const addNewProduct = () => {
+    const name = newName.trim();
+    const price = Number(newPrice);
+    if (!name || !Number.isFinite(price) || price <= 0) {
+      setError("Enter item name and valid price");
+      return;
+    }
+    const nextProduct: Product = {
+      id: String(Date.now()),
+      name,
+      price,
+      category: newCategory,
+      subItems: newSubItem.trim() ? [newSubItem.trim()] : undefined,
+      image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80"
+    };
+    onProductsChange([...products, nextProduct]);
+    setNewName("");
+    setNewPrice("");
+    setNewSubItem("");
+    setError("");
+  };
+
+  if (!unlocked) {
+    return (
+      <View style={styles.formCard}>
+        <Text style={styles.summaryTitle}>Admin Password</Text>
+        <TextInput
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+          placeholder="Enter admin password"
+          placeholderTextColor="#8a94a6"
+          style={styles.realInput}
+        />
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+        <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={unlock}>
+          <Text style={styles.primaryActionText}>Unlock Items</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.optionStack}>
-      <SearchBar />
-      {products.slice(0, 4).map(item => (
-        <View key={item.id} style={styles.listCard}>
-          <View>
-            <Text style={styles.listTitle}>{item.name}</Text>
-            <Text style={styles.listSub}>{item.category}</Text>
+      <View style={styles.formCard}>
+        <Text style={styles.summaryTitle}>Add Item</Text>
+        <TextInput value={newName} onChangeText={setNewName} placeholder="Item name" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <View style={styles.categoryPicker}>
+          {itemCategories.map(category => (
+            <TouchableOpacity
+              key={category}
+              activeOpacity={0.85}
+              onPress={() => setNewCategory(category)}
+              style={[styles.smallChip, newCategory === category && styles.smallChipActive]}
+            >
+              <Text style={[styles.smallChipText, newCategory === category && styles.smallChipTextActive]}>{category}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TextInput value={newPrice} onChangeText={setNewPrice} keyboardType="numeric" placeholder="Price" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <TextInput value={newSubItem} onChangeText={setNewSubItem} placeholder="Sub item optional" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+        <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={addNewProduct}>
+          <Text style={styles.primaryActionText}>Add Item</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.managerHeader}>
+        <Text style={styles.summaryTitle}>Existing Items</Text>
+        <Text style={styles.managerCount}>{products.length} items</Text>
+      </View>
+
+      {products.map(item => (
+        <View key={item.id} style={styles.itemManageCard}>
+          <View style={styles.itemManageTop}>
+            <Image source={{ uri: item.image }} style={styles.manageImage} />
+            <View style={styles.manageInfo}>
+              <Text style={styles.listTitle}>{item.name}</Text>
+              <Text style={styles.listSub}>{item.category}</Text>
+            </View>
+            <View style={styles.editPriceBox}>
+              <Text style={styles.editPriceLabel}>Edit Price</Text>
+              <TextInput
+                value={String(item.price)}
+                onChangeText={value => updateProduct(item.id, { price: Number(value) || 0 })}
+                keyboardType="numeric"
+                style={styles.priceInput}
+              />
+            </View>
           </View>
-          <View style={styles.priceBox}><Text style={styles.priceBoxText}>Rs {item.price}</Text></View>
+
+          <View style={styles.subItemsWrap}>
+            {(item.subItems && item.subItems.length > 0) ? item.subItems.map(subItem => (
+              <View key={subItem} style={styles.subPill}>
+                <Text style={styles.subPillText}>{subItem}</Text>
+              </View>
+            )) : (
+              <Text style={styles.listSub}>Empty</Text>
+            )}
+          </View>
+
+          <View style={styles.addSubRow}>
+            <TextInput
+              value={subInputs[item.id] || ""}
+              onChangeText={value => setSubInputs(inputs => ({ ...inputs, [item.id]: value }))}
+              placeholder="Add sub item"
+              placeholderTextColor="#8a94a6"
+              style={styles.subInput}
+            />
+            <TouchableOpacity activeOpacity={0.86} style={styles.addSubButton} onPress={() => addSubItem(item.id)}>
+              <Text style={styles.addSubButtonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ))}
-      <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Save Changes</Text></TouchableOpacity>
     </View>
   );
 }
 
-function StockAvailabilityScreen() {
+function StockAvailabilityScreen({ products }: { products: Product[] }) {
   return (
     <View style={styles.optionStack}>
       <SearchBar />
@@ -704,15 +1029,26 @@ function CartPanel({ count, total, onClear }: { count: number; total: number; on
   );
 }
 
-function BottomNav() {
-  const items = ["Home", "Orders", "Reports", "Settings"];
+function BottomNav({ activeOption, onSelect }: { activeOption: DrawerOption; onSelect: (item: BottomNavItem) => void }) {
+  const items: BottomNavItem[] = ["Home", "Orders", "Reports", "Settings"];
+  const activeItem: Record<BottomNavItem, boolean> = {
+    Home: activeOption === "Dashboard" || activeOption === "New Billing",
+    Orders: activeOption === "Orders",
+    Reports: activeOption === "Reports",
+    Settings: activeOption === "Settings"
+  };
 
   return (
     <View style={styles.bottomNav}>
       {items.map(item => {
-        const active = item === "Home";
+        const active = activeItem[item];
         return (
-          <TouchableOpacity key={item} activeOpacity={0.85} style={[styles.navItem, active && styles.navActive]}>
+          <TouchableOpacity
+            key={item}
+            activeOpacity={0.85}
+            onPress={() => onSelect(item)}
+            style={[styles.navItem, active && styles.navActive]}
+          >
             <Text style={[styles.navText, active && styles.navActiveText]}>{item}</Text>
           </TouchableOpacity>
         );
@@ -893,6 +1229,135 @@ const styles = StyleSheet.create({
   },
   textBlue: {
     color: "#165dcc"
+  },
+  reportFilterCard: {
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    shadowColor: "#101828",
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2
+  },
+  dateRow: {
+    flexDirection: "row",
+    gap: 10
+  },
+  dateInputWrap: {
+    flex: 1
+  },
+  dateLabel: {
+    marginBottom: 6,
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  dateInput: {
+    minHeight: 44,
+    borderRadius: 14,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: LINE,
+    color: "#111827",
+    fontSize: 13,
+    fontWeight: "900",
+    paddingHorizontal: 12
+  },
+  quickRangeRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  quickRangeChip: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 13,
+    backgroundColor: "#edf4ff",
+    borderWidth: 1,
+    borderColor: "#d7e4f6",
+    justifyContent: "center"
+  },
+  quickRangeText: {
+    color: NAVY,
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  reportGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10
+  },
+  reportMetric: {
+    flexGrow: 1,
+    flexBasis: "47%",
+    minHeight: 76,
+    borderRadius: 16,
+    padding: 13,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    justifyContent: "center"
+  },
+  reportMetricValue: {
+    color: NAVY,
+    fontSize: 19,
+    fontWeight: "900"
+  },
+  reportMetricLabel: {
+    marginTop: 5,
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  reportSection: {
+    borderRadius: 18,
+    padding: 14,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    shadowColor: "#101828",
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 2
+  },
+  reportRows: {
+    gap: 9
+  },
+  reportRow: {
+    minHeight: 52,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#eef2f7",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  itemReportRow: {
+    minHeight: 62,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#eef2f7",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  itemReportName: {
+    flex: 1,
+    paddingRight: 10
+  },
+  itemReportMoney: {
+    alignItems: "flex-end"
   },
   tabs: {
     flexDirection: "row",
@@ -1176,6 +1641,157 @@ const styles = StyleSheet.create({
     color: MUTED,
     fontSize: 14,
     fontWeight: "800"
+  },
+  realInput: {
+    minHeight: 52,
+    borderRadius: 16,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: LINE,
+    color: "#111827",
+    fontSize: 14,
+    fontWeight: "800",
+    paddingHorizontal: 14
+  },
+  errorText: {
+    color: "#b42318",
+    fontSize: 13,
+    fontWeight: "800"
+  },
+  categoryPicker: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  smallChip: {
+    minHeight: 38,
+    paddingHorizontal: 13,
+    borderRadius: 14,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  smallChipActive: {
+    backgroundColor: "#edf4ff",
+    borderColor: "#c8d8ef"
+  },
+  smallChipText: {
+    color: "#111827",
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  smallChipTextActive: {
+    color: NAVY
+  },
+  managerHeader: {
+    marginTop: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  managerCount: {
+    color: MUTED,
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  itemManageCard: {
+    borderRadius: 18,
+    padding: 12,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    shadowColor: "#101828",
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2
+  },
+  itemManageTop: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+  manageImage: {
+    width: 52,
+    height: 52,
+    borderRadius: 13,
+    backgroundColor: "#eef2f7"
+  },
+  manageInfo: {
+    flex: 1,
+    marginLeft: 11
+  },
+  editPriceBox: {
+    width: 92
+  },
+  editPriceLabel: {
+    marginBottom: 5,
+    color: MUTED,
+    fontSize: 11,
+    fontWeight: "900"
+  },
+  priceInput: {
+    minHeight: 38,
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: LINE,
+    color: NAVY,
+    fontSize: 14,
+    fontWeight: "900",
+    paddingHorizontal: 10
+  },
+  subItemsWrap: {
+    marginTop: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 7
+  },
+  subPill: {
+    minHeight: 30,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: "#edf4ff",
+    borderWidth: 1,
+    borderColor: "#d7e4f6",
+    justifyContent: "center"
+  },
+  subPillText: {
+    color: NAVY,
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  addSubRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8
+  },
+  subInput: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 14,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: LINE,
+    color: "#111827",
+    fontSize: 13,
+    fontWeight: "800",
+    paddingHorizontal: 12
+  },
+  addSubButton: {
+    minWidth: 62,
+    minHeight: 42,
+    borderRadius: 14,
+    backgroundColor: NAVY,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  addSubButtonText: {
+    color: CARD,
+    fontSize: 13,
+    fontWeight: "900"
   },
   priceBox: {
     minWidth: 78,
