@@ -327,6 +327,9 @@ const printerSchema = new mongoose.Schema({
 const marketingUserSchema = new mongoose.Schema({
   employeeId: { type: String, unique: true, index: true },
   name: String,
+  mobile: String,
+  aadhaarNumber: String,
+  panNumber: String,
   password: String,
   role: { type: String, enum: ["marketing", "super_admin"], default: "marketing" },
   active: { type: Boolean, default: true },
@@ -429,6 +432,10 @@ function normalizeMobile(value) {
   return String(value || "").trim();
 }
 
+function normalizeCanteenId(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
 function publicUser(user) {
   if (!user) return null;
   return {
@@ -464,6 +471,9 @@ function publicMarketingUser(user) {
     id: String(user._id || user.employeeId),
     employeeId: user.employeeId,
     name: user.name,
+    mobile: user.mobile || "",
+    aadhaarNumber: user.aadhaarNumber || "",
+    panNumber: user.panNumber || "",
     role: user.role,
     active: user.active !== false,
     target: Number(user.target || 0)
@@ -505,6 +515,21 @@ function requireSuperAdmin(req, res, next) {
   });
 }
 
+function canteenUserFromRequest(req) {
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
+  if (!token) return null;
+  try {
+    const user = process.env.JWT_SECRET
+      ? jwt.verify(token, process.env.JWT_SECRET)
+      : decodeLocalToken(token.replace(/^local\./, ""));
+    if (user.authType !== "canteen") return null;
+    if (!process.env.JWT_SECRET && Number(user.exp || 0) < Date.now()) return null;
+    return user;
+  } catch {
+    return null;
+  }
+}
+
 function requireAdmin(req, res, next) {
   const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   if (!token) return res.status(401).json({ success: false, message: "Login token missing" });
@@ -528,16 +553,16 @@ function requireAdmin(req, res, next) {
 async function seedDefaults() {
   for (const user of defaultUsers) {
     await User.findOneAndUpdate(
-      { mobile: user.mobile },
-      { $setOnInsert: user },
+      { canteenId: user.canteenId || DEFAULT_CANTEEN_ID, mobile: user.mobile },
+      { $setOnInsert: { ...user, canteenId: user.canteenId || DEFAULT_CANTEEN_ID } },
       { upsert: true }
     );
   }
   if (!await MenuItem.countDocuments()) await MenuItem.insertMany(defaultMenuItems);
   if (!await StockItem.countDocuments()) await StockItem.insertMany(defaultStockItems);
   await ReportSetting.findOneAndUpdate(
-    { key: "app" },
-    { $setOnInsert: defaultSettings },
+    { key: "app", canteenId: DEFAULT_CANTEEN_ID },
+    { $setOnInsert: { ...defaultSettings, canteenId: DEFAULT_CANTEEN_ID } },
     { upsert: true }
   );
   for (const user of defaultMarketingUsers) {
@@ -587,10 +612,15 @@ function modelToPlain(doc) {
   return doc && typeof doc.toObject === "function" ? doc.toObject() : doc;
 }
 
-async function allMenuItems() {
+async function allMenuItems(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   const byOrder = (a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0);
-  if (!mongoReady) return memory.menuItems.slice().sort(byOrder);
-  return (await MenuItem.find({}).lean()).sort(byOrder);
+  if (!mongoReady) {
+    return memory.menuItems
+      .filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId)
+      .sort(byOrder);
+  }
+  return (await MenuItem.find({ canteenId: targetCanteenId }).lean()).sort(byOrder);
 }
 
 function normalizeSubItems(value) {
@@ -613,9 +643,11 @@ function normalizeSubItems(value) {
 }
 
 async function saveMenuItem(payload) {
-  const current = await allMenuItems();
+  const canteenId = normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID);
+  const current = await allMenuItems(canteenId);
   const item = {
     id: payload.id ? Number(payload.id) : nextId(current),
+    canteenId,
     name: String(payload.name || "").trim(),
     price: Number(payload.price || 0),
     category: payload.category || "Snacks",
@@ -627,36 +659,61 @@ async function saveMenuItem(payload) {
   if (!item.name) throw new Error("Product name is required");
 
   if (!mongoReady) {
-    const existing = memory.menuItems.find(row => Number(row.id) === Number(item.id));
+    const existing = memory.menuItems.find(row =>
+      normalizeCanteenId(row.canteenId || DEFAULT_CANTEEN_ID) === canteenId &&
+      Number(row.id) === Number(item.id)
+    );
     if (existing) Object.assign(existing, item);
     else memory.menuItems.push(item);
     return item;
   }
 
   return modelToPlain(await MenuItem.findOneAndUpdate(
-    { id: item.id },
+    { canteenId, id: item.id },
     { $set: item },
     { new: true, upsert: true }
   ));
 }
 
-async function deleteMenuItem(id) {
+async function deleteMenuItem(id, canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   if (!mongoReady) {
-    memory.menuItems = memory.menuItems.filter(item => Number(item.id) !== Number(id));
+    memory.menuItems = memory.menuItems.filter(item =>
+      normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) !== targetCanteenId ||
+      Number(item.id) !== Number(id)
+    );
     return;
   }
-  await MenuItem.deleteOne({ id: Number(id) });
+  await MenuItem.deleteOne({ canteenId: targetCanteenId, id: Number(id) });
 }
 
-async function allStockItems() {
-  if (!mongoReady) return memory.stockItems;
-  return StockItem.find({}).sort({ id: 1, createdAt: 1 }).lean();
+async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen") {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!(await allMenuItems(targetCanteenId)).length) {
+    for (const item of defaultMenuItems) {
+      await saveMenuItem({ ...item, canteenId: targetCanteenId });
+    }
+  }
+  if (!(await allStockItems(targetCanteenId)).length) {
+    for (const item of defaultStockItems) {
+      await saveStockItem({ ...item, canteenId: targetCanteenId });
+    }
+  }
+  await saveSettings({ ...defaultSettings, canteenName }, targetCanteenId);
+}
+
+async function allStockItems(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!mongoReady) return memory.stockItems.filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId);
+  return StockItem.find({ canteenId: targetCanteenId }).sort({ id: 1, createdAt: 1 }).lean();
 }
 
 async function saveStockItem(payload) {
-  const current = await allStockItems();
+  const canteenId = normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID);
+  const current = await allStockItems(canteenId);
   const item = {
     id: payload.id ? Number(payload.id) : nextId(current),
+    canteenId,
     item: String(payload.item || "").trim(),
     stock: Number(payload.stock || 0),
     unit: payload.unit || "Unit",
@@ -666,28 +723,34 @@ async function saveStockItem(payload) {
   if (!item.item) throw new Error("Stock item is required");
 
   if (!mongoReady) {
-    const existing = memory.stockItems.find(row => Number(row.id) === Number(item.id));
+    const existing = memory.stockItems.find(row =>
+      normalizeCanteenId(row.canteenId || DEFAULT_CANTEEN_ID) === canteenId &&
+      Number(row.id) === Number(item.id)
+    );
     if (existing) Object.assign(existing, item);
     else memory.stockItems.push(item);
     return item;
   }
 
   return modelToPlain(await StockItem.findOneAndUpdate(
-    { id: item.id },
+    { canteenId, id: item.id },
     { $set: item },
     { new: true, upsert: true }
   ));
 }
 
-async function allExpenses() {
-  if (!mongoReady) return memory.expenses;
-  return Expense.find({}).sort({ createdAt: 1 }).lean();
+async function allExpenses(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!mongoReady) return memory.expenses.filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId);
+  return Expense.find({ canteenId: targetCanteenId }).sort({ createdAt: 1 }).lean();
 }
 
 async function saveExpense(payload) {
-  const current = await allExpenses();
+  const canteenId = normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID);
+  const current = await allExpenses(canteenId);
   const expense = {
     id: payload.id ? Number(payload.id) : nextId(current),
+    canteenId,
     title: String(payload.title || "").trim(),
     amount: Number(payload.amount || 0),
     category: payload.category || "General",
@@ -697,23 +760,32 @@ async function saveExpense(payload) {
   if (!expense.title) throw new Error("Expense title is required");
 
   if (!mongoReady) {
-    const existing = memory.expenses.find(row => Number(row.id) === Number(expense.id));
+    const existing = memory.expenses.find(row =>
+      normalizeCanteenId(row.canteenId || DEFAULT_CANTEEN_ID) === canteenId &&
+      Number(row.id) === Number(expense.id)
+    );
     if (existing) Object.assign(existing, expense);
     else memory.expenses.push(expense);
     return expense;
   }
 
   return modelToPlain(await Expense.findOneAndUpdate(
-    { id: expense.id },
+    { canteenId, id: expense.id },
     { $set: expense },
     { new: true, upsert: true }
   ));
 }
 
-async function getSettings() {
-  if (!mongoReady) return memory.settings;
-  const stored = await ReportSetting.findOne({ key: "app" }).lean();
-  return { ...defaultSettings, ...(stored || {}) };
+async function getSettings(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!mongoReady) {
+    return { ...defaultSettings, ...memory.settings, canteenId: targetCanteenId };
+  }
+  const stored = await ReportSetting.findOne({ key: "app", canteenId: targetCanteenId }).lean();
+  const legacy = !stored && targetCanteenId === DEFAULT_CANTEEN_ID
+    ? await ReportSetting.findOne({ key: "app", canteenId: { $exists: false } }).lean()
+    : null;
+  return { ...defaultSettings, canteenId: targetCanteenId, ...(stored || legacy || {}) };
 }
 
 function parseReportTime(value) {
@@ -732,7 +804,8 @@ function parseReportTime(value) {
   return `${String(hour).padStart(2, "0")}:${minute}`;
 }
 
-async function saveSettings(payload) {
+async function saveSettings(payload, canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || payload.canteenId || DEFAULT_CANTEEN_ID);
   const next = { ...payload };
   if (Object.prototype.hasOwnProperty.call(next, "autoReport")) {
     next.autoReport = next.autoReport === true || next.autoReport === "true";
@@ -742,16 +815,16 @@ async function saveSettings(payload) {
   if (next.reportPhone && !next.adminWhatsAppNumber) next.adminWhatsAppNumber = next.reportPhone;
 
   if (!mongoReady) {
-    memory.settings = { ...memory.settings, ...next };
+    memory.settings = { ...memory.settings, ...next, canteenId: targetCanteenId };
     return memory.settings;
   }
 
   const saved = await ReportSetting.findOneAndUpdate(
-    { key: "app" },
-    { $set: { ...next, key: "app" } },
+    { key: "app", canteenId: targetCanteenId },
+    { $set: { ...next, key: "app", canteenId: targetCanteenId } },
     { new: true, upsert: true }
   ).lean();
-  return { ...defaultSettings, ...saved };
+  return { ...defaultSettings, ...saved, canteenId: targetCanteenId };
 }
 
 async function allUsers() {
@@ -762,7 +835,7 @@ async function allUsers() {
 async function saveUser(payload) {
   const user = {
     id: payload.id ? Number(payload.id) : nextId(await allUsers()),
-    canteenId: payload.canteenId || DEFAULT_CANTEEN_ID,
+    canteenId: normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID),
     name: payload.name || "User",
     mobile: normalizeMobile(payload.mobile),
     password: String(payload.password || "1234"),
@@ -774,31 +847,39 @@ async function saveUser(payload) {
   if (!user.mobile) throw new Error("Mobile is required");
 
   if (!mongoReady) {
-    const existing = memory.users.find(row => row.mobile === user.mobile);
+    const existing = memory.users.find(row =>
+      normalizeCanteenId(row.canteenId || DEFAULT_CANTEEN_ID) === user.canteenId &&
+      row.mobile === user.mobile
+    );
     if (existing) Object.assign(existing, user);
     else memory.users.push(user);
     return user;
   }
 
   return modelToPlain(await User.findOneAndUpdate(
-    { mobile: user.mobile },
+    { canteenId: user.canteenId, mobile: user.mobile },
     { $set: user },
     { new: true, upsert: true }
   ));
 }
 
-async function deleteUser(mobile) {
+async function deleteUser(mobile, canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   if (!mongoReady) {
-    memory.users = memory.users.filter(user => user.mobile !== mobile);
+    memory.users = memory.users.filter(user =>
+      normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) !== targetCanteenId ||
+      user.mobile !== mobile
+    );
     return;
   }
-  await User.deleteOne({ mobile });
+  await User.deleteOne({ canteenId: targetCanteenId, mobile });
 }
 
 function makeOrder(payload) {
   const total = Number(payload.total || 0);
   const paymentBreakup = normalizePaymentBreakup(payload.paymentBreakup, payload.payment, total);
   return {
+    canteenId: normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID),
     id: payload.id || Date.now(),
     clientOrderId: payload.clientOrderId,
     time: payload.time || new Date().toLocaleString("en-IN", { timeZone: INDIA_TZ }),
@@ -834,7 +915,8 @@ async function saveOrder(payload) {
 
   if (!mongoReady) {
     const exists = memory.orders.find(row =>
-      (order.clientOrderId && row.clientOrderId === order.clientOrderId) || Number(row.id) === Number(order.id)
+      normalizeCanteenId(row.canteenId || DEFAULT_CANTEEN_ID) === order.canteenId &&
+      ((order.clientOrderId && row.clientOrderId === order.clientOrderId) || Number(row.id) === Number(order.id))
     );
     if (exists) return exists;
     memory.orders.push(order);
@@ -842,7 +924,9 @@ async function saveOrder(payload) {
     return order;
   }
 
-  const filter = order.clientOrderId ? { clientOrderId: order.clientOrderId } : { id: order.id };
+  const filter = order.clientOrderId
+    ? { canteenId: order.canteenId, clientOrderId: order.clientOrderId }
+    : { canteenId: order.canteenId, id: order.id };
   const saved = await Order.findOneAndUpdate(
     filter,
     { $setOnInsert: order },
@@ -850,7 +934,9 @@ async function saveOrder(payload) {
   ).lean();
 
   await Sale.findOneAndUpdate(
-    order.clientOrderId ? { clientOrderId: order.clientOrderId } : { orderId: order.id },
+    order.clientOrderId
+      ? { canteenId: order.canteenId, clientOrderId: order.clientOrderId }
+      : { canteenId: order.canteenId, orderId: order.id },
     { $setOnInsert: { ...order, orderId: order.id } },
     { new: true, upsert: true }
   );
@@ -858,21 +944,24 @@ async function saveOrder(payload) {
   return saved;
 }
 
-async function allOrders() {
-  if (!mongoReady) return memory.orders;
-  return Order.find({}).sort({ createdAt: 1 }).lean();
+async function allOrders(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!mongoReady) return memory.orders.filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId);
+  return Order.find({ canteenId: targetCanteenId }).sort({ createdAt: 1 }).lean();
 }
 
-async function clearOrders() {
+async function clearOrders(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   if (!mongoReady) {
-    memory.orders = [];
-    memory.sales = [];
+    memory.orders = memory.orders.filter(order => normalizeCanteenId(order.canteenId || DEFAULT_CANTEEN_ID) !== targetCanteenId);
+    memory.sales = memory.sales.filter(sale => normalizeCanteenId(sale.canteenId || DEFAULT_CANTEEN_ID) !== targetCanteenId);
     return;
   }
-  await Promise.all([Order.deleteMany({}), Sale.deleteMany({})]);
+  await Promise.all([Order.deleteMany({ canteenId: targetCanteenId }), Sale.deleteMany({ canteenId: targetCanteenId })]);
 }
 
-async function deleteOrder(id) {
+async function deleteOrder(id, canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   const key = String(id || "").trim();
   if (!key) throw new Error("Order id is required");
   const numericId = Number(key);
@@ -880,17 +969,19 @@ async function deleteOrder(id) {
 
   if (!mongoReady) {
     memory.orders = memory.orders.filter(order =>
-      String(order.clientOrderId || "") !== key && Number(order.id) !== numericMatch
+      normalizeCanteenId(order.canteenId || DEFAULT_CANTEEN_ID) !== targetCanteenId ||
+      (String(order.clientOrderId || "") !== key && Number(order.id) !== numericMatch)
     );
     memory.sales = memory.sales.filter(sale =>
-      String(sale.clientOrderId || "") !== key && Number(sale.orderId) !== numericMatch
+      normalizeCanteenId(sale.canteenId || DEFAULT_CANTEEN_ID) !== targetCanteenId ||
+      (String(sale.clientOrderId || "") !== key && Number(sale.orderId) !== numericMatch)
     );
     return;
   }
 
   await Promise.all([
-    Order.deleteOne({ $or: [{ clientOrderId: key }, { id: numericMatch }] }),
-    Sale.deleteOne({ $or: [{ clientOrderId: key }, { orderId: numericMatch }] })
+    Order.deleteOne({ canteenId: targetCanteenId, $or: [{ clientOrderId: key }, { id: numericMatch }] }),
+    Sale.deleteOne({ canteenId: targetCanteenId, $or: [{ clientOrderId: key }, { orderId: numericMatch }] })
   ]);
 }
 
@@ -980,10 +1071,10 @@ function userSalesFromOrders(orders) {
   return [...rows.values()].sort((a, b) => b.total - a.total);
 }
 
-async function reportData(reportType = "daily") {
-  const currentOrders = reportOrdersForType(await allOrders(), reportType);
-  const currentExpenses = await allExpenses();
-  const currentStock = await allStockItems();
+async function reportData(reportType = "daily", canteenId = DEFAULT_CANTEEN_ID) {
+  const currentOrders = reportOrdersForType(await allOrders(canteenId), reportType);
+  const currentExpenses = await allExpenses(canteenId);
+  const currentStock = await allStockItems(canteenId);
   const totals = paymentTotals(currentOrders);
   const totalExpenses = currentExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
   return {
@@ -998,9 +1089,9 @@ async function reportData(reportType = "daily") {
   };
 }
 
-async function buildWhatsAppReport(reportType = "daily") {
-  const data = await reportData(reportType);
-  const appSettings = await getSettings();
+async function buildWhatsAppReport(reportType = "daily", canteenId = DEFAULT_CANTEEN_ID) {
+  const data = await reportData(reportType, canteenId);
+  const appSettings = await getSettings(canteenId);
   const titleType = reportType[0].toUpperCase() + reportType.slice(1);
   const topLines = data.topItems.slice(0, 3).length
     ? data.topItems.slice(0, 3).map((item, index) => `${index + 1}. ${item.name} - ${item.qty}`).join("\n")
@@ -1053,6 +1144,46 @@ async function allWhatsappLogs() {
 async function allMarketingUsers() {
   if (!mongoReady) return memory.marketingUsers;
   return MarketingUser.find({}).sort({ createdAt: 1 }).lean();
+}
+
+async function saveMarketingUser(payload, actor) {
+  const current = await allMarketingUsers();
+  const employee = {
+    employeeId: String(payload.employeeId || "").trim().toUpperCase(),
+    name: String(payload.name || "").trim(),
+    mobile: normalizeMobile(payload.mobile),
+    aadhaarNumber: String(payload.aadhaarNumber || "").trim(),
+    panNumber: String(payload.panNumber || "").trim().toUpperCase(),
+    password: String(payload.password || "1234"),
+    role: payload.role === "super_admin" ? "super_admin" : "marketing",
+    active: payload.active !== false,
+    target: Number(payload.target || 0),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (!employee.employeeId || !employee.name) throw new Error("Employee ID and name are required");
+  if (!/^[A-Z0-9_-]{3,24}$/.test(employee.employeeId)) throw new Error("Employee ID must be 3-24 letters or numbers");
+  if (employee.aadhaarNumber && !/^\d{12}$/.test(employee.aadhaarNumber)) throw new Error("Aadhaar number must be 12 digits");
+  if (employee.panNumber && !/^[A-Z]{5}\d{4}[A-Z]$/.test(employee.panNumber)) throw new Error("PAN number format is invalid");
+
+  if (!mongoReady) {
+    const existing = memory.marketingUsers.find(item => String(item.employeeId).toUpperCase() === employee.employeeId);
+    if (existing) Object.assign(existing, employee);
+    else memory.marketingUsers.push({ ...employee, createdAt: new Date().toISOString() });
+  } else {
+    await MarketingUser.findOneAndUpdate(
+      { employeeId: employee.employeeId },
+      { $set: employee, $setOnInsert: { createdAt: new Date().toISOString() } },
+      { new: true, upsert: true }
+    );
+  }
+
+  await addMarketingActivity({
+    type: "employee",
+    text: `${employee.name} employee profile saved`,
+    actor: actor?.name || "Super Admin"
+  });
+  return (await allMarketingUsers()).find(item => String(item.employeeId).toUpperCase() === employee.employeeId);
 }
 
 async function allMarketingCanteens() {
@@ -1228,6 +1359,7 @@ async function activateApprovedCanteen(canteen, actor) {
     active: true,
     mustChangePassword: true
   });
+  await seedCanteenDefaults(credentials.activatedCanteenId, canteen.canteenName);
 
   return updateMarketingCanteen(canteen.id, credentials, actor);
 }
@@ -1287,12 +1419,12 @@ function marketingSummary(canteens, users, activities, payments = [], supportTic
   };
 }
 
-async function sendReportNow(reason = "manual") {
-  const appSettings = await getSettings();
+async function sendReportNow(reason = "manual", canteenId = DEFAULT_CANTEEN_ID) {
+  const appSettings = await getSettings(canteenId);
   const to = appSettings.adminWhatsAppNumber || appSettings.reportPhone;
   if (!to) throw new Error("Missing admin WhatsApp number");
 
-  const message = await buildWhatsAppReport(appSettings.reportType || "daily");
+  const message = await buildWhatsAppReport(appSettings.reportType || "daily", canteenId);
   const meta = await sendWhatsAppText(to, message);
   await addWhatsAppLog({ success: true, reason, to, message, meta });
   return { to, message, meta };
@@ -1325,12 +1457,12 @@ async function checkScheduledWhatsAppReport() {
   }
 }
 
-async function dashboardData() {
-  const orders = await allOrders();
+async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
+  const orders = await allOrders(canteenId);
   const todayOrders = reportOrdersForType(orders, "daily");
-  const stock = await allStockItems();
-  const expenses = await allExpenses();
-  const products = await allMenuItems();
+  const stock = await allStockItems(canteenId);
+  const expenses = await allExpenses(canteenId);
+  const products = await allMenuItems(canteenId);
   const todayTotals = paymentTotals(todayOrders);
   const totalExpenses = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
@@ -1345,8 +1477,8 @@ async function dashboardData() {
     stock,
     expenses,
     products,
-    users: (await allUsers()).map(publicUser),
-    settings: await getSettings(),
+    users: (await allUsers()).filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === normalizeCanteenId(canteenId)).map(publicUser),
+    settings: await getSettings(canteenId),
     orders
   };
 }
@@ -1492,73 +1624,98 @@ app.get("/health", (req, res) => {
   res.json({ success: true, mongoReady, database: DB_NAME, mongoError });
 });
 
-app.get("/products", async (req, res) => res.json(await allMenuItems()));
+app.get("/products", async (req, res) => {
+  const authUser = canteenUserFromRequest(req);
+  res.json(await allMenuItems(authUser?.canteenId || DEFAULT_CANTEEN_ID));
+});
 
 app.get("/catalog/default-products", requireAdmin, async (req, res) => {
-  const liveIds = new Set((await allMenuItems()).map(item => Number(item.id)));
+  const liveIds = new Set((await allMenuItems(req.authUser.canteenId)).map(item => Number(item.id)));
   res.json(defaultCatalogItems.map(item => ({ ...item, active: liveIds.has(Number(item.id)) })));
 });
 
 app.post("/products", requireAdmin, async (req, res) => {
   try {
-    const product = await saveMenuItem(req.body);
-    res.json({ success: true, product, products: await allMenuItems() });
+    const product = await saveMenuItem({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
+    res.json({ success: true, product, products: await allMenuItems(req.authUser.canteenId) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
 });
 
 app.delete("/products/:id", requireAdmin, async (req, res) => {
-  await deleteMenuItem(req.params.id);
-  res.json({ success: true, products: await allMenuItems() });
+  await deleteMenuItem(req.params.id, req.authUser.canteenId);
+  res.json({ success: true, products: await allMenuItems(req.authUser.canteenId) });
 });
 
-app.get("/stock", async (req, res) => res.json(await allStockItems()));
+app.get("/stock", async (req, res) => {
+  const authUser = canteenUserFromRequest(req);
+  res.json(await allStockItems(authUser?.canteenId || DEFAULT_CANTEEN_ID));
+});
 
 app.post("/stock", requireAdmin, async (req, res) => {
   try {
-    const item = await saveStockItem(req.body);
-    res.json({ success: true, item, stock: await allStockItems() });
+    const item = await saveStockItem({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
+    res.json({ success: true, item, stock: await allStockItems(req.authUser.canteenId) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
 });
 
-app.get("/expenses", requireAdmin, async (req, res) => res.json(await allExpenses()));
+app.get("/expenses", requireAdmin, async (req, res) => res.json(await allExpenses(req.authUser.canteenId)));
 
 app.post("/expenses", requireAdmin, async (req, res) => {
   try {
-    const expense = await saveExpense(req.body);
-    res.json({ success: true, expense, expenses: await allExpenses() });
+    const expense = await saveExpense({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
+    res.json({ success: true, expense, expenses: await allExpenses(req.authUser.canteenId) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
 });
 
-app.get("/settings", async (req, res) => res.json(await getSettings()));
+app.get("/settings", async (req, res) => {
+  const authUser = canteenUserFromRequest(req);
+  res.json(await getSettings(authUser?.canteenId || DEFAULT_CANTEEN_ID));
+});
 
 app.post("/settings", requireAdmin, async (req, res) => {
   try {
-    res.json({ success: true, settings: await saveSettings(req.body) });
+    res.json({ success: true, settings: await saveSettings(req.body, req.authUser.canteenId) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
 app.post("/login", async (req, res) => {
-  const mobile = normalizeMobile(req.body.mobile);
+  const loginId = normalizeMobile(req.body.loginId || req.body.mobile || req.body.restaurantId || req.body.canteenId);
+  const mobile = normalizeMobile(req.body.mobile || req.body.loginId);
+  const canteenHint = normalizeCanteenId(req.body.canteenId || req.body.restaurantId || "");
+  const loginAsCanteenId = normalizeCanteenId(loginId);
   const password = String(req.body.password || "");
-  const user = (await allUsers()).find(item =>
-    item.active !== false &&
-    String(item.mobile) === mobile &&
-    String(item.password) === password
-  );
+  const users = (await allUsers()).filter(item => item.active !== false && String(item.password) === password);
+  const matches = users.filter(item => {
+    const itemCanteenId = normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID);
+    const itemMobile = normalizeMobile(item.mobile);
+    const canteenOk = !canteenHint || itemCanteenId === canteenHint;
+    return canteenOk && (itemMobile === loginId || itemMobile === mobile || itemCanteenId === loginAsCanteenId);
+  });
+
+  const mobileMatches = matches.filter(item => normalizeMobile(item.mobile) === loginId || normalizeMobile(item.mobile) === mobile);
+  const uniqueCanteens = new Set(mobileMatches.map(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID)));
+  if (!canteenHint && mobileMatches.length > 1 && uniqueCanteens.size > 1 && loginAsCanteenId !== normalizeCanteenId(matches[0]?.canteenId)) {
+    return res.status(409).json({ success: false, message: "Restaurant ID required for this mobile number" });
+  }
+
+  const user = matches.find(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === loginAsCanteenId) || matches[0];
 
   if (!user) return res.status(401).json({ success: false, message: "Invalid credentials" });
-  res.json({ success: true, user: publicUser(user), token: signToken(user), settings: await getSettings() });
+  res.json({ success: true, user: publicUser(user), token: signToken(user), settings: await getSettings(user.canteenId) });
 });
 
-app.get("/users", requireAdmin, async (req, res) => res.json((await allUsers()).map(publicUser)));
+app.get("/users", requireAdmin, async (req, res) => {
+  const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
+  res.json((await allUsers()).filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === canteenId).map(publicUser));
+});
 
 app.post("/users", requireAdmin, async (req, res) => {
   try {
@@ -1574,13 +1731,14 @@ app.post("/users", requireAdmin, async (req, res) => {
 });
 
 app.delete("/users/:mobile", requireAdmin, async (req, res) => {
-  await deleteUser(req.params.mobile);
+  await deleteUser(req.params.mobile, req.authUser.canteenId);
   res.json({ success: true });
 });
 
 app.post("/orders", async (req, res) => {
   try {
-    const order = await saveOrder(req.body);
+    const authUser = canteenUserFromRequest(req);
+    const order = await saveOrder({ ...req.body, canteenId: authUser?.canteenId || req.body.canteenId || DEFAULT_CANTEEN_ID });
     io.emit("new-order", order);
     res.json({ success: true, order });
   } catch (error) {
@@ -1590,10 +1748,11 @@ app.post("/orders", async (req, res) => {
 
 app.post("/orders/sync", async (req, res) => {
   try {
+    const authUser = canteenUserFromRequest(req);
     const incoming = Array.isArray(req.body.orders) ? req.body.orders : [];
     const synced = [];
     for (const payload of incoming) {
-      const order = await saveOrder(payload);
+      const order = await saveOrder({ ...payload, canteenId: authUser?.canteenId || payload.canteenId || DEFAULT_CANTEEN_ID });
       synced.push(order.clientOrderId || order.id);
     }
     if (synced.length) io.emit("orders-synced", synced);
@@ -1603,21 +1762,21 @@ app.post("/orders/sync", async (req, res) => {
   }
 });
 
-app.get("/orders", requireAdmin, async (req, res) => res.json(await allOrders()));
+app.get("/orders", requireAdmin, async (req, res) => res.json(await allOrders(req.authUser.canteenId)));
 
 app.delete("/orders", requireAdmin, async (req, res) => {
-  await clearOrders();
+  await clearOrders(req.authUser.canteenId);
   io.emit("orders-cleared");
   res.json({ success: true });
 });
 
 app.delete("/orders/:id", requireAdmin, async (req, res) => {
-  await deleteOrder(req.params.id);
+  await deleteOrder(req.params.id, req.authUser.canteenId);
   io.emit("order-deleted", req.params.id);
   res.json({ success: true });
 });
 
-app.get("/dashboard", requireAdmin, async (req, res) => res.json(await dashboardData()));
+app.get("/dashboard", requireAdmin, async (req, res) => res.json(await dashboardData(req.authUser.canteenId)));
 
 app.post("/marketing-api/login", async (req, res) => {
   const employeeId = String(req.body.employeeId || "").trim();
@@ -1660,6 +1819,15 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
       : activities.filter(item => canteens.some(canteen => Number(canteen.id) === Number(item.canteenId))),
     summary: marketingSummary(canteens, users, activities, payments, supportTickets)
   });
+});
+
+app.post("/marketing-api/users", requireSuperAdmin, async (req, res) => {
+  try {
+    const employee = await saveMarketingUser(req.body, req.marketingUser);
+    res.json({ success: true, user: publicMarketingUser(employee), users: (await allMarketingUsers()).map(publicMarketingUser) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 });
 
 app.post("/marketing-api/canteens", requireMarketingAuth, async (req, res) => {
@@ -1766,10 +1934,10 @@ app.post("/marketing-api/canteens/:id/printers", requireSuperAdmin, async (req, 
 
 app.post("/whatsapp/send-test-report", requireAdmin, async (req, res) => {
   try {
-    const result = await sendReportNow("manual");
+    const result = await sendReportNow("manual", req.authUser.canteenId);
     res.json({ success: true, to: result.to, message: result.message, meta: result.meta });
   } catch (error) {
-    const appSettings = await getSettings();
+    const appSettings = await getSettings(req.authUser.canteenId);
     await addWhatsAppLog({
       success: false,
       reason: "manual",
@@ -1783,7 +1951,7 @@ app.post("/whatsapp/send-test-report", requireAdmin, async (req, res) => {
 app.get("/whatsapp/logs", requireAdmin, async (req, res) => res.json(await allWhatsappLogs()));
 
 app.get("/whatsapp/status", requireAdmin, async (req, res) => {
-  const appSettings = await getSettings();
+  const appSettings = await getSettings(req.authUser.canteenId);
   res.json({
     success: true,
     tokenConfigured: Boolean(process.env.WHATSAPP_TOKEN),

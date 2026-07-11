@@ -23,6 +23,7 @@
     body {
       margin: 0;
       min-height: 100vh;
+      min-height: 100dvh;
       background: var(--page);
       color: var(--ink);
       font-family: "Segoe UI", Arial, sans-serif;
@@ -33,10 +34,11 @@
     .hidden { display: none !important; }
     .login {
       min-height: 100vh;
+      min-height: 100dvh;
       display: grid;
       place-items: center;
       padding: 24px;
-      background: linear-gradient(140deg, #f8fbff, #eef5f3 52%, #f6f8fb);
+      background: radial-gradient(circle at top, #162b55 0, #0b1f3f 38%, #f6f8fb 39%, #eef5f3 100%);
     }
     .login-card {
       width: min(440px, 100%);
@@ -44,11 +46,11 @@
       gap: 16px;
       padding: 30px;
       border: 1px solid #fff;
-      border-radius: 8px;
+      border-radius: 22px;
       background: #ffffffed;
       box-shadow: 0 24px 70px #11182717;
     }
-    .brand { display: grid; gap: 6px; text-align: center; }
+    .brand { display: grid; gap: 8px; text-align: center; padding: 8px 0 4px; }
     .brand h1 { margin: 0; color: var(--navy); font-size: 34px; }
     .brand p { margin: 0; color: var(--muted); font-weight: 800; }
     label { display: grid; gap: 7px; color: var(--muted); font-size: 12px; font-weight: 900; text-transform: uppercase; }
@@ -132,6 +134,42 @@
       top: 0;
       z-index: 3;
     }
+    .top-actions { position: relative; display: flex; align-items: center; gap: 10px; }
+    .top-menu-btn {
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: white;
+      color: var(--navy);
+      font-size: 22px;
+      font-weight: 950;
+      line-height: 1;
+    }
+    .top-menu {
+      position: absolute;
+      right: 0;
+      top: 48px;
+      z-index: 30;
+      width: 190px;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: white;
+      box-shadow: 0 18px 42px #11182722;
+    }
+    .top-menu button {
+      min-height: 42px;
+      border: 0;
+      border-radius: 12px;
+      background: #fff1f2;
+      color: var(--red);
+      font-weight: 950;
+      text-align: left;
+      padding: 0 12px;
+    }
     .topbar h1 { margin: 0; font-size: 28px; }
     .topbar p { margin: 4px 0 0; color: var(--muted); font-weight: 750; }
     .chip { border: 1px solid var(--line); border-radius: 8px; background: white; padding: 10px 12px; font-weight: 900; }
@@ -167,10 +205,20 @@
       gap: 12px;
       padding: 14px;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 16px;
       background: white;
       box-shadow: 0 10px 26px #1118270d;
     }
+    .canteen-card.tone-0 { background: #f2f7ff; border-color: #d7e8ff; }
+    .canteen-card.tone-1 { background: #f0fdf4; border-color: #bbf7d0; }
+    .canteen-card.tone-2 { background: #fff7ed; border-color: #fed7aa; }
+    .canteen-card.tone-3 { background: #f5f3ff; border-color: #ddd6fe; }
+    .canteen-card.tone-4 { background: #ecfeff; border-color: #a5f3fc; }
+    .canteen-card.tone-5 { background: #fff1f2; border-color: #fecdd3; }
+    tr.tone-0 td { background: #f8fbff; }
+    tr.tone-1 td { background: #f7fef9; }
+    tr.tone-2 td { background: #fffaf5; }
+    tr.tone-3 td { background: #fbfaff; }
     .canteen-card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
     .canteen-card h3 { margin: 0; font-size: 17px; }
     .canteen-card .meta { color: var(--muted); font-size: 12px; font-weight: 800; }
@@ -187,6 +235,19 @@
       border: 1px solid #cfe4ff;
     }
     .credential-box strong { overflow-wrap: anywhere; }
+    .employee-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+    .employee-card {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fbff;
+    }
+    .employee-card:nth-child(2n) { background: #f7fef9; }
+    .employee-card:nth-child(3n) { background: #fffaf5; }
+    .employee-card h3 { margin: 0; font-size: 17px; }
+    .employee-card .doc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .pill { display: inline-flex; min-height: 24px; align-items: center; border-radius: 999px; padding: 0 9px; font-size: 12px; font-weight: 950; background: #eef4ff; color: var(--blue); }
     .pill.green { background: #ecfdf5; color: var(--green); }
     .pill.orange { background: #fff7ed; color: #c2410c; }
@@ -201,8 +262,8 @@
     .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: 5px; background: var(--blue); }
     @media (max-width: 980px) {
       body { background: #f8fafc; }
-      .login { padding: 18px; }
-      .login-card { padding: 22px; border-radius: 14px; }
+      .login { padding: 18px; align-items: center; }
+      .login-card { padding: 22px; border-radius: 24px; }
       .brand h1 { font-size: 28px; }
       .shell { display: block; min-height: 100vh; }
       aside {
@@ -245,18 +306,19 @@
       nav button span { display: none; }
       nav button small { display: block; font-size: 12px; font-weight: 950; }
       nav button.active { background: #1d4ed8; color: #fff; }
-      main { padding: 12px 12px 96px; }
+      main { padding: 12px 12px 96px; min-height: 100dvh; }
       .topbar {
         position: sticky;
         top: 0;
         margin: -12px -12px 12px;
         padding: 14px 12px;
-        border-radius: 0 0 14px 14px;
+        border-radius: 0 0 20px 20px;
         z-index: 10;
       }
       .topbar h1 { font-size: 20px; }
       .topbar p { font-size: 12px; }
       .chip { display: none; }
+      .top-menu-btn { display: grid; place-items: center; }
       .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
       .grid-2, .grid-3, .form-grid { grid-template-columns: 1fr; }
       .form-grid .wide, .form-grid .full { grid-column: auto; }
@@ -267,6 +329,8 @@
       .panel h2 { font-size: 16px; }
       .canteen-result .table-wrap { display: none; }
       .mobile-canteens { display: grid; gap: 10px; }
+      .employee-grid { grid-template-columns: 1fr; }
+      .employee-card .doc-row { grid-template-columns: 1fr; }
       .canteen-facts { grid-template-columns: 1fr 1fr; }
       .primary, .secondary, .danger, .ghost { min-height: 44px; }
       input, select, textarea { min-height: 44px; }
@@ -297,7 +361,13 @@
     <main>
       <header class="topbar">
         <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub">Track canteen onboarding, payments and approvals.</p></div>
-        <div class="chip" id="roleChip">Super Admin</div>
+        <div class="top-actions">
+          <div class="chip" id="roleChip">Super Admin</div>
+          <button class="top-menu-btn" id="topMenuBtn" type="button" aria-label="More options">⋮</button>
+          <div class="top-menu hidden" id="topMenu">
+            <button id="topLogoutBtn" type="button">Logout</button>
+          </div>
+        </div>
       </header>
       <div class="status" id="pageStatus"></div>
       <section id="page"></section>
@@ -321,6 +391,7 @@
       ["dashboard", "Dashboard"],
       ["approvals", "Approval Queue"],
       ["canteens", "Canteens"],
+      ["employees", "Employees"],
       ["payments", "Payments"],
       ["printers", "Printer Inventory"],
       ["performance", "Marketing Performance"],
@@ -341,6 +412,7 @@
       performance: "Stats",
       approvals: "Queue",
       canteens: "Canteens",
+      employees: "Team",
       printers: "Printers",
       activities: "Log"
     };
@@ -405,8 +477,21 @@
     function supportTicketsHtml(rows) {
       return `<div class="list">${rows.slice(0, 8).map(row => `<div class="list-row"><div><strong>${esc(row.title)}</strong><br><span class="muted">${esc(row.canteenName || "-")} | ${esc(row.priority || "Normal")}</span></div><span class="pill ${row.status === "Open" ? "orange" : "green"}">${esc(row.status)}</span></div>`).join("") || `<span class="muted">No support tickets</span>`}</div>`;
     }
+    function employeeHtml(rows) {
+      const cards = rows.map(item => `<article class="employee-card">
+        <div><h3>${esc(item.name)}</h3><span class="muted">${esc(item.employeeId)} | ${item.role === "super_admin" ? "Super Admin" : "Marketing"}</span></div>
+        <div class="doc-row">
+          <div class="fact"><span>Mobile</span><strong>${esc(item.mobile || "-")}</strong></div>
+          <div class="fact"><span>Target</span><strong>${Number(item.target || 0)}</strong></div>
+          <div class="fact"><span>Aadhaar</span><strong>${esc(item.aadhaarNumber || "-")}</strong></div>
+          <div class="fact"><span>PAN</span><strong>${esc(item.panNumber || "-")}</strong></div>
+        </div>
+        <span class="pill ${item.active === false ? "red" : "green"}">${item.active === false ? "Inactive" : "Active"}</span>
+      </article>`).join("") || `<div class="muted">No employees found</div>`;
+      return `<div class="employee-grid">${cards}</div>`;
+    }
     function canteensTable(rows, actions = true) {
-      const mobileCards = rows.map(item => `<article class="canteen-card">
+      const mobileCards = rows.map((item, index) => `<article class="canteen-card tone-${index % 6}">
         <div class="canteen-card-head">
           <div><h3>${esc(item.canteenName)}</h3><div class="meta">${esc(item.city || "-")}, ${esc(item.state || "-")} | ${esc(item.ownerName || "-")}</div></div>
           <span class="pill ${statusClass(item.status)}">${esc(item.status)}</span>
@@ -423,7 +508,7 @@
         </div>
         ${actions ? `<div class="row-actions">${actionButtons(item)}</div>` : ""}
       </article>`).join("") || `<div class="muted">No canteens found</div>`;
-      return `<div class="canteen-result"><div class="mobile-canteens">${mobileCards}</div><div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map(item => `<tr>
+      return `<div class="canteen-result"><div class="mobile-canteens">${mobileCards}</div><div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map((item, index) => `<tr class="tone-${index % 4}">
         <td><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.city)}, ${esc(item.state)}</span></td>
         <td>${esc(item.ownerName)}<br><span class="muted">${esc(item.ownerMobile)}</span></td>
         <td>${esc(item.selectedPlan)}<br><span class="muted">${esc(item.planType)}</span></td>
@@ -535,11 +620,53 @@
         if (submitButton) submitButton.disabled = false;
       }
     }
+    function renderEmployees() {
+      $("page").innerHTML = `<section class="panel"><h2>Add Marketing Employee</h2><form class="form-grid" id="employeeForm">
+        <label>Employee ID <input id="newEmployeeId" placeholder="MKT003" required></label>
+        <label>Name <input id="newEmployeeName" required></label>
+        <label>Mobile <input id="newEmployeeMobile" inputmode="tel"></label>
+        <label>Password <input id="newEmployeePassword" value="1234" required></label>
+        <label>Role <select id="newEmployeeRole"><option value="marketing">Marketing</option><option value="super_admin">Super Admin</option></select></label>
+        <label>Monthly target <input id="newEmployeeTarget" type="number" min="0" value="20"></label>
+        <label>Aadhaar card number <input id="newEmployeeAadhaar" inputmode="numeric" maxlength="12"></label>
+        <label>PAN card number <input id="newEmployeePan" maxlength="10"></label>
+        <button class="primary" type="submit">Save Employee</button>
+      </form></section><section class="panel"><h2>Employees</h2>${employeeHtml(state.users || [])}</section>`;
+      $("employeeForm").addEventListener("submit", submitEmployee);
+    }
+    async function submitEmployee(event) {
+      event.preventDefault();
+      const submitButton = event.submitter;
+      const body = {
+        employeeId: $("newEmployeeId").value,
+        name: $("newEmployeeName").value,
+        mobile: $("newEmployeeMobile").value,
+        password: $("newEmployeePassword").value,
+        role: $("newEmployeeRole").value,
+        target: $("newEmployeeTarget").value,
+        aadhaarNumber: $("newEmployeeAadhaar").value,
+        panNumber: $("newEmployeePan").value
+      };
+      try {
+        if (submitButton) submitButton.disabled = true;
+        status("Saving employee...");
+        const data = await api("/marketing-api/users", { method: "POST", body: JSON.stringify(body) });
+        state.users = data.users || state.users;
+        await refresh();
+        renderEmployees();
+        status("Employee saved.");
+      } catch (error) {
+        status(error.message || "Employee save failed", "error");
+      } finally {
+        if (submitButton) submitButton.disabled = false;
+      }
+    }
     function render() {
       const titles = {
         dashboard: ["Dashboard", "Live canteen onboarding and revenue overview."],
         approvals: ["Approval Queue", "Approve or reject submitted canteens."],
         canteens: ["Canteen Management", "Manage active, trial, blocked and expired canteens."],
+        employees: ["Employees", "Add and manage marketing employee records."],
         payments: ["Payment Management", "Track collections and pending payments."],
         printers: ["Printer Inventory", "Assign and track printer installation."],
         performance: ["Marketing Performance", "Employee-wise registration and collection results."],
@@ -551,6 +678,7 @@
       setPage(title, sub);
       if (tab === "dashboard") return renderDashboard();
       if (tab === "add") return renderAdd();
+      if (tab === "employees") return renderEmployees();
       if (tab === "approvals") $("page").innerHTML = `<section class="panel"><h2>Pending Approval</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
       else if (tab === "canteens" || tab === "my") $("page").innerHTML = `<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Canteens" : "All Canteens"}</h2><input id="searchBox" placeholder="Search canteen or owner"></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
       else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section><section class="panel"><h2>Payment History</h2>${paymentsTable(state.payments || [])}</section>`;
@@ -591,12 +719,24 @@
         $("loginStatus").className = "status error";
       }
     });
-    $("logoutBtn").addEventListener("click", () => {
+    function logoutMarketing() {
       token = "";
       user = null;
       localStorage.removeItem(tokenKey);
+      $("topMenu").classList.add("hidden");
       $("appView").classList.add("hidden");
       $("loginView").classList.remove("hidden");
+    }
+    $("logoutBtn").addEventListener("click", logoutMarketing);
+    $("topLogoutBtn").addEventListener("click", logoutMarketing);
+    $("topMenuBtn").addEventListener("click", event => {
+      event.stopPropagation();
+      $("topMenu").classList.toggle("hidden");
+    });
+    document.addEventListener("click", event => {
+      if (!$("topMenu").contains(event.target) && event.target !== $("topMenuBtn")) {
+        $("topMenu").classList.add("hidden");
+      }
     });
     (async function boot() {
       if (!token) return;

@@ -69,6 +69,14 @@
     .login-card { padding: 22px; display: grid; gap: 14px; }
     .login-card h1 { margin: 0; font-size: 26px; letter-spacing: 0; }
     .login-card p { margin: -6px 0 4px; color: var(--muted); font-size: 14px; }
+    .login-links { display: flex; justify-content: space-between; gap: 10px; margin-top: -4px; }
+    .login-links button {
+      border: 0;
+      background: transparent;
+      color: var(--blue);
+      font-weight: 900;
+      padding: 2px 0;
+    }
     .activation-card { gap: 16px; }
     .activation-id {
       display: grid;
@@ -735,6 +743,21 @@
       padding: 0 11px;
       font-weight: 900;
     }
+    #newItemPrice, #newItemSubPrice, .item-manager-card [data-price-item] {
+      border-color: #bfdbfe;
+      background: linear-gradient(180deg, #eff6ff, #ffffff);
+      color: #1d4ed8;
+      box-shadow: inset 0 0 0 1px #dbeafe;
+    }
+    #saveNewItem {
+      background: linear-gradient(180deg, #22c55e, #16a34a);
+      box-shadow: 0 12px 22px #22c55e30;
+    }
+    .item-manager-card [data-add-sub] {
+      border-color: #bfdbfe;
+      background: linear-gradient(180deg, #3b82f6, #1d4ed8);
+      color: white;
+    }
     .quick-ranges {
       grid-column: 1 / -1;
       display: flex;
@@ -861,16 +884,19 @@
     }
     #posView .topbar {
       gap: 14px;
-      padding: 18px 20px;
-      background: #ffffff;
-      border-bottom: 1px solid #edf1f5;
+      padding: 26px 20px 30px;
+      background: radial-gradient(circle at top right, #18264c 0, #0b1532 48%, #071028 100%);
+      border-bottom: 0;
+      border-bottom-left-radius: 28px;
+      border-bottom-right-radius: 28px;
+      box-shadow: 0 18px 34px #0710282b;
     }
     #posView .topbar .icon-btn,
-    #posView .brand-mark,
+    #posView .brand-mark { display: grid; background: white; color: #0b1532; border-color: #ffffff44; }
     #posView .top-actions-pos { display: none; }
     #posView .title-block { flex: 1; }
-    #posView .title-block strong { display: block; font-size: 24px; line-height: 1.05; }
-    #posView .title-block span { margin-top: 8px; color: #667085; font-size: 13px; font-weight: 800; }
+    #posView .title-block strong { display: block; color: white; font-size: 28px; line-height: 1.05; }
+    #posView .title-block span { margin-top: 8px; color: #22c55e; font-size: 14px; font-weight: 900; }
     .counter-pill { display: inline-flex; min-height: 28px; align-items: center; border-radius: 999px; background: #f0f2f5; color: #4b5563; padding: 0 13px; font-size: 13px; font-weight: 850; }
     .shift-line { display: flex !important; align-items: center; gap: 7px; flex-wrap: wrap; }
     .shift-line b { color: #22b447; }
@@ -886,7 +912,7 @@
     .notif-dot::after { content: ""; position: absolute; top: 15px; left: 15px; width: 12px; height: 12px; border-radius: 50%; background: var(--red); border: 2px solid white; }
     .notif-dot.online::after { background: #16a34a; }
     .notif-dot.offline::after { background: #ef4444; }
-    #posView .content { padding: 24px 336px 90px 20px; }
+    #posView .content { padding: 28px 336px 90px 20px; }
     #posView.option-mode .content { padding-right: 20px; }
     #posView.option-mode .cart-sheet { display: none; }
     .search-row { display: grid; grid-template-columns: minmax(260px, 1fr); gap: 18px; align-items: center; margin-bottom: 26px; }
@@ -901,7 +927,10 @@
     #posView .tab { min-height: 52px; border-radius: 18px; padding: 0 16px; border-color: #e5eaf0; font-size: 15px; font-weight: 850; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 8px 18px #11182708; }
     #posView .tab.active { background: #edf4ff; border-color: #c8d8ef; color: #172033; }
     #posView .menu-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 12px; }
-    #posView .item-card { min-height: 296px; border-radius: 12px; grid-template-rows: 174px auto auto; gap: 8px; padding: 8px 8px 12px; text-align: left; box-shadow: 0 12px 28px #1118270d; }
+    .section-title-row { display: flex; align-items: center; justify-content: space-between; margin: 6px 0 18px; }
+    .section-title-row h2 { margin: 0; color: #0b1532; font-size: 24px; letter-spacing: 0; }
+    .section-title-row span { color: #2563eb; font-weight: 950; }
+    #posView .item-card { min-height: 296px; border-radius: 14px; grid-template-rows: 174px auto auto; gap: 8px; padding: 8px 8px 12px; text-align: left; box-shadow: 0 16px 34px #11182712; }
     #posView .item-card.selected { border-color: #2f7d26; background: #f1fbef; box-shadow: 0 16px 34px #2f7d2630; }
     #posView .item-card.selected .item-icon { outline: 3px solid #2f7d26; outline-offset: -3px; }
     #posView .item-card.selected .item-price { color: #2f7d26; }
@@ -913,12 +942,14 @@
     .item-emoji { font-size: 19px; }
     .item-name-wrap { display: inline-flex; align-items: center; min-width: 0; gap: 7px; }
     .item-foot { display: block; padding: 0; }
-    .item-price { color: #27364a; font-size: 18px; font-weight: 950; white-space: nowrap; }
+    .item-price { color: #0b1532; font-size: 20px; font-weight: 950; white-space: nowrap; }
     .variant-hint { color: #007aff; font-size: 11px; font-weight: 950; }
-    .item-action-row { display: none; }
+    .item-action-row { display: flex; justify-content: flex-end; align-items: center; padding: 0 4px; }
     .mini-qty { display: grid; grid-template-columns: 38px 1fr 38px; align-items: center; min-height: 38px; border: 1px solid #dfe5ee; border-radius: 8px; overflow: hidden; text-align: center; font-weight: 900; }
     .mini-qty span:first-child, .mini-qty span:last-child { display: grid; place-items: center; height: 38px; background: #fbfcff; color: #082653; font-size: 20px; }
-    .add-mini { display: grid; place-items: center; min-height: 38px; border-radius: 8px; background: #082653; color: white; font-size: 13px; font-weight: 950; }
+    .add-mini { display: grid; place-items: center; width: 38px; min-height: 38px; border-radius: 10px; background: linear-gradient(180deg, #3b82f6, #1d4ed8); color: white; font-size: 0; font-weight: 950; box-shadow: 0 10px 18px #2563eb3a; }
+    .add-mini::before { content: "+"; font-size: 24px; line-height: 1; }
+    #posView .item-card .mini-qty { display: none; }
     #posView .count-badge { top: 10px; right: 12px; }
     #posView .remove-badge { top: 10px; left: 12px; }
     #posView .cart-sheet { position: fixed; z-index: 6; top: 312px; left: calc(50% + 192px); bottom: 200px; width: 300px; transform: none; border: 1px solid #e8edf4; border-radius: 12px; background: #fffffff5; box-shadow: 0 14px 36px #11182712; overflow: auto; }
@@ -944,11 +975,11 @@
 
     @media (max-width: 760px) {
       .app { max-width: 520px; }
-      #posView .topbar { padding: 10px 14px; gap: 10px; }
+      #posView .topbar { padding: 16px 14px 24px; gap: 10px; border-bottom-left-radius: 24px; border-bottom-right-radius: 24px; }
       #posView .title-block strong { font-size: 20px; }
       .counter-pill, .top-actions-pos .icon-btn, .admin-chip span, .shift-line .date-part, .shift-line .shift-part { display: none; }
       .brand-mark { width: 46px; height: 46px; font-size: 22px; }
-      #posView .content { padding: 10px 14px 188px; }
+      #posView .content { padding: 18px 14px 188px; }
       #posView.option-mode .content { padding: 10px 14px 90px; }
       .work-header { display: grid; padding: 14px; }
       .work-header h2 { font-size: 20px; }
@@ -958,7 +989,7 @@
       .search-row { grid-template-columns: 1fr; gap: 10px; margin-bottom: 14px; }
       .pos-layout { grid-template-columns: 1fr; }
       #posView .menu-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
-      #posView .item-card { min-height: 132px; grid-template-rows: 74px auto; gap: 5px; padding: 5px; border-radius: 10px; }
+      #posView .item-card { min-height: 148px; grid-template-rows: 74px auto 30px; gap: 5px; padding: 5px; border-radius: 10px; }
       #posView .item-icon { height: 74px; border-radius: 8px; }
       #posView .item-card h3 { font-size: 11px; line-height: 1.1; }
       .item-body { gap: 3px; padding: 2px 1px 0; }
@@ -966,6 +997,9 @@
       .item-name-wrap { gap: 3px; }
       .item-emoji, .variant-hint { display: none; }
       .item-price { font-size: 12px; }
+      .section-title-row h2 { font-size: 18px; }
+      .add-mini { width: 30px; min-height: 30px; border-radius: 9px; }
+      .add-mini::before { font-size: 20px; }
       .mini-qty { display: none; }
       #posView .count-badge, #posView .remove-badge { width: 22px; height: 22px; min-width: 22px; font-size: 11px; top: 4px; right: 5px; }
       #posView .remove-badge { left: 5px; }
@@ -1000,8 +1034,12 @@
       <form class="login-card" id="loginForm">
         <h1>Sign in</h1>
         <p id="loginCanteen">Main Canteen</p>
-        <label>Mobile number <input id="mobileInput" autocomplete="username" required></label>
+        <label>Mobile number / Restaurant ID <input id="mobileInput" autocomplete="username" required></label>
         <label>Password <input id="passwordInput" type="password" autocomplete="current-password" required></label>
+        <div class="login-links">
+          <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
+          <button type="button" id="signupBtn">Sign Up</button>
+        </div>
         <button class="primary" type="submit">Login</button>
         <button class="secondary" type="button" id="testServerBtn">Test Server</button>
         <div class="status" id="loginStatus">Admin default: admin / 1234</div>
@@ -1050,6 +1088,7 @@
             </label>
           </div>
           <div class="tabs" id="categoryTabs"></div>
+          <div class="section-title-row"><h2>Popular Items</h2><span>View All ›</span></div>
           <div class="menu-grid" id="menuGrid"></div>
         </div>
         <div class="option-page hidden" id="optionPage"></div>
@@ -2186,6 +2225,7 @@
           <input id="newItemName" placeholder="Item name">
           <select id="newItemCategory">${categoryOrder.filter(item => item !== "All").map(item => `<option value="${esc(item)}">${esc(categoryLabel(item))}</option>`).join("")}</select>
           <input id="newItemPrice" type="number" min="0" placeholder="Price">
+          <input id="newItemImage" placeholder="Image URL">
           <input id="newItemSubName" placeholder="Sub item optional">
           <input id="newItemSubPrice" type="number" min="0" placeholder="Sub item price optional">
           <button class="page-action" id="saveNewItem" type="button">Add Item</button>
@@ -2298,12 +2338,13 @@
       }
       const subName = $("newItemSubName").value.trim();
       const subPrice = Number($("newItemSubPrice").value || price);
+      const image = $("newItemImage").value.trim();
       const product = {
         id: Date.now(),
         name,
         price,
         category: $("newItemCategory").value,
-        image: "",
+        image,
         sortOrder: products.length + 1,
         subItems: subName ? [{ name: subName, price: subPrice }] : []
       };
@@ -2796,17 +2837,17 @@
 
     async function login(event) {
       event.preventDefault();
-      const mobile = $("mobileInput").value;
+      const loginId = $("mobileInput").value.trim();
       const password = $("passwordInput").value;
       $("loginStatus").textContent = "Checking...";
       $("loginStatus").className = "status";
       try {
         const data = await api("/login", {
           method: "POST",
-          body: JSON.stringify({ mobile, password })
+          body: JSON.stringify({ loginId, mobile: loginId, password })
         });
         setSession(data.user, data.token);
-        cacheLogin(mobile, password, data.user);
+        cacheLogin(loginId, password, data.user);
         applySettings(data.settings);
         if (data.user?.mustChangePassword) {
           showOwnerSetup();
@@ -2814,7 +2855,7 @@
         }
         await enterApp();
       } catch (error) {
-        const cachedUser = offlineLogin(mobile, password);
+        const cachedUser = offlineLogin(loginId, password);
         if (cachedUser) {
           setSession(cachedUser);
           $("loginStatus").textContent = "Offline login success. Sync pending when internet returns.";
@@ -2852,6 +2893,14 @@
     }
 
     $("loginForm").addEventListener("submit", login);
+    $("forgotPasswordBtn").addEventListener("click", () => {
+      $("loginStatus").textContent = "Forgot password: contact Super Admin or Marketing team to reset this canteen login.";
+      $("loginStatus").className = "status";
+    });
+    $("signupBtn").addEventListener("click", () => {
+      $("loginStatus").textContent = "Sign up: ask Marketing team to register and approve your canteen. Approval creates your Restaurant ID.";
+      $("loginStatus").className = "status ok";
+    });
     $("ownerSetupForm").addEventListener("submit", createOwnerLogin);
     $("setupLogout").addEventListener("click", logout);
     $("testServerBtn").addEventListener("click", testServerFromLogin);
@@ -2861,10 +2910,6 @@
       itemSearch = event.target.value;
       renderProducts();
     });
-    if ($("filterBtn")) $("filterBtn").addEventListener("click", () => {
-      setPosSection("held");
-    });
-    if ($("todaySaleBtn")) $("todaySaleBtn").addEventListener("click", () => setPosSection("report"));
     $("userNav").addEventListener("click", event => {
       const label = String(event.target.textContent || "").trim();
       document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn === event.target));
