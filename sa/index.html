@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>axzen Infotech POS</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     :root {
       --ink: #111827;
       --muted: #6b7280;
@@ -21,14 +22,23 @@
     }
 
     * { box-sizing: border-box; }
+    html {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
 
     body {
       margin: 0;
       min-height: 100vh;
       background: #ffffff;
       color: var(--ink);
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Arial, sans-serif;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.5;
     }
+    h1, h2, h3 { font-weight: 700; line-height: 1.25; letter-spacing: 0; }
 
     button, input, select { font: inherit; }
     button { cursor: pointer; }
@@ -646,6 +656,8 @@
 
     .bottom-nav.user-nav { bottom: 254px; }
     .bottom-nav button { min-height: 56px; border: 0; background: white; color: var(--muted); font-size: 11px; font-weight: 900; }
+    .bottom-nav button span, .admin-tabs button span { display: inline-grid; place-items: center; margin-right: 6px; font-size: 15px; line-height: 1; }
+    .bottom-nav button b { font: inherit; }
     .bottom-nav button.active { color: var(--blue); }
 
     .admin-shell { min-height: 100vh; background: var(--page); }
@@ -1050,6 +1062,9 @@
       .brand-name { font-size: 36px; }
       .cart-sheet { font-size: 13px; }
     }
+    .powered, .tagline, label, .status, .muted, .title-block span, .card span, .kpi span, .cart-row small, .option-row, td, th { font-weight: 500; }
+    .primary, .secondary, .danger, .ghost, .tab, .bottom-nav button, .admin-tabs button, .pay-toggle button, .qty button, .pill, .mini-danger, .filter-btn, .login-links button { font-weight: 600; }
+    .brand-name, .login-card h1, .title-block strong, .section-title-row h2, .panel h2, .work-header h2, .item-card h3, .card strong, .kpi strong, .item-price, #cartTotal { font-weight: 700; }
   </style>
 </head>
 <body>
@@ -1131,10 +1146,10 @@
         <div class="option-page hidden" id="optionPage"></div>
       </section>
       <nav class="bottom-nav user-nav" id="userNav">
-        <button class="active">Home</button>
-        <button>Orders</button>
-        <button>Reports</button>
-        <button>Settings</button>
+        <button class="active"><span aria-hidden="true">⌂</span><b>Home</b></button>
+        <button><span aria-hidden="true">▤</span><b>Orders</b></button>
+        <button><span aria-hidden="true">▥</span><b>Reports</b></button>
+        <button><span aria-hidden="true">⚙</span><b>Settings</b></button>
       </nav>
       <section class="cart-sheet">
         <div class="cart-inner">
@@ -1180,10 +1195,10 @@
         </div>
       </div>
       <div class="admin-tabs">
-        <button class="active" data-admin-tab="dashboard">Home</button>
-        <button data-admin-tab="users">Users</button>
-        <button data-admin-tab="orders">Sales</button>
-        <button data-admin-tab="settings">Settings</button>
+        <button class="active" data-admin-tab="dashboard"><span aria-hidden="true">⌂</span>Home</button>
+        <button data-admin-tab="users"><span aria-hidden="true">◉</span>Users</button>
+        <button data-admin-tab="orders"><span aria-hidden="true">▥</span>Sales</button>
+        <button data-admin-tab="settings"><span aria-hidden="true">⚙</span>Settings</button>
       </div>
       <section class="admin-page" id="adminPage"></section>
     </section>
@@ -2346,7 +2361,10 @@
       $("posView").classList.toggle("option-mode", !billingMode);
       $("billingPanel").classList.toggle("hidden", !billingMode);
       $("optionPage").classList.toggle("hidden", billingMode);
-      document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn.textContent.trim() === (billingMode ? "Home" : pageTitle(activePosSection).split(" ")[0])));
+      document.querySelectorAll("#userNav button").forEach(btn => {
+        const label = (btn.querySelector("b")?.textContent || btn.textContent).trim();
+        btn.classList.toggle("active", label === (billingMode ? "Home" : pageTitle(activePosSection).split(" ")[0]));
+      });
       if (billingMode) {
         activeCategory = "All";
         itemSearch = "";
@@ -3025,8 +3043,10 @@
       renderProducts();
     });
     $("userNav").addEventListener("click", event => {
-      const label = String(event.target.textContent || "").trim();
-      document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn === event.target));
+      const button = event.target.closest("button");
+      if (!button) return;
+      const label = String(button.querySelector("b")?.textContent || button.textContent || "").trim();
+      document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn === button));
       if (label === "Home") {
         setPosSection("billing");
       }
