@@ -335,6 +335,9 @@
       backdrop-filter: blur(8px);
       padding: 16px;
     }
+    .modal-backdrop.center-modal {
+      align-items: center;
+    }
     .payment-modal {
       width: min(448px, 100%);
       border: 1px solid #e8edf4;
@@ -600,6 +603,24 @@
     .bill-print { border: 1px solid var(--line); border-radius: 10px; background: white; font-size: 19px; }
     .variant-list { display: grid; gap: 8px; }
     .variant-choice { display: flex; justify-content: space-between; align-items: center; min-height: 48px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcff; padding: 0 12px; font-weight: 950; }
+    .variant-choice.selected { border-color: var(--green); background: #edf9ef; color: #166534; }
+    .cart-view-btn {
+      width: 38px;
+      height: 38px;
+      border: 1px solid #dbe5f3;
+      border-radius: 12px;
+      background: #f2f7ff;
+      color: #082653;
+      font-size: 18px;
+      font-weight: 950;
+    }
+    .cart-head .cart-view-btn {
+      color: #082653;
+      background: #f2f7ff;
+    }
+    .cart-actions { display: inline-flex; align-items: center; gap: 8px; }
+    .cart-view-list { display: grid; gap: 10px; max-height: 58vh; overflow-y: auto; }
+    .cart-view-row { display: flex; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px; font-weight: 850; }
 
     .bottom-nav {
       position: fixed;
@@ -844,11 +865,14 @@
       background: #ffffff;
       border-bottom: 1px solid #edf1f5;
     }
+    #posView .topbar .icon-btn,
+    #posView .brand-mark,
+    #posView .top-actions-pos { display: none; }
     #posView .title-block { flex: 1; }
-    #posView .title-block strong { display: inline-flex; align-items: center; gap: 10px; font-size: 28px; line-height: 1.05; }
-    #posView .title-block span { margin-top: 7px; color: #667085; font-size: 13px; font-weight: 650; }
+    #posView .title-block strong { display: block; font-size: 24px; line-height: 1.05; }
+    #posView .title-block span { margin-top: 8px; color: #667085; font-size: 13px; font-weight: 800; }
     .counter-pill { display: inline-flex; min-height: 28px; align-items: center; border-radius: 999px; background: #f0f2f5; color: #4b5563; padding: 0 13px; font-size: 13px; font-weight: 850; }
-    .shift-line { display: flex !important; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .shift-line { display: flex !important; align-items: center; gap: 7px; flex-wrap: wrap; }
     .shift-line b { color: #22b447; }
     #posView .net-badge { width: 11px; height: 11px; box-shadow: none; }
     #posView .net-badge::before { content: ""; }
@@ -1010,7 +1034,7 @@
         <div class="brand-mark">🍴</div>
         <div class="title-block">
           <strong><span id="posCanteen">Axzen Canteen</span></strong>
-          <span class="shift-line"><span class="connection-pill"><span class="net-badge offline" id="connectionBadge"></span><b id="syncStatus">Online</b></span><span class="date-part">7 May 2025, Wed</span><span class="shift-part">Morning Shift</span></span>
+          <span class="shift-line"><span class="connection-pill"><span class="net-badge offline" id="connectionBadge"></span><b id="syncStatus">Disconnected</b></span></span>
         </div>
         <div class="top-actions-pos">
           <button class="icon-btn" type="button" aria-label="Notifications">!</button>
@@ -1046,7 +1070,7 @@
                 <div class="muted" id="cartSubtitle">Cart empty</div>
               </div>
             </div>
-            <button id="clearCart">🗑 Clear</button>
+            <span class="cart-actions"><button class="cart-view-btn" id="viewCartBtn" type="button" aria-label="View cart">👁</button><button id="clearCart">Clear</button></span>
           </div>
           <div class="cart-list" id="cartList"></div>
           <div class="cart-summary">
@@ -1134,6 +1158,7 @@
     let serverOnline = navigator.onLine;
     let adminUnlocked = false;
     let selectedPrinter = localStorage.getItem(selectedPrinterKey) || "";
+    let selectedSubItems = {};
     let longPressTimer = null;
     let longPressHandled = false;
 
@@ -1155,7 +1180,7 @@
     function setConnectionState(state, text) {
       const badge = $("connectionBadge");
       if (badge) badge.className = `net-badge ${state}`;
-      if ($("syncStatus")) $("syncStatus").textContent = text;
+      if ($("syncStatus")) $("syncStatus").textContent = state === "offline" ? "Disconnected" : "Connected";
       if ($("profileBtn")) {
         $("profileBtn").classList.toggle("online", state === "online");
         $("profileBtn").classList.toggle("offline", state !== "online");
@@ -1361,7 +1386,9 @@
         .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
         .slice()
         .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
-      $("menuGrid").innerHTML = visible.map(item => `
+      $("menuGrid").innerHTML = visible.map(item => {
+        const selectedOption = selectedSubItems[item.id] || null;
+        return `
         <button class="item-card ${cartQty(item.id) ? "selected" : ""}" data-item="${item.id}">
           ${cartQty(item.id) ? `<span class="remove-badge" data-remove-item="${item.id}">X</span>` : ""}
           ${cartQty(item.id) ? `<span class="count-badge">${cartQty(item.id)}</span>` : ""}
@@ -1369,20 +1396,25 @@
           <span class="item-body">
             <span class="item-name-line">
               <span class="item-name-wrap"><span class="item-emoji">${itemEmoji(item)}</span><h3>${item.name}</h3></span>
-              <span class="item-price">${money(item.price)}</span>
+              <span class="item-price">${money(selectedOption ? selectedOption.price : item.price)}</span>
             </span>
-            ${productSubItems(item).length ? `<span class="variant-hint">Hold for sub items</span>` : ""}
+            ${productSubItems(item).length ? `<span class="variant-hint">${selectedOption ? esc(selectedOption.name) : "Hold for sub items"}</span>` : ""}
           </span>
           <span class="item-action-row">
             <span class="mini-qty"><span>-</span><span>${cartQty(item.id) || 1}</span><span>+</span></span>
             <span class="add-mini">+ ADD</span>
           </span>
         </button>
-      `).join("") || `<div class="panel">No menu items</div>`;
+      `;
+      }).join("") || `<div class="panel">No menu items</div>`;
     }
 
     function productSubItems(item) {
-      return Array.isArray(item && item.subItems) ? item.subItems.filter(row => row && row.name) : [];
+      return Array.isArray(item && item.subItems)
+        ? item.subItems
+          .map(row => typeof row === "string" ? { name: row, price: item.price } : row)
+          .filter(row => row && row.name)
+        : [];
     }
 
     function cartLineId(product, option) {
@@ -1452,6 +1484,23 @@
       `).join("") || `<div class="muted">Cart empty</div>`;
     }
 
+    function openCartViewModal() {
+      const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      $("optionsModalMount").innerHTML = `
+        <div class="modal-backdrop center-modal">
+          <div class="payment-modal">
+            <div class="modal-title-row"><h2>Cart Items</h2><button class="modal-x" id="closeCartView" type="button">X</button></div>
+            <div class="cart-view-list">
+              ${cart.map(item => `<div class="cart-view-row"><div><strong>${esc(item.name)}</strong><small>${item.qty} x ${money(item.price)}</small></div><strong>${money(Number(item.price) * item.qty)}</strong></div>`).join("") || `<div class="muted">Cart empty</div>`}
+            </div>
+            <div class="row-between"><span>Total</span><strong>${money(Math.max(0, subtotal - cartDiscount))}</strong></div>
+            <button class="secondary modal-close" type="button" id="closeCartViewBottom">Close</button>
+          </div>
+        </div>`;
+      $("closeCartView").addEventListener("click", closeOptionsModal);
+      $("closeCartViewBottom").addEventListener("click", closeOptionsModal);
+    }
+
     function removeCartLine(id) {
       cart = cart.filter(item => item.lineId !== id);
       renderCart();
@@ -1461,18 +1510,26 @@
     function openSubItemModal(product) {
       const options = productSubItems(product);
       if (!options.length) return;
+      const selectedOption = selectedSubItems[product.id] || null;
       $("optionsModalMount").innerHTML = `
-        <div class="modal-backdrop">
+        <div class="modal-backdrop center-modal">
           <div class="payment-modal">
             <h2>${esc(product.name)} Sub Items</h2>
             <div class="variant-list">
-              ${options.map((option, index) => `<button class="variant-choice" data-sub-index="${index}" type="button"><span>${esc(option.name)}</span><strong>${money(option.price)}</strong></button>`).join("")}
+              <button class="variant-choice ${!selectedOption ? "selected" : ""}" data-main-item type="button"><span>Main Item</span><strong>${money(product.price)}</strong></button>
+              ${options.map((option, index) => `<button class="variant-choice ${selectedOption && selectedOption.name === option.name ? "selected" : ""}" data-sub-index="${index}" type="button"><span>${esc(option.name)}</span><strong>${money(option.price)}</strong></button>`).join("")}
             </div>
             <button class="secondary modal-close" type="button" id="closeVariantModal">Close</button>
           </div>
         </div>`;
       document.querySelectorAll("[data-sub-index]").forEach(btn => btn.addEventListener("click", () => {
-        addToCart(product.id, options[Number(btn.dataset.subIndex)]);
+        selectedSubItems[product.id] = options[Number(btn.dataset.subIndex)];
+        renderProducts();
+        closeOptionsModal();
+      }));
+      document.querySelectorAll("[data-main-item]").forEach(btn => btn.addEventListener("click", () => {
+        delete selectedSubItems[product.id];
+        renderProducts();
         closeOptionsModal();
       }));
       $("closeVariantModal").addEventListener("click", closeOptionsModal);
@@ -2837,7 +2894,7 @@
         return;
       }
       const btn = event.target.closest("[data-item]");
-      if (btn) addToCart(btn.dataset.item);
+      if (btn) addToCart(btn.dataset.item, selectedSubItems[btn.dataset.item] || null);
     });
     $("menuGrid").addEventListener("pointerdown", event => {
       const btn = event.target.closest("[data-item]");
@@ -2862,6 +2919,7 @@
       const btn = event.target.closest("[data-qty]");
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
     });
+    $("viewCartBtn").addEventListener("click", openCartViewModal);
     $("clearCart").addEventListener("click", () => { cart = []; cartDiscount = 0; renderCart(); renderProducts(); });
     $("placeOrder").addEventListener("click", placeOrderFlow);
     $("profileBtn").addEventListener("click", openMainMenu);
