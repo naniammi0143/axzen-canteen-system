@@ -691,6 +691,86 @@
       margin: 0 0 10px;
       font-size: 16px;
     }
+    .report-filter {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: end;
+      gap: 10px;
+    }
+    .report-filter label, .item-add-card {
+      display: grid;
+      gap: 7px;
+      font-weight: 900;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .report-filter input, .item-add-card input, .item-add-card select, .item-manager-card input {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: white;
+      color: var(--ink);
+      padding: 0 11px;
+      font-weight: 900;
+    }
+    .quick-ranges {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .quick-ranges button {
+      min-height: 36px;
+      border: 1px solid #d7e8ff;
+      border-radius: 12px;
+      background: #f2f7ff;
+      color: var(--blue);
+      font-weight: 950;
+      padding: 0 12px;
+    }
+    .item-add-card {
+      color: var(--ink);
+    }
+    .item-manager-card {
+      display: grid;
+      gap: 12px;
+    }
+    .item-manager-top {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 110px;
+      gap: 12px;
+      align-items: center;
+    }
+    .item-manager-top label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 950;
+    }
+    .sub-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+    .sub-chip-row span {
+      min-height: 30px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid #d7e8ff;
+      border-radius: 999px;
+      background: #f2f7ff;
+      color: var(--blue);
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .add-sub-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px 86px;
+      gap: 8px;
+    }
     .metric-card span {
       color: var(--muted);
       font-size: 12px;
@@ -785,7 +865,7 @@
     #posView .content { padding: 24px 336px 90px 20px; }
     #posView.option-mode .content { padding-right: 20px; }
     #posView.option-mode .cart-sheet { display: none; }
-    .search-row { display: grid; grid-template-columns: minmax(260px, 1fr) 158px 126px; gap: 18px; align-items: center; margin-bottom: 26px; }
+    .search-row { display: grid; grid-template-columns: minmax(260px, 1fr); gap: 18px; align-items: center; margin-bottom: 26px; }
     .search-box { display: flex; align-items: center; gap: 10px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; padding: 0 14px; color: #667085; box-shadow: 0 10px 24px #11182708; }
     .search-box input { border: 0; box-shadow: none; background: transparent; padding: 0; font-size: 16px; font-weight: 650; }
     .filter-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 64px; border: 1px solid #e5eaf0; border-radius: 14px; background: #eef5ff; color: #0f62d5; font-weight: 950; }
@@ -929,7 +1009,7 @@
         <button class="icon-btn" id="logoutPos" type="button">☰</button>
         <div class="brand-mark">🍴</div>
         <div class="title-block">
-          <strong><span id="posCanteen">Axzen Canteen</span><span class="counter-pill">Counter 01</span></strong>
+          <strong><span id="posCanteen">Axzen Canteen</span></strong>
           <span class="shift-line"><span class="connection-pill"><span class="net-badge offline" id="connectionBadge"></span><b id="syncStatus">Online</b></span><span class="date-part">7 May 2025, Wed</span><span class="shift-part">Morning Shift</span></span>
         </div>
         <div class="top-actions-pos">
@@ -944,8 +1024,6 @@
               <span>⌕</span>
               <input id="itemSearch" placeholder="Search item by name / code">
             </label>
-            <button class="filter-btn sale-btn" id="todaySaleBtn" type="button">Today's Sale</button>
-            <button class="filter-btn" id="filterBtn" type="button">Orders</button>
           </div>
           <div class="tabs" id="categoryTabs"></div>
           <div class="menu-grid" id="menuGrid"></div>
@@ -1829,13 +1907,13 @@
     function pageTitle(section) {
       return ({
         held: "Orders",
-        report: "Today's Sales",
+        report: "Reports",
         cash: "Cash Summary",
         stock: "Stock Availability",
         printer: "Printer Settings",
         add: "Add Item",
         edit: "Edit Price",
-        counter: "Counter User",
+        counter: "User",
         settings: "Settings"
       })[section] || "Dashboard";
     }
@@ -1843,13 +1921,13 @@
     function pageSubtitle(section) {
       return ({
         held: "Held orders and quick return to billing.",
-        report: "Today's bills, payment mode and sale totals.",
+        report: "Date wise, item wise and payment reports.",
         cash: "Cash, online and credit collection split.",
         stock: "Inventory view with low-stock status.",
         printer: "Bluetooth printer selection and test print.",
         add: "Admin item creation shortcut.",
         edit: "Menu price management shortcut.",
-        counter: "Cashier and counter user management.",
+        counter: "Cashier user management.",
         settings: "Search, menu refresh and admin access."
       })[section] || "Overview";
     }
@@ -1892,35 +1970,82 @@
         </div>`;
     }
 
+    function orderDate(order) {
+      return order.createdAt ? new Date(order.createdAt) : order.syncedAt ? new Date(order.syncedAt) : Number(order.id) ? new Date(Number(order.id)) : new Date(order.time || Date.now());
+    }
+
+    function dateInputValue(date) {
+      const next = new Date(date);
+      if (Number.isNaN(next.getTime())) return "";
+      return next.toISOString().slice(0, 10);
+    }
+
+    function reportRange() {
+      const today = dateInputValue(new Date());
+      const from = localStorage.getItem("AXEN_REPORT_FROM") || today;
+      const to = localStorage.getItem("AXEN_REPORT_TO") || today;
+      return { from, to };
+    }
+
+    function rangedOrders() {
+      const range = reportRange();
+      const from = new Date(`${range.from}T00:00:00`);
+      const to = new Date(`${range.to}T23:59:59`);
+      return orders.filter(order => {
+        const date = orderDate(order);
+        return date >= from && date <= to;
+      });
+    }
+
     function reportPageHtml() {
-      const rows = todayOrders();
+      const range = reportRange();
+      const rows = rangedOrders();
       const totals = rows.reduce((sum, order) => {
         const pay = orderBreakup(order);
         sum.total += Number(order.total || 0);
         sum.cash += pay.cash;
         sum.online += pay.online;
         sum.credit += pay.credit;
+        (order.items || []).forEach(item => {
+          const key = item.name || "Item";
+          const current = sum.items.get(key) || { qty: 0, amount: 0 };
+          current.qty += Number(item.qty || 0);
+          current.amount += Number(item.qty || 0) * Number(item.price || 0);
+          sum.items.set(key, current);
+        });
         return sum;
-      }, { total: 0, cash: 0, online: 0, credit: 0 });
-      const tableRows = rows.slice().reverse().slice(0, 12).map(order => `
-        <tr>
-          <td>${esc(order.id || order.clientOrderId || "-")}</td>
-          <td>${esc(order.time || "-")}</td>
-          <td>${esc(order.cashier || user?.name || "-")}</td>
-          <td>${money(order.total)}</td>
-          <td>${esc(order.payment || "Cash")}</td>
-        </tr>`).join("");
+      }, { total: 0, cash: 0, online: 0, credit: 0, items: new Map() });
+      const itemRows = [...totals.items.entries()].sort((a, b) => b[1].amount - a[1].amount).map(([name, item]) => `
+        <tr><td>${esc(name)}</td><td>${item.qty}</td><td>${money(item.amount)}</td></tr>`).join("");
+      const dateGroups = new Map();
+      rows.forEach(order => {
+        const key = dateInputValue(orderDate(order)) || "Unknown";
+        const current = dateGroups.get(key) || { bills: 0, amount: 0 };
+        current.bills += 1;
+        current.amount += Number(order.total || 0);
+        dateGroups.set(key, current);
+      });
+      const dateRows = [...dateGroups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, item]) => `
+        <tr><td>${date}</td><td>${item.bills}</td><td>${money(item.amount)}</td></tr>`).join("");
+      const bills = rows.slice().reverse().slice(0, 15).map(order => `
+        <tr><td>${esc(order.id || order.clientOrderId || "-")}</td><td>${esc(order.cashier || user?.name || "-")}</td><td>${money(order.total)}</td><td>${esc(order.payment || "Cash")}</td></tr>`).join("");
       return `
         ${sectionHeader("report")}
+        <div class="work-card report-filter">
+          <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
+          <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
+          <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button></div>
+        </div>
         <div class="work-grid">
           <div class="work-card metric-card"><span>Total Sale</span><strong>${money(totals.total)}</strong></div>
           <div class="work-card metric-card"><span>Total Bills</span><strong>${rows.length}</strong></div>
           <div class="work-card metric-card"><span>Cash</span><strong>${money(totals.cash)}</strong></div>
+          <div class="work-card metric-card"><span>Online</span><strong>${money(totals.online)}</strong></div>
         </div>
-        <div class="work-card">
-          <h3>Today Bills</h3>
-          <table class="data-table"><thead><tr><th>Bill ID</th><th>Time</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${tableRows || `<tr><td colspan="5">No sales today</td></tr>`}</tbody></table>
-        </div>`;
+        <div class="work-card"><h3>Date Wise Report</h3><table class="data-table"><thead><tr><th>Date</th><th>Bills</th><th>Sale</th></tr></thead><tbody>${dateRows || `<tr><td colspan="3">No date wise sales</td></tr>`}</tbody></table></div>
+        <div class="work-card"><h3>Item Wise Report</h3><table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody>${itemRows || `<tr><td colspan="3">No item sales</td></tr>`}</tbody></table></div>
+        <div class="work-card"><h3>Payment Report</h3><div class="option-row"><span>Cash</span><strong>${money(totals.cash)}</strong></div><div class="option-row"><span>Online / UPI</span><strong>${money(totals.online)}</strong></div><div class="option-row"><span>Credit</span><strong>${money(totals.credit)}</strong></div></div>
+        <div class="work-card"><h3>Recent Bills</h3><table class="data-table"><thead><tr><th>Bill</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${bills || `<tr><td colspan="4">No bills in selected date range</td></tr>`}</tbody></table></div>`;
     }
 
     function cashPageHtml() {
@@ -1978,6 +2103,40 @@
         ${lastBillsHtml()}`;
     }
 
+    function itemManagerPageHtml(section) {
+      if (!hasAdminAccess()) {
+        return `${sectionHeader(section)}${adminUnlockHtml()}`;
+      }
+      const rows = products.slice().sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0)).map(item => {
+        const subs = productSubItems(item);
+        return `<div class="work-card item-manager-card">
+          <div class="item-manager-top">
+            <div><h3>${esc(item.name || "Item")}</h3><span class="muted">${esc(item.category || "-")} | ${subs.length ? `${subs.length} sub items` : "Empty"}</span></div>
+            <label>Edit Price <input data-price-item="${item.id}" type="number" min="0" value="${Number(item.price || 0)}"></label>
+          </div>
+          <div class="sub-chip-row">${subs.map(sub => `<span>${esc(sub.name)} - ${money(sub.price)}</span>`).join("") || `<span>Empty</span>`}</div>
+          <div class="add-sub-row">
+            <input data-sub-name="${item.id}" placeholder="Sub item name">
+            <input data-sub-price="${item.id}" type="number" min="0" placeholder="Price">
+            <button class="ghost-action" data-add-sub="${item.id}" type="button">Add Sub</button>
+          </div>
+        </div>`;
+      }).join("");
+      return `
+        ${sectionHeader(section)}
+        <div class="work-card item-add-card">
+          <h3>Add Item</h3>
+          <input id="newItemName" placeholder="Item name">
+          <select id="newItemCategory">${categoryOrder.filter(item => item !== "All").map(item => `<option value="${esc(item)}">${esc(categoryLabel(item))}</option>`).join("")}</select>
+          <input id="newItemPrice" type="number" min="0" placeholder="Price">
+          <input id="newItemSubName" placeholder="Sub item optional">
+          <input id="newItemSubPrice" type="number" min="0" placeholder="Sub item price optional">
+          <button class="page-action" id="saveNewItem" type="button">Add Item</button>
+        </div>
+        <div class="work-header compact"><div><h2>Existing Items</h2><p>${products.length} items ready</p></div></div>
+        ${rows || `<div class="work-card">No items found</div>`}`;
+    }
+
     function simpleAdminPageHtml(section) {
       return `${sectionHeader(section)}<div class="work-card"><h3>${pageTitle(section)}</h3><p class="muted">Admin panel lo manage cheyyandi. Billing ki vellali ante below button click cheyyandi.</p><button class="page-action" data-go-billing type="button">Go to Billing Panel</button></div>${adminUnlockHtml()}`;
     }
@@ -1991,6 +2150,7 @@
         : activePosSection === "stock" ? stockPageHtml()
         : activePosSection === "printer" ? printerPageHtml()
         : activePosSection === "settings" ? settingsPageHtml()
+        : activePosSection === "add" || activePosSection === "edit" ? itemManagerPageHtml(activePosSection)
         : simpleAdminPageHtml(activePosSection);
       page.innerHTML = html;
       bindOptionPageActions();
@@ -2026,10 +2186,71 @@
       if ($("clearSearchBtn")) $("clearSearchBtn").addEventListener("click", () => { itemSearch = ""; if ($("itemSearch")) $("itemSearch").value = ""; });
       if ($("clearCartSettingsBtn")) $("clearCartSettingsBtn").addEventListener("click", () => { cart = []; cartDiscount = 0; renderCart(); renderProducts(); });
       if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
+      if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_FROM", event.target.value); renderOptionPage(); });
+      if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderOptionPage(); });
+      document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => setReportQuickRange(btn.dataset.reportRange)));
+      if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
+      document.querySelectorAll("[data-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem, input.value)));
+      document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       document.querySelectorAll("[data-go-billing]").forEach(btn => btn.addEventListener("click", () => setPosSection("billing")));
       document.querySelectorAll("[data-restore-held]").forEach(btn => btn.addEventListener("click", () => restoreHeldOrder(btn.dataset.restoreHeld)));
       document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
       document.querySelectorAll("[data-delete-held]").forEach(btn => btn.addEventListener("click", () => deleteHeldOrder(btn.dataset.deleteHeld)));
+    }
+
+    function setReportQuickRange(range) {
+      const now = new Date();
+      const start = new Date(now);
+      if (range === "week") start.setDate(now.getDate() - 6);
+      if (range === "month") start.setDate(1);
+      localStorage.setItem("AXEN_REPORT_FROM", dateInputValue(start));
+      localStorage.setItem("AXEN_REPORT_TO", dateInputValue(now));
+      renderOptionPage();
+    }
+
+    async function persistProductFromPos(product) {
+      const saved = await api("/products", { method: "POST", body: JSON.stringify(product) });
+      products = saved.products || products.map(item => Number(item.id) === Number(product.id) ? product : item);
+      writeJson(productCacheKey, products);
+      renderProducts();
+      renderOptionPage();
+    }
+
+    async function savePriceFromPos(id, value) {
+      const item = products.find(row => Number(row.id) === Number(id));
+      if (!item) return;
+      await persistProductFromPos({ ...item, price: Number(value || 0) });
+    }
+
+    async function saveSubItemFromPos(id) {
+      const item = products.find(row => Number(row.id) === Number(id));
+      if (!item) return;
+      const name = document.querySelector(`[data-sub-name="${id}"]`)?.value.trim();
+      const price = Number(document.querySelector(`[data-sub-price="${id}"]`)?.value || item.price || 0);
+      if (!name) return;
+      await persistProductFromPos({ ...item, subItems: [...productSubItems(item), { name, price }] });
+    }
+
+    async function saveNewItemFromPos() {
+      const name = $("newItemName").value.trim();
+      const price = Number($("newItemPrice").value || 0);
+      if (!name || price <= 0) {
+        $("posMessage").textContent = "Item name and price required";
+        $("posMessage").className = "status error";
+        return;
+      }
+      const subName = $("newItemSubName").value.trim();
+      const subPrice = Number($("newItemSubPrice").value || price);
+      const product = {
+        id: Date.now(),
+        name,
+        price,
+        category: $("newItemCategory").value,
+        image: "",
+        sortOrder: products.length + 1,
+        subItems: subName ? [{ name: subName, price: subPrice }] : []
+      };
+      await persistProductFromPos(product);
     }
 
     function drawerDetailHtml(section, pairedPrinters) {
@@ -2039,7 +2260,7 @@
       if (section === "held") {
         return `<div class="option-card"><h3>Hold Orders</h3><button class="secondary" id="holdCurrentOrder" type="button">Hold Current Cart</button>${heldOrdersHtml()}</div>`;
       }
-      if (section === "report") return todaySaleHtml();
+      if (section === "report") return reportPageHtml();
       if (section === "cash") return cashSummaryHtml();
       if (section === "printer") {
         return `<div class="option-card"><h3>Available Printers</h3><select id="printerSelect">${printerOptionsHtml(pairedPrinters)}</select><div class="muted" id="printerStatus">${selectedPrinter ? "Selected printer saved" : "Auto printer selection active"}</div></div><button class="secondary" id="menuTestPrint" type="button">Test Print</button>`;
@@ -2048,8 +2269,11 @@
       if (section === "settings") {
         return `<div class="option-card"><h3>Settings</h3><input id="optionSearchInput" placeholder="Search item name / code" value="${esc(itemSearch)}"><button class="secondary" id="clearSearchBtn" type="button">Clear Search</button><button class="secondary" id="refreshMenuBtn" type="button">Refresh Menu</button><button class="secondary" id="clearCartSettingsBtn" type="button">Clear Cart</button></div>${adminUnlockHtml()}${lastBillsHtml()}`;
       }
-      if (section === "add" || section === "edit" || section === "counter") {
-        return `<div class="option-card"><h3>${section === "add" ? "Add Item" : section === "edit" ? "Edit Price" : "Counter User"}</h3><div class="muted">Admin panel lo ee option manage cheyyandi.</div>${adminUnlockHtml()}</div>`;
+      if (section === "add" || section === "edit") {
+        return itemManagerPageHtml(section);
+      }
+      if (section === "counter") {
+        return `<div class="option-card"><h3>User</h3><div class="muted">Cashier profile and access details.</div>${adminUnlockHtml()}</div>`;
       }
       if (section === "help") {
         return `<div class="option-card"><h3>Help</h3><div class="muted">Item ni normal tap chesthe cart lo add avuthundi. Item ni hold chesi pattukunte sub items open avuthayi.</div></div>`;
@@ -2070,7 +2294,7 @@
             <div class="drawer-scroll">
               <div class="drawer-brand">
                 <div class="drawer-logo">A</div>
-                <div class="drawer-title"><strong>${esc(settings.canteenName || "Main Canteen")}</strong><span>Counter 01</span></div>
+                <div class="drawer-title"><strong>${esc(settings.canteenName || "Main Canteen")}</strong></div>
                 <div class="drawer-connected">Connected</div>
               </div>
               <div class="drawer-user">
@@ -2083,7 +2307,7 @@
                 ${drawerItem("dashboard", "Dashboard", "H", activeSection)}
                 ${drawerItem("billing", "New Billing", "B", activeSection)}
                 ${drawerItem("held", "Orders", "O", activeSection)}
-                ${drawerItem("report", "Today's Sales", "S", activeSection)}
+                ${drawerItem("report", "Reports", "R", activeSection)}
                 ${drawerItem("cash", "Cash Summary", "C", activeSection)}
               </section>
               <section class="drawer-section">
@@ -2095,7 +2319,7 @@
               <section class="drawer-section">
                 <span class="drawer-section-title">Settings</span>
                 ${drawerItem("printer", "Printer Settings", "P", activeSection)}
-                ${drawerItem("counter", "Counter User", "U", activeSection)}
+                ${drawerItem("counter", "User", "U", activeSection)}
                 ${drawerItem("settings", "Settings", "G", activeSection)}
                 <button class="drawer-item" id="syncNowBtn" type="button"><span>Y</span><strong>Sync Data</strong><span class="drawer-arrow">›</span></button>
               </section>
@@ -2580,7 +2804,7 @@
       itemSearch = event.target.value;
       renderProducts();
     });
-    $("filterBtn").addEventListener("click", () => {
+    if ($("filterBtn")) $("filterBtn").addEventListener("click", () => {
       setPosSection("held");
     });
     if ($("todaySaleBtn")) $("todaySaleBtn").addEventListener("click", () => setPosSection("report"));
