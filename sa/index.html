@@ -638,6 +638,8 @@
       background: #f2f7ff;
     }
     .cart-actions { display: inline-flex; align-items: center; gap: 8px; }
+    #clearCart { display: inline-flex; align-items: center; gap: 5px; }
+    #clearCart svg { width: 15px; height: 15px; stroke: currentColor; }
     .cart-view-list { display: grid; gap: 10px; max-height: 58vh; overflow-y: auto; }
     .cart-view-row { display: flex; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px; font-weight: 850; }
 
@@ -943,6 +945,7 @@
     #posView .status-dot.offline { background: #dc2626; box-shadow: 0 0 0 4px #ef44441f; }
     #posView .status-dot.syncing { background: #f59e0b; box-shadow: 0 0 0 4px #f59e0b20; }
     #posView .icon-btn { width: 58px; height: 58px; border-radius: 18px; border-color: #edf1f5; box-shadow: 0 12px 24px #0f172a0d; font-size: 0; }
+    #posView .icon-btn.menu-trigger { width: 46px; height: 46px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
     #posView .icon-btn.menu-trigger::before { content: ""; width: 28px; height: 20px; display: block; background: linear-gradient(#071a3d 0 0) 0 0 / 100% 4px no-repeat, linear-gradient(#071a3d 0 0) 0 50% / 100% 4px no-repeat, linear-gradient(#071a3d 0 0) 0 100% / 100% 4px no-repeat; border-radius: 8px; }
     .brand-mark { width: 66px; height: 66px; border-radius: 50%; display: grid; place-items: center; flex: 0 0 auto; color: #082653; background: #ffffff; border: 7px solid #f6f8fb; box-shadow: 0 12px 26px #0f172a10; font-size: 26px; font-weight: 950; letter-spacing: 0; overflow: hidden; }
     .brand-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 50%; }
@@ -1167,7 +1170,7 @@
                 <div class="muted" id="cartSubtitle">Cart empty</div>
               </div>
             </div>
-            <span class="cart-actions"><button class="cart-view-btn" id="viewCartBtn" type="button" aria-label="View cart">👁</button><button id="clearCart">Clear</button></span>
+            <span class="cart-actions"><button class="cart-view-btn" id="viewCartBtn" type="button" aria-label="View cart">👁</button><button id="clearCart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>Clear</button></span>
           </div>
           <div class="cart-list" id="cartList"></div>
           <div class="cart-summary">
@@ -1258,6 +1261,7 @@
     let selectedSubItems = {};
     let longPressTimer = null;
     let longPressHandled = false;
+    let liveRefreshBusy = false;
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(0);
@@ -1399,10 +1403,14 @@
     }
 
     function logout() {
+      closeOptionsModal();
+      $("paymentModalMount").innerHTML = "";
       localStorage.removeItem(sessionKey);
       localStorage.removeItem(tokenKey);
       user = null;
       cart = [];
+      selectedSubItems = {};
+      activePosSection = "billing";
       adminUnlocked = false;
       show("loginView");
     }
@@ -1493,6 +1501,16 @@
       renderAdmin();
     }
 
+    async function refreshLiveData() {
+      if (!user || liveRefreshBusy || !navigator.onLine) return;
+      liveRefreshBusy = true;
+      try {
+        await loadAdminData();
+      } finally {
+        liveRefreshBusy = false;
+      }
+    }
+
     function renderCategories() {
       const found = new Set(products.map(item => item.category || "Other"));
       const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
@@ -1573,6 +1591,15 @@
 
     function removeFromCart(id) {
       cart = cart.filter(item => Number(item.parentId || item.id) !== Number(id));
+      delete selectedSubItems[id];
+      renderCart();
+      renderProducts();
+    }
+
+    function clearCartState() {
+      cart = [];
+      cartDiscount = 0;
+      selectedSubItems = {};
       renderCart();
       renderProducts();
     }
@@ -1620,7 +1647,9 @@
     }
 
     function removeCartLine(id) {
+      const removed = cart.find(item => item.lineId === id);
       cart = cart.filter(item => item.lineId !== id);
+      if (removed) delete selectedSubItems[removed.parentId || removed.id];
       renderCart();
       renderProducts();
     }
@@ -2399,7 +2428,7 @@
       if ($("refreshPrinterPage")) $("refreshPrinterPage").addEventListener("click", () => renderOptionPage());
       if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => { await loadProducts(); renderOptionPage(); });
       if ($("clearSearchBtn")) $("clearSearchBtn").addEventListener("click", () => { itemSearch = ""; if ($("itemSearch")) $("itemSearch").value = ""; });
-      if ($("clearCartSettingsBtn")) $("clearCartSettingsBtn").addEventListener("click", () => { cart = []; cartDiscount = 0; renderCart(); renderProducts(); });
+      if ($("clearCartSettingsBtn")) $("clearCartSettingsBtn").addEventListener("click", clearCartState);
       if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
       if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_FROM", event.target.value); renderOptionPage(); });
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderOptionPage(); });
@@ -2789,11 +2818,8 @@
       }
 
       setPaymentStatus("Success", "status ok");
-      cart = [];
-      cartDiscount = 0;
       payment = "";
-      renderCart();
-      renderProducts();
+      clearCartState();
       renderAdmin();
       setTimeout(closePaymentModal, 250);
       setTimeout(() => receipt(payload), 300);
@@ -3113,7 +3139,7 @@
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
     });
     $("viewCartBtn").addEventListener("click", openCartViewModal);
-    $("clearCart").addEventListener("click", () => { cart = []; cartDiscount = 0; renderCart(); renderProducts(); });
+    $("clearCart").addEventListener("click", clearCartState);
     $("placeOrder").addEventListener("click", placeOrderFlow);
     $("profileBtn").addEventListener("click", openMainMenu);
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
@@ -3125,7 +3151,8 @@
       serverOnline = false;
       updateSyncStatus("Connect internet", "offline");
     });
-    window.setInterval(syncPendingOrders, 15000);
+    window.setInterval(syncPendingOrders, 7000);
+    window.setInterval(refreshLiveData, 3000);
     window.setInterval(checkServerConnection, 30000);
 
     user = readJson(sessionKey, null);
