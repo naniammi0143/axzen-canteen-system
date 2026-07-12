@@ -685,28 +685,61 @@
     .bottom-nav button b { font: inherit; }
     .bottom-nav button.active { color: var(--blue); }
 
-    .admin-shell { min-height: 100vh; background: var(--page); }
+    .admin-shell { min-height: 100vh; background: #f8fbff; padding-bottom: 86px; color: #07142f; }
     .admin-hero {
-      padding: 18px 14px;
-      background: linear-gradient(145deg, #111827, #172033);
-      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 8;
+      padding: 18px 18px 14px;
+      background: #ffffffee;
+      color: #07142f;
+      border-bottom: 1px solid #e8edf4;
+      backdrop-filter: blur(18px);
     }
-    .admin-hero .brand-name { color: white; font-size: 34px; }
-    .admin-hero .tagline { color: #8ec5ff; }
+    .admin-topbar { display: grid; grid-template-columns: 42px 1fr 42px 42px; align-items: center; gap: 10px; }
+    .admin-title { margin: 0; font-size: 25px; line-height: 1; font-weight: 900; }
+    .admin-icon-btn { width: 40px; height: 40px; border: 0; background: transparent; color: #07142f; font-size: 23px; font-weight: 950; }
+    .admin-avatar { width: 40px; height: 40px; border: 0; border-radius: 999px; background: linear-gradient(145deg, #2f7dff, #7c67ff); color: white; font-weight: 950; }
+    .admin-meta { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: end; margin-top: 22px; }
+    .admin-brand strong { display: block; font-size: 21px; line-height: 1.1; }
+    .admin-brand span { display: block; margin-top: 5px; color: #64748b; font-size: 15px; }
+    .admin-filters { display: flex; gap: 8px; overflow-x: auto; justify-content: flex-end; }
+    .admin-filter-chip { min-height: 42px; display: inline-flex; align-items: center; border: 1px solid #dce4ef; border-radius: 14px; background: white; padding: 0 12px; color: #07142f; font-size: 13px; font-weight: 850; white-space: nowrap; }
+    .admin-tabs { position: fixed; left: 50%; bottom: 0; z-index: 12; transform: translateX(-50%); width: min(520px, 100%); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(78px, 1fr); gap: 0; padding: 8px 8px 10px; overflow-x: auto; background: #fffffff2; border-top: 1px solid #e8edf4; box-shadow: 0 -12px 34px #0f172a12; backdrop-filter: blur(16px); }
+    .admin-tabs button { min-height: 58px; border: 0; border-radius: 14px; background: transparent; color: #64748b; padding: 4px 8px; font-size: 11px; font-weight: 850; white-space: nowrap; }
+    .admin-tabs button span { display: block; margin: 0 0 4px; font-size: 20px; }
+    .admin-tabs button.active { background: #eef6ff; color: #007aff; }
+    .admin-page { padding: 14px 14px 22px; display: grid; gap: 12px; }
 
-    .admin-tabs { display: flex; gap: 8px; padding: 12px; overflow-x: auto; background: #fff; border-bottom: 1px solid var(--line); }
-    .admin-tabs button { flex: 0 0 auto; min-height: 42px; border: 1px solid var(--line); border-radius: 12px; background: white; color: var(--ink); padding: 0 12px; font-size: 12px; font-weight: 900; white-space: nowrap; }
-    .admin-tabs button.active { background: var(--blue); color: white; border-color: var(--blue); }
-    .admin-page { padding: 12px; display: grid; gap: 12px; }
-    .admin-page { padding: 0 12px 22px; display: grid; gap: 12px; }
+    .kpis { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px; }
+    .kpi { flex: 0 0 148px; min-height: 146px; padding: 16px; border: 1px solid #e1e8f2; border-radius: 16px; background: linear-gradient(145deg, #fff, #f8fbff); box-shadow: 0 10px 26px #1118270a; }
+    .kpi:nth-child(2) { background: linear-gradient(145deg, #ffffff, #f1fff4); }
+    .kpi:nth-child(3) { background: linear-gradient(145deg, #ffffff, #fff8e9); }
+    .kpi:nth-child(4) { background: linear-gradient(145deg, #ffffff, #f7f1ff); }
+    .kpi:nth-child(5) { background: linear-gradient(145deg, #ffffff, #fff1f1); }
+    .kpi i { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 999px; background: #e8f3ff; color: #007aff; font-style: normal; font-weight: 950; }
+    .kpi span { display: block; margin-top: 18px; color: #64748b; font-size: 12px; font-weight: 850; }
+    .kpi strong { display: block; margin-top: 8px; font-size: 25px; line-height: 1; }
+    .kpi small { display: block; margin-top: 11px; color: #16a34a; font-weight: 850; }
 
-    .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-    .kpi { padding: 14px; border: 1px solid #e8edf4; border-radius: 16px; background: white; box-shadow: 0 10px 26px #1118270d; }
-    .kpi span { color: var(--muted); font-size: 12px; font-weight: 900; }
-    .kpi strong { display: block; margin-top: 8px; font-size: 22px; }
-
-    .panel { padding: 14px; }
+    .panel { padding: 16px; border-radius: 16px; border: 1px solid #e1e8f2; background: white; box-shadow: 0 10px 26px #1118270a; }
     .panel h2 { margin: 0 0 12px; font-size: 17px; }
+    .admin-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .admin-card-head h2 { margin: 0; }
+    .admin-link { border: 0; background: transparent; color: #007aff; font-weight: 900; }
+    .admin-chart { height: 210px; display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: end; }
+    .chart-axis { height: 100%; display: grid; align-content: space-between; color: #334155; font-size: 12px; }
+    .chart-bars-admin { height: 100%; display: grid; grid-template-columns: repeat(7, 1fr); align-items: end; gap: 12px; border-bottom: 1px solid #e5e7eb; background: repeating-linear-gradient(to top, #e5e7eb 0 1px, transparent 1px 48px); padding: 0 4px; }
+    .chart-bar-admin { border-radius: 7px 7px 0 0; background: linear-gradient(180deg, #007aff, #79bdff); min-height: 20px; }
+    .chart-labels { grid-column: 2; display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; color: #334155; font-size: 11px; text-align: center; }
+    .admin-grid-2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
+    .donut-admin { width: 160px; height: 160px; margin: 6px auto 14px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(#007aff 0 62%, #22c55e 62% 86%, #f59e0b 86% 100%); }
+    .donut-admin span { width: 82px; height: 82px; display: grid; place-items: center; border-radius: 50%; background: white; text-align: center; font-weight: 950; }
+    .admin-sale-row, .admin-stock-row { display: grid; grid-template-columns: 42px 1fr auto; gap: 10px; align-items: center; min-height: 62px; border: 1px solid #e8edf4; border-radius: 14px; padding: 9px; margin-bottom: 8px; }
+    .row-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: #e8f3ff; color: #007aff; font-weight: 950; }
+    .payment-pill { border-radius: 999px; padding: 8px 12px; background: #e8fff0; color: #16a34a; font-size: 12px; font-weight: 900; }
+    .payment-pill.online { background: #e8f3ff; color: #007aff; }
+    .payment-pill.credit { background: #fff6df; color: #b45309; }
     .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
     .panel-head h2 { margin: 0; }
     .stack { display: grid; gap: 10px; }
@@ -1202,17 +1235,21 @@
 
     <section id="adminView" class="admin-shell hidden">
       <div class="admin-hero">
-        <div class="brand-lockup">
-          <p class="powered">Powered by</p>
-          <h1 class="brand-name">axzen</h1>
-          <p class="tagline">Infotech</p>
+        <div class="admin-topbar">
+          <button class="admin-icon-btn" id="adminMenuBtn" type="button" aria-label="Menu">&#9776;</button>
+          <h1 class="admin-title" id="adminTitle">Dashboard</h1>
+          <button class="admin-icon-btn" type="button" aria-label="Notifications">!</button>
+          <button class="admin-avatar" id="adminAvatar" type="button">A</button>
         </div>
-        <div class="row-between" style="margin-top:16px">
-          <div>
+        <div class="admin-meta">
+          <div class="admin-brand">
+            <strong>axzen Infotech</strong>
             <strong id="adminCanteen">Main Canteen</strong>
-            <div class="muted" id="adminRole">Admin Panel</div>
           </div>
-          <button class="icon-btn" id="logoutAdmin">X</button>
+          <div class="admin-filters">
+            <span class="admin-filter-chip" id="adminDateChip">12 Jul 2026</span>
+            <span class="admin-filter-chip" id="adminBranchChip">Main Canteen</span>
+          </div>
         </div>
       </div>
       <div class="admin-tabs">
@@ -1246,7 +1283,7 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
-    const appBuild = "1.8.9";
+    const appBuild = "1.9.0";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -3283,6 +3320,10 @@
     function setupAdminTabs() {
       const tabs = document.querySelector(".admin-tabs");
       if (!tabs) return;
+      if ($("adminTitle")) $("adminTitle").textContent = adminModules.find(([key]) => key === adminTab)?.[2] || "Dashboard";
+      if ($("adminAvatar")) $("adminAvatar").textContent = String(user?.name || "A").slice(0, 1).toUpperCase();
+      if ($("adminDateChip")) $("adminDateChip").textContent = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      if ($("adminBranchChip")) $("adminBranchChip").textContent = settings.canteenName || "Main Canteen";
       tabs.innerHTML = adminModules.map(([key, icon, label]) =>
         `<button class="${key === adminTab ? "active" : ""}" data-admin-tab="${key}" type="button"><span aria-hidden="true">${icon}</span>${label}</button>`
       ).join("");
@@ -3290,6 +3331,58 @@
         adminTab = btn.dataset.adminTab;
         renderAdmin();
       }));
+    }
+
+    function dashboardAdminHtml(stats) {
+      const total = Math.max(1, stats.total);
+      const recent = orders.slice().reverse().slice(0, 5);
+      const top = [...orders.reduce((map, order) => {
+        (order.items || []).forEach(item => {
+          const row = map.get(item.name) || { name: item.name, qty: 0, total: 0 };
+          row.qty += Number(item.qty || 0);
+          row.total += Number(item.qty || 0) * Number(item.price || 0);
+          map.set(item.name, row);
+        });
+        return map;
+      }, new Map()).values()].sort((a, b) => b.qty - a.qty);
+      const chartValues = recent.length ? recent.slice().reverse().map(order => Number(order.total || 0)) : [300, 280, 650, 270, 290, 450, 540];
+      const chartMax = Math.max(...chartValues, 1);
+      const chartLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const lowStock = products.slice(0, 3);
+      const posPreview = products.slice(0, 2);
+      return `
+        <div class="kpis">
+          <div class="kpi"><i>S</i><span>Today's Sale</span><strong>${money(stats.total)}</strong><small>Live</small></div>
+          <div class="kpi"><i>C</i><span>Total Collection</span><strong>${money(stats.total)}</strong><small>Cash + Online</small></div>
+          <div class="kpi"><i>O</i><span>Total Orders</span><strong>${stats.count}</strong><small>Recorded</small></div>
+          <div class="kpi"><i>N</i><span>Net Collection</span><strong>${money(stats.total)}</strong><small>After expenses</small></div>
+          <div class="kpi"><i>E</i><span>Total Expenses</span><strong>${money(0)}</strong><small style="color:#ef4444">Tracked</small></div>
+        </div>
+        <div class="panel">
+          <div class="admin-card-head"><h2>Sales Overview</h2><button class="admin-link" data-admin-jump="sales" type="button">View All</button></div>
+          <div class="admin-chart"><div class="chart-axis"><span>800</span><span>600</span><span>400</span><span>200</span><span>0</span></div><div class="chart-bars-admin">${chartValues.map(value => `<span class="chart-bar-admin" style="height:${Math.max(16, (value / chartMax) * 92)}%"></span>`).join("")}</div><div class="chart-labels">${chartLabels.map(label => `<span>${label}</span>`).join("")}</div></div>
+        </div>
+        <div class="admin-grid-2">
+          <div class="panel">
+            <div class="admin-card-head"><h2>Payment Method</h2><button class="admin-link" data-admin-jump="finance" type="button">View All</button></div>
+            <div class="donut-admin" style="background:conic-gradient(#007aff 0 ${(stats.online / total) * 100}%, #22c55e ${(stats.online / total) * 100}% ${((stats.online + stats.cash) / total) * 100}%, #f59e0b ${((stats.online + stats.cash) / total) * 100}% 100%)"><span>${money(stats.total)}<br><small>Total</small></span></div>
+            <div class="option-row"><span>Cash</span><strong>${money(stats.cash)}</strong></div><div class="option-row"><span>UPI / Online</span><strong>${money(stats.online)}</strong></div><div class="option-row"><span>Credit</span><strong>${money(stats.credit)}</strong></div>
+          </div>
+          <div class="panel">
+            <div class="admin-card-head"><h2>Recent Sales</h2><button class="admin-link" data-admin-jump="sales" type="button">View All</button></div>
+            ${recent.map(order => `<div class="admin-sale-row"><span class="row-icon">S</span><div><strong>${esc(order.time || "-")}</strong><div class="muted">${esc((order.items || []).map(item => `${item.name} x ${item.qty}`).join(", "))}</div></div><div><strong>${money(order.total)}</strong><span class="payment-pill ${String(order.payment || "").toLowerCase()}">${esc(order.payment || "Cash")}</span></div></div>`).join("") || `<div class="muted">No recent sales</div>`}
+          </div>
+        </div>
+        <div class="admin-grid-2">
+          <div class="panel">
+            <div class="admin-card-head"><h2>Low Stock Items</h2><button class="admin-link" data-admin-jump="stock" type="button">View All</button></div>
+            ${lowStock.map(item => `<div class="admin-stock-row"><span class="row-icon">I</span><div><strong>${esc(item.name || item.item || "Item")}</strong><div class="muted">${esc(item.category || item.unit || "")}</div></div><span class="payment-pill credit">Low</span></div>`).join("") || `<div class="muted">No stock items</div>`}
+          </div>
+          <div class="panel">
+            <div class="admin-card-head"><h2>POS Preview</h2><button class="admin-link" id="adminGoBilling" type="button">View All</button></div>
+            <div class="phone-preview"><div class="phone-head"><span>${esc(settings.canteenName)}</span><span>POS</span></div><div class="phone-tabs"><span>Tiffin</span><span>Meals</span><span>Tea</span><span>Snacks</span></div><div class="phone-grid">${posPreview.map(item => `<div class="phone-item">${esc(item.name || "Item")}<br><span class="muted">${money(item.price)}</span></div>`).join("")}</div></div>
+          </div>
+        </div>`;
     }
 
     function financeAdminHtml() {
@@ -3340,16 +3433,7 @@
       document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.classList.toggle("active", btn.dataset.adminTab === adminTab));
 
       if (adminTab === "dashboard") {
-        page.innerHTML = `
-          <div class="kpis">
-            <div class="kpi"><span>Today Sale</span><strong>${money(stats.total)}</strong></div>
-            <div class="kpi"><span>Total Orders</span><strong>${stats.count}</strong></div>
-            <div class="kpi"><span>Cash</span><strong>${money(stats.cash)}</strong></div>
-            <div class="kpi"><span>Online</span><strong>${money(stats.online)}</strong></div>
-          </div>
-          <div class="panel"><h2>Work Flow</h2><div class="muted">Admin creates users -> User login -> Select item -> Place order -> Sale recorded -> Sync report</div><button class="primary" id="adminGoBilling" type="button">Open Billing</button></div>
-          <div class="panel"><h2>Top Items</h2>${topItemsHtml()}</div>
-        `;
+        page.innerHTML = dashboardAdminHtml(stats);
       } else if (adminTab === "sales") {
         page.innerHTML = `<div class="panel">
           <div class="panel-head">
@@ -3411,6 +3495,10 @@
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_FROM", event.target.value); renderAdmin(); });
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderAdmin(); });
+      document.querySelectorAll("[data-admin-jump]").forEach(btn => btn.addEventListener("click", () => {
+        adminTab = btn.dataset.adminJump;
+        renderAdmin();
+      }));
       document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => {
         setReportQuickRange(btn.dataset.reportRange);
         renderAdmin();
@@ -3607,6 +3695,12 @@
       await loadProducts();
       await loadAdminData();
       await syncPendingOrders();
+      if (user.role === "admin") {
+        adminTab = "dashboard";
+        show("adminView");
+        renderAdmin();
+        return;
+      }
       show("posView");
       renderCart();
       updateSyncStatus();
@@ -3626,7 +3720,9 @@
     $("setupLogout").addEventListener("click", logout);
     $("testServerBtn").addEventListener("click", testServerFromLogin);
     $("logoutPos").addEventListener("click", openMainMenu);
-    $("logoutAdmin").addEventListener("click", logout);
+    if ($("adminMenuBtn")) $("adminMenuBtn").addEventListener("click", openMainMenu);
+    if ($("adminAvatar")) $("adminAvatar").addEventListener("click", logout);
+    if ($("logoutAdmin")) $("logoutAdmin").addEventListener("click", logout);
     if ($("itemSearch")) $("itemSearch").addEventListener("input", event => {
       itemSearch = event.target.value;
       renderProducts();
