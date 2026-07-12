@@ -206,6 +206,7 @@ let memory = {
   printers: [],
   menuItems: [...defaultMenuItems],
   stockItems: [...defaultStockItems],
+  creditors: [],
   expenses: [],
   orders: [],
   sales: [],
@@ -275,8 +276,19 @@ const menuItemSchema = new mongoose.Schema({
   category: String,
   image: String,
   subItems: [{ name: String, price: Number }],
-  sortOrder: Number
+  sortOrder: Number,
+  hidden: { type: Boolean, default: false }
 }, { timestamps: true, collection: "menu_items" });
+
+const creditorSchema = new mongoose.Schema({
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
+  id: { type: Number, sparse: true, index: true },
+  name: String,
+  phone: String,
+  address: String,
+  reason: String,
+  active: { type: Boolean, default: true }
+}, { timestamps: true, collection: "creditors" });
 
 const stockItemSchema = new mongoose.Schema({
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
@@ -437,6 +449,7 @@ saleSchema.index(
 );
 reportSettingSchema.index({ canteenId: 1, key: 1 }, { unique: true, name: "canteenId_1_key_1" });
 menuItemSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
+creditorSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 stockItemSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 expenseSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 
@@ -444,6 +457,7 @@ const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
 const Sale = mongoose.models.Sale || mongoose.model("Sale", saleSchema);
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 const MenuItem = mongoose.models.MenuItem || mongoose.model("MenuItem", menuItemSchema);
+const Creditor = mongoose.models.Creditor || mongoose.model("Creditor", creditorSchema);
 const StockItem = mongoose.models.StockItem || mongoose.model("StockItem", stockItemSchema);
 const Expense = mongoose.models.Expense || mongoose.model("Expense", expenseSchema);
 const ReportSetting = mongoose.models.ReportSetting || mongoose.model("ReportSetting", reportSettingSchema);
@@ -734,7 +748,7 @@ async function ensureDatabaseIndexes() {
     { unique: true, name: "canteenId_1_key_1" }
   );
 
-  for (const collection of [MenuItem.collection, StockItem.collection, Expense.collection]) {
+  for (const collection of [MenuItem.collection, Creditor.collection, StockItem.collection, Expense.collection]) {
     await dropIndexIfExists(collection, "id_1");
     await collection.createIndex(
       { canteenId: 1, id: 1 },
@@ -778,15 +792,18 @@ function modelToPlain(doc) {
   return doc && typeof doc.toObject === "function" ? doc.toObject() : doc;
 }
 
-async function allMenuItems(canteenId = DEFAULT_CANTEEN_ID) {
+async function allMenuItems(canteenId = DEFAULT_CANTEEN_ID, options = {}) {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   const byOrder = (a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0);
+  const includeHidden = options.includeHidden === true;
   if (!mongoReady) {
     return memory.menuItems
       .filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId)
+      .filter(item => includeHidden || item.hidden !== true)
       .sort(byOrder);
   }
-  return (await MenuItem.find({ canteenId: targetCanteenId }).lean()).sort(byOrder);
+  const query = includeHidden ? { canteenId: targetCanteenId } : { canteenId: targetCanteenId, hidden: { $ne: true } };
+  return (await MenuItem.find(query).lean()).sort(byOrder);
 }
 
 function normalizeSubItems(value) {
@@ -810,7 +827,7 @@ function normalizeSubItems(value) {
 
 async function saveMenuItem(payload) {
   const canteenId = normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID);
-  const current = await allMenuItems(canteenId);
+  const current = await allMenuItems(canteenId, { includeHidden: true });
   const item = {
     id: payload.id ? Number(payload.id) : nextId(current),
     canteenId,
@@ -819,7 +836,8 @@ async function saveMenuItem(payload) {
     category: payload.category || "Snacks",
     image: payload.image || "",
     subItems: normalizeSubItems(payload.subItems),
-    sortOrder: payload.sortOrder !== undefined && payload.sortOrder !== "" ? Number(payload.sortOrder) : Number(payload.id || nextId(current))
+    sortOrder: payload.sortOrder !== undefined && payload.sortOrder !== "" ? Number(payload.sortOrder) : Number(payload.id || nextId(current)),
+    hidden: payload.hidden === true || payload.hidden === "true"
   };
 
   if (!item.name) throw new Error("Product name is required");
@@ -853,9 +871,53 @@ async function deleteMenuItem(id, canteenId = DEFAULT_CANTEEN_ID) {
   await MenuItem.deleteOne({ canteenId: targetCanteenId, id: Number(id) });
 }
 
+async function allCreditors(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""));
+  if (!mongoReady) {
+    return memory.creditors
+      .filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId)
+      .filter(item => item.active !== false)
+      .sort(byName);
+  }
+  return (await Creditor.find({ canteenId: targetCanteenId, active: { $ne: false } }).lean()).sort(byName);
+}
+
+async function saveCreditor(payload) {
+  const canteenId = normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID);
+  const current = await allCreditors(canteenId);
+  const creditor = {
+    id: payload.id ? Number(payload.id) : nextId(current),
+    canteenId,
+    name: String(payload.name || "").trim(),
+    phone: String(payload.phone || "").trim(),
+    address: String(payload.address || "").trim(),
+    reason: String(payload.reason || "").trim(),
+    active: payload.active !== false
+  };
+
+  if (!creditor.name) throw new Error("Creditor name is required");
+
+  if (!mongoReady) {
+    const existing = memory.creditors.find(row =>
+      normalizeCanteenId(row.canteenId || DEFAULT_CANTEEN_ID) === canteenId &&
+      Number(row.id) === Number(creditor.id)
+    );
+    if (existing) Object.assign(existing, creditor);
+    else memory.creditors.push(creditor);
+    return creditor;
+  }
+
+  return modelToPlain(await Creditor.findOneAndUpdate(
+    { canteenId, id: creditor.id },
+    { $set: creditor },
+    { new: true, upsert: true }
+  ));
+}
+
 async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen") {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
-  if (!(await allMenuItems(targetCanteenId)).length) {
+  if (!(await allMenuItems(targetCanteenId, { includeHidden: true })).length) {
     for (const item of defaultMenuItems) {
       await saveMenuItem({ ...item, canteenId: targetCanteenId });
     }
@@ -1065,9 +1127,15 @@ function makeOrder(payload) {
 function normalizePaymentBreakup(value, payment, total) {
   const source = value && typeof value === "object" ? value : {};
   if (payment === "Split") {
-    const cash = Math.max(0, Number(source.cash || 0));
-    const online = Math.max(0, Number(source.online || 0));
-    const credit = Math.max(0, Number(source.credit || 0));
+    let cash = Math.max(0, Number(source.cash || 0));
+    let online = Math.max(0, Number(source.online || 0));
+    let credit = Math.max(0, Number(source.credit || 0));
+    const splitTotal = cash + online + credit;
+    if (total >= 0 && Math.round(splitTotal * 100) !== Math.round(total * 100)) {
+      cash = Math.min(cash, total);
+      credit = Math.min(credit, Math.max(0, total - cash));
+      online = Math.max(0, total - cash - credit);
+    }
     return { cash, online, credit };
   }
   if (payment === "Online") return { cash: 0, online: total, credit: 0 };
@@ -1723,7 +1791,7 @@ async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
   const todayOrders = reportOrdersForType(orders, "daily");
   const stock = await allStockItems(canteenId);
   const expenses = await allExpenses(canteenId);
-  const products = await allMenuItems(canteenId);
+  const products = await allMenuItems(canteenId, { includeHidden: true });
   const todayTotals = paymentTotals(todayOrders);
   const totalExpenses = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
@@ -1738,6 +1806,7 @@ async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
     stock,
     expenses,
     products,
+    creditors: await allCreditors(canteenId),
     users: (await allUsers()).filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === normalizeCanteenId(canteenId)).map(publicUser),
     settings: await getSettings(canteenId),
     orders
@@ -1898,7 +1967,7 @@ app.get("/catalog/default-products", requireAdmin, async (req, res) => {
 app.post("/products", requireDatabase, requireAdmin, async (req, res) => {
   try {
     const product = await saveMenuItem({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
-    res.json({ success: true, product, products: await allMenuItems(req.authUser.canteenId) });
+    res.json({ success: true, product, products: await allMenuItems(req.authUser.canteenId, { includeHidden: true }) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -1906,7 +1975,20 @@ app.post("/products", requireDatabase, requireAdmin, async (req, res) => {
 
 app.delete("/products/:id", requireDatabase, requireAdmin, async (req, res) => {
   await deleteMenuItem(req.params.id, req.authUser.canteenId);
-  res.json({ success: true, products: await allMenuItems(req.authUser.canteenId) });
+  res.json({ success: true, products: await allMenuItems(req.authUser.canteenId, { includeHidden: true }) });
+});
+
+app.get("/creditors", requireCanteenAuth, async (req, res) => {
+  res.json(await allCreditors(req.authUser.canteenId));
+});
+
+app.post("/creditors", requireDatabase, requireAdmin, async (req, res) => {
+  try {
+    const creditor = await saveCreditor({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
+    res.json({ success: true, creditor, creditors: await allCreditors(req.authUser.canteenId) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 });
 
 app.get("/stock", async (req, res) => {

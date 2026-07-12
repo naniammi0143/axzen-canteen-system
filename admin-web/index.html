@@ -215,6 +215,8 @@
     tr:last-child td { border-bottom: 0; }
     .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
     .table-wrap { width: 100%; overflow: auto; }
+    .sales-scroll, .report-sales-scroll { max-height: 650px; overflow: auto; }
+    .report-sales-scroll { max-height: 720px; }
     .list { display: grid; gap: 10px; }
     .list-row { display: flex; justify-content: space-between; gap: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
     .list-row:last-child { border-bottom: 0; padding-bottom: 0; }
@@ -353,7 +355,7 @@
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 
     function emptyDashboard() {
-      return { totalSales: 0, totalBills: 0, cash: 0, upi: 0, card: 0, online: 0, totalExpenses: 0, netCollection: 0, topItems: [], userSales: [], lowStock: [], stock: [], expenses: [], products: [], users: [], orders: [] };
+      return { totalSales: 0, totalBills: 0, cash: 0, upi: 0, card: 0, online: 0, credit: 0, totalExpenses: 0, netCollection: 0, topItems: [], userSales: [], lowStock: [], stock: [], expenses: [], products: [], users: [], creditors: [], orders: [] };
     }
 
     async function api(path, options = {}) {
@@ -446,8 +448,9 @@
     function paymentRows() {
       return `<div class="list">
         <div class="list-row"><span>Cash</span><strong>${money(dashboard.cash)}</strong></div>
-        <div class="list-row"><span>UPI / Online</span><strong>${money(dashboard.upi + dashboard.online)}</strong></div>
+        <div class="list-row"><span>UPI / Online</span><strong>${money(dashboard.online)}</strong></div>
         <div class="list-row"><span>Card</span><strong>${money(dashboard.card)}</strong></div>
+        <div class="list-row"><span>Credit</span><strong>${money(dashboard.credit)}</strong></div>
       </div>`;
     }
 
@@ -470,9 +473,9 @@
       $("page").innerHTML = `<section class="grid-4">
         <div class="card blue"><span>Sales</span><strong>${money(dashboard.totalSales)}</strong></div>
         <div class="card green"><span>Cash</span><strong>${money(dashboard.cash)}</strong></div>
-        <div class="card"><span>Online</span><strong>${money(dashboard.online + dashboard.upi)}</strong></div>
+        <div class="card"><span>Online</span><strong>${money(dashboard.online)}</strong></div>
         <div class="card orange"><span>Bills</span><strong>${dashboard.totalBills}</strong></div>
-      </section><section class="panel" style="margin-top:16px"><div class="toolbar"><h2>All Sales</h2>${dashboard.orders.length ? `<button class="danger" id="deleteAllBills" type="button">Delete All Bills</button>` : ""}</div>${salesTable(200)}</section>`;
+      </section><section class="panel" style="margin-top:16px"><div class="toolbar"><h2>All Sales</h2>${dashboard.orders.length ? `<button class="danger" id="deleteAllBills" type="button">Delete All Bills</button>` : ""}</div><div class="sales-scroll">${salesTable(200)}</div></section>`;
       document.querySelectorAll("[data-delete-bill]").forEach(btn => btn.addEventListener("click", deleteBill));
       if ($("deleteAllBills")) $("deleteAllBills").addEventListener("click", deleteAllBills);
     }
@@ -501,6 +504,7 @@
       document.querySelectorAll("[data-edit-product]").forEach(btn => btn.addEventListener("click", editProduct));
       document.querySelectorAll("[data-delete-product]").forEach(btn => btn.addEventListener("click", deleteProduct));
       document.querySelectorAll("[data-move-product]").forEach(btn => btn.addEventListener("click", moveProduct));
+      document.querySelectorAll("[data-toggle-hidden]").forEach(btn => btn.addEventListener("click", toggleHiddenProduct));
       document.querySelectorAll("[data-live-product]").forEach(input => input.addEventListener("change", toggleDefaultProduct));
     }
 
@@ -532,10 +536,10 @@
       ).slice().sort((a, b) => productSortValue(a) - productSortValue(b));
       const rows = visible.map((item, index) => `<tr>
         <td><div class="name-cell"><img class="item-thumb" src="${esc(item.image || "")}" alt=""><strong>${esc(item.name)}</strong></div></td>
-        <td><span class="pill">${esc(item.category)}</span></td>
+        <td><span class="pill">${esc(item.category)}</span>${item.hidden ? `<br><span class="pill gray">Hidden</span>` : ""}</td>
         <td>${money(item.price)}${Array.isArray(item.subItems) && item.subItems.length ? `<br><span class="muted">${item.subItems.length} sub items</span>` : ""}</td>
         <td>${productSortValue(item, index)}</td>
-        <td><div class="row-actions"><button class="ghost" data-move-product="${item.id}" data-direction="up" type="button">↑</button><button class="ghost" data-move-product="${item.id}" data-direction="down" type="button">↓</button><button class="secondary" data-edit-product="${item.id}" type="button">Edit</button><button class="danger" data-delete-product="${item.id}" type="button">Delete</button></div></td>
+        <td><div class="row-actions"><button class="ghost" data-move-product="${item.id}" data-direction="up" type="button">Up</button><button class="ghost" data-move-product="${item.id}" data-direction="down" type="button">Down</button><button class="secondary" data-toggle-hidden="${item.id}" type="button">${item.hidden ? "Show" : "Hide"}</button><button class="secondary" data-edit-product="${item.id}" type="button">Edit</button><button class="danger" data-delete-product="${item.id}" type="button">Delete</button></div></td>
       </tr>`).join("");
       return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Category</th><th>Price</th><th>Display Order</th><th>Action</th></tr></thead><tbody>${rows || `<tr><td colspan="5">No products</td></tr>`}</tbody></table></div>`;
     }
@@ -549,6 +553,7 @@
         category: $("productCategory").value || "Snacks",
         image: $("productImage").value,
         sortOrder: $("productSortOrder").value || undefined,
+        hidden: $("productHidden").checked,
         subItems: parseSubItems($("productSubItems").value)
       }) });
       pageMessage("Menu item saved");
@@ -596,7 +601,7 @@
     }
 
     function openProductModal(item = {}) {
-      const categories = ["Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner"];
+      const categories = [...new Set(["Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner", ...dashboard.products.map(row => row.category).filter(Boolean)])];
       const mount = $("modalMount");
       mount.innerHTML = `
         <div class="modal-backdrop" data-close-modal>
@@ -610,8 +615,9 @@
                 <input id="productId" type="hidden" value="${esc(item.id || "")}">
                 <label>Name <input id="productName" value="${esc(item.name || "")}" required></label>
                 <label>Price <input id="productPrice" type="number" min="0" value="${Number(item.price || 0)}" required></label>
-                <label>Category <select id="productCategory">${categories.map(category => `<option value="${category}" ${String(item.category || "Snacks") === category ? "selected" : ""}>${category}</option>`).join("")}</select></label>
+                <label>Category <input id="productCategory" list="productCategories" value="${esc(item.category || "Snacks")}" required><datalist id="productCategories">${categories.map(category => `<option value="${esc(category)}"></option>`).join("")}</datalist></label>
                 <label>Display Order <input id="productSortOrder" type="number" min="0" value="${Number(item.sortOrder ?? item.id ?? (dashboard.products.length + 1))}"></label>
+                <label><input id="productHidden" type="checkbox" ${item.hidden ? "checked" : ""}> Hide from billing menu</label>
                 <label>Image URL <input id="productImage" value="${esc(item.image || "")}"></label>
                 <label>Sub Items <textarea id="productSubItems" placeholder="Single: 15&#10;Half Plate: 30&#10;Full Plate: 50">${esc(subItemsText(item))}</textarea></label>
               </div>
@@ -645,6 +651,14 @@
     async function deleteProduct(event) {
       await api(`/products/${event.target.dataset.deleteProduct}`, { method: "DELETE" });
       pageMessage("Menu item deleted");
+      await loadData();
+    }
+
+    async function toggleHiddenProduct(event) {
+      const item = dashboard.products.find(row => Number(row.id) === Number(event.target.dataset.toggleHidden));
+      if (!item) return;
+      await api("/products", { method: "POST", body: JSON.stringify({ ...item, hidden: !item.hidden }) });
+      pageMessage(item.hidden ? "Item shown in billing" : "Item hidden from billing");
       await loadData();
     }
 
@@ -689,9 +703,59 @@
           <label>Category <input id="expenseCategory" value="General"></label>
           <button class="primary">Save Expense</button>
         </form></div>
-        <div class="panel"><h2>Expenses</h2>${expensesTable()}</div>
-      </section>`;
+        <div class="panel"><div class="toolbar"><h2>Credits</h2><button class="primary" id="addCreditorBtn" type="button">Add Credit</button></div>${creditorsTable()}</div>
+      </section>
+      <section class="panel"><h2>Expenses</h2>${expensesTable()}</section>
+      <div id="modalMount"></div>`;
       $("expenseForm").addEventListener("submit", saveExpense);
+      $("addCreditorBtn").addEventListener("click", () => openCreditorModal());
+    }
+
+    function creditorsTable() {
+      const rows = (dashboard.creditors || []).map(item => `<tr><td><strong>${esc(item.name)}</strong></td><td>${esc(item.phone || "-")}</td><td>${esc(item.address || "-")}</td><td>${esc(item.reason || "-")}</td></tr>`).join("");
+      return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Address</th><th>Reason</th></tr></thead><tbody>${rows || `<tr><td colspan="4">No creditors added</td></tr>`}</tbody></table></div>`;
+    }
+
+    function openCreditorModal() {
+      const mount = $("modalMount");
+      mount.innerHTML = `
+        <div class="modal-backdrop" data-close-modal>
+          <div class="modal">
+            <div class="modal-head">
+              <h2>Add Credit</h2>
+              <button class="ghost" type="button" data-close-modal>Close</button>
+            </div>
+            <form id="creditorForm">
+              <div class="modal-body">
+                <label>Creditor Name <input id="creditorName" required></label>
+                <label>Phone Number <input id="creditorPhone" type="tel" inputmode="numeric"></label>
+                <label>Address <textarea id="creditorAddress"></textarea></label>
+                <label>Reason <textarea id="creditorReason"></textarea></label>
+              </div>
+              <div class="modal-actions">
+                <button class="ghost" type="button" data-close-modal>Cancel</button>
+                <button class="primary">Save Credit</button>
+              </div>
+            </form>
+          </div>
+        </div>`;
+      mount.querySelector("#creditorForm").addEventListener("submit", saveCreditor);
+      mount.querySelectorAll("[data-close-modal]").forEach(node => node.addEventListener("click", event => {
+        if (event.target === node) mount.innerHTML = "";
+      }));
+      $("creditorName").focus();
+    }
+
+    async function saveCreditor(event) {
+      event.preventDefault();
+      await api("/creditors", { method: "POST", body: JSON.stringify({
+        name: $("creditorName").value,
+        phone: $("creditorPhone").value,
+        address: $("creditorAddress").value,
+        reason: $("creditorReason").value
+      }) });
+      pageMessage("Creditor saved");
+      await loadData();
     }
 
     function expensesTable() {
@@ -898,7 +962,17 @@
     function paymentBreakup(order) {
       const total = Number(order.total || 0);
       const breakup = order.paymentBreakup || {};
-      if (order.payment === "Split") return { cash: Number(breakup.cash || 0), online: Number(breakup.online || 0), credit: Number(breakup.credit || 0) };
+      if (order.payment === "Split") {
+        let cash = Math.max(0, Number(breakup.cash || 0));
+        let online = Math.max(0, Number(breakup.online || 0));
+        let credit = Math.max(0, Number(breakup.credit || 0));
+        if (Math.round((cash + online + credit) * 100) !== Math.round(total * 100)) {
+          cash = Math.min(cash, total);
+          credit = Math.min(credit, Math.max(0, total - cash));
+          online = Math.max(0, total - cash - credit);
+        }
+        return { cash, online, credit };
+      }
       if (order.payment === "Online") return { cash: 0, online: total, credit: 0 };
       if (order.payment === "Credit") return { cash: 0, online: 0, credit: total };
       if (order.payment === "Cancel") return { cash: 0, online: 0, credit: 0 };
@@ -974,7 +1048,7 @@
         const qty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
         return `<tr><td>${esc(order.time || new Date(orderDate(order)).toLocaleString("en-IN"))}</td><td><strong>${billNo(order, index)}</strong></td><td>${esc((order.items || []).map(i => `${i.name} x ${i.qty}`).join(", "))}</td><td>${qty}</td><td>${money(order.total)}</td><td><span class="pill green">${esc(order.payment || "-")}</span></td><td>${esc(order.cashier || "-")}</td></tr>`;
       }).join("");
-      return `<div class="table-wrap"><table><thead><tr><th>Time</th><th>Bill No</th><th>Items</th><th>Quantity</th><th>Amount</th><th>Payment Mode</th><th>Cashier/User</th></tr></thead><tbody>${rows || `<tr><td colspan="7">No sales for selected range</td></tr>`}</tbody></table></div>`;
+      return `<div class="table-wrap report-sales-scroll"><table><thead><tr><th>Time</th><th>Bill No</th><th>Items</th><th>Quantity</th><th>Amount</th><th>Payment Mode</th><th>Cashier/User</th></tr></thead><tbody>${rows || `<tr><td colspan="7">No sales for selected range</td></tr>`}</tbody></table></div>`;
     }
 
     function reportUserSalesHtml(rows) {
@@ -1000,7 +1074,7 @@
           <div class="list-row"><span>Cash total</span><strong>${money(data.cash)} (${cashPct}%)</strong></div>
           <div class="list-row"><span>Online total</span><strong>${money(data.online)} (${onlinePct}%)</strong></div>
           <div class="list-row"><span>Credit total</span><strong>${money(data.credit)} (${creditPct}%)</strong></div>
-          <div class="list-row"><span>UPI / Card</span><strong>${money(dashboard.upi + dashboard.card)}</strong></div>
+          <div class="list-row"><span>UPI / Card</span><strong>${money(data.online)}</strong></div>
         </div>
       </div>`;
     }

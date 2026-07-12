@@ -859,6 +859,13 @@
       font-weight: 850;
       vertical-align: middle;
     }
+    .report-bills-scroll { max-height: 650px; overflow: auto; }
+    .bulk-order-grid { display: grid; gap: 10px; }
+    .bulk-order-row { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+    .bulk-order-row input { min-height: 44px; text-align: center; font-size: 18px; font-weight: 950; }
+    .day-close-summary { display: grid; gap: 12px; max-height: 68vh; overflow-y: auto; }
+    .day-close-text { width: 100%; min-height: 240px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: #f8fafc; color: var(--ink); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 12px; line-height: 1.45; white-space: pre; overflow: auto; }
+    .day-close-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .status-pill {
       display: inline-flex;
       align-items: center;
@@ -1214,7 +1221,7 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
-    const appBuild = "1.8.0";
+    const appBuild = "1.8.2";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -1228,6 +1235,7 @@
     let products = [];
     let orders = [];
     let users = [];
+    let creditors = [];
     let activeCategory = "All";
     let cart = [];
     let payment = "";
@@ -1474,6 +1482,7 @@
         const dashboard = await api("/dashboard", { timeoutMs: 2500 });
         const allOrders = dashboard.orders || [];
         orders = user?.role === "admin" ? allOrders : allOrders.filter(order => String(order.cashier || "") === String(user?.name || ""));
+        creditors = dashboard.creditors || [];
       } catch {}
       try {
         users = await api("/users", { timeoutMs: 2500 });
@@ -1806,17 +1815,14 @@
 
     async function receipt(order) {
       const text = receiptText(order);
-      if (!selectedPrinter) {
-        $("posMessage").textContent = "Order saved. Printer not connected.";
-        $("posMessage").className = "status error";
-        return;
-      }
-      if (window.AxenPrinter && typeof window.AxenPrinter.print === "function") {
+      if (window.AxenPrinter && (typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
         try {
           applySelectedPrinterToBridge();
-          const result = window.AxenPrinter.print(text);
-          $("posMessage").textContent = result === "Print sent" ? "Order saved and print sent" : (result || "Order saved. Printer not connected.");
-          $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
+          const result = typeof window.AxenPrinter.printAsync === "function"
+            ? window.AxenPrinter.printAsync(text)
+            : window.AxenPrinter.print(text);
+          $("posMessage").textContent = result === "Print queued" || result === "Print sent" ? "Order saved and print started" : (result || "Order saved. Printer not connected.");
+          $("posMessage").className = result === "Print queued" || result === "Print sent" ? "status ok" : "status error";
           return;
         } catch (error) {
           $("posMessage").textContent = "Order saved. Printer not connected.";
@@ -1839,16 +1845,18 @@
     }
 
     function testPrint() {
-      if (!window.AxenPrinter || typeof window.AxenPrinter.print !== "function") {
+      if (!window.AxenPrinter || (typeof window.AxenPrinter.printAsync !== "function" && typeof window.AxenPrinter.print !== "function")) {
         $("posMessage").textContent = "Direct Bluetooth print works only inside the Android APK.";
         $("posMessage").className = "status error";
         return;
       }
       try {
         applySelectedPrinterToBridge();
-        const result = window.AxenPrinter.print(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n`);
+        const result = typeof window.AxenPrinter.printAsync === "function"
+          ? window.AxenPrinter.printAsync(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n`)
+          : window.AxenPrinter.print(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n`);
         $("posMessage").textContent = result;
-        $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
+        $("posMessage").className = result === "Print queued" || result === "Print sent" ? "status ok" : "status error";
       } catch (error) {
         $("posMessage").textContent = `Printer failed: ${error.message || "Unknown error"}`;
         $("posMessage").className = "status error";
@@ -1858,7 +1866,17 @@
     function orderBreakup(order) {
       const total = Number(order.total || 0);
       const breakup = order.paymentBreakup || {};
-      if (order.payment === "Split") return { cash: Number(breakup.cash || 0), online: Number(breakup.online || 0), credit: Number(breakup.credit || 0) };
+      if (order.payment === "Split") {
+        let cash = Math.max(0, Number(breakup.cash || 0));
+        let online = Math.max(0, Number(breakup.online || 0));
+        let credit = Math.max(0, Number(breakup.credit || 0));
+        if (Math.round((cash + online + credit) * 100) !== Math.round(total * 100)) {
+          cash = Math.min(cash, total);
+          credit = Math.min(credit, Math.max(0, total - cash));
+          online = Math.max(0, total - cash - credit);
+        }
+        return { cash, online, credit };
+      }
       if (order.payment === "Online") return { cash: 0, online: total, credit: 0 };
       if (order.payment === "Credit") return { cash: 0, online: 0, credit: total };
       if (order.payment === "Cancel") return { cash: 0, online: 0, credit: 0 };
@@ -2098,6 +2116,7 @@
     function pageTitle(section) {
       return ({
         held: "Orders",
+        bulk: "Orders",
         report: "Reports",
         cash: "Cash Summary",
         stock: "Stock Availability",
@@ -2112,6 +2131,7 @@
     function pageSubtitle(section) {
       return ({
         held: "Held orders and quick return to billing.",
+        bulk: "Bulk quantity order entry.",
         report: "Date wise, item wise and payment reports.",
         cash: "Cash, online and credit collection split.",
         stock: "Inventory view with low-stock status.",
@@ -2158,6 +2178,19 @@
         <div class="work-card">
           <h3>Recent Orders</h3>
           <table class="data-table"><thead><tr><th>Bill</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${recentRows || `<tr><td colspan="4">No orders yet</td></tr>`}</tbody></table>
+        </div>`;
+    }
+
+    function bulkOrderPageHtml() {
+      const rows = products.slice().sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0)).map(item => `
+        <div class="bulk-order-row">
+          <div><strong>${esc(item.name || "Item")}</strong><div class="muted">${esc(item.category || "")} | ${money(item.price)}</div></div>
+          <input data-bulk-item="${item.id}" type="number" inputmode="numeric" pattern="[0-9]*" min="0" placeholder="0">
+        </div>`).join("");
+      return `
+        ${sectionHeader("bulk", `<button class="page-action" id="bulkAddToCart" type="button">Add To Cart</button>`)}
+        <div class="work-card">
+          <div class="bulk-order-grid">${rows || `<div class="muted">Menu items load avvaledu</div>`}</div>
         </div>`;
     }
 
@@ -2236,7 +2269,7 @@
         <div class="work-card"><h3>Date Wise Report</h3><table class="data-table"><thead><tr><th>Date</th><th>Bills</th><th>Sale</th></tr></thead><tbody>${dateRows || `<tr><td colspan="3">No date wise sales</td></tr>`}</tbody></table></div>
         <div class="work-card"><h3>Item Wise Report</h3><table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody>${itemRows || `<tr><td colspan="3">No item sales</td></tr>`}</tbody></table></div>
         <div class="work-card"><h3>Payment Report</h3><div class="option-row"><span>Cash</span><strong>${money(totals.cash)}</strong></div><div class="option-row"><span>Online / UPI</span><strong>${money(totals.online)}</strong></div><div class="option-row"><span>Credit</span><strong>${money(totals.credit)}</strong></div></div>
-        <div class="work-card"><h3>Recent Bills</h3><table class="data-table"><thead><tr><th>Bill</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${bills || `<tr><td colspan="4">No bills in selected date range</td></tr>`}</tbody></table></div>`;
+        <div class="work-card"><h3>Recent Bills</h3><div class="report-bills-scroll"><table class="data-table"><thead><tr><th>Bill</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${bills || `<tr><td colspan="4">No bills in selected date range</td></tr>`}</tbody></table></div></div>`;
     }
 
     function cashPageHtml() {
@@ -2256,6 +2289,139 @@
           <div class="work-card metric-card"><span>Credit Pending</span><strong>${money(totals.credit)}</strong></div>
         </div>
         <div class="work-card"><h3>Collection Summary</h3><div class="option-row"><span>Total collection</span><strong>${money(totals.cash + totals.online + totals.credit)}</strong></div><div class="option-row"><span>Bill count</span><strong>${rows.length}</strong></div></div>`;
+    }
+
+    function dayCloseRows() {
+      return todayOrders();
+    }
+
+    function dayCloseSummary() {
+      const rows = dayCloseRows();
+      const items = new Map();
+      const usersMap = new Map();
+      const totals = rows.reduce((sum, order) => {
+        const pay = orderBreakup(order);
+        const amount = Number(order.total || 0);
+        sum.total += amount;
+        sum.cash += pay.cash;
+        sum.upi += pay.online;
+        sum.credit += pay.credit;
+
+        const cashier = order.cashier || "Unknown";
+        const userRow = usersMap.get(cashier) || { bills: 0, total: 0, cash: 0, upi: 0, credit: 0 };
+        userRow.bills += 1;
+        userRow.total += amount;
+        userRow.cash += pay.cash;
+        userRow.upi += pay.online;
+        userRow.credit += pay.credit;
+        usersMap.set(cashier, userRow);
+
+        (order.items || []).forEach(item => {
+          const name = item.name || "Item";
+          const price = Number(item.price || 0);
+          const key = `${name}__${price}`;
+          const current = items.get(key) || { name, qty: 0, price, total: 0 };
+          current.qty += Number(item.qty || 0);
+          current.total += Number(item.qty || 0) * price;
+          items.set(key, current);
+        });
+        return sum;
+      }, { total: 0, cash: 0, upi: 0, credit: 0 });
+      return {
+        rows,
+        items: [...items.values()].sort((a, b) => a.name.localeCompare(b.name)),
+        users: [...usersMap.entries()].map(([name, data]) => ({ name, ...data })).sort((a, b) => b.total - a.total),
+        totals
+      };
+    }
+
+    function padText(value, width, alignRight = false) {
+      const text = String(value ?? "");
+      return alignRight ? text.padStart(width).slice(-width) : text.padEnd(width).slice(0, width);
+    }
+
+    function dayCloseReportText() {
+      const data = dayCloseSummary();
+      const date = new Date().toLocaleDateString("en-IN");
+      const title = `${settings.canteenName || "Canteen"} Store Closed`;
+      const itemLines = data.items.length
+        ? data.items.map(item => `${padText(item.name, 12)} ${padText(item.qty, 5, true)} ${padText(Number(item.price).toFixed(0), 7, true)} ${padText(Number(item.total).toFixed(0), 8, true)}`)
+        : ["No sales"];
+      const userLines = user?.role === "admin" && data.users.length > 1
+        ? [
+            "",
+            "User wise:",
+            ...data.users.map(row => `${padText(row.name, 12)} ${padText(row.bills + " bills", 8, true)} ${padText(Number(row.total).toFixed(0), 8, true)}`)
+          ]
+        : [];
+      return [
+        title,
+        `Date: ${date}`,
+        `Status: Store closed`,
+        "",
+        `${padText("item", 12)} ${padText("qt", 5, true)} ${padText("price", 7, true)} ${padText("total", 8, true)}`,
+        ...itemLines,
+        "",
+        `${padText("total", 26)} ${padText(Number(data.totals.total).toFixed(0), 8, true)}`,
+        `${padText("upi", 26)} ${padText(Number(data.totals.upi).toFixed(0), 8, true)}`,
+        `${padText("cash", 26)} ${padText(Number(data.totals.cash).toFixed(0), 8, true)}`,
+        `${padText("credit", 26)} ${padText(Number(data.totals.credit).toFixed(0), 8, true)}`,
+        "",
+        `Bills: ${data.rows.length}`,
+        ...userLines
+      ].join("\n");
+    }
+
+    async function openDayCloseModal() {
+      await syncPendingOrders();
+      await loadAdminData();
+      const text = dayCloseReportText();
+      $("optionsModalMount").innerHTML = `
+        <div class="modal-backdrop center-modal">
+          <div class="payment-modal">
+            <div class="modal-title-row"><h2>Day Close</h2><button class="modal-x" id="closeDayClose" type="button">X</button></div>
+            <div class="day-close-summary">
+              <div class="payment-total"><span>Store Closed</span><strong>${money(dayCloseSummary().totals.total)}</strong></div>
+              <pre class="day-close-text" id="dayCloseText">${esc(text)}</pre>
+            </div>
+            <div class="day-close-actions">
+              <button class="secondary" id="copyDayClose" type="button">Copy</button>
+              <button class="primary" id="shareDayClose" type="button">Share</button>
+            </div>
+            <div class="status" id="dayCloseStatus">WhatsApp select chesi evariki pampalo choose cheyyandi.</div>
+          </div>
+        </div>`;
+      $("closeDayClose").addEventListener("click", closeOptionsModal);
+      $("copyDayClose").addEventListener("click", copyDayCloseText);
+      $("shareDayClose").addEventListener("click", shareDayCloseText);
+    }
+
+    async function copyDayCloseText() {
+      const text = $("dayCloseText")?.textContent || dayCloseReportText();
+      try {
+        await navigator.clipboard.writeText(text);
+        $("dayCloseStatus").textContent = "Copied";
+        $("dayCloseStatus").className = "status ok";
+      } catch {
+        $("dayCloseStatus").textContent = "Copy failed. Text select chesi copy cheyyandi.";
+        $("dayCloseStatus").className = "status error";
+      }
+    }
+
+    async function shareDayCloseText() {
+      const text = $("dayCloseText")?.textContent || dayCloseReportText();
+      try {
+        if (navigator.share) {
+          await navigator.share({ text });
+        } else {
+          window.location.href = `whatsapp://send?text=${encodeURIComponent(text)}`;
+        }
+        $("dayCloseStatus").textContent = "Share opened";
+        $("dayCloseStatus").className = "status ok";
+      } catch {
+        $("dayCloseStatus").textContent = "Share cancelled or failed";
+        $("dayCloseStatus").className = "status error";
+      }
     }
 
     function stockPageHtml() {
@@ -2365,6 +2531,7 @@
       const page = $("optionPage");
       if (!page) return;
       const html = activePosSection === "held" ? ordersPageHtml()
+        : activePosSection === "bulk" ? bulkOrderPageHtml()
         : activePosSection === "report" ? reportPageHtml()
         : activePosSection === "cash" ? cashPageHtml()
         : activePosSection === "stock" ? stockPageHtml()
@@ -2415,6 +2582,7 @@
       document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => setReportQuickRange(btn.dataset.reportRange)));
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
       if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
+      if ($("bulkAddToCart")) $("bulkAddToCart").addEventListener("click", addBulkItemsToCart);
       document.querySelectorAll("[data-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem, input.value)));
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       document.querySelectorAll("[data-go-billing]").forEach(btn => btn.addEventListener("click", () => setPosSection("billing")));
@@ -2443,6 +2611,39 @@
       writeJson(productCacheKey, products);
       renderProducts();
       renderOptionPage();
+    }
+
+    function addBulkItemsToCart() {
+      let added = 0;
+      document.querySelectorAll("[data-bulk-item]").forEach(input => {
+        const qty = Math.max(0, Number(input.value || 0));
+        if (!qty) return;
+        const product = products.find(item => Number(item.id) === Number(input.dataset.bulkItem));
+        if (!product) return;
+        const lineId = cartLineId(product, null);
+        const existing = cart.find(item => item.lineId === lineId);
+        if (existing) existing.qty += qty;
+        else cart.push({
+          ...product,
+          lineId,
+          parentId: Number(product.id),
+          optionName: "",
+          name: product.name,
+          price: Number(product.price || 0),
+          qty
+        });
+        added += qty;
+      });
+      if (!added) {
+        $("posMessage").textContent = "Quantity enter cheyyandi";
+        $("posMessage").className = "status error";
+        return;
+      }
+      renderCart();
+      renderProducts();
+      setPosSection("billing");
+      $("posMessage").textContent = `${added} items cart lo add ayyayi`;
+      $("posMessage").className = "status ok";
     }
 
     async function savePriceFromPos(id, value) {
@@ -2562,6 +2763,8 @@
                 ${drawerItem("held", "Orders", "O", activeSection)}
                 ${drawerItem("report", "Reports", "R", activeSection)}
                 ${drawerItem("cash", "Cash Summary", "C", activeSection)}
+                <button class="drawer-item" id="dayCloseBtn" type="button"><span>D</span><strong>Day Close</strong><span class="drawer-arrow">›</span></button>
+                <button class="drawer-item" id="syncNowBtn" type="button"><span>S</span><strong>Sync Data</strong><span class="drawer-arrow">›</span></button>
               </section>
               <section class="drawer-section">
                 <span class="drawer-section-title">Items</span>
@@ -2574,7 +2777,6 @@
                 ${drawerItem("printer", "Printer Settings", "P", activeSection)}
                 ${drawerItem("counter", "User", "U", activeSection)}
                 ${drawerItem("settings", "Settings", "G", activeSection)}
-                <button class="drawer-item" id="syncNowBtn" type="button"><span>Y</span><strong>Sync Data</strong><span class="drawer-arrow">›</span></button>
               </section>
             </div>
             <div class="drawer-footer">
@@ -2593,6 +2795,7 @@
         $("posMessage").textContent = before ? "Sync complete" : "No pending data to sync";
         $("posMessage").className = "status ok";
       });
+      if ($("dayCloseBtn")) $("dayCloseBtn").addEventListener("click", openDayCloseModal);
       $("menuLogout").addEventListener("click", logout);
     }
 
@@ -2613,10 +2816,13 @@
         $("posMessage").className = "status error";
         return;
       }
-      if (window.AxenPrinter && typeof window.AxenPrinter.print === "function") {
-        const result = window.AxenPrinter.print(receiptText(order, true));
+      if (window.AxenPrinter && (typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
+        applySelectedPrinterToBridge();
+        const result = typeof window.AxenPrinter.printAsync === "function"
+          ? window.AxenPrinter.printAsync(receiptText(order, true))
+          : window.AxenPrinter.print(receiptText(order, true));
         $("posMessage").textContent = result || "Copy receipt sent";
-        $("posMessage").className = result === "Print sent" ? "status ok" : "status error";
+        $("posMessage").className = result === "Print queued" || result === "Print sent" ? "status ok" : "status error";
       } else {
         console.log(receiptText(order, true));
         $("posMessage").textContent = "Copy receipt ready only inside Android APK printer mode.";
@@ -2684,7 +2890,7 @@
 
     function openPaymentModal() {
       const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
-      const creditNames = users.map(row => row.name).filter(Boolean);
+      const creditNames = (creditors.length ? creditors : users).map(row => row.name).filter(Boolean);
       $("paymentModalMount").innerHTML = `
         <div class="modal-backdrop">
           <div class="payment-modal">
@@ -2779,7 +2985,8 @@
         return;
       }
       if (selectedPayment === "Cancel") payload.total = 0;
-      setPaymentStatus("Saving order...");
+      setPaymentStatus("Saving order and starting print...");
+      setTimeout(() => receipt(payload), 0);
 
       try {
         if (!navigator.onLine) throw new Error("offline");
@@ -2802,7 +3009,6 @@
       clearCartState();
       renderAdmin();
       setTimeout(closePaymentModal, 250);
-      setTimeout(() => receipt(payload), 300);
       setTimeout(() => loadAdminData(), 80);
       if (pendingOrders().length) setTimeout(syncPendingOrders, 900);
     }
@@ -3070,7 +3276,7 @@
       if (label === "Home") {
         setPosSection("billing");
       }
-      if (label === "Orders") setPosSection("held");
+      if (label === "Orders") setPosSection("bulk");
       if (label === "Reports") setPosSection("report");
       if (label === "Settings") setPosSection("settings");
     });

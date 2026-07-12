@@ -108,6 +108,16 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public String printAsync(String text) {
+            new Thread(() -> {
+                try {
+                    print(text);
+                } catch (Exception ignored) {}
+            }).start();
+            return "Print queued";
+        }
+
+        @JavascriptInterface
         public synchronized String listPrinters() {
             if (!hasBluetoothPermission()) {
                 requestBluetoothPermission();
