@@ -1246,7 +1246,7 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
-    const appBuild = "1.8.8";
+    const appBuild = "1.8.9";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -2974,6 +2974,7 @@
               </div>
               <section class="drawer-section">
                 <span class="drawer-section-title">Sales</span>
+                ${hasAdminAccess() ? `<button class="drawer-item" id="adminPanelBtn" type="button"><span>A</span><strong>Admin Panel</strong><span class="drawer-arrow">&rsaquo;</span></button>` : ""}
                 ${drawerItem("dashboard", "Dashboard", "H", activeSection)}
                 ${drawerItem("billing", "New Billing", "B", activeSection)}
                 ${drawerItem("held", "Orders", "O", activeSection)}
@@ -3004,6 +3005,7 @@
         </div>`;
       $("closeOptionsModal").addEventListener("click", closeOptionsModal);
       document.querySelectorAll("[data-menu-section]").forEach(btn => btn.addEventListener("click", () => setPosSection(btn.dataset.menuSection)));
+      if ($("adminPanelBtn")) $("adminPanelBtn").addEventListener("click", openAdminPanelFromBilling);
       if ($("syncNowBtn")) $("syncNowBtn").addEventListener("click", async () => {
         const before = pendingOrders().length;
         $("syncNowBtn").disabled = true;
@@ -3423,6 +3425,14 @@
       setPosSection("billing");
     }
 
+    function openAdminPanelFromBilling() {
+      closeOptionsModal();
+      adminTab = "dashboard";
+      if ($("adminRole")) $("adminRole").textContent = `${user?.name || "Admin"} | Admin Panel`;
+      show("adminView");
+      renderAdmin();
+    }
+
     async function deleteBill(orderId) {
       if (!confirm("Ee bill delete cheyyala?")) return;
       try {
@@ -3597,13 +3607,6 @@
       await loadProducts();
       await loadAdminData();
       await syncPendingOrders();
-      if (user.role === "admin") {
-        adminTab = "dashboard";
-        if ($("adminRole")) $("adminRole").textContent = `${user.name || "Admin"} | Admin Panel`;
-        show("adminView");
-        renderAdmin();
-        return;
-      }
       show("posView");
       renderCart();
       updateSyncStatus();
