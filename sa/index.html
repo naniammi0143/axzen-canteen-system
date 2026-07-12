@@ -694,9 +694,10 @@
     .admin-hero .brand-name { color: white; font-size: 34px; }
     .admin-hero .tagline { color: #8ec5ff; }
 
-    .admin-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px; }
-    .admin-tabs button { min-height: 42px; border: 1px solid var(--line); border-radius: 12px; background: white; color: var(--ink); font-size: 12px; font-weight: 900; }
+    .admin-tabs { display: flex; gap: 8px; padding: 12px; overflow-x: auto; background: #fff; border-bottom: 1px solid var(--line); }
+    .admin-tabs button { flex: 0 0 auto; min-height: 42px; border: 1px solid var(--line); border-radius: 12px; background: white; color: var(--ink); padding: 0 12px; font-size: 12px; font-weight: 900; white-space: nowrap; }
     .admin-tabs button.active { background: var(--blue); color: white; border-color: var(--blue); }
+    .admin-page { padding: 12px; display: grid; gap: 12px; }
     .admin-page { padding: 0 12px 22px; display: grid; gap: 12px; }
 
     .kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -1245,7 +1246,7 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
-    const appBuild = "1.8.7";
+    const appBuild = "1.8.8";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -2796,7 +2797,8 @@
       products = saved.products || products.map(item => Number(item.id) === Number(product.id) ? product : item);
       writeJson(productCacheKey, products);
       renderProducts();
-      renderOptionPage();
+      if (!$("adminView").classList.contains("hidden") && adminTab === "menu") renderAdmin();
+      else renderOptionPage();
     }
 
     function addBulkItemsToCart() {
@@ -2912,7 +2914,8 @@
         $("posMessage").textContent = "User saved";
         $("posMessage").className = "status ok";
         await loadAdminData();
-        renderOptionPage();
+        if (!$("adminView").classList.contains("hidden") && adminTab === "users") renderAdmin();
+        else renderOptionPage();
       } catch {
         $("posMessage").textContent = "User save failed. Admin permission required.";
         $("posMessage").className = "status error";
@@ -3263,9 +3266,75 @@
       return { total, cash: paid.cash, online: paid.online, credit: paid.credit, count: orders.length };
     }
 
+    const adminModules = [
+      ["dashboard", "D", "Dashboard"],
+      ["sales", "S", "Sales"],
+      ["menu", "M", "Menu"],
+      ["stock", "I", "Stock"],
+      ["finance", "F", "Finance"],
+      ["users", "U", "Users"],
+      ["reports", "R", "Reports"],
+      ["whatsapp", "W", "WhatsApp"],
+      ["settings", "G", "Settings"]
+    ];
+
+    function setupAdminTabs() {
+      const tabs = document.querySelector(".admin-tabs");
+      if (!tabs) return;
+      tabs.innerHTML = adminModules.map(([key, icon, label]) =>
+        `<button class="${key === adminTab ? "active" : ""}" data-admin-tab="${key}" type="button"><span aria-hidden="true">${icon}</span>${label}</button>`
+      ).join("");
+      tabs.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
+        adminTab = btn.dataset.adminTab;
+        renderAdmin();
+      }));
+    }
+
+    function financeAdminHtml() {
+      const stats = dashboardStats();
+      const expenseTotal = 0;
+      const creditorRows = (creditors || []).map(item => `<div class="user-line"><strong>${esc(item.name || "-")}</strong><span class="muted">${esc(item.phone || "")} ${item.reason ? `| ${esc(item.reason)}` : ""}</span></div>`).join("");
+      return `
+        <div class="kpis">
+          <div class="kpi"><span>Total Collection</span><strong>${money(stats.total)}</strong></div>
+          <div class="kpi"><span>Cash</span><strong>${money(stats.cash)}</strong></div>
+          <div class="kpi"><span>Online</span><strong>${money(stats.online)}</strong></div>
+          <div class="kpi"><span>Credit</span><strong>${money(stats.credit)}</strong></div>
+        </div>
+        <div class="panel"><h2>Finance Summary</h2><div class="row-between"><span>Net Collection</span><strong>${money(stats.total - expenseTotal)}</strong></div><div class="row-between"><span>Total Expenses</span><strong>${money(expenseTotal)}</strong></div></div>
+        <div class="panel"><h2>Creditors</h2>${creditorRows || `<div class="muted">No creditors added</div>`}</div>`;
+    }
+
+    function whatsappAdminHtml() {
+      return `
+        <div class="panel"><h2>WhatsApp Report Preview</h2><div class="muted">${esc(settings.canteenName)} daily report</div><div class="row-between"><span>Total Sale</span><strong>${money(dashboardStats().total)}</strong></div><div class="row-between"><span>Report Time</span><strong>${esc(settings.reportTime || "22:00")}</strong></div><div class="row-between"><span>Auto Report</span><strong>${settings.autoReport ? "ON" : "OFF"}</strong></div></div>
+        <div class="panel"><h2>WhatsApp Settings</h2><form class="form-grid" id="settingsForm">
+          <label>Report Time <input id="reportTimeInput" value="${esc(settings.reportTime || "22:00")}"></label>
+          <label>Admin WhatsApp Number <input id="adminWhatsAppInput" value="${esc(settings.adminWhatsAppNumber || settings.reportPhone || "")}" placeholder="919999999999"></label>
+          <label>Report Type <select id="reportTypeInput"><option value="daily" ${settings.reportType === "daily" ? "selected" : ""}>Daily</option><option value="weekly" ${settings.reportType === "weekly" ? "selected" : ""}>Weekly</option><option value="monthly" ${settings.reportType === "monthly" ? "selected" : ""}>Monthly</option><option value="yearly" ${settings.reportType === "yearly" ? "selected" : ""}>Yearly</option></select></label>
+          <label>Auto Report <select id="autoReportInput"><option value="true" ${settings.autoReport ? "selected" : ""}>ON</option><option value="false" ${!settings.autoReport ? "selected" : ""}>OFF</option></select></label>
+          <button class="primary">Save WhatsApp Settings</button>
+        </form></div>`;
+    }
+
+    function settingsAdminHtml() {
+      return `
+        <div class="panel">
+          <h2>Settings</h2>
+          <form class="form-grid" id="settingsForm">
+            <label>Canteen name <input id="canteenNameInput" value="${esc(settings.canteenName)}"></label>
+            <label>Logo URL <input id="logoUrlInput" value="${esc(settings.logoUrl || "")}" placeholder="https://..."></label>
+            <label>Server URL <input id="apiInput" value="${esc(API)}"></label>
+            <button class="primary">Save Settings</button>
+          </form>
+        </div>
+        <div class="panel"><h2>Quick Tools</h2><button class="secondary" id="refreshMenuBtn" type="button">Refresh Menu</button><button class="secondary" id="adminGoBilling" type="button">Open Billing</button></div>`;
+    }
+
     function renderAdmin() {
       const stats = dashboardStats();
       const page = $("adminPage");
+      setupAdminTabs();
       document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.classList.toggle("active", btn.dataset.adminTab === adminTab));
 
       if (adminTab === "dashboard") {
@@ -3279,10 +3348,10 @@
           <div class="panel"><h2>Work Flow</h2><div class="muted">Admin creates users -> User login -> Select item -> Place order -> Sale recorded -> Sync report</div><button class="primary" id="adminGoBilling" type="button">Open Billing</button></div>
           <div class="panel"><h2>Top Items</h2>${topItemsHtml()}</div>
         `;
-      } else if (adminTab === "orders") {
+      } else if (adminTab === "sales") {
         page.innerHTML = `<div class="panel">
           <div class="panel-head">
-            <h2>Recent Sales</h2>
+            <h2>All Sales</h2>
             ${orders.length ? `<button class="mini-danger" id="deleteAllBills" type="button">Delete All</button>` : ""}
           </div>
           ${orders.slice().reverse().map(order => {
@@ -3296,6 +3365,12 @@
         </div>`;
         document.querySelectorAll("[data-delete-bill]").forEach(btn => btn.addEventListener("click", () => deleteBill(btn.dataset.deleteBill)));
         if ($("deleteAllBills")) $("deleteAllBills").addEventListener("click", deleteAllBills);
+      } else if (adminTab === "menu") {
+        page.innerHTML = itemManagerPageHtml("edit");
+      } else if (adminTab === "stock") {
+        page.innerHTML = stockPageHtml();
+      } else if (adminTab === "finance") {
+        page.innerHTML = financeAdminHtml();
       } else if (adminTab === "users") {
         page.innerHTML = `
           <div class="panel">
@@ -3314,21 +3389,30 @@
           `).join("")}</div>
         `;
         $("userForm").addEventListener("submit", saveUser);
+      } else if (adminTab === "reports") {
+        page.innerHTML = reportPageHtml();
+      } else if (adminTab === "whatsapp") {
+        page.innerHTML = whatsappAdminHtml();
       } else {
-        page.innerHTML = `
-          <div class="panel">
-            <h2>Settings</h2>
-            <form class="form-grid" id="settingsForm">
-              <label>Canteen name <input id="canteenNameInput" value="${settings.canteenName}"></label>
-              <label>Logo URL <input id="logoUrlInput" value="${settings.logoUrl || ""}" placeholder="https://..."></label>
-              <label>Server URL <input id="apiInput" value="${API}"></label>
-              <button class="primary">Save Settings</button>
-            </form>
-          </div>
-        `;
-        $("settingsForm").addEventListener("submit", saveSettings);
+        page.innerHTML = settingsAdminHtml();
       }
+      bindAdminPageActions();
+    }
+
+    function bindAdminPageActions() {
       if ($("adminGoBilling")) $("adminGoBilling").addEventListener("click", openBillingFromAdmin);
+      if ($("settingsForm")) $("settingsForm").addEventListener("submit", saveSettings);
+      if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
+      if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
+      if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => { await loadProducts(); renderAdmin(); });
+      document.querySelectorAll("[data-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem, input.value)));
+      document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
+      if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_FROM", event.target.value); renderAdmin(); });
+      if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderAdmin(); });
+      document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => {
+        setReportQuickRange(btn.dataset.reportRange);
+        renderAdmin();
+      }));
     }
 
     function openBillingFromAdmin() {
@@ -3443,18 +3527,24 @@
 
     async function saveSettings(event) {
       event.preventDefault();
-      const nextApi = $("apiInput").value.trim().replace(/\/$/, "");
+      const nextApi = $("apiInput") ? $("apiInput").value.trim().replace(/\/$/, "") : "";
       if (nextApi) localStorage.setItem("AXEN_API_URL", nextApi);
       try {
         const data = await adminApi("/settings", {
           method: "POST",
           body: JSON.stringify({
-            canteenName: $("canteenNameInput").value.trim() || "Main Canteen",
-            logoUrl: $("logoUrlInput")?.value.trim() || ""
+            canteenName: $("canteenNameInput") ? $("canteenNameInput").value.trim() || "Main Canteen" : settings.canteenName,
+            logoUrl: $("logoUrlInput")?.value.trim() || settings.logoUrl || "",
+            reportTime: $("reportTimeInput") ? $("reportTimeInput").value.trim() : settings.reportTime,
+            adminWhatsAppNumber: $("adminWhatsAppInput") ? $("adminWhatsAppInput").value.trim() : settings.adminWhatsAppNumber,
+            reportPhone: $("adminWhatsAppInput") ? $("adminWhatsAppInput").value.trim() : settings.reportPhone,
+            reportType: $("reportTypeInput") ? $("reportTypeInput").value : settings.reportType,
+            autoReport: $("autoReportInput") ? $("autoReportInput").value === "true" : settings.autoReport
           })
         });
         applySettings(data.settings);
         await loadAdminData();
+        renderAdmin();
       } catch {
         alert("Settings save failed. Admin login check cheyyandi.");
       }
