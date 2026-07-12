@@ -1152,7 +1152,7 @@
           Total Sale: ${money(dashboard.totalSales)}<br>
           Total Orders: ${dashboard.totalBills}<br>
           Cash: ${money(dashboard.cash)}<br>
-          Online: ${money(dashboard.online + dashboard.upi)}<br>
+          Online: ${money(dashboard.online)}<br>
           Card: ${money(dashboard.card)}<br>
           Top Item: ${esc((dashboard.topItems[0] || {}).name || "-")}<br>
           Report Time: ${esc(settings.reportTime || "22:00")}<br>
