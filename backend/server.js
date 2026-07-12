@@ -208,6 +208,7 @@ let memory = {
   menuItems: [...defaultMenuItems],
   stockItems: [...defaultStockItems],
   stockUsage: [],
+  branchAddresses: [],
   creditors: [],
   expenses: [],
   orders: [],
@@ -266,9 +267,18 @@ const userSchema = new mongoose.Schema({
   mobile: { type: String, index: true },
   password: String,
   role: { type: String, enum: CANTEEN_ROLES, default: "user" },
+  branchAddress: String,
   active: { type: Boolean, default: true },
   mustChangePassword: { type: Boolean, default: false }
 }, { timestamps: true, collection: "users" });
+
+const branchAddressSchema = new mongoose.Schema({
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
+  id: { type: Number, sparse: true, index: true },
+  name: String,
+  address: String,
+  active: { type: Boolean, default: true }
+}, { timestamps: true, collection: "branch_addresses" });
 
 const menuItemSchema = new mongoose.Schema({
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
@@ -453,6 +463,7 @@ const whatsappLogSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "whatsapp_logs" });
 
 userSchema.index({ canteenId: 1, mobile: 1 }, { unique: true, name: "canteenId_1_mobile_1" });
+branchAddressSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 orderSchema.index(
   { canteenId: 1, clientOrderId: 1 },
   { unique: true, name: "canteenId_1_clientOrderId_1", partialFilterExpression: { clientOrderId: { $type: "string" } } }
@@ -471,6 +482,7 @@ expenseSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_
 const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
 const Sale = mongoose.models.Sale || mongoose.model("Sale", saleSchema);
 const User = mongoose.models.User || mongoose.model("User", userSchema);
+const BranchAddress = mongoose.models.BranchAddress || mongoose.model("BranchAddress", branchAddressSchema);
 const MenuItem = mongoose.models.MenuItem || mongoose.model("MenuItem", menuItemSchema);
 const Creditor = mongoose.models.Creditor || mongoose.model("Creditor", creditorSchema);
 const StockItem = mongoose.models.StockItem || mongoose.model("StockItem", stockItemSchema);
@@ -505,6 +517,7 @@ function publicUser(user) {
     name: user.name,
     mobile: user.mobile,
     role: user.role,
+    branchAddress: user.branchAddress || "",
     active: user.active !== false,
     canteenId: user.canteenId || DEFAULT_CANTEEN_ID,
     mustChangePassword: user.mustChangePassword === true
@@ -782,7 +795,7 @@ async function ensureDatabaseIndexes() {
     { unique: true, name: "canteenId_1_key_1" }
   );
 
-  for (const collection of [MenuItem.collection, Creditor.collection, StockItem.collection, StockUsage.collection, Expense.collection]) {
+  for (const collection of [MenuItem.collection, Creditor.collection, BranchAddress.collection, StockItem.collection, StockUsage.collection, Expense.collection]) {
     await dropIndexIfExists(collection, "id_1");
     await collection.createIndex(
       { canteenId: 1, id: 1 },
@@ -1150,6 +1163,7 @@ async function saveUser(payload) {
     mobile: normalizeMobile(payload.mobile),
     password: String(payload.password || "1234"),
     role: CANTEEN_ROLES.includes(payload.role) ? payload.role : "user",
+    branchAddress: String(payload.branchAddress || "").trim(),
     active: payload.active !== false,
     mustChangePassword: payload.mustChangePassword === true
   };
@@ -1183,6 +1197,45 @@ async function deleteUser(mobile, canteenId = DEFAULT_CANTEEN_ID) {
     return;
   }
   await User.deleteOne({ canteenId: targetCanteenId, mobile });
+}
+
+async function allBranchAddresses(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""));
+  if (!mongoReady) {
+    return memory.branchAddresses
+      .filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId)
+      .filter(item => item.active !== false)
+      .sort(byName);
+  }
+  return (await BranchAddress.find({ canteenId: targetCanteenId, active: { $ne: false } }).lean()).sort(byName);
+}
+
+async function saveBranchAddress(payload) {
+  const canteenId = normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID);
+  const current = await allBranchAddresses(canteenId);
+  const address = {
+    id: payload.id ? Number(payload.id) : nextId(current),
+    canteenId,
+    name: String(payload.name || "").trim(),
+    address: String(payload.address || "").trim(),
+    active: payload.active !== false
+  };
+  if (!address.name) throw new Error("Address name is required");
+  if (!mongoReady) {
+    const existing = memory.branchAddresses.find(row =>
+      normalizeCanteenId(row.canteenId || DEFAULT_CANTEEN_ID) === canteenId &&
+      Number(row.id) === Number(address.id)
+    );
+    if (existing) Object.assign(existing, address);
+    else memory.branchAddresses.push(address);
+    return address;
+  }
+  return modelToPlain(await BranchAddress.findOneAndUpdate(
+    { canteenId, id: address.id },
+    { $set: address },
+    { new: true, upsert: true }
+  ));
 }
 
 function makeOrder(payload) {
@@ -1891,6 +1944,7 @@ async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
     expenses,
     products,
     creditors: await allCreditors(canteenId),
+    addresses: await allBranchAddresses(canteenId),
     users: (await allUsers()).filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === normalizeCanteenId(canteenId)).map(publicUser),
     settings: await getSettings(canteenId),
     orders
@@ -2178,6 +2232,19 @@ app.post("/users", requireDatabase, requireAdmin, async (req, res) => {
 app.delete("/users/:mobile", requireDatabase, requireAdmin, async (req, res) => {
   await deleteUser(req.params.mobile, req.authUser.canteenId);
   res.json({ success: true });
+});
+
+app.get("/addresses", requireCanteenAuth, async (req, res) => {
+  res.json(await allBranchAddresses(req.authUser.canteenId));
+});
+
+app.post("/addresses", requireDatabase, requireAdmin, async (req, res) => {
+  try {
+    const address = await saveBranchAddress({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
+    res.json({ success: true, address, addresses: await allBranchAddresses(req.authUser.canteenId) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 });
 
 app.post("/orders", requireDatabase, requireCanteenAuth, async (req, res) => {

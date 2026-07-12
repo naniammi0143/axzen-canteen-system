@@ -367,7 +367,7 @@
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 
     function emptyDashboard() {
-      return { totalSales: 0, totalBills: 0, cash: 0, upi: 0, card: 0, online: 0, credit: 0, totalExpenses: 0, netCollection: 0, topItems: [], userSales: [], lowStock: [], stock: [], stockUsage: [], expenses: [], products: [], users: [], creditors: [], orders: [] };
+      return { totalSales: 0, totalBills: 0, cash: 0, upi: 0, card: 0, online: 0, credit: 0, totalExpenses: 0, netCollection: 0, topItems: [], userSales: [], lowStock: [], stock: [], stockUsage: [], expenses: [], products: [], users: [], creditors: [], addresses: [], orders: [] };
     }
 
     async function api(path, options = {}) {
@@ -826,13 +826,15 @@
               <h2>Users</h2>
               <div class="muted">Manage cashier and admin access</div>
             </div>
-            <button class="primary" id="addUserBtn" type="button">Add User</button>
+            <div class="toolbar-right"><button class="secondary" id="addAddressBtn" type="button">Add Address</button><button class="primary" id="addUserBtn" type="button">Add User</button></div>
           </div>
           ${usersTable()}
         </div>
+        <div class="panel"><h2>Branch Addresses</h2>${addressesTable()}</div>
         <div id="modalMount"></div>
       </section>`;
       $("addUserBtn").addEventListener("click", () => openUserModal());
+      $("addAddressBtn").addEventListener("click", () => openAddressModal());
       document.querySelectorAll("[data-edit-user]").forEach(btn => btn.addEventListener("click", editUser));
       document.querySelectorAll("[data-delete-user]").forEach(btn => btn.addEventListener("click", deleteUser));
     }
@@ -842,14 +844,20 @@
         <td><strong>${esc(user.name)}</strong></td>
         <td>${esc(user.mobile)}</td>
         <td><span class="pill">${esc(user.role)}</span></td>
+        <td>${esc(user.branchAddress || "-")}</td>
         <td><div class="row-actions"><button class="secondary" data-edit-user="${esc(user.mobile)}" type="button">Edit</button><button class="danger" data-delete-user="${esc(user.mobile)}" type="button">Delete</button></div></td>
       </tr>`).join("");
-      return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Action</th></tr></thead><tbody>${rows || `<tr><td colspan="4">No users</td></tr>`}</tbody></table></div>`;
+      return `<div class="table-wrap"><table><thead><tr><th>Name</th><th>Mobile</th><th>Role</th><th>Address</th><th>Action</th></tr></thead><tbody>${rows || `<tr><td colspan="5">No users</td></tr>`}</tbody></table></div>`;
+    }
+
+    function addressesTable() {
+      const rows = (dashboard.addresses || []).map(item => `<tr><td><strong>${esc(item.name)}</strong></td><td>${esc(item.address || "-")}</td></tr>`).join("");
+      return `<div class="table-wrap"><table><thead><tr><th>Branch</th><th>Address</th></tr></thead><tbody>${rows || `<tr><td colspan="2">No addresses</td></tr>`}</tbody></table></div>`;
     }
 
     async function saveUser(event) {
       event.preventDefault();
-      await api("/users", { method: "POST", body: JSON.stringify({ name: $("newName").value, mobile: $("newMobile").value, password: $("newPassword").value, role: $("newRole").value }) });
+      await api("/users", { method: "POST", body: JSON.stringify({ name: $("newName").value, mobile: $("newMobile").value, password: $("newPassword").value, role: $("newRole").value, branchAddress: $("newBranchAddress").value }) });
       pageMessage("User saved");
       await loadData();
     }
@@ -874,6 +882,7 @@
                 <label>Mobile <input id="newMobile" value="${esc(user.mobile || "")}" ${user.mobile ? "readonly" : ""} required></label>
                 <label>Password <input id="newPassword" placeholder="${user.mobile ? "Enter new or same password" : "Password"}" required></label>
                 <label>Role <select id="newRole">${userRoles.map(([value, label]) => `<option value="${value}" ${user.role === value || (!user.role && value === "user") ? "selected" : ""}>${label}</option>`).join("")}</select></label>
+                <label>Address <select id="newBranchAddress"><option value="">Select Address</option>${(dashboard.addresses || []).map(address => `<option value="${esc(address.name)}" ${user.branchAddress === address.name ? "selected" : ""}>${esc(address.name)}${address.address ? ` - ${esc(address.address)}` : ""}</option>`).join("")}</select></label>
               </div>
               <div class="modal-actions">
                 <button class="ghost" type="button" data-close-modal>Cancel</button>
@@ -887,6 +896,35 @@
         if (event.target === node) mount.innerHTML = "";
       }));
       $("newName").focus();
+    }
+
+    function openAddressModal() {
+      const mount = $("modalMount");
+      mount.innerHTML = `
+        <div class="modal-backdrop" data-close-modal>
+          <div class="modal">
+            <div class="modal-head"><h2>Add Address</h2><button class="ghost" type="button" data-close-modal>Close</button></div>
+            <form id="addressForm">
+              <div class="modal-body">
+                <label>Branch Name <input id="addressName" placeholder="Miyapur Branch" required></label>
+                <label>Address <textarea id="addressText" placeholder="Metro Rail Miyapur Canteen"></textarea></label>
+              </div>
+              <div class="modal-actions"><button class="ghost" type="button" data-close-modal>Cancel</button><button class="primary">Save Address</button></div>
+            </form>
+          </div>
+        </div>`;
+      mount.querySelector("#addressForm").addEventListener("submit", saveAddress);
+      mount.querySelectorAll("[data-close-modal]").forEach(node => node.addEventListener("click", event => {
+        if (event.target === node) mount.innerHTML = "";
+      }));
+      $("addressName").focus();
+    }
+
+    async function saveAddress(event) {
+      event.preventDefault();
+      await api("/addresses", { method: "POST", body: JSON.stringify({ name: $("addressName").value, address: $("addressText").value }) });
+      pageMessage("Address saved");
+      await loadData();
     }
 
     async function deleteUser(event) {
