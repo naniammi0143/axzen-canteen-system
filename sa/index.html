@@ -1245,7 +1245,7 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
-    const appBuild = "1.8.5";
+    const appBuild = "1.8.6";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -1288,6 +1288,7 @@
     let longPressHandled = false;
     let liveRefreshBusy = false;
     let lastDataSyncAt = "";
+    let menuOpening = false;
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(0);
@@ -1370,7 +1371,16 @@
           ...(fetchOptions.headers || {})
         }
       }).finally(() => clearTimeout(timeout));
-      if (!response.ok) throw new Error("Request failed");
+      if (!response.ok) {
+        let message = "Request failed";
+        try {
+          const body = await response.json();
+          message = body.message || message;
+        } catch {}
+        const error = new Error(message);
+        error.status = response.status;
+        throw error;
+      }
       return response.json();
     }
 
@@ -1420,19 +1430,29 @@
       renderUserChrome();
     }
 
+    function loginCacheId(mobile, canteenId = "") {
+      return `${String(mobile || "").trim()}::${String(canteenId || "").trim().toUpperCase()}`;
+    }
+
     function cacheLogin(mobile, password, nextUser) {
       const cache = readJson(loginCacheKey, {});
-      cache[String(mobile).trim()] = {
+      const canteenId = String(nextUser?.canteenId || "").trim().toUpperCase();
+      cache[loginCacheId(mobile, canteenId)] = {
         password: String(password),
         user: nextUser,
         savedAt: new Date().toISOString()
       };
+      cache[String(mobile).trim()] = { canteenId, savedAt: new Date().toISOString() };
       writeJson(loginCacheKey, cache);
     }
 
-    function offlineLogin(mobile, password) {
+    function offlineLogin(mobile, password, canteenId = "") {
       const cache = readJson(loginCacheKey, {});
-      const saved = cache[String(mobile).trim()];
+      const mobileKey = String(mobile || "").trim();
+      const normalizedCanteen = String(canteenId || "").trim().toUpperCase();
+      const saved = normalizedCanteen
+        ? cache[loginCacheId(mobileKey, normalizedCanteen)]
+        : cache[loginCacheId(mobileKey, cache[mobileKey]?.canteenId || "")];
       if (!saved || String(saved.password) !== String(password)) return null;
       return saved.user;
     }
@@ -2913,7 +2933,8 @@
         setPosSection(section);
         return;
       }
-      await loadAdminData();
+      if (menuOpening) return;
+      menuOpening = true;
       const activeSection = activePosSection === "billing" ? "dashboard" : activePosSection;
       $("optionsModalMount").innerHTML = `
         <div class="drawer-backdrop">
@@ -2984,15 +3005,24 @@
       });
       if ($("dayCloseBtn")) $("dayCloseBtn").addEventListener("click", openDayCloseModal);
       $("menuLogout").addEventListener("click", logout);
+      setTimeout(() => { menuOpening = false; }, 350);
+      loadAdminData().then(() => {
+        if ($("optionsModalMount").innerHTML) {
+          const title = document.querySelector(".drawer-title strong");
+          if (title) title.textContent = settings.canteenName || "Main Canteen";
+        }
+      }).catch(() => {});
     }
 
     function closeOptionsModal() {
       longPressHandled = false;
+      menuOpening = false;
       $("optionsModalMount").innerHTML = "";
     }
 
     function openMainMenu(event) {
       if (event && typeof event.preventDefault === "function") event.preventDefault();
+      if (event && typeof event.stopPropagation === "function") event.stopPropagation();
       openOptionsModal("menu");
     }
 
@@ -3411,6 +3441,11 @@
         }
         await enterApp();
       } catch (error) {
+        if (error?.status === 409) {
+          $("loginStatus").textContent = error.message || "Restaurant ID required for this phone number.";
+          $("loginStatus").className = "status error";
+          return;
+        }
         const cachedUser = offlineLogin(loginId, password);
         if (cachedUser) {
           setSession(cachedUser);
