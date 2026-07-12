@@ -708,6 +708,7 @@
     .admin-tabs { position: fixed; left: 50%; bottom: 0; z-index: 12; transform: translateX(-50%); width: min(520px, 100%); display: grid; grid-auto-flow: column; grid-auto-columns: minmax(78px, 1fr); gap: 0; padding: 8px 8px 10px; overflow-x: auto; background: #fffffff2; border-top: 1px solid #e8edf4; box-shadow: 0 -12px 34px #0f172a12; backdrop-filter: blur(16px); }
     .admin-tabs button { min-height: 58px; border: 0; border-radius: 14px; background: transparent; color: #64748b; padding: 4px 8px; font-size: 11px; font-weight: 850; white-space: nowrap; }
     .admin-tabs button span { display: block; margin: 0 0 4px; font-size: 20px; }
+    .admin-tabs svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .admin-tabs button.active { background: #eef6ff; color: #007aff; }
     .admin-page { padding: 14px 14px 22px; display: grid; gap: 12px; }
 
@@ -735,7 +736,7 @@
     .admin-grid-2 { display: grid; grid-template-columns: 1fr; gap: 12px; }
     .donut-admin { width: 160px; height: 160px; margin: 6px auto 14px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(#007aff 0 62%, #22c55e 62% 86%, #f59e0b 86% 100%); }
     .donut-admin span { width: 82px; height: 82px; display: grid; place-items: center; border-radius: 50%; background: white; text-align: center; font-weight: 950; }
-    .admin-sale-row, .admin-stock-row { display: grid; grid-template-columns: 42px 1fr auto; gap: 10px; align-items: center; min-height: 62px; border: 1px solid #e8edf4; border-radius: 14px; padding: 9px; margin-bottom: 8px; }
+    .admin-sale-row, .admin-stock-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 62px; border: 1px solid #e8edf4; border-radius: 14px; padding: 9px; margin-bottom: 8px; }
     .row-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: #e8f3ff; color: #007aff; font-weight: 950; }
     .payment-pill { border-radius: 999px; padding: 8px 12px; background: #e8fff0; color: #16a34a; font-size: 12px; font-weight: 900; }
     .payment-pill.online { background: #e8f3ff; color: #007aff; }
@@ -1283,7 +1284,7 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
-    const appBuild = "1.9.0";
+    const appBuild = "1.9.1";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -3306,26 +3307,35 @@
     }
 
     const adminModules = [
-      ["dashboard", "D", "Dashboard"],
-      ["sales", "S", "Sales"],
-      ["menu", "M", "Menu"],
-      ["stock", "I", "Stock"],
-      ["finance", "F", "Finance"],
-      ["users", "U", "Users"],
-      ["reports", "R", "Reports"],
-      ["whatsapp", "W", "WhatsApp"],
-      ["settings", "G", "Settings"]
+      ["dashboard", "home", "Dashboard"],
+      ["sales", "bar", "Sales"],
+      ["menu", "list", "Menu"],
+      ["stock", "box", "Stock"],
+      ["finance", "wallet", "Finance"],
+      ["more", "more", "More"]
     ];
+
+    function adminIcon(name) {
+      const icons = {
+        home: `<svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10.5V20h14v-9.5"/><path d="M9 20v-6h6v6"/></svg>`,
+        bar: `<svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M8 19v-7"/><path d="M13 19V8"/><path d="M18 19v-4"/></svg>`,
+        list: `<svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg>`,
+        box: `<svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="M4 7.5 12 12l8-4.5"/><path d="M12 12v9"/></svg>`,
+        wallet: `<svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M4 10h16"/><path d="M16 14h2"/></svg>`,
+        more: `<svg viewBox="0 0 24 24"><path d="M5 12h.01"/><path d="M12 12h.01"/><path d="M19 12h.01"/></svg>`
+      };
+      return icons[name] || icons.more;
+    }
 
     function setupAdminTabs() {
       const tabs = document.querySelector(".admin-tabs");
       if (!tabs) return;
-      if ($("adminTitle")) $("adminTitle").textContent = adminModules.find(([key]) => key === adminTab)?.[2] || "Dashboard";
+      if ($("adminTitle")) $("adminTitle").textContent = adminModules.find(([key]) => key === adminTab)?.[2] || ({ users: "Users", reports: "Reports", whatsapp: "WhatsApp", settings: "Settings" }[adminTab] || "Dashboard");
       if ($("adminAvatar")) $("adminAvatar").textContent = String(user?.name || "A").slice(0, 1).toUpperCase();
       if ($("adminDateChip")) $("adminDateChip").textContent = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
       if ($("adminBranchChip")) $("adminBranchChip").textContent = settings.canteenName || "Main Canteen";
       tabs.innerHTML = adminModules.map(([key, icon, label]) =>
-        `<button class="${key === adminTab ? "active" : ""}" data-admin-tab="${key}" type="button"><span aria-hidden="true">${icon}</span>${label}</button>`
+        `<button class="${key === adminTab ? "active" : ""}" data-admin-tab="${key}" type="button"><span aria-hidden="true">${adminIcon(icon)}</span>${label}</button>`
       ).join("");
       tabs.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
         adminTab = btn.dataset.adminTab;
@@ -3426,6 +3436,18 @@
         <div class="panel"><h2>Quick Tools</h2><button class="secondary" id="refreshMenuBtn" type="button">Refresh Menu</button><button class="secondary" id="adminGoBilling" type="button">Open Billing</button></div>`;
     }
 
+    function moreAdminHtml() {
+      const items = [
+        ["users", "Users", "Create and manage cashiers"],
+        ["reports", "Reports", "Date wise, item wise and payment reports"],
+        ["whatsapp", "WhatsApp Reports", "Auto report and admin number"],
+        ["settings", "Settings", "Canteen name, logo and server"],
+        ["billing", "Open Billing", "Go to POS billing screen"],
+        ["logout", "Logout", "Sign out from this device"]
+      ];
+      return `<div class="panel"><h2>More</h2>${items.map(([key, title, sub]) => `<button class="admin-sale-row" data-more-action="${key}" type="button"><span class="row-icon">${title.slice(0, 1)}</span><div><strong>${title}</strong><div class="muted">${sub}</div></div><span class="drawer-arrow">&rsaquo;</span></button>`).join("")}</div>`;
+    }
+
     function renderAdmin() {
       const stats = dashboardStats();
       const page = $("adminPage");
@@ -3479,6 +3501,8 @@
         page.innerHTML = reportPageHtml();
       } else if (adminTab === "whatsapp") {
         page.innerHTML = whatsappAdminHtml();
+      } else if (adminTab === "more") {
+        page.innerHTML = moreAdminHtml();
       } else {
         page.innerHTML = settingsAdminHtml();
       }
@@ -3497,6 +3521,13 @@
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderAdmin(); });
       document.querySelectorAll("[data-admin-jump]").forEach(btn => btn.addEventListener("click", () => {
         adminTab = btn.dataset.adminJump;
+        renderAdmin();
+      }));
+      document.querySelectorAll("[data-more-action]").forEach(btn => btn.addEventListener("click", () => {
+        const action = btn.dataset.moreAction;
+        if (action === "billing") return openBillingFromAdmin();
+        if (action === "logout") return logout();
+        adminTab = action;
         renderAdmin();
       }));
       document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => {
@@ -3721,7 +3752,6 @@
     $("testServerBtn").addEventListener("click", testServerFromLogin);
     $("logoutPos").addEventListener("click", openMainMenu);
     if ($("adminMenuBtn")) $("adminMenuBtn").addEventListener("click", openMainMenu);
-    if ($("adminAvatar")) $("adminAvatar").addEventListener("click", logout);
     if ($("logoutAdmin")) $("logoutAdmin").addEventListener("click", logout);
     if ($("itemSearch")) $("itemSearch").addEventListener("input", event => {
       itemSearch = event.target.value;
