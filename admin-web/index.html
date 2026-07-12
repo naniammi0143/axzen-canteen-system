@@ -44,7 +44,8 @@
     }
     h1, h2, h3 { margin: 0; font-weight: 700; line-height: 1.25; letter-spacing: 0; }
     button, input, select, textarea { font: inherit; }
-    button { cursor: pointer; }
+    button { cursor: pointer; transition: transform .12s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease, opacity .12s ease; }
+    button:active { transform: scale(.97); }
     .hidden { display: none !important; }
 
     .login {

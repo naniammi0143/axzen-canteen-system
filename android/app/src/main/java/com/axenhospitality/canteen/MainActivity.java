@@ -4,14 +4,20 @@ import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.FileProvider;
 import com.getcapacitor.BridgeActivity;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
@@ -28,6 +34,7 @@ public class MainActivity extends BridgeActivity {
         applySystemBars();
         requestBluetoothPermission();
         getBridge().getWebView().addJavascriptInterface(new ThermalPrinterBridge(), "AxenPrinter");
+        getBridge().getWebView().addJavascriptInterface(new ShareBridge(), "AxenShare");
     }
 
     private void applySystemBars() {
@@ -220,6 +227,41 @@ public class MainActivity extends BridgeActivity {
                     .replace("\"", "\\\"")
                     .replace("\n", "\\n")
                     .replace("\r", "\\r");
+        }
+    }
+
+    public class ShareBridge {
+        @JavascriptInterface
+        public String sharePng(String dataUrl, String fileName, String title) {
+            try {
+                if (dataUrl == null || dataUrl.trim().isEmpty()) return "Share failed: empty image";
+                String base64 = dataUrl.contains(",") ? dataUrl.substring(dataUrl.indexOf(",") + 1) : dataUrl;
+                byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                File dir = new File(getCacheDir(), "shared-reports");
+                if (!dir.exists() && !dir.mkdirs()) return "Share failed: cache not ready";
+                String safeName = (fileName == null || fileName.trim().isEmpty() ? "day-close.png" : fileName)
+                        .replaceAll("[^a-zA-Z0-9._-]", "-");
+                File file = new File(dir, safeName.endsWith(".png") ? safeName : safeName + ".png");
+                try (FileOutputStream stream = new FileOutputStream(file)) {
+                    stream.write(bytes);
+                }
+                Uri uri = FileProvider.getUriForFile(
+                        MainActivity.this,
+                        getPackageName() + ".fileprovider",
+                        file
+                );
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("image/png");
+                shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+                shareIntent.putExtra(Intent.EXTRA_SUBJECT, title == null ? "Day Close Report" : title);
+                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                Intent chooser = Intent.createChooser(shareIntent, title == null ? "Share Report" : title);
+                chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                runOnUiThread(() -> startActivity(chooser));
+                return "Share opened";
+            } catch (Exception error) {
+                return "Share failed: " + error.getMessage();
+            }
         }
     }
 }

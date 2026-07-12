@@ -233,6 +233,8 @@ const orderSchema = new mongoose.Schema({
   time: String,
   canteen: String,
   cashier: String,
+  cashierMobile: String,
+  branchAddress: String,
   payment: String,
   paymentBreakup: mongoose.Schema.Types.Mixed,
   creditName: String,
@@ -250,6 +252,8 @@ const saleSchema = new mongoose.Schema({
   time: String,
   canteen: String,
   cashier: String,
+  cashierMobile: String,
+  branchAddress: String,
   payment: String,
   paymentBreakup: mongoose.Schema.Types.Mixed,
   creditName: String,
@@ -1248,6 +1252,8 @@ function makeOrder(payload) {
     time: payload.time || new Date().toLocaleString("en-IN", { timeZone: INDIA_TZ }),
     canteen: payload.canteen || "Main Canteen",
     cashier: payload.cashier || "Mobile Cashier",
+    cashierMobile: String(payload.cashierMobile || payload.userMobile || "").trim(),
+    branchAddress: String(payload.branchAddress || "").trim(),
     payment: payload.payment || "Cash",
     paymentBreakup,
     creditName: payload.creditName || "",
@@ -1922,12 +1928,28 @@ async function checkScheduledWhatsAppReport() {
 }
 
 async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
-  const orders = await allOrders(canteenId);
+  const [
+    orders,
+    stock,
+    stockUsage,
+    expenses,
+    products,
+    creditors,
+    addresses,
+    allUserRows,
+    settings
+  ] = await Promise.all([
+    allOrders(canteenId),
+    allStockItems(canteenId),
+    allStockUsage(canteenId),
+    allExpenses(canteenId),
+    allMenuItems(canteenId, { includeHidden: true }),
+    allCreditors(canteenId),
+    allBranchAddresses(canteenId),
+    allUsers(),
+    getSettings(canteenId)
+  ]);
   const todayOrders = reportOrdersForType(orders, "daily");
-  const stock = await allStockItems(canteenId);
-  const stockUsage = await allStockUsage(canteenId);
-  const expenses = await allExpenses(canteenId);
-  const products = await allMenuItems(canteenId, { includeHidden: true });
   const todayTotals = paymentTotals(todayOrders);
   const totalExpenses = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
 
@@ -1943,10 +1965,10 @@ async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
     stockUsage,
     expenses,
     products,
-    creditors: await allCreditors(canteenId),
-    addresses: await allBranchAddresses(canteenId),
-    users: (await allUsers()).filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === normalizeCanteenId(canteenId)).map(publicUser),
-    settings: await getSettings(canteenId),
+    creditors,
+    addresses,
+    users: allUserRows.filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === normalizeCanteenId(canteenId)).map(publicUser),
+    settings,
     orders
   };
 }
