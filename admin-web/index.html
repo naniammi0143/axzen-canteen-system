@@ -350,12 +350,24 @@
     let reportFilter = "today";
     let customFrom = "";
     let customTo = "";
+    const userRoles = [
+      ["user", "User"],
+      ["cashier", "Cashier"],
+      ["billing", "Billing"],
+      ["store_keeper", "Store Keeper"],
+      ["inventory", "Inventory"],
+      ["manager", "Manager"],
+      ["accountant", "Accountant"],
+      ["chef", "Chef"],
+      ["waiter", "Waiter"],
+      ["admin", "Admin"]
+    ];
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(0);
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 
     function emptyDashboard() {
-      return { totalSales: 0, totalBills: 0, cash: 0, upi: 0, card: 0, online: 0, credit: 0, totalExpenses: 0, netCollection: 0, topItems: [], userSales: [], lowStock: [], stock: [], expenses: [], products: [], users: [], creditors: [], orders: [] };
+      return { totalSales: 0, totalBills: 0, cash: 0, upi: 0, card: 0, online: 0, credit: 0, totalExpenses: 0, netCollection: 0, topItems: [], userSales: [], lowStock: [], stock: [], stockUsage: [], expenses: [], products: [], users: [], creditors: [], orders: [] };
     }
 
     async function api(path, options = {}) {
@@ -673,20 +685,57 @@
             <button class="primary">Save Stock</button>
           </form>
         </div>
-        <div class="panel"><h2>Inventory</h2>${stockTable()}</div>
+        <div class="panel"><h2>Daily Stock Used</h2>
+          <form class="form-grid" id="stockUsageForm">
+            <label>Date <input id="usageDate" type="date" value="${new Date().toISOString().slice(0, 10)}" required></label>
+            <label>Item <select id="usageItem">${dashboard.stock.map(item => `<option value="${item.id}">${esc(item.item)} (${esc(item.unit || "Unit")})</option>`).join("")}</select></label>
+            <label>Used Qty <input id="usageQty" type="number" step="0.001" min="0" required></label>
+            <label>Store Keeper <input id="usageKeeper" value="${esc(session?.name || "")}" required></label>
+            <label>Note <input id="usageNote" placeholder="Optional"></label>
+            <button class="primary">Save Used Stock</button>
+          </form>
+        </div>
+        <section class="grid-2-even">
+          <div class="panel"><h2>Stock List</h2>${stockTable()}</div>
+          <div class="panel"><h2>Date Wise Stock Usage Report</h2>${stockUsageTable()}</div>
+        </section>
       </section>`;
       $("stockForm").addEventListener("submit", saveStock);
+      $("stockUsageForm").addEventListener("submit", saveStockUsage);
     }
 
     function stockTable() {
-      const rows = dashboard.stock.map(item => `<tr><td>${esc(item.item)}</td><td>${item.stock} ${esc(item.unit)}</td><td>${item.minStock} ${esc(item.unit)}</td><td>${Number(item.stock) <= Number(item.minStock) ? `<span class="pill red">Low</span>` : `<span class="pill green">Good</span>`}</td></tr>`).join("");
-      return `<table><thead><tr><th>Item</th><th>Stock</th><th>Minimum</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>`;
+      const rows = dashboard.stock.map(item => `<tr><td>${esc(item.item)}</td><td>${item.stock} ${esc(item.unit)}</td><td>${item.minStock} ${esc(item.unit)}</td><td>${esc(stockKeeperForItem(item.item))}</td><td>${Number(item.stock) <= Number(item.minStock) ? `<span class="pill red">Low</span>` : `<span class="pill green">Good</span>`}</td></tr>`).join("");
+      return `<div class="table-wrap"><table><thead><tr><th>Item</th><th>Stock</th><th>Minimum</th><th>Store Keeper</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="5">No stock items</td></tr>`}</tbody></table></div>`;
+    }
+
+    function stockKeeperForItem(name) {
+      const usage = (dashboard.stockUsage || []).find(row => String(row.item || "") === String(name || ""));
+      return usage?.storeKeeper || "-";
+    }
+
+    function stockUsageTable() {
+      const rows = (dashboard.stockUsage || []).map(item => `<tr><td>${esc(item.date || "-")}</td><td>${esc(item.item || "-")}</td><td>${Number(item.qtyUsed || 0)} ${esc(item.unit || "")}</td><td>${esc(item.storeKeeper || "-")}</td><td>${esc(item.note || "-")}</td></tr>`).join("");
+      return `<div class="table-wrap report-sales-scroll"><table><thead><tr><th>Date</th><th>Item</th><th>Used</th><th>Store Keeper</th><th>Note</th></tr></thead><tbody>${rows || `<tr><td colspan="5">No stock usage report</td></tr>`}</tbody></table></div>`;
     }
 
     async function saveStock(event) {
       event.preventDefault();
       await api("/stock", { method: "POST", body: JSON.stringify({ item: $("stockName").value, stock: $("stockQty").value, unit: $("stockUnit").value || "Unit", minStock: $("stockMin").value || 0 }) });
       pageMessage("Stock saved");
+      await loadData();
+    }
+
+    async function saveStockUsage(event) {
+      event.preventDefault();
+      await api("/stock-usage", { method: "POST", body: JSON.stringify({
+        date: $("usageDate").value,
+        itemId: $("usageItem").value,
+        qtyUsed: $("usageQty").value,
+        storeKeeper: $("usageKeeper").value,
+        note: $("usageNote").value
+      }) });
+      pageMessage("Stock usage saved");
       await loadData();
     }
 
@@ -824,7 +873,7 @@
                 <label>Name <input id="newName" value="${esc(user.name || "")}" required></label>
                 <label>Mobile <input id="newMobile" value="${esc(user.mobile || "")}" ${user.mobile ? "readonly" : ""} required></label>
                 <label>Password <input id="newPassword" placeholder="${user.mobile ? "Enter new or same password" : "Password"}" required></label>
-                <label>Role <select id="newRole"><option value="user" ${user.role !== "admin" ? "selected" : ""}>User</option><option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option></select></label>
+                <label>Role <select id="newRole">${userRoles.map(([value, label]) => `<option value="${value}" ${user.role === value || (!user.role && value === "user") ? "selected" : ""}>${label}</option>`).join("")}</select></label>
               </div>
               <div class="modal-actions">
                 <button class="ghost" type="button" data-close-modal>Cancel</button>
@@ -887,7 +936,7 @@
             ${reportMetric("Total Sales", money(data.total), "SALE")}
             ${reportMetric("Cash Sales", money(data.cash), "CASH")}
             ${reportMetric("Online Sales", money(data.online), "UPI")}
-            ${reportMetric("Served Customers", data.orders.length, "USER")}
+            ${reportMetric("Credit", money(data.credit), "CREDIT")}
             ${reportMetric("Top Item", esc((data.items[0] || {}).name || "-"), `${(data.items[0] || {}).qty || 0} sold`)}
           </section>
           <section class="grid-2">
@@ -1260,14 +1309,14 @@
       event.preventDefault();
       try {
         const data = await api("/login", { method: "POST", body: JSON.stringify({ mobile: $("mobileInput").value, password: $("passwordInput").value }) });
-        if (data.user.role !== "admin") throw new Error("Admin only");
+        if (!["admin", "store_keeper", "inventory", "manager"].includes(data.user.role)) throw new Error("Admin only");
         session = data.user;
         localStorage.setItem("AXEN_ADMIN_SESSION", JSON.stringify(session));
         if (data.token) localStorage.setItem("AXEN_ADMIN_TOKEN", data.token);
         applySettings(data.settings);
         showApp();
       } catch {
-        $("loginStatus").textContent = "Admin login failed";
+        $("loginStatus").textContent = "Admin / Store Keeper login failed";
         $("loginStatus").className = "status error";
       }
     });
@@ -1278,7 +1327,10 @@
       location.reload();
     });
     document.querySelectorAll("[data-tab]").forEach(btn => btn.addEventListener("click", () => { tab = btn.dataset.tab; pageMessage(""); render(); }));
-    if (session && session.role === "admin") showApp();
+    if (session && ["admin", "store_keeper", "inventory", "manager"].includes(session.role)) {
+      if (session.role !== "admin") tab = "stock";
+      showApp();
+    }
   </script>
 </body>
 </html>

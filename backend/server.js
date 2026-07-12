@@ -20,6 +20,7 @@ const INDIA_TZ = "Asia/Kolkata";
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const DEFAULT_CANTEEN_ID = "AXC-0001";
 const DEFAULT_ADMIN_PASSWORD = "Axzen@123";
+const CANTEEN_ROLES = ["admin", "user", "cashier", "store_keeper", "manager", "accountant", "chef", "waiter", "billing", "inventory"];
 
 // Warn during startup when the Meta webhook verification token is not configured.
 if (!VERIFY_TOKEN) {
@@ -206,6 +207,7 @@ let memory = {
   printers: [],
   menuItems: [...defaultMenuItems],
   stockItems: [...defaultStockItems],
+  stockUsage: [],
   creditors: [],
   expenses: [],
   orders: [],
@@ -263,7 +265,7 @@ const userSchema = new mongoose.Schema({
   name: String,
   mobile: { type: String, index: true },
   password: String,
-  role: { type: String, enum: ["admin", "user"], default: "user" },
+  role: { type: String, enum: CANTEEN_ROLES, default: "user" },
   active: { type: Boolean, default: true },
   mustChangePassword: { type: Boolean, default: false }
 }, { timestamps: true, collection: "users" });
@@ -298,6 +300,18 @@ const stockItemSchema = new mongoose.Schema({
   unit: String,
   minStock: Number
 }, { timestamps: true, collection: "stock_items" });
+
+const stockUsageSchema = new mongoose.Schema({
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
+  id: { type: Number, sparse: true, index: true },
+  itemId: Number,
+  item: String,
+  qtyUsed: Number,
+  unit: String,
+  date: String,
+  storeKeeper: String,
+  note: String
+}, { timestamps: true, collection: "stock_usage" });
 
 const expenseSchema = new mongoose.Schema({
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
@@ -451,6 +465,7 @@ reportSettingSchema.index({ canteenId: 1, key: 1 }, { unique: true, name: "cante
 menuItemSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 creditorSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 stockItemSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
+stockUsageSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 expenseSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 
 const Order = mongoose.models.Order || mongoose.model("Order", orderSchema);
@@ -459,6 +474,7 @@ const User = mongoose.models.User || mongoose.model("User", userSchema);
 const MenuItem = mongoose.models.MenuItem || mongoose.model("MenuItem", menuItemSchema);
 const Creditor = mongoose.models.Creditor || mongoose.model("Creditor", creditorSchema);
 const StockItem = mongoose.models.StockItem || mongoose.model("StockItem", stockItemSchema);
+const StockUsage = mongoose.models.StockUsage || mongoose.model("StockUsage", stockUsageSchema);
 const Expense = mongoose.models.Expense || mongoose.model("Expense", expenseSchema);
 const ReportSetting = mongoose.models.ReportSetting || mongoose.model("ReportSetting", reportSettingSchema);
 const Canteen = mongoose.models.Canteen || mongoose.model("Canteen", canteenSchema);
@@ -647,12 +663,30 @@ async function requireAdmin(req, res, next) {
   }
 }
 
+async function requireStockAccess(req, res, next) {
+  const decoded = decodeCanteenAuthToken(req);
+  if (decoded.error) return res.status(401).json({ success: false, message: decoded.error });
+  try {
+    req.authUser = decoded.user;
+    if (!["admin", "store_keeper", "inventory", "manager"].includes(req.authUser.role)) {
+      return res.status(403).json({ success: false, message: "Stock access required" });
+    }
+    if (!await tokenUserIsCurrent(req.authUser)) {
+      return res.status(403).json({ success: false, message: "Canteen access is inactive or blocked" });
+    }
+    markCanteenSeen(req.authUser.canteenId).catch(() => {});
+    return next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: "Invalid or expired login token" });
+  }
+}
+
 async function requireCanteenAuth(req, res, next) {
   const decoded = decodeCanteenAuthToken(req);
   if (decoded.error) return res.status(401).json({ success: false, message: decoded.error });
   try {
     req.authUser = decoded.user;
-    if (!["admin", "user"].includes(req.authUser.role)) {
+    if (!CANTEEN_ROLES.includes(req.authUser.role)) {
       return res.status(403).json({ success: false, message: "Canteen user access required" });
     }
     if (!await tokenUserIsCurrent(req.authUser)) {
@@ -748,7 +782,7 @@ async function ensureDatabaseIndexes() {
     { unique: true, name: "canteenId_1_key_1" }
   );
 
-  for (const collection of [MenuItem.collection, Creditor.collection, StockItem.collection, Expense.collection]) {
+  for (const collection of [MenuItem.collection, Creditor.collection, StockItem.collection, StockUsage.collection, Expense.collection]) {
     await dropIndexIfExists(collection, "id_1");
     await collection.createIndex(
       { canteenId: 1, id: 1 },
@@ -967,6 +1001,54 @@ async function saveStockItem(payload) {
   ));
 }
 
+async function allStockUsage(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  const byNewest = (a, b) => String(b.date || "").localeCompare(String(a.date || "")) || Number(b.id || 0) - Number(a.id || 0);
+  if (!mongoReady) return memory.stockUsage.filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId).sort(byNewest);
+  return StockUsage.find({ canteenId: targetCanteenId }).sort({ date: -1, createdAt: -1 }).lean();
+}
+
+async function saveStockUsage(payload, actor = {}) {
+  const canteenId = normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID);
+  const current = await allStockUsage(canteenId);
+  const stockItems = await allStockItems(canteenId);
+  const source = stockItems.find(item => Number(item.id) === Number(payload.itemId)) || stockItems.find(item => String(item.item || "").toLowerCase() === String(payload.item || "").toLowerCase());
+  const qtyUsed = Math.max(0, Number(payload.qtyUsed || 0));
+  const usage = {
+    id: payload.id ? Number(payload.id) : nextId(current),
+    canteenId,
+    itemId: source ? Number(source.id) : Number(payload.itemId || 0),
+    item: source ? source.item : String(payload.item || "").trim(),
+    qtyUsed,
+    unit: payload.unit || source?.unit || "Unit",
+    date: payload.date || new Date().toISOString().slice(0, 10),
+    storeKeeper: payload.storeKeeper || actor.name || "Store Keeper",
+    note: String(payload.note || "").trim()
+  };
+
+  if (!usage.item) throw new Error("Stock item is required");
+  if (usage.qtyUsed <= 0) throw new Error("Used quantity is required");
+
+  if (!mongoReady) {
+    memory.stockUsage.unshift(usage);
+    if (source) source.stock = Math.max(0, Number(source.stock || 0) - usage.qtyUsed);
+    return usage;
+  }
+
+  const saved = await StockUsage.findOneAndUpdate(
+    { canteenId, id: usage.id },
+    { $set: usage },
+    { new: true, upsert: true }
+  ).lean();
+  if (source) {
+    await StockItem.findOneAndUpdate(
+      { canteenId, id: Number(source.id) },
+      { $set: { stock: Math.max(0, Number(source.stock || 0) - usage.qtyUsed) } }
+    );
+  }
+  return saved;
+}
+
 async function allExpenses(canteenId = DEFAULT_CANTEEN_ID) {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   if (!mongoReady) return memory.expenses.filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId);
@@ -1067,7 +1149,7 @@ async function saveUser(payload) {
     name: payload.name || "User",
     mobile: normalizeMobile(payload.mobile),
     password: String(payload.password || "1234"),
-    role: payload.role === "admin" ? "admin" : "user",
+    role: CANTEEN_ROLES.includes(payload.role) ? payload.role : "user",
     active: payload.active !== false,
     mustChangePassword: payload.mustChangePassword === true
   };
@@ -1790,6 +1872,7 @@ async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
   const orders = await allOrders(canteenId);
   const todayOrders = reportOrdersForType(orders, "daily");
   const stock = await allStockItems(canteenId);
+  const stockUsage = await allStockUsage(canteenId);
   const expenses = await allExpenses(canteenId);
   const products = await allMenuItems(canteenId, { includeHidden: true });
   const todayTotals = paymentTotals(todayOrders);
@@ -1804,6 +1887,7 @@ async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
     userSales: userSalesFromOrders(todayOrders),
     lowStock: stock.filter(item => Number(item.stock || 0) <= Number(item.minStock || 0)),
     stock,
+    stockUsage,
     expenses,
     products,
     creditors: await allCreditors(canteenId),
@@ -1996,10 +2080,23 @@ app.get("/stock", async (req, res) => {
   res.json(await allStockItems(authUser?.canteenId || DEFAULT_CANTEEN_ID));
 });
 
-app.post("/stock", requireDatabase, requireAdmin, async (req, res) => {
+app.post("/stock", requireDatabase, requireStockAccess, async (req, res) => {
   try {
     const item = await saveStockItem({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
     res.json({ success: true, item, stock: await allStockItems(req.authUser.canteenId) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.get("/stock-usage", requireCanteenAuth, async (req, res) => {
+  res.json(await allStockUsage(req.authUser.canteenId));
+});
+
+app.post("/stock-usage", requireDatabase, requireStockAccess, async (req, res) => {
+  try {
+    const usage = await saveStockUsage({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID }, req.authUser);
+    res.json({ success: true, usage, stock: await allStockItems(req.authUser.canteenId), stockUsage: await allStockUsage(req.authUser.canteenId) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
