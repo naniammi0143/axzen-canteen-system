@@ -1245,7 +1245,7 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
-    const appBuild = "1.8.6";
+    const appBuild = "1.8.7";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -1282,6 +1282,7 @@
     let activePosSection = "billing";
     let serverOnline = navigator.onLine;
     let adminUnlocked = false;
+    let adminAccessToken = "";
     let selectedPrinter = localStorage.getItem(selectedPrinterKey) || "";
     let selectedSubItems = {};
     let longPressTimer = null;
@@ -1358,10 +1359,10 @@
     }
 
     async function api(path, options = {}) {
-      const token = localStorage.getItem(tokenKey);
+      const { timeoutMs, authToken, ...fetchOptions } = options;
+      const token = authToken || localStorage.getItem(tokenKey);
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), Number(options.timeoutMs || 3500));
-      const { timeoutMs, ...fetchOptions } = options;
+      const timeout = setTimeout(() => controller.abort(), Number(timeoutMs || 3500));
       const response = await fetch(API + path, {
         ...fetchOptions,
         signal: controller.signal,
@@ -1382,6 +1383,10 @@
         throw error;
       }
       return response.json();
+    }
+
+    function adminApi(path, options = {}) {
+      return api(path, { ...options, authToken: adminAccessToken || localStorage.getItem(tokenKey) });
     }
 
     function applyHeaderLogo() {
@@ -1434,12 +1439,13 @@
       return `${String(mobile || "").trim()}::${String(canteenId || "").trim().toUpperCase()}`;
     }
 
-    function cacheLogin(mobile, password, nextUser) {
+    function cacheLogin(mobile, password, nextUser, token = "") {
       const cache = readJson(loginCacheKey, {});
       const canteenId = String(nextUser?.canteenId || "").trim().toUpperCase();
       cache[loginCacheId(mobile, canteenId)] = {
         password: String(password),
         user: nextUser,
+        token,
         savedAt: new Date().toISOString()
       };
       cache[String(mobile).trim()] = { canteenId, savedAt: new Date().toISOString() };
@@ -1454,6 +1460,7 @@
         ? cache[loginCacheId(mobileKey, normalizedCanteen)]
         : cache[loginCacheId(mobileKey, cache[mobileKey]?.canteenId || "")];
       if (!saved || String(saved.password) !== String(password)) return null;
+      if (saved.token) localStorage.setItem(tokenKey, saved.token);
       return saved.user;
     }
 
@@ -1463,6 +1470,7 @@
       localStorage.removeItem(sessionKey);
       localStorage.removeItem(tokenKey);
       user = null;
+      adminAccessToken = "";
       cart = [];
       selectedSubItems = {};
       activePosSection = "billing";
@@ -1549,7 +1557,7 @@
         updateSyncStatus("Loading data...", "syncing");
         const dashboard = await api("/dashboard", { timeoutMs: 9000 });
         const allOrders = dashboard.orders || [];
-        orders = user?.role === "admin"
+        orders = hasAdminAccess()
           ? allOrders
           : allOrders.filter(order =>
               String(order.cashierMobile || "") === String(user?.mobile || "") ||
@@ -2018,6 +2026,15 @@
 
     function hasAdminAccess() {
       return adminUnlocked || (user && user.role === "admin");
+    }
+
+    function addressOptionsHtml(selected = "") {
+      const current = String(selected || "");
+      return `<option value="">Select branch/address</option>${addresses.map(address => {
+        const name = String(address.name || "");
+        const label = `${name}${address.address ? ` - ${address.address}` : ""}`;
+        return `<option value="${esc(name)}" ${name === current ? "selected" : ""}>${esc(label)}</option>`;
+      }).join("")}`;
     }
 
     function adminUnlockHtml() {
@@ -2635,7 +2652,7 @@
         <tr>
           <td>${esc(item.name || "-")}</td>
           <td>${esc(item.mobile || "-")}</td>
-          <td><span class="status-pill ${item.role === "admin" ? "warn" : ""}">${esc(item.role || "user")}</span></td>
+          <td><span class="status-pill ${item.role === "admin" ? "warn" : ""}">${esc(item.role || "user")}</span><div class="muted">${esc(item.branchAddress || "")}</div></td>
         </tr>`).join("");
       return `
         ${sectionHeader("counter")}
@@ -2646,6 +2663,7 @@
             <input id="posNewMobile" placeholder="Mobile number / user ID" required>
             <input id="posNewPassword" placeholder="Password" required>
             <select id="posNewRole">${userRoles.map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select>
+            <select id="posNewBranchAddress">${addressOptionsHtml()}</select>
             <button class="page-action">Save User</button>
           </form>
         </div>
@@ -2774,7 +2792,7 @@
     }
 
     async function persistProductFromPos(product) {
-      const saved = await api("/products", { method: "POST", body: JSON.stringify(product) });
+      const saved = await adminApi("/products", { method: "POST", body: JSON.stringify(product) });
       products = saved.products || products.map(item => Number(item.id) === Number(product.id) ? product : item);
       writeJson(productCacheKey, products);
       renderProducts();
@@ -2880,13 +2898,14 @@
     async function savePosUser(event) {
       event.preventDefault();
       try {
-        await api("/users", {
+        await adminApi("/users", {
           method: "POST",
           body: JSON.stringify({
             name: $("posNewName").value.trim(),
             mobile: $("posNewMobile").value.trim(),
             password: $("posNewPassword").value,
             role: $("posNewRole").value,
+            branchAddress: $("posNewBranchAddress")?.value || "",
             canteenId: user?.canteenId
           })
         });
@@ -3056,7 +3075,7 @@
         });
         if (!data.user || data.user.role !== "admin") throw new Error("Admin only");
         adminUnlocked = true;
-        if (data.token) localStorage.setItem(tokenKey, data.token);
+        adminAccessToken = data.token || "";
         await loadAdminData();
         renderOptionPage();
       } catch {
@@ -3257,7 +3276,7 @@
             <div class="kpi"><span>Cash</span><strong>${money(stats.cash)}</strong></div>
             <div class="kpi"><span>Online</span><strong>${money(stats.online)}</strong></div>
           </div>
-          <div class="panel"><h2>Work Flow</h2><div class="muted">Admin creates users -> User login -> Select item -> Place order -> Sale recorded -> Sync report</div></div>
+          <div class="panel"><h2>Work Flow</h2><div class="muted">Admin creates users -> User login -> Select item -> Place order -> Sale recorded -> Sync report</div><button class="primary" id="adminGoBilling" type="button">Open Billing</button></div>
           <div class="panel"><h2>Top Items</h2>${topItemsHtml()}</div>
         `;
       } else if (adminTab === "orders") {
@@ -3286,11 +3305,12 @@
               <input id="newMobile" placeholder="Mobile number" required>
               <input id="newPassword" placeholder="Password" required>
               <select id="newRole">${userRoles.map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select>
+              <select id="newBranchAddress">${addressOptionsHtml()}</select>
               <button class="primary">Save User</button>
             </form>
           </div>
           <div class="panel"><h2>Users</h2>${users.map(item => `
-            <div class="user-line"><strong>${item.name}</strong><span class="muted">${item.mobile} | ${item.role}</span></div>
+            <div class="user-line"><strong>${item.name}</strong><span class="muted">${item.mobile} | ${item.role}${item.branchAddress ? ` | ${item.branchAddress}` : ""}</span></div>
           `).join("")}</div>
         `;
         $("userForm").addEventListener("submit", saveUser);
@@ -3308,12 +3328,21 @@
         `;
         $("settingsForm").addEventListener("submit", saveSettings);
       }
+      if ($("adminGoBilling")) $("adminGoBilling").addEventListener("click", openBillingFromAdmin);
+    }
+
+    function openBillingFromAdmin() {
+      show("posView");
+      renderUserChrome();
+      renderCart();
+      updateSyncStatus();
+      setPosSection("billing");
     }
 
     async function deleteBill(orderId) {
       if (!confirm("Ee bill delete cheyyala?")) return;
       try {
-        await api(`/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+        await adminApi(`/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
         orders = orders.filter(order => String(order.clientOrderId || order.id) !== String(orderId));
         renderAdmin();
       } catch {
@@ -3324,7 +3353,7 @@
     async function deleteAllBills() {
       if (!confirm("All bills delete cheyyala? Reports total kuda clear avuthayi.")) return;
       try {
-        await api("/orders", { method: "DELETE" });
+        await adminApi("/orders", { method: "DELETE" });
         orders = [];
         renderAdmin();
       } catch {
@@ -3344,17 +3373,23 @@
 
     async function saveUser(event) {
       event.preventDefault();
-      await api("/users", {
-        method: "POST",
-        body: JSON.stringify({
-          name: $("newName").value,
-          mobile: $("newMobile").value,
-          password: $("newPassword").value,
-          role: $("newRole").value,
-          canteenId: user?.canteenId
-        })
-      });
-      await loadAdminData();
+      try {
+        await adminApi("/users", {
+          method: "POST",
+          body: JSON.stringify({
+            name: $("newName").value,
+            mobile: $("newMobile").value,
+            password: $("newPassword").value,
+            role: $("newRole").value,
+            branchAddress: $("newBranchAddress")?.value || "",
+            canteenId: user?.canteenId
+          })
+        });
+        await loadAdminData();
+        renderAdmin();
+      } catch {
+        alert("User save failed. Admin login check cheyyandi.");
+      }
     }
 
     function showOwnerSetup() {
@@ -3397,7 +3432,7 @@
           body: JSON.stringify({ mobile: $("ownerSetupMobile").value.trim(), password })
         });
         setSession(data.user, data.token);
-        cacheLogin($("ownerSetupMobile").value.trim(), password, data.user);
+        cacheLogin($("ownerSetupMobile").value.trim(), password, data.user, data.token || "");
         applySettings(data.settings);
         await enterApp();
       } catch (error) {
@@ -3410,15 +3445,19 @@
       event.preventDefault();
       const nextApi = $("apiInput").value.trim().replace(/\/$/, "");
       if (nextApi) localStorage.setItem("AXEN_API_URL", nextApi);
-      const data = await api("/settings", {
-        method: "POST",
-        body: JSON.stringify({
-          canteenName: $("canteenNameInput").value.trim() || "Main Canteen",
-          logoUrl: $("logoUrlInput")?.value.trim() || ""
-        })
-      });
-      applySettings(data.settings);
-      await loadAdminData();
+      try {
+        const data = await adminApi("/settings", {
+          method: "POST",
+          body: JSON.stringify({
+            canteenName: $("canteenNameInput").value.trim() || "Main Canteen",
+            logoUrl: $("logoUrlInput")?.value.trim() || ""
+          })
+        });
+        applySettings(data.settings);
+        await loadAdminData();
+      } catch {
+        alert("Settings save failed. Admin login check cheyyandi.");
+      }
     }
 
     async function login(event) {
@@ -3433,7 +3472,7 @@
           body: JSON.stringify({ loginId, mobile: loginId, password })
         });
         setSession(data.user, data.token);
-        cacheLogin(loginId, password, data.user);
+        cacheLogin(loginId, password, data.user, data.token || "");
         applySettings(data.settings);
         if (data.user?.mustChangePassword) {
           showOwnerSetup();
@@ -3464,13 +3503,20 @@
       if (!user) return show("loginView");
       if (user.mustChangePassword) return showOwnerSetup();
       renderUserChrome();
-      show("posView");
-      renderCart();
-      updateSyncStatus();
       await loadSettings();
       await loadProducts();
       await loadAdminData();
       await syncPendingOrders();
+      if (user.role === "admin") {
+        adminTab = "dashboard";
+        if ($("adminRole")) $("adminRole").textContent = `${user.name || "Admin"} | Admin Panel`;
+        show("adminView");
+        renderAdmin();
+        return;
+      }
+      show("posView");
+      renderCart();
+      updateSyncStatus();
       setPosSection("billing");
     }
 
