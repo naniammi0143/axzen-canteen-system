@@ -5,6 +5,7 @@ import {
   Image,
   Pressable,
   SafeAreaView,
+  Share as NativeShare,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +14,9 @@ import {
   useWindowDimensions,
   View
 } from "react-native";
+import { generatePDF } from "react-native-html-to-pdf";
+import RNShare from "react-native-share";
+import { captureRef } from "react-native-view-shot";
 
 const NAVY = "#082653";
 const PAGE = "#f5f7fb";
@@ -21,24 +25,38 @@ const LINE = "#e5eaf0";
 const MUTED = "#667085";
 const GREEN = "#22c55e";
 
-const itemCategories = ["Meals", "Tiffins", "Tea"] as const;
-const categories = ["All", ...itemCategories] as const;
+const defaultItemCategories = [
+  "Breakfast",
+  "Meals",
+  "Biryani",
+  "Starters",
+  "Chinese",
+  "Tiffins",
+  "Tea",
+  "Coffee",
+  "Juices",
+  "Desserts"
+];
 const registeredCanteen = {
   name: "Main Canteen",
   logoUri: ""
 };
 
-type Category = (typeof categories)[number];
+type Category = string;
 type BottomNavItem = "Home" | "Orders" | "Reports" | "Settings";
 type DrawerOption =
   | "Dashboard"
   | "New Billing"
+  | "Admin Panel"
   | "Orders"
   | "Reports"
+  | "Finance"
+  | "Expenses"
   | "Today's Sales"
   | "Cash Summary"
   | "Add Item"
   | "Edit Price"
+  | "Categories"
   | "Stock Availability"
   | "Printer Settings"
   | "User"
@@ -47,18 +65,22 @@ type DrawerOption =
   | "Logout";
 
 type DrawerSection = {
-  title: "SALES" | "ITEMS" | "SETTINGS";
+  title: "SALES" | "ADMIN" | "ITEMS" | "SETTINGS";
   items: DrawerOption[];
 };
 
 const drawerSections: DrawerSection[] = [
   {
     title: "SALES",
-    items: ["Dashboard", "New Billing", "Orders", "Reports", "Today's Sales", "Cash Summary"]
+    items: ["Dashboard", "New Billing", "Orders", "Today's Sales", "Cash Summary"]
+  },
+  {
+    title: "ADMIN",
+    items: ["Admin Panel", "Reports", "Finance", "Expenses"]
   },
   {
     title: "ITEMS",
-    items: ["Add Item", "Edit Price", "Stock Availability"]
+    items: ["Add Item", "Edit Price", "Categories", "Stock Availability"]
   },
   {
     title: "SETTINGS",
@@ -72,8 +94,24 @@ type Product = {
   price: number;
   category: Category;
   image: string;
+  hidden?: boolean;
   subItems?: string[];
 };
+
+type Expense = {
+  id: string;
+  date: string;
+  category: string;
+  amount: number;
+  note: string;
+};
+
+const defaultExpenses: Expense[] = [
+  { id: "e1", date: formatDateInput(new Date()), category: "Raw Material", amount: 1850, note: "Vegetables and rice" },
+  { id: "e2", date: formatDateInput(new Date()), category: "Staff", amount: 420, note: "Staff meals" },
+  { id: "e3", date: formatDateInput(new Date()), category: "Packing", amount: 260, note: "Cups and parcels" },
+  { id: "e4", date: formatDateInput(new Date()), category: "Maintenance", amount: 300, note: "Cleaning supplies" }
+];
 
 const products: Product[] = [
   {
@@ -136,17 +174,20 @@ export default function HomeScreen() {
     [columns, horizontalPadding, width]
   );
 
-  const [activeCategory, setActiveCategory] = useState<Category>("All");
+  const [activeCategory, setActiveCategory] = useState("All");
   const [cartCount, setCartCount] = useState(0);
   const [total, setTotal] = useState(0);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [activeOption, setActiveOption] = useState<DrawerOption>("Dashboard");
+  const [activeOption, setActiveOption] = useState<DrawerOption>("New Billing");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [catalog, setCatalog] = useState<Product[]>(products);
+  const [appCategories, setAppCategories] = useState<string[]>(defaultItemCategories);
+  const [expenses, setExpenses] = useState<Expense[]>(defaultExpenses);
   const drawerProgress = useRef(new Animated.Value(0)).current;
 
+  const categoryTabs = useMemo(() => ["All", ...appCategories], [appCategories]);
   const visibleProducts = useMemo(
-    () => catalog.filter(item => activeCategory === "All" || item.category === activeCategory),
+    () => catalog.filter(item => !item.hidden && (activeCategory === "All" || item.category === activeCategory)),
     [activeCategory, catalog]
   );
 
@@ -194,7 +235,7 @@ export default function HomeScreen() {
 
   const selectBottomNav = useCallback((item: BottomNavItem) => {
     const nextOption: Record<BottomNavItem, DrawerOption> = {
-      Home: "Dashboard",
+      Home: "New Billing",
       Orders: "Orders",
       Reports: "Reports",
       Settings: "Settings"
@@ -224,7 +265,7 @@ export default function HomeScreen() {
             ListHeaderComponent={
               <>
                 <SearchBar />
-                <CategoryTabs active={activeCategory} onChange={setActiveCategory} />
+                <CategoryTabs categories={categoryTabs} active={activeCategory} onChange={setActiveCategory} />
               </>
             }
             renderItem={({ item }) => (
@@ -241,6 +282,10 @@ export default function HomeScreen() {
             horizontalPadding={horizontalPadding}
             products={catalog}
             onProductsChange={setCatalog}
+            categories={appCategories}
+            onCategoriesChange={setAppCategories}
+            expenses={expenses}
+            onExpensesChange={setExpenses}
           />
         )}
 
@@ -443,12 +488,20 @@ function OptionContent({
   option,
   horizontalPadding,
   products,
-  onProductsChange
+  onProductsChange,
+  categories,
+  onCategoriesChange,
+  expenses,
+  onExpensesChange
 }: {
   option: DrawerOption;
   horizontalPadding: number;
   products: Product[];
   onProductsChange: (next: Product[]) => void;
+  categories: string[];
+  onCategoriesChange: (next: string[]) => void;
+  expenses: Expense[];
+  onExpensesChange: (next: Expense[]) => void;
 }) {
   return (
     <ScrollView
@@ -457,11 +510,15 @@ function OptionContent({
     >
       <Text style={styles.optionTitle}>{option}</Text>
       {option === "Orders" && <OrdersScreen />}
-      {option === "Reports" && <ReportsScreen products={products} />}
+      {option === "Admin Panel" && <AdminPanelScreen products={products} expenses={expenses} />}
+      {option === "Reports" && <ReportsScreen products={products} expenses={expenses} />}
+      {option === "Finance" && <FinanceScreen products={products} expenses={expenses} onExpensesChange={onExpensesChange} />}
+      {option === "Expenses" && <ExpensesScreen expenses={expenses} onExpensesChange={onExpensesChange} />}
       {option === "Today's Sales" && <TodaysSalesScreen />}
       {option === "Cash Summary" && <CashSummaryScreen />}
-      {option === "Add Item" && <ItemManagerScreen products={products} onProductsChange={onProductsChange} />}
-      {option === "Edit Price" && <ItemManagerScreen products={products} onProductsChange={onProductsChange} />}
+      {option === "Add Item" && <ItemManagerScreen products={products} onProductsChange={onProductsChange} categories={categories} onCategoriesChange={onCategoriesChange} />}
+      {option === "Edit Price" && <ItemManagerScreen products={products} onProductsChange={onProductsChange} categories={categories} onCategoriesChange={onCategoriesChange} />}
+      {option === "Categories" && <CategoryManagerScreen categories={categories} onCategoriesChange={onCategoriesChange} />}
       {option === "Stock Availability" && <StockAvailabilityScreen products={products} />}
       {option === "Printer Settings" && <PrinterSettingsScreen />}
       {option === "User" && <UserScreen />}
@@ -473,13 +530,38 @@ function OptionContent({
 }
 
 function OrdersScreen() {
+  const [bulkEntry, setBulkEntry] = useState("");
+  const [orders, setOrders] = useState([
+    ["#10131", "2 items", "Rs 8,245", "Paid"],
+    ["#10122", "1 item", "Rs 235", "Pending"],
+    ["#10144", "4 items", "Rs 530", "Paid"]
+  ]);
+
+  const addBulkOrder = () => {
+    const lines = bulkEntry.split("\n").map(line => line.trim()).filter(Boolean);
+    if (!lines.length) return;
+    setOrders(current => [[`#${Date.now().toString().slice(-5)}`, `${lines.length} entries`, "Bulk", "Draft"], ...current]);
+    setBulkEntry("");
+  };
+
   return (
     <View style={styles.optionStack}>
-      {[
-        ["#10131", "2 items", "Rs 8,245", "Paid"],
-        ["#10122", "1 item", "Rs 235", "Pending"],
-        ["#10144", "4 items", "Rs 530", "Paid"]
-      ].map(row => (
+      <View style={styles.formCard}>
+        <Text style={styles.summaryTitle}>Bulk Order Entry</Text>
+        <TextInput
+          value={bulkEntry}
+          onChangeText={setBulkEntry}
+          multiline
+          placeholder={"Example:\nTea x 4\nMeals x 2\nDosa x 3"}
+          placeholderTextColor="#8a94a6"
+          style={[styles.realInput, styles.bulkInput]}
+        />
+        <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={addBulkOrder}>
+          <Text style={styles.primaryActionText}>Add Bulk Order</Text>
+        </TouchableOpacity>
+      </View>
+
+      {orders.map(row => (
         <View key={row[0]} style={styles.listCard}>
           <View>
             <Text style={styles.listTitle}>{row[0]}</Text>
@@ -495,38 +577,105 @@ function OrdersScreen() {
   );
 }
 
-function ReportsScreen({ products }: { products: Product[] }) {
-  const [fromDate, setFromDate] = useState("2026-07-01");
-  const [toDate, setToDate] = useState("2026-07-11");
-  const quickRanges: Record<string, [string, string]> = {
-    Today: ["2026-07-11", "2026-07-11"],
-    Week: ["2026-07-05", "2026-07-11"],
-    Month: ["2026-07-01", "2026-07-11"],
-    Year: ["2026-01-01", "2026-07-11"],
-    Custom: [fromDate, toDate]
-  };
+type ReportRange = "Today" | "Week" | "Month" | "Year" | "Custom";
 
-  const itemReports = useMemo(() => products.map((item, index) => {
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function buildRange(range: ReportRange, fromDate: string, toDate: string): [string, string] {
+  const today = new Date();
+  const start = new Date(today);
+  if (range === "Week") start.setDate(today.getDate() - 6);
+  if (range === "Month") start.setDate(1);
+  if (range === "Year") {
+    start.setMonth(0);
+    start.setDate(1);
+  }
+  if (range === "Custom") return [fromDate, toDate];
+  return [formatDateInput(start), formatDateInput(today)];
+}
+
+function isDateInRange(date: string, fromDate: string, toDate: string) {
+  return date >= fromDate && date <= toDate;
+}
+
+function buildReportSummary(products: Product[], expenses: Expense[] = defaultExpenses, rangeDates?: [string, string]) {
+  const itemReports = products.filter(item => !item.hidden).map((item, index) => {
     const quantity = (index + 2) * 4;
     const discount = index % 2 === 0 ? 10 : 0;
     const gross = quantity * item.price;
+    const cost = Math.round(gross * (item.category === "Tea" ? 0.38 : 0.58));
     return {
       ...item,
       quantity,
       gross,
       discount,
-      net: gross - discount
+      cost,
+      net: gross - discount,
+      profit: gross - discount - cost
     };
-  }), [products]);
-
+  });
   const totalSales = itemReports.reduce((sum, item) => sum + item.net, 0);
   const totalQty = itemReports.reduce((sum, item) => sum + item.quantity, 0);
+  const totalCost = itemReports.reduce((sum, item) => sum + item.cost, 0);
+  const filteredExpenses = rangeDates
+    ? expenses.filter(item => isDateInRange(item.date, rangeDates[0], rangeDates[1]))
+    : expenses;
+  const totalExpenses = filteredExpenses.reduce((sum, item) => sum + item.amount, 0);
+  const profit = totalSales - totalCost - totalExpenses;
+  return { itemReports, totalSales, totalQty, totalCost, expenses: filteredExpenses, totalExpenses, profit };
+}
+
+function AdminPanelScreen({ products, expenses }: { products: Product[]; expenses: Expense[] }) {
+  const summary = useMemo(() => buildReportSummary(products, expenses), [expenses, products]);
+  const lowStock = Math.max(1, Math.round(products.filter(item => !item.hidden).length / 3));
+
+  return (
+    <View style={styles.optionStack}>
+      <View style={styles.adminHero}>
+        <Text style={styles.adminHeroTitle}>Admin Control Room</Text>
+        <Text style={styles.adminHeroSub}>Sales, billing, stock, users, expenses, and reports</Text>
+      </View>
+      <View style={styles.reportGrid}>
+        <ReportMetric label="Today Sales" value={`Rs ${summary.totalSales}`} />
+        <ReportMetric label="Bills" value={String(Math.max(summary.totalQty, 1))} />
+        <ReportMetric label="Expenses" value={`Rs ${summary.totalExpenses}`} />
+        <ReportMetric label={summary.profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(summary.profit)}`} />
+      </View>
+      <ReportSection title="Admin Modules">
+        <ReportRow label="Billing" value="Ready" detail="New bill, cart, payments" />
+        <ReportRow label="Reports" value="Clear" detail="Today, week, month, year, custom date" />
+        <ReportRow label="Inventory" value={`${lowStock} low`} detail="Stock and price management" />
+        <ReportRow label="Users" value="2 active" detail="Admin and cashier control" />
+      </ReportSection>
+      <ReportsScreen products={products} expenses={expenses} compact />
+    </View>
+  );
+}
+
+function ReportsScreen({ products, expenses, compact = false }: { products: Product[]; expenses: Expense[]; compact?: boolean }) {
+  const reportCardRef = useRef<View | null>(null);
+  const initialToday = formatDateInput(new Date());
+  const [range, setRange] = useState<ReportRange>("Today");
+  const [fromDate, setFromDate] = useState(initialToday);
+  const [toDate, setToDate] = useState(initialToday);
+  const [shareStatus, setShareStatus] = useState("");
+
+  const activeRange = buildRange(range, fromDate, toDate);
+  const summary = useMemo(() => buildReportSummary(products, expenses, activeRange), [activeRange, expenses, products]);
+  const { itemReports, totalSales, totalQty, totalCost, expenses: reportExpenses, totalExpenses, profit } = summary;
   const avgBill = Math.round(totalSales / Math.max(itemReports.length, 1));
   const cash = Math.round(totalSales * 0.52);
   const upi = Math.round(totalSales * 0.38);
   const card = totalSales - cash - upi;
+  const discount = itemReports.reduce((sum, item) => sum + item.discount, 0);
 
-  const categoryReports = itemCategories.map(category => {
+  const categoryNames = Array.from(new Set(products.filter(item => !item.hidden).map(item => item.category)));
+  const categoryReports = categoryNames.map(category => {
     const rows = itemReports.filter(item => item.category === category);
     return {
       label: category,
@@ -536,100 +685,253 @@ function ReportsScreen({ products }: { products: Product[] }) {
   });
 
   const dailyReports = [
-    ["2026-07-07", "Rs 4,840", "62 bills"],
-    ["2026-07-08", "Rs 5,260", "71 bills"],
-    ["2026-07-09", "Rs 6,110", "78 bills"],
-    ["2026-07-10", "Rs 5,980", "74 bills"],
-    ["2026-07-11", `Rs ${totalSales}`, `${totalQty} qty`]
+    [activeRange[0], `Rs ${Math.round(totalSales * 0.78)}`, `${Math.round(totalQty * 0.7)} qty`],
+    [activeRange[1], `Rs ${totalSales}`, `${totalQty} qty`]
   ];
 
   const hourlyReports = [
-    ["07-09 AM", "Breakfast", "Rs 2,180"],
-    ["09-12 PM", "Tea Rush", "Rs 1,420"],
-    ["12-03 PM", "Lunch", "Rs 3,760"],
-    ["03-06 PM", "Snacks", "Rs 1,980"]
+    ["07-09 AM", "Breakfast", `Rs ${Math.round(totalSales * 0.22)}`],
+    ["09-12 PM", "Tea Rush", `Rs ${Math.round(totalSales * 0.16)}`],
+    ["12-03 PM", "Lunch", `Rs ${Math.round(totalSales * 0.42)}`],
+    ["03-06 PM", "Snacks", `Rs ${Math.round(totalSales * 0.2)}`]
   ];
+
+  const reportMessage = [
+    `${registeredCanteen.name} ${range} Report`,
+    `Date: ${activeRange[0]} to ${activeRange[1]}`,
+    `Total Sales: Rs ${totalSales}`,
+    `Bills/Qty: ${totalQty}`,
+    `Cash: Rs ${cash}`,
+    `UPI/Online: Rs ${upi}`,
+    `Card: Rs ${card}`,
+    `Expenses: Rs ${totalExpenses}`,
+    `${profit >= 0 ? "Profit" : "Loss"}: Rs ${Math.abs(profit)}`
+  ].join("\n");
+
+  const reportHtml = `
+    <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; color: #111827; padding: 24px; }
+          h1 { color: #082653; margin-bottom: 6px; }
+          .sub { color: #667085; margin-bottom: 22px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th, td { border: 1px solid #e5eaf0; padding: 10px; text-align: left; font-size: 12px; }
+          th { background: #f5f7fb; color: #082653; }
+          .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+          .metric { border: 1px solid #e5eaf0; border-radius: 8px; padding: 12px; }
+          .metric strong { display: block; color: #082653; font-size: 20px; }
+        </style>
+      </head>
+      <body>
+        <h1>${registeredCanteen.name} ${range} Report</h1>
+        <div class="sub">Date: ${activeRange[0]} to ${activeRange[1]}</div>
+        <div class="metrics">
+          <div class="metric"><strong>Rs ${totalSales}</strong>Total Sale</div>
+          <div class="metric"><strong>${totalQty}</strong>Items Sold</div>
+          <div class="metric"><strong>Rs ${totalExpenses}</strong>Expenses</div>
+          <div class="metric"><strong>Rs ${Math.abs(profit)}</strong>${profit >= 0 ? "Profit" : "Loss"}</div>
+        </div>
+        <table>
+          <tr><th>Report</th><th>Value</th><th>Details</th></tr>
+          <tr><td>Cash</td><td>Rs ${cash}</td><td>52%</td></tr>
+          <tr><td>UPI / Online</td><td>Rs ${upi}</td><td>38%</td></tr>
+          <tr><td>Card</td><td>Rs ${card}</td><td>10%</td></tr>
+          <tr><td>Food Cost</td><td>Rs ${totalCost}</td><td>Estimated item cost</td></tr>
+          <tr><td>Total Expenses</td><td>Rs ${totalExpenses}</td><td>All expenses</td></tr>
+          <tr><td>${profit >= 0 ? "Net Profit" : "Net Loss"}</td><td>Rs ${Math.abs(profit)}</td><td>Sales minus cost and expenses</td></tr>
+        </table>
+        <table>
+          <tr><th>Item</th><th>Qty</th><th>Amount</th></tr>
+          ${itemReports.map(item => `<tr><td>${item.name}</td><td>${item.quantity}</td><td>Rs ${item.net}</td></tr>`).join("")}
+        </table>
+      </body>
+    </html>
+  `;
+
+  const shareTextFallback = async (type: string) => {
+    await NativeShare.share({
+      title: `${registeredCanteen.name} ${range} Report`,
+      message: `${reportMessage}\n\nFormat selected: ${type}`
+    });
+  };
+
+  const sharePdfReport = async (target: "PDF" | "WhatsApp") => {
+    const file = await generatePDF({
+      html: reportHtml,
+      fileName: `${registeredCanteen.name.replace(/\s+/g, "-").toLowerCase()}-${range.toLowerCase()}-report`,
+      directory: "Documents"
+    });
+    if (!file.filePath) {
+      throw new Error("PDF file path missing");
+    }
+    const url = file.filePath?.startsWith("file://") ? file.filePath : `file://${file.filePath}`;
+    await RNShare.open({
+      title: `${registeredCanteen.name} ${range} Report`,
+      message: reportMessage,
+      url,
+      type: "application/pdf",
+      failOnCancel: false
+    });
+    setShareStatus(target === "WhatsApp" ? "PDF ready for WhatsApp" : "PDF report shared");
+  };
+
+  const shareImageReport = async () => {
+    if (!reportCardRef.current) {
+      await shareTextFallback("Image");
+      return;
+    }
+    const uri = await captureRef(reportCardRef, {
+      format: "png",
+      quality: 0.95,
+      result: "tmpfile"
+    });
+    await RNShare.open({
+      title: `${registeredCanteen.name} ${range} Report`,
+      message: reportMessage,
+      url: uri,
+      type: "image/png",
+      failOnCancel: false
+    });
+    setShareStatus("Image report shared");
+  };
+
+  const shareReport = async (type: "PDF" | "Image" | "WhatsApp") => {
+    setShareStatus(`${type} report preparing...`);
+    try {
+      if (type === "Image") {
+        await shareImageReport();
+      } else {
+        await sharePdfReport(type);
+      }
+    } catch {
+      await shareTextFallback(type);
+      setShareStatus(`${type} shared as text fallback`);
+    }
+  };
+
+  const applyRange = (nextRange: ReportRange) => {
+    const [nextFrom, nextTo] = buildRange(nextRange, fromDate, toDate);
+    setRange(nextRange);
+    setFromDate(nextFrom);
+    setToDate(nextTo);
+  };
 
   return (
     <View style={styles.optionStack}>
+      {!compact && (
+        <View style={styles.reportHeaderCard}>
+          <Text style={styles.adminHeroTitle}>Reports Center</Text>
+          <Text style={styles.adminHeroSub}>Sales, payments, expenses, profit/loss and stock reports</Text>
+        </View>
+      )}
+
       <View style={styles.reportFilterCard}>
         <View style={styles.dateRow}>
           <View style={styles.dateInputWrap}>
             <Text style={styles.dateLabel}>From Date</Text>
-            <TextInput value={fromDate} onChangeText={setFromDate} style={styles.dateInput} />
+            <TextInput value={fromDate} onChangeText={value => { setRange("Custom"); setFromDate(value); }} style={styles.dateInput} />
           </View>
           <View style={styles.dateInputWrap}>
             <Text style={styles.dateLabel}>To Date</Text>
-            <TextInput value={toDate} onChangeText={setToDate} style={styles.dateInput} />
+            <TextInput value={toDate} onChangeText={value => { setRange("Custom"); setToDate(value); }} style={styles.dateInput} />
           </View>
         </View>
         <View style={styles.quickRangeRow}>
-          {["Today", "Week", "Month", "Year", "Custom"].map(item => (
+          {(["Today", "Week", "Month", "Year", "Custom"] as ReportRange[]).map(item => (
             <TouchableOpacity
               key={item}
               activeOpacity={0.85}
-              onPress={() => {
-                setFromDate(quickRanges[item][0]);
-                setToDate(quickRanges[item][1]);
-              }}
-              style={styles.quickRangeChip}
+              onPress={() => applyRange(item)}
+              style={[styles.quickRangeChip, range === item && styles.quickRangeChipActive]}
             >
-              <Text style={styles.quickRangeText}>{item}</Text>
+              <Text style={[styles.quickRangeText, range === item && styles.quickRangeTextActive]}>{item}</Text>
             </TouchableOpacity>
           ))}
         </View>
+        <View style={styles.reportActionRow}>
+          <TouchableOpacity style={styles.reportActionButton} onPress={() => shareReport("PDF")} activeOpacity={0.86}>
+            <Text style={styles.reportActionText}>Share PDF</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.reportActionButton} onPress={() => shareReport("Image")} activeOpacity={0.86}>
+            <Text style={styles.reportActionText}>Share Image</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.reportActionButton, styles.whatsappButton]} onPress={() => shareReport("WhatsApp")} activeOpacity={0.86}>
+            <Text style={[styles.reportActionText, styles.whatsappButtonText]}>WhatsApp</Text>
+          </TouchableOpacity>
+        </View>
+        {!!shareStatus && <Text style={styles.shareStatus}>{shareStatus}</Text>}
       </View>
 
-      <View style={styles.reportGrid}>
-        <ReportMetric label="Total Sale" value={`Rs ${totalSales}`} />
-        <ReportMetric label="Items Sold" value={String(totalQty)} />
-        <ReportMetric label="Avg Bill" value={`Rs ${avgBill}`} />
-        <ReportMetric label="Reports" value="8" />
+      <View ref={reportCardRef} collapsable={false} style={styles.reportCaptureArea}>
+        <View style={styles.reportGrid}>
+          <ReportMetric label="Total Sale" value={`Rs ${totalSales}`} />
+          <ReportMetric label="Items Sold" value={String(totalQty)} />
+          <ReportMetric label="Expenses" value={`Rs ${totalExpenses}`} />
+          <ReportMetric label={profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(profit)}`} />
+        </View>
+
+        <ReportSection title="Today Report">
+          <ReportRow label="Selected Date" value={activeRange[1]} detail={`${range} report`} />
+          <ReportRow label="Bills / Quantity" value={String(totalQty)} detail="Total sold items" />
+          <ReportRow label="Average Bill" value={`Rs ${avgBill}`} detail="Sale average" />
+        </ReportSection>
+
+        <ReportSection title="Date Wise Report">
+          {dailyReports.map(row => <ReportRow key={row[0]} label={row[0]} value={row[1]} detail={row[2]} />)}
+        </ReportSection>
+
+        <ReportSection title="Item Wise Report">
+          {itemReports.map(item => (
+            <View key={item.id} style={styles.itemReportRow}>
+              <View style={styles.itemReportName}>
+                <Text style={styles.listTitle}>{item.name}</Text>
+                <Text style={styles.listSub}>{item.quantity} qty - {item.category}</Text>
+              </View>
+              <View style={styles.itemReportMoney}>
+                <Text style={styles.listAmount}>Rs {item.net}</Text>
+                <Text style={styles.listSub}>Rate Rs {item.price}</Text>
+              </View>
+            </View>
+          ))}
+        </ReportSection>
+
+        <ReportSection title="Payment Report">
+          <ReportRow label="Cash" value={`Rs ${cash}`} detail="52%" />
+          <ReportRow label="UPI / Online" value={`Rs ${upi}`} detail="38%" />
+          <ReportRow label="Card" value={`Rs ${card}`} detail="10%" />
+        </ReportSection>
+
+        <ReportSection title="Expenses Report">
+          {reportExpenses.map(row => <ReportRow key={row.id} label={row.category} value={`Rs ${row.amount}`} detail={`${row.date} - ${row.note}`} />)}
+          <ReportRow label="Total Expenses" value={`Rs ${totalExpenses}`} detail="All expenses" />
+        </ReportSection>
+
+        <ReportSection title="Profit / Loss Report">
+          <ReportRow label="Total Sales" value={`Rs ${totalSales}`} detail="Net sale after discount" />
+          <ReportRow label="Food Cost" value={`Rs ${totalCost}`} detail="Estimated item cost" />
+          <ReportRow label={profit >= 0 ? "Net Profit" : "Net Loss"} value={`Rs ${Math.abs(profit)}`} detail="Sales minus cost and expenses" />
+        </ReportSection>
+
+        <ReportSection title="Category Report">
+          {categoryReports.map(row => <ReportRow key={row.label} label={row.label} value={`Rs ${row.amount}`} detail={`${row.qty} qty`} />)}
+        </ReportSection>
+
+        <ReportSection title="Cashier Report">
+          <ReportRow label="Venkatesh" value={`Rs ${Math.round(totalSales * 0.58)}`} detail="Morning shift" />
+          <ReportRow label="Cashier 2" value={`Rs ${Math.round(totalSales * 0.42)}`} detail="Evening shift" />
+        </ReportSection>
+
+        <ReportSection title="Hourly Sales">
+          {hourlyReports.map(row => <ReportRow key={row[0]} label={row[0]} value={row[2]} detail={row[1]} />)}
+        </ReportSection>
+
+        <ReportSection title="Stock Report">
+          <ReportRow label="Low Stock Items" value="2" detail="Need refill" />
+          <ReportRow label="Discount Given" value={`Rs ${discount}`} detail="Selected bills" />
+          <ReportRow label="Report Status" value="Ready" detail="Can share to WhatsApp" />
+        </ReportSection>
       </View>
-
-      <ReportSection title="Date Wise Report">
-        {dailyReports.map(row => <ReportRow key={row[0]} label={row[0]} value={row[1]} detail={row[2]} />)}
-      </ReportSection>
-
-      <ReportSection title="Item Wise Report">
-        {itemReports.map(item => (
-          <View key={item.id} style={styles.itemReportRow}>
-            <View style={styles.itemReportName}>
-              <Text style={styles.listTitle}>{item.name}</Text>
-              <Text style={styles.listSub}>{item.quantity} qty - {item.category}</Text>
-            </View>
-            <View style={styles.itemReportMoney}>
-              <Text style={styles.listAmount}>Rs {item.net}</Text>
-              <Text style={styles.listSub}>Rate Rs {item.price}</Text>
-            </View>
-          </View>
-        ))}
-      </ReportSection>
-
-      <ReportSection title="Payment Report">
-        <ReportRow label="Cash" value={`Rs ${cash}`} detail="52%" />
-        <ReportRow label="UPI / Online" value={`Rs ${upi}`} detail="38%" />
-        <ReportRow label="Card" value={`Rs ${card}`} detail="10%" />
-      </ReportSection>
-
-      <ReportSection title="Category Report">
-        {categoryReports.map(row => <ReportRow key={row.label} label={row.label} value={`Rs ${row.amount}`} detail={`${row.qty} qty`} />)}
-      </ReportSection>
-
-      <ReportSection title="Cashier Report">
-        <ReportRow label="Venkatesh" value={`Rs ${Math.round(totalSales * 0.58)}`} detail="Morning shift" />
-        <ReportRow label="Cashier 2" value={`Rs ${Math.round(totalSales * 0.42)}`} detail="Evening shift" />
-      </ReportSection>
-
-      <ReportSection title="Hourly Sales">
-        {hourlyReports.map(row => <ReportRow key={row[0]} label={row[0]} value={row[2]} detail={row[1]} />)}
-      </ReportSection>
-
-      <ReportSection title="Stock & Profit">
-        <ReportRow label="Low Stock Items" value="2" detail="Need refill" />
-        <ReportRow label="Estimated Profit" value={`Rs ${Math.round(totalSales * 0.32)}`} detail="After cost" />
-        <ReportRow label="Discount Given" value={`Rs ${itemReports.reduce((sum, item) => sum + item.discount, 0)}`} detail="Selected bills" />
-      </ReportSection>
     </View>
   );
 }
@@ -699,21 +1001,166 @@ function CashSummaryScreen() {
   );
 }
 
+function ExpensesScreen({
+  expenses,
+  onExpensesChange
+}: {
+  expenses: Expense[];
+  onExpensesChange: (next: Expense[]) => void;
+}) {
+  const today = formatDateInput(new Date());
+  const [date, setDate] = useState(today);
+  const [category, setCategory] = useState("Raw Material");
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const expenseCategories = ["Raw Material", "Staff", "Packing", "Maintenance", "Rent", "Utilities", "Delivery", "Other"];
+
+  const addExpense = () => {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0) return;
+    onExpensesChange([
+      { id: String(Date.now()), date, category, amount: value, note: note.trim() || category },
+      ...expenses
+    ]);
+    setAmount("");
+    setNote("");
+  };
+
+  return (
+    <View style={styles.optionStack}>
+      <View style={styles.formCard}>
+        <Text style={styles.summaryTitle}>Add Expense</Text>
+        <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <View style={styles.categoryPicker}>
+          {expenseCategories.map(item => (
+            <TouchableOpacity key={item} activeOpacity={0.85} onPress={() => setCategory(item)} style={[styles.smallChip, category === item && styles.smallChipActive]}>
+              <Text style={[styles.smallChipText, category === item && styles.smallChipTextActive]}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TextInput value={amount} onChangeText={setAmount} keyboardType="numeric" placeholder="Amount" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <TextInput value={note} onChangeText={setNote} placeholder="Note" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={addExpense}>
+          <Text style={styles.primaryActionText}>Add Expense</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ReportSection title="Expenses List">
+        {expenses.map(item => <ReportRow key={item.id} label={item.category} value={`Rs ${item.amount}`} detail={`${item.date} - ${item.note}`} />)}
+      </ReportSection>
+    </View>
+  );
+}
+
+function FinanceScreen({
+  products,
+  expenses,
+  onExpensesChange
+}: {
+  products: Product[];
+  expenses: Expense[];
+  onExpensesChange: (next: Expense[]) => void;
+}) {
+  const today = formatDateInput(new Date());
+  const [range, setRange] = useState<ReportRange>("Today");
+  const [fromDate, setFromDate] = useState(today);
+  const [toDate, setToDate] = useState(today);
+  const activeRange = buildRange(range, fromDate, toDate);
+  const summary = useMemo(() => buildReportSummary(products, expenses, activeRange), [activeRange, expenses, products]);
+
+  const applyRange = (nextRange: ReportRange) => {
+    const [nextFrom, nextTo] = buildRange(nextRange, fromDate, toDate);
+    setRange(nextRange);
+    setFromDate(nextFrom);
+    setToDate(nextTo);
+  };
+
+  return (
+    <View style={styles.optionStack}>
+      <View style={styles.reportFilterCard}>
+        <View style={styles.dateRow}>
+          <View style={styles.dateInputWrap}>
+            <Text style={styles.dateLabel}>From Date</Text>
+            <TextInput value={fromDate} onChangeText={value => { setRange("Custom"); setFromDate(value); }} style={styles.dateInput} />
+          </View>
+          <View style={styles.dateInputWrap}>
+            <Text style={styles.dateLabel}>To Date</Text>
+            <TextInput value={toDate} onChangeText={value => { setRange("Custom"); setToDate(value); }} style={styles.dateInput} />
+          </View>
+        </View>
+        <View style={styles.quickRangeRow}>
+          {(["Today", "Week", "Month", "Year", "Custom"] as ReportRange[]).map(item => (
+            <TouchableOpacity key={item} activeOpacity={0.85} onPress={() => applyRange(item)} style={[styles.quickRangeChip, range === item && styles.quickRangeChipActive]}>
+              <Text style={[styles.quickRangeText, range === item && styles.quickRangeTextActive]}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.reportGrid}>
+        <ReportMetric label="Sales" value={`Rs ${summary.totalSales}`} />
+        <ReportMetric label="Food Cost" value={`Rs ${summary.totalCost}`} />
+        <ReportMetric label="Expenses" value={`Rs ${summary.totalExpenses}`} />
+        <ReportMetric label={summary.profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(summary.profit)}`} />
+      </View>
+
+      <ExpensesScreen expenses={expenses} onExpensesChange={onExpensesChange} />
+    </View>
+  );
+}
+
+function CategoryManagerScreen({
+  categories,
+  onCategoriesChange
+}: {
+  categories: string[];
+  onCategoriesChange: (next: string[]) => void;
+}) {
+  const [name, setName] = useState("");
+  const addCategory = () => {
+    const value = name.trim();
+    if (!value || categories.includes(value)) return;
+    onCategoriesChange([...categories, value]);
+    setName("");
+  };
+
+  return (
+    <View style={styles.optionStack}>
+      <View style={styles.formCard}>
+        <Text style={styles.summaryTitle}>Add Category</Text>
+        <TextInput value={name} onChangeText={setName} placeholder="Category name" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={addCategory}>
+          <Text style={styles.primaryActionText}>Add Category</Text>
+        </TouchableOpacity>
+      </View>
+      <ReportSection title="Restaurant Categories">
+        {categories.map(item => <ReportRow key={item} label={item} value="Active" detail="Available in billing and items" />)}
+      </ReportSection>
+    </View>
+  );
+}
+
 function ItemManagerScreen({
   products,
-  onProductsChange
+  onProductsChange,
+  categories,
+  onCategoriesChange
 }: {
   products: Product[];
   onProductsChange: (next: Product[]) => void;
+  categories: string[];
+  onCategoriesChange: (next: string[]) => void;
 }) {
   const [password, setPassword] = useState("");
   const [unlocked, setUnlocked] = useState(false);
   const [error, setError] = useState("");
   const [newName, setNewName] = useState("");
-  const [newCategory, setNewCategory] = useState<Category>("Meals");
+  const [newCategory, setNewCategory] = useState<Category>(categories[0] || "Meals");
   const [newPrice, setNewPrice] = useState("");
+  const [newImage, setNewImage] = useState("");
   const [newSubItem, setNewSubItem] = useState("");
   const [subInputs, setSubInputs] = useState<Record<string, string>>({});
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const unlock = () => {
     if (password.trim() === "1234" || password.trim().toLowerCase() === "admin123") {
@@ -750,11 +1197,13 @@ function ItemManagerScreen({
       price,
       category: newCategory,
       subItems: newSubItem.trim() ? [newSubItem.trim()] : undefined,
-      image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80"
+      image: newImage.trim() || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80"
     };
     onProductsChange([...products, nextProduct]);
+    if (!categories.includes(newCategory)) onCategoriesChange([...categories, newCategory]);
     setNewName("");
     setNewPrice("");
+    setNewImage("");
     setNewSubItem("");
     setError("");
   };
@@ -785,7 +1234,7 @@ function ItemManagerScreen({
         <Text style={styles.summaryTitle}>Add Item</Text>
         <TextInput value={newName} onChangeText={setNewName} placeholder="Item name" placeholderTextColor="#8a94a6" style={styles.realInput} />
         <View style={styles.categoryPicker}>
-          {itemCategories.map(category => (
+          {categories.map(category => (
             <TouchableOpacity
               key={category}
               activeOpacity={0.85}
@@ -797,6 +1246,7 @@ function ItemManagerScreen({
           ))}
         </View>
         <TextInput value={newPrice} onChangeText={setNewPrice} keyboardType="numeric" placeholder="Price" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <TextInput value={newImage} onChangeText={setNewImage} placeholder="Image URL optional" placeholderTextColor="#8a94a6" style={styles.realInput} />
         <TextInput value={newSubItem} onChangeText={setNewSubItem} placeholder="Sub item optional" placeholderTextColor="#8a94a6" style={styles.realInput} />
         {!!error && <Text style={styles.errorText}>{error}</Text>}
         <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={addNewProduct}>
@@ -812,44 +1262,87 @@ function ItemManagerScreen({
       {products.map(item => (
         <View key={item.id} style={styles.itemManageCard}>
           <View style={styles.itemManageTop}>
-            <Image source={{ uri: item.image }} style={styles.manageImage} />
+            {item.image ? (
+              <Image source={{ uri: item.image }} style={[styles.manageImage, item.hidden && styles.hiddenImage]} />
+            ) : (
+              <View style={[styles.manageImage, styles.imageFallback]}>
+                <Text style={styles.imageFallbackText}>{item.name.slice(0, 1)}</Text>
+              </View>
+            )}
             <View style={styles.manageInfo}>
               <Text style={styles.listTitle}>{item.name}</Text>
-              <Text style={styles.listSub}>{item.category}</Text>
+              <Text style={styles.listSub}>{item.category} - {item.hidden ? "Hidden" : "Visible"}</Text>
             </View>
-            <View style={styles.editPriceBox}>
-              <Text style={styles.editPriceLabel}>Edit Price</Text>
-              <TextInput
-                value={String(item.price)}
-                onChangeText={value => updateProduct(item.id, { price: Number(value) || 0 })}
-                keyboardType="numeric"
-                style={styles.priceInput}
-              />
-            </View>
-          </View>
-
-          <View style={styles.subItemsWrap}>
-            {(item.subItems && item.subItems.length > 0) ? item.subItems.map(subItem => (
-              <View key={subItem} style={styles.subPill}>
-                <Text style={styles.subPillText}>{subItem}</Text>
-              </View>
-            )) : (
-              <Text style={styles.listSub}>Empty</Text>
-            )}
-          </View>
-
-          <View style={styles.addSubRow}>
-            <TextInput
-              value={subInputs[item.id] || ""}
-              onChangeText={value => setSubInputs(inputs => ({ ...inputs, [item.id]: value }))}
-              placeholder="Add sub item"
-              placeholderTextColor="#8a94a6"
-              style={styles.subInput}
-            />
-            <TouchableOpacity activeOpacity={0.86} style={styles.addSubButton} onPress={() => addSubItem(item.id)}>
-              <Text style={styles.addSubButtonText}>Add</Text>
+            <TouchableOpacity activeOpacity={0.86} style={styles.miniActionButton} onPress={() => setEditingId(editingId === item.id ? null : item.id)}>
+              <Text style={styles.miniActionText}>{editingId === item.id ? "Done" : "Edit"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.86} style={[styles.miniActionButton, item.hidden && styles.showActionButton]} onPress={() => updateProduct(item.id, { hidden: !item.hidden })}>
+              <Text style={styles.miniActionText}>{item.hidden ? "Show" : "Hide"}</Text>
             </TouchableOpacity>
           </View>
+
+          {editingId === item.id ? (
+            <>
+              <View style={styles.editGrid}>
+                <TextInput
+                  value={item.name}
+                  onChangeText={value => updateProduct(item.id, { name: value })}
+                  placeholder="Item name"
+                  placeholderTextColor="#8a94a6"
+                  style={styles.realInput}
+                />
+                <TextInput
+                  value={String(item.price)}
+                  onChangeText={value => updateProduct(item.id, { price: Number(value) || 0 })}
+                  keyboardType="numeric"
+                  placeholder="Price"
+                  placeholderTextColor="#8a94a6"
+                  style={styles.realInput}
+                />
+                <TextInput
+                  value={item.image}
+                  onChangeText={value => updateProduct(item.id, { image: value })}
+                  placeholder="Image URL"
+                  placeholderTextColor="#8a94a6"
+                  style={styles.realInput}
+                />
+              </View>
+              <View style={styles.categoryPicker}>
+                {categories.map(category => (
+                  <TouchableOpacity
+                    key={category}
+                    activeOpacity={0.85}
+                    onPress={() => updateProduct(item.id, { category })}
+                    style={[styles.smallChip, item.category === category && styles.smallChipActive]}
+                  >
+                    <Text style={[styles.smallChipText, item.category === category && styles.smallChipTextActive]}>{category}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.addSubRow}>
+                <TextInput
+                  value={subInputs[item.id] || ""}
+                  onChangeText={value => setSubInputs(inputs => ({ ...inputs, [item.id]: value }))}
+                  placeholder="Add sub item"
+                  placeholderTextColor="#8a94a6"
+                  style={styles.subInput}
+                />
+                <TouchableOpacity activeOpacity={0.86} style={styles.addSubButton} onPress={() => addSubItem(item.id)}>
+                  <Text style={styles.addSubButtonText}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <View style={styles.subItemsWrap}>
+              {(item.subItems && item.subItems.length > 0) ? item.subItems.map(subItem => (
+                <View key={subItem} style={styles.subPill}>
+                  <Text style={styles.subPillText}>{subItem}</Text>
+                </View>
+              )) : (
+                <Text style={styles.listSub}>No sub items</Text>
+              )}
+            </View>
+          )}
         </View>
       ))}
     </View>
@@ -970,7 +1463,15 @@ function StatsCard({ tone, icon, label, value }: { tone: "green" | "blue"; icon:
   );
 }
 
-const CategoryTabs = memo(function CategoryTabs({ active, onChange }: { active: Category; onChange: (value: Category) => void }) {
+const CategoryTabs = memo(function CategoryTabs({
+  categories,
+  active,
+  onChange
+}: {
+  categories: string[];
+  active: string;
+  onChange: (value: string) => void;
+}) {
   return (
     <View style={styles.tabs}>
       {categories.map(category => (
@@ -1074,6 +1575,12 @@ function CartPanel({ count, total, onClear }: { count: number; total: number; on
 
 function BottomNav({ activeOption, onSelect }: { activeOption: DrawerOption; onSelect: (item: BottomNavItem) => void }) {
   const items: BottomNavItem[] = ["Home", "Orders", "Reports", "Settings"];
+  const labels: Record<BottomNavItem, string> = {
+    Home: "Billing",
+    Orders: "Orders",
+    Reports: "Reports",
+    Settings: "Settings"
+  };
   const activeItem: Record<BottomNavItem, boolean> = {
     Home: activeOption === "Dashboard" || activeOption === "New Billing",
     Orders: activeOption === "Orders",
@@ -1092,7 +1599,9 @@ function BottomNav({ activeOption, onSelect }: { activeOption: DrawerOption; onS
             onPress={() => onSelect(item)}
             style={[styles.navItem, active && styles.navActive]}
           >
-            <Text style={[styles.navText, active && styles.navActiveText]}>{item}</Text>
+            <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.navText, active && styles.navActiveText]}>
+              {labels[item]}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -1248,6 +1757,25 @@ const styles = StyleSheet.create({
   optionStack: {
     gap: 12
   },
+  adminHero: {
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: NAVY,
+    borderWidth: 1,
+    borderColor: "#163a73"
+  },
+  adminHeroTitle: {
+    color: CARD,
+    fontSize: 20,
+    fontWeight: "900"
+  },
+  adminHeroSub: {
+    marginTop: 6,
+    color: "#dbeafe",
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 19
+  },
   searchBar: {
     minHeight: 58,
     borderRadius: 18,
@@ -1328,6 +1856,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 2
   },
+  reportHeaderCard: {
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: "#0f172a",
+    borderWidth: 1,
+    borderColor: "#1e293b"
+  },
   dateRow: {
     flexDirection: "row",
     gap: 10
@@ -1367,10 +1902,55 @@ const styles = StyleSheet.create({
     borderColor: "#d7e4f6",
     justifyContent: "center"
   },
+  quickRangeChipActive: {
+    backgroundColor: NAVY,
+    borderColor: NAVY
+  },
   quickRangeText: {
     color: NAVY,
     fontSize: 12,
     fontWeight: "900"
+  },
+  quickRangeTextActive: {
+    color: CARD
+  },
+  reportActionRow: {
+    marginTop: 13,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  reportActionButton: {
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: LINE,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  reportActionText: {
+    color: "#111827",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  whatsappButton: {
+    backgroundColor: "#16a34a",
+    borderColor: "#16a34a"
+  },
+  whatsappButtonText: {
+    color: CARD
+  },
+  shareStatus: {
+    marginTop: 9,
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  reportCaptureArea: {
+    gap: 12,
+    backgroundColor: PAGE
   },
   reportGrid: {
     flexDirection: "row",
@@ -1506,12 +2086,12 @@ const styles = StyleSheet.create({
     fontWeight: "900"
   },
   subSheetLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     justifyContent: "flex-end",
     zIndex: 30
   },
   subSheetOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "rgba(2,6,23,0.34)"
   },
   subSheet: {
@@ -1739,6 +2319,11 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     paddingHorizontal: 14
   },
+  bulkInput: {
+    minHeight: 118,
+    paddingTop: 12,
+    textAlignVertical: "top"
+  },
   errorText: {
     color: "#b42318",
     fontSize: 13,
@@ -1804,9 +2389,45 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     backgroundColor: "#eef2f7"
   },
+  hiddenImage: {
+    opacity: 0.38
+  },
+  imageFallback: {
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  imageFallbackText: {
+    color: NAVY,
+    fontSize: 18,
+    fontWeight: "900"
+  },
   manageInfo: {
     flex: 1,
     marginLeft: 11
+  },
+  miniActionButton: {
+    minWidth: 48,
+    minHeight: 36,
+    marginLeft: 6,
+    borderRadius: 12,
+    backgroundColor: "#edf4ff",
+    borderWidth: 1,
+    borderColor: "#d7e4f6",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  showActionButton: {
+    backgroundColor: "#ecfdf3",
+    borderColor: "#bbf7d0"
+  },
+  miniActionText: {
+    color: NAVY,
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  editGrid: {
+    marginTop: 12,
+    gap: 8
   },
   editPriceBox: {
     width: 92
@@ -1968,7 +2589,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    bottom: 82,
+    bottom: 94,
     padding: 16,
     borderRadius: 22,
     backgroundColor: CARD,
@@ -2027,38 +2648,47 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 16,
-    height: 58,
+    height: 64,
     borderRadius: 18,
     backgroundColor: NAVY,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-around",
-    paddingHorizontal: 8
+    justifyContent: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 7
   },
   navItem: {
     flex: 1,
-    height: 42,
+    height: 50,
     borderRadius: 12,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    marginHorizontal: 2,
+    paddingHorizontal: 2,
+    overflow: "hidden"
   },
   navActive: {
-    backgroundColor: "rgba(255,255,255,0.14)"
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.22)"
   },
   navText: {
     color: CARD,
-    fontSize: 13,
-    fontWeight: "900"
+    fontSize: 12,
+    lineHeight: 15,
+    fontWeight: "900",
+    textAlign: "center",
+    includeFontPadding: false
   },
   navActiveText: {
     color: CARD
   },
   drawerLayer: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 40
   },
   drawerOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: "#020617"
   },
   overlayPressable: {
