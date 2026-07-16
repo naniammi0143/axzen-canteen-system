@@ -806,7 +806,7 @@
       color: var(--muted);
       font-size: 12px;
     }
-    .report-filter input, .item-add-card input, .item-add-card select, .item-manager-card input {
+    .report-filter input, .item-add-card input, .item-add-card select, .item-manager-card input, .item-manager-card select {
       width: 100%;
       min-height: 42px;
       border: 1px solid var(--line);
@@ -855,9 +855,31 @@
     }
     .item-manager-top {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) 110px;
-      gap: 12px;
+      grid-template-columns: 58px minmax(0, 1fr) auto auto;
+      gap: 10px;
       align-items: center;
+    }
+    .item-manager-thumb {
+      width: 58px;
+      height: 50px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #eef2f7 center / cover;
+      color: var(--blue);
+      font-size: 18px;
+      font-weight: 950;
+    }
+    .item-manager-thumb.initials { background: linear-gradient(145deg, #eef7ff, #fff8e8); }
+    .item-edit-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .danger-lite {
+      color: var(--red) !important;
+      border-color: #ffd9d9 !important;
+      background: #fff5f5 !important;
     }
     .item-manager-top label {
       display: grid;
@@ -1283,7 +1305,15 @@
       ? productionApi
       : (storedApi || `http://${nativeHost}:5000`);
 
-    const categoryOrder = ["All", "Meals", "Tiffin", "Tea", "Drinks", "Snacks", "Lunch", "Juice", "Dinner"];
+    const categoryOrder = (() => {
+      const defaults = ["All", "Breakfast", "Meals", "Biryani", "Starters", "Chinese", "Tiffin", "Tea", "Coffee", "Drinks", "Snacks", "Lunch", "Juice", "Desserts", "Dinner"];
+      try {
+        const saved = JSON.parse(localStorage.getItem("AXEN_CATEGORIES") || "[]");
+        return [...new Set([...defaults, ...saved])];
+      } catch {
+        return defaults;
+      }
+    })();
     const appBuild = "1.9.1";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
@@ -1309,6 +1339,7 @@
     let user = null;
     let products = [];
     let orders = [];
+    let expenses = [];
     let users = [];
     let creditors = [];
     let addresses = [];
@@ -1339,6 +1370,7 @@
     const writeJson = (key, value) => localStorage.setItem(key, JSON.stringify(value));
     const pendingOrders = () => readJson(pendingOrdersKey, []);
     const setPendingOrders = value => { writeJson(pendingOrdersKey, value); updateSyncStatus(); };
+    const isItemHidden = item => item?.hidden === true || item?.available === false || item?.isAvailable === false || item?.status === "hidden";
 
     if (localStorage.getItem(appBuildKey) !== appBuild) {
       localStorage.removeItem(productCacheKey);
@@ -1603,6 +1635,7 @@
               String(order.userMobile || "") === String(user?.mobile || "") ||
               String(order.cashier || "").trim().toLowerCase() === String(user?.name || "").trim().toLowerCase()
             );
+        expenses = dashboard.expenses || [];
         creditors = dashboard.creditors || [];
         addresses = dashboard.addresses || [];
         const currentUser = (dashboard.users || []).find(row => String(row.mobile || "") === String(user?.mobile || ""));
@@ -1632,7 +1665,7 @@
     }
 
     function renderCategories() {
-      const found = new Set(products.map(item => item.category || "Other"));
+      const found = new Set(products.filter(item => !isItemHidden(item)).map(item => item.category || "Other"));
       const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
       $("categoryTabs").innerHTML = categories.map(category => `
         <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${category}"><span>${categoryIcon(category)}</span>${categoryLabel(category)}</button>
@@ -1643,6 +1676,7 @@
       renderCategories();
       const query = itemSearch.trim().toLowerCase();
       const visible = (activeCategory === "All" ? products : products.filter(item => item.category === activeCategory))
+        .filter(item => !isItemHidden(item))
         .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
         .slice()
         .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
@@ -2258,11 +2292,14 @@
         held: "Orders",
         bulk: "Orders",
         report: "Reports",
+        finance: "Finance",
+        expenses: "Expenses",
         cash: "Cash Summary",
         stock: "Stock Availability",
         printer: "Printer Settings",
         add: "Add Item",
         edit: "Edit Price",
+        categories: "Categories",
         counter: "User",
         settings: "Settings"
       })[section] || "Dashboard";
@@ -2273,11 +2310,14 @@
         held: "Held orders and quick return to billing.",
         bulk: "Bulk quantity order entry.",
         report: "Date wise, item wise and payment reports.",
+        finance: "Date wise finance, expenses and profit/loss.",
+        expenses: "Add and review restaurant expenses.",
         cash: "Cash, online and credit collection split.",
         stock: "Inventory view with low-stock status.",
         printer: "Bluetooth printer selection and test print.",
         add: "Admin item creation shortcut.",
         edit: "Menu price management shortcut.",
+        categories: "Restaurant category management.",
         counter: "Cashier user management.",
         settings: "Search, menu refresh and admin access."
       })[section] || "Overview";
@@ -2368,9 +2408,100 @@
       });
     }
 
+    function expenseDate(expense) {
+      return expense.createdAt ? new Date(expense.createdAt) : expense.date ? new Date(`${expense.date}T00:00:00`) : new Date(expense.time || Date.now());
+    }
+
+    function rangedExpenses() {
+      const range = reportRange();
+      const from = new Date(`${range.from}T00:00:00`);
+      const to = new Date(`${range.to}T23:59:59`);
+      return expenses.filter(expense => {
+        const date = expenseDate(expense);
+        return date >= from && date <= to;
+      });
+    }
+
+    function expenseRowsHtml(rows = expenses) {
+      return rows.slice().reverse().map(item => `
+        <tr>
+          <td>${esc(dateInputValue(expenseDate(item)) || item.time || "-")}</td>
+          <td>${esc(item.title || item.note || "Expense")}</td>
+          <td>${esc(item.category || "General")}</td>
+          <td>${money(item.amount)}</td>
+        </tr>`).join("");
+    }
+
+    function expenseFormHtml() {
+      return `<div class="work-card">
+        <h3>Add Expense</h3>
+        <div class="form-grid">
+          <input id="expenseTitleInput" placeholder="Expense title">
+          <input id="expenseAmountInput" type="number" min="0" placeholder="Amount">
+          <input id="expenseCategoryInput" value="General" placeholder="Category">
+          <button class="page-action" id="saveExpenseBtn" type="button">Add Expense</button>
+        </div>
+      </div>`;
+    }
+
+    function expensesPageHtml() {
+      return `
+        ${sectionHeader("expenses")}
+        ${hasAdminAccess() ? expenseFormHtml() : adminUnlockHtml()}
+        <div class="work-card">
+          <h3>Expenses List</h3>
+          <table class="data-table"><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml() || `<tr><td colspan="4">No expenses yet</td></tr>`}</tbody></table>
+        </div>`;
+    }
+
+    function financePageHtml() {
+      const range = reportRange();
+      const sales = rangedOrders().reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const filteredExpenses = rangedExpenses();
+      const expenseTotal = filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+      const foodCost = Math.round(sales * 0.48);
+      const net = sales - foodCost - expenseTotal;
+      return `
+        ${sectionHeader("finance")}
+        <div class="work-card report-filter">
+          <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
+          <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
+          <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button><button data-report-range="year" type="button">Year</button></div>
+        </div>
+        <div class="work-grid">
+          <div class="work-card metric-card"><span>Sales</span><strong>${money(sales)}</strong></div>
+          <div class="work-card metric-card"><span>Food Cost</span><strong>${money(foodCost)}</strong></div>
+          <div class="work-card metric-card"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div>
+          <div class="work-card metric-card"><span>${net >= 0 ? "Profit" : "Loss"}</span><strong>${money(Math.abs(net))}</strong></div>
+        </div>
+        ${hasAdminAccess() ? expenseFormHtml() : adminUnlockHtml()}
+        <div class="work-card">
+          <h3>Expenses in Date Range</h3>
+          <table class="data-table"><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml(filteredExpenses) || `<tr><td colspan="4">No expenses in selected range</td></tr>`}</tbody></table>
+        </div>`;
+    }
+
+    function categoriesPageHtml() {
+      return `
+        ${sectionHeader("categories")}
+        <div class="work-card">
+          <h3>Add Category</h3>
+          <div class="form-grid">
+            <input id="newCategoryInput" placeholder="Category name">
+            <button class="page-action" id="saveCategoryBtn" type="button">Add Category</button>
+          </div>
+        </div>
+        <div class="work-card">
+          <h3>Restaurant Categories</h3>
+          <div class="sub-chip-row">${categoryOrder.filter(item => item !== "All").map(item => `<span>${esc(categoryLabel(item))}</span>`).join("")}</div>
+        </div>`;
+    }
+
     function reportPageHtml() {
       const range = reportRange();
       const rows = rangedOrders();
+      const filteredExpenses = rangedExpenses();
+      const expenseTotal = filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
       const totals = rows.reduce((sum, order) => {
         const pay = orderBreakup(order);
         sum.total += Number(order.total || 0);
@@ -2400,6 +2531,8 @@
         <tr><td>${date}</td><td>${item.bills}</td><td>${money(item.amount)}</td></tr>`).join("");
       const bills = rows.slice().reverse().slice(0, 15).map(order => `
         <tr><td>${esc(order.id || order.clientOrderId || "-")}</td><td>${esc(order.cashier || user?.name || "-")}</td><td>${money(order.total)}</td><td>${esc(order.payment || "Cash")}</td></tr>`).join("");
+      const foodCost = Math.round(totals.total * 0.48);
+      const net = totals.total - foodCost - expenseTotal;
       return `
         ${sectionHeader("report")}
         <div class="work-card report-filter">
@@ -2412,10 +2545,14 @@
           <div class="work-card metric-card"><span>Total Bills</span><strong>${rows.length}</strong></div>
           <div class="work-card metric-card"><span>Cash</span><strong>${money(totals.cash)}</strong></div>
           <div class="work-card metric-card"><span>Online</span><strong>${money(totals.online)}</strong></div>
+          <div class="work-card metric-card"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div>
+          <div class="work-card metric-card"><span>${net >= 0 ? "Profit" : "Loss"}</span><strong>${money(Math.abs(net))}</strong></div>
         </div>
         <div class="work-card"><h3>Date Wise Report</h3><table class="data-table"><thead><tr><th>Date</th><th>Bills</th><th>Sale</th></tr></thead><tbody>${dateRows || `<tr><td colspan="3">No date wise sales</td></tr>`}</tbody></table></div>
         <div class="work-card"><h3>Item Wise Report</h3><table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody>${itemRows || `<tr><td colspan="3">No item sales</td></tr>`}</tbody></table></div>
         <div class="work-card"><h3>Payment Report</h3><div class="option-row"><span>Cash</span><strong>${money(totals.cash)}</strong></div><div class="option-row"><span>Online / UPI</span><strong>${money(totals.online)}</strong></div><div class="option-row"><span>Credit</span><strong>${money(totals.credit)}</strong></div></div>
+        <div class="work-card"><h3>Profit / Loss Report</h3><div class="option-row"><span>Total Sale</span><strong>${money(totals.total)}</strong></div><div class="option-row"><span>Food Cost</span><strong>${money(foodCost)}</strong></div><div class="option-row"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div><div class="option-row"><span>${net >= 0 ? "Net Profit" : "Net Loss"}</span><strong>${money(Math.abs(net))}</strong></div></div>
+        <div class="work-card"><h3>Expenses Report</h3><table class="data-table"><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml(filteredExpenses) || `<tr><td colspan="4">No expenses in selected range</td></tr>`}</tbody></table></div>
         <div class="work-card"><h3>Recent Bills</h3><div class="report-bills-scroll"><table class="data-table"><thead><tr><th>Bill</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${bills || `<tr><td colspan="4">No bills in selected date range</td></tr>`}</tbody></table></div></div>`;
     }
 
@@ -2718,17 +2855,28 @@
       }
       const rows = products.slice().sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0)).map(item => {
         const subs = productSubItems(item);
+        const hidden = isItemHidden(item);
+        const editing = item._editing === true;
+        const imageStyle = item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : "";
         return `<div class="work-card item-manager-card">
           <div class="item-manager-top">
-            <div><h3>${esc(item.name || "Item")}</h3><span class="muted">${esc(item.category || "-")} | ${subs.length ? `${subs.length} sub items` : "Empty"}</span></div>
-            <label>Edit Price <input data-price-item="${item.id}" type="number" min="0" value="${Number(item.price || 0)}"></label>
+            <span class="item-manager-thumb ${imageStyle ? "" : "initials"}" style="${imageStyle}">${imageStyle ? "" : esc(String(item.name || "I").slice(0, 1))}</span>
+            <div><h3>${esc(item.name || "Item")}</h3><span class="muted">${esc(item.category || "-")} | ${subs.length ? `${subs.length} sub items` : "Empty"} | ${hidden ? "Hidden" : "Visible"}</span></div>
+            <button class="ghost-action" data-edit-item="${item.id}" type="button">${editing ? "Done" : "Edit"}</button>
+            <button class="ghost-action ${hidden ? "" : "danger-lite"}" data-hide-item="${item.id}" type="button">${hidden ? "Show" : "Hide"}</button>
           </div>
+          ${editing ? `<div class="item-edit-grid">
+            <input data-edit-name="${item.id}" value="${esc(item.name || "")}" placeholder="Item name">
+            <input data-price-item="${item.id}" type="number" min="0" value="${Number(item.price || 0)}" placeholder="Price">
+            <input data-edit-image="${item.id}" value="${esc(item.image || "")}" placeholder="Image URL">
+            <select data-edit-category="${item.id}">${categoryOrder.filter(cat => cat !== "All").map(cat => `<option value="${esc(cat)}" ${cat === item.category ? "selected" : ""}>${esc(categoryLabel(cat))}</option>`).join("")}</select>
+          </div>` : ""}
           <div class="sub-chip-row">${subs.map(sub => `<span>${esc(sub.name)} - ${money(sub.price)}</span>`).join("") || `<span>Empty</span>`}</div>
-          <div class="add-sub-row">
+          ${editing ? `<div class="add-sub-row">
             <input data-sub-name="${item.id}" placeholder="Sub item name">
             <input data-sub-price="${item.id}" type="number" min="0" placeholder="Price">
             <button class="ghost-action" data-add-sub="${item.id}" type="button">Add Sub</button>
-          </div>
+          </div>` : ""}
         </div>`;
       }).join("");
       return `
@@ -2757,11 +2905,14 @@
       const html = activePosSection === "held" ? ordersPageHtml()
         : activePosSection === "bulk" ? bulkOrderPageHtml()
         : activePosSection === "report" ? reportPageHtml()
+        : activePosSection === "finance" ? financePageHtml()
+        : activePosSection === "expenses" ? expensesPageHtml()
         : activePosSection === "cash" ? cashPageHtml()
         : activePosSection === "stock" ? stockPageHtml()
         : activePosSection === "printer" ? printerPageHtml()
         : activePosSection === "settings" ? settingsPageHtml()
         : activePosSection === "counter" ? userManagementPageHtml()
+        : activePosSection === "categories" ? categoriesPageHtml()
         : activePosSection === "add" || activePosSection === "edit" ? itemManagerPageHtml(activePosSection)
         : simpleAdminPageHtml(activePosSection);
       page.innerHTML = html;
@@ -2805,11 +2956,15 @@
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderOptionPage(); });
       document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => setReportQuickRange(btn.dataset.reportRange)));
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
+      if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
+      if ($("saveCategoryBtn")) $("saveCategoryBtn").addEventListener("click", saveCategoryFromPos);
       if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
       if ($("bulkAddToCart")) $("bulkAddToCart").addEventListener("click", addBulkItemsToCart);
       if ($("bulkProceedPayment")) $("bulkProceedPayment").addEventListener("click", openBulkConfirmModal);
       document.querySelectorAll("[data-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem, input.value)));
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
+      document.querySelectorAll("[data-edit-item]").forEach(btn => btn.addEventListener("click", () => toggleItemEdit(btn.dataset.editItem)));
+      document.querySelectorAll("[data-hide-item]").forEach(btn => btn.addEventListener("click", () => toggleItemHidden(btn.dataset.hideItem)));
       document.querySelectorAll("[data-go-billing]").forEach(btn => btn.addEventListener("click", () => setPosSection("billing")));
       document.querySelectorAll("[data-restore-held]").forEach(btn => btn.addEventListener("click", () => restoreHeldOrder(btn.dataset.restoreHeld)));
       document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
@@ -2831,8 +2986,9 @@
     }
 
     async function persistProductFromPos(product) {
-      const saved = await adminApi("/products", { method: "POST", body: JSON.stringify(product) });
-      products = saved.products || products.map(item => Number(item.id) === Number(product.id) ? product : item);
+      const { _editing, ...cleanProduct } = product;
+      const saved = await adminApi("/products", { method: "POST", body: JSON.stringify(cleanProduct) });
+      products = saved.products || products.map(item => Number(item.id) === Number(cleanProduct.id) ? cleanProduct : item);
       writeJson(productCacheKey, products);
       renderProducts();
       if (!$("adminView").classList.contains("hidden") && adminTab === "menu") renderAdmin();
@@ -2900,7 +3056,31 @@
     async function savePriceFromPos(id, value) {
       const item = products.find(row => Number(row.id) === Number(id));
       if (!item) return;
-      await persistProductFromPos({ ...item, price: Number(value || 0) });
+      const name = document.querySelector(`[data-edit-name="${id}"]`)?.value.trim() || item.name;
+      const image = document.querySelector(`[data-edit-image="${id}"]`)?.value.trim() ?? item.image;
+      const category = document.querySelector(`[data-edit-category="${id}"]`)?.value || item.category;
+      await persistProductFromPos({ ...item, name, image, category, price: Number(value || item.price || 0), _editing: false });
+    }
+
+    async function toggleItemEdit(id) {
+      const item = products.find(row => Number(row.id) === Number(id));
+      if (!item) return;
+      if (item._editing) {
+        const name = document.querySelector(`[data-edit-name="${id}"]`)?.value.trim() || item.name;
+        const price = Number(document.querySelector(`[data-price-item="${id}"]`)?.value || item.price || 0);
+        const image = document.querySelector(`[data-edit-image="${id}"]`)?.value.trim() ?? item.image;
+        const category = document.querySelector(`[data-edit-category="${id}"]`)?.value || item.category;
+        await persistProductFromPos({ ...item, name, price, image, category, _editing: false });
+        return;
+      }
+      products = products.map(row => Number(row.id) === Number(id) ? { ...row, _editing: true } : row);
+      renderOptionPage();
+    }
+
+    async function toggleItemHidden(id) {
+      const item = products.find(row => Number(row.id) === Number(id));
+      if (!item) return;
+      await persistProductFromPos({ ...item, hidden: !isItemHidden(item), available: isItemHidden(item), isAvailable: isItemHidden(item), _editing: false });
     }
 
     async function saveSubItemFromPos(id) {
@@ -2933,6 +3113,38 @@
         subItems: subName ? [{ name: subName, price: subPrice }] : []
       };
       await persistProductFromPos(product);
+    }
+
+    async function saveExpenseFromPos() {
+      const title = $("expenseTitleInput")?.value.trim();
+      const amount = Number($("expenseAmountInput")?.value || 0);
+      const category = $("expenseCategoryInput")?.value.trim() || "General";
+      if (!title || amount <= 0) {
+        $("posMessage").textContent = "Expense title and amount required";
+        $("posMessage").className = "status error";
+        return;
+      }
+      try {
+        const data = await adminApi("/expenses", { method: "POST", body: JSON.stringify({ title, amount, category }) });
+        expenses = data.expenses || [data.expense, ...expenses].filter(Boolean);
+        $("posMessage").textContent = "Expense saved";
+        $("posMessage").className = "status ok";
+        renderOptionPage();
+      } catch {
+        $("posMessage").textContent = "Expense save failed. Admin permission required.";
+        $("posMessage").className = "status error";
+      }
+    }
+
+    function saveCategoryFromPos() {
+      const value = $("newCategoryInput")?.value.trim();
+      if (!value || categoryOrder.includes(value)) return;
+      categoryOrder.splice(categoryOrder.length - 1, 0, value);
+      localStorage.setItem("AXEN_CATEGORIES", JSON.stringify(categoryOrder.filter(item => item !== "All")));
+      $("posMessage").textContent = "Category added";
+      $("posMessage").className = "status ok";
+      renderOptionPage();
+      renderCategories();
     }
 
     async function savePosUser(event) {
@@ -3017,6 +3229,8 @@
                 ${drawerItem("billing", "New Billing", "B", activeSection)}
                 ${drawerItem("held", "Orders", "O", activeSection)}
                 ${drawerItem("report", "Reports", "R", activeSection)}
+                ${drawerItem("finance", "Finance", "F", activeSection)}
+                ${drawerItem("expenses", "Expenses", "X", activeSection)}
                 ${drawerItem("cash", "Cash Summary", "C", activeSection)}
                 <button class="drawer-item" id="dayCloseBtn" type="button"><span>D</span><strong>Day Close</strong><span class="drawer-arrow">›</span></button>
                 <button class="drawer-item" id="syncNowBtn" type="button"><span>S</span><strong>Sync Data</strong><span class="drawer-arrow">›</span></button>
@@ -3025,6 +3239,7 @@
                 <span class="drawer-section-title">Items</span>
                 ${drawerItem("add", "Add Item", "+", activeSection)}
                 ${drawerItem("edit", "Edit Price", "E", activeSection)}
+                ${drawerItem("categories", "Categories", "C", activeSection)}
                 ${drawerItem("stock", "Stock Availability", "I", activeSection)}
               </section>
               <section class="drawer-section">
@@ -3345,6 +3560,7 @@
 
     function dashboardAdminHtml(stats) {
       const total = Math.max(1, stats.total);
+      const expenseTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
       const recent = orders.slice().reverse().slice(0, 5);
       const top = [...orders.reduce((map, order) => {
         (order.items || []).forEach(item => {
@@ -3365,8 +3581,8 @@
           <div class="kpi"><i>S</i><span>Today's Sale</span><strong>${money(stats.total)}</strong><small>Live</small></div>
           <div class="kpi"><i>C</i><span>Total Collection</span><strong>${money(stats.total)}</strong><small>Cash + Online</small></div>
           <div class="kpi"><i>O</i><span>Total Orders</span><strong>${stats.count}</strong><small>Recorded</small></div>
-          <div class="kpi"><i>N</i><span>Net Collection</span><strong>${money(stats.total)}</strong><small>After expenses</small></div>
-          <div class="kpi"><i>E</i><span>Total Expenses</span><strong>${money(0)}</strong><small style="color:#ef4444">Tracked</small></div>
+          <div class="kpi"><i>N</i><span>Net Collection</span><strong>${money(stats.total - expenseTotal)}</strong><small>After expenses</small></div>
+          <div class="kpi"><i>E</i><span>Total Expenses</span><strong>${money(expenseTotal)}</strong><small style="color:#ef4444">Tracked</small></div>
         </div>
         <div class="panel">
           <div class="admin-card-head"><h2>Sales Overview</h2><button class="admin-link" data-admin-jump="sales" type="button">View All</button></div>
@@ -3397,7 +3613,7 @@
 
     function financeAdminHtml() {
       const stats = dashboardStats();
-      const expenseTotal = 0;
+      const expenseTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
       const creditorRows = (creditors || []).map(item => `<div class="user-line"><strong>${esc(item.name || "-")}</strong><span class="muted">${esc(item.phone || "")} ${item.reason ? `| ${esc(item.reason)}` : ""}</span></div>`).join("");
       return `
         <div class="kpis">
@@ -3407,6 +3623,8 @@
           <div class="kpi"><span>Credit</span><strong>${money(stats.credit)}</strong></div>
         </div>
         <div class="panel"><h2>Finance Summary</h2><div class="row-between"><span>Net Collection</span><strong>${money(stats.total - expenseTotal)}</strong></div><div class="row-between"><span>Total Expenses</span><strong>${money(expenseTotal)}</strong></div></div>
+        <div class="panel"><h2>Add Expense</h2><div class="form-grid"><input id="expenseTitleInput" placeholder="Expense title"><input id="expenseAmountInput" type="number" min="0" placeholder="Amount"><input id="expenseCategoryInput" value="General" placeholder="Category"><button class="primary" id="saveExpenseBtn" type="button">Add Expense</button></div></div>
+        <div class="panel"><h2>Expenses</h2><table class="data-table"><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml() || `<tr><td colspan="4">No expenses yet</td></tr>`}</tbody></table></div>
         <div class="panel"><h2>Creditors</h2>${creditorRows || `<div class="muted">No creditors added</div>`}</div>`;
     }
 
@@ -3513,6 +3731,7 @@
       if ($("adminGoBilling")) $("adminGoBilling").addEventListener("click", openBillingFromAdmin);
       if ($("settingsForm")) $("settingsForm").addEventListener("submit", saveSettings);
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
+      if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
       if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
       if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => { await loadProducts(); renderAdmin(); });
       document.querySelectorAll("[data-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem, input.value)));
