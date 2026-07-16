@@ -1080,8 +1080,29 @@
     #posView .place { min-height: 60px; margin-top: 14px; background: linear-gradient(180deg, #2fc152, #20a83d); box-shadow: 0 12px 26px #22c55e30; font-size: 18px; }
     #posView .bottom-nav { display: grid; width: min(964px, calc(100% - 40px)); bottom: 16px; border: 0; border-radius: 18px; overflow: hidden; background: #082653; box-shadow: 0 12px 28px #08265333; }
     #posView .bottom-nav.user-nav { bottom: 16px; }
-    #posView .bottom-nav button { min-height: 58px; background: #082653; color: white; font-size: 16px; }
-    #posView .bottom-nav button.active { margin: 8px; min-height: 42px; border-radius: 10px; background: #ffffff1c; color: white; }
+    #posView .bottom-nav button {
+      height: 58px;
+      min-height: 58px;
+      border-radius: 0;
+      background: #082653;
+      color: white;
+      font-size: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    #posView .bottom-nav button.active {
+      margin: 0;
+      height: 58px;
+      min-height: 58px;
+      border-radius: 0;
+      background: #ffffff1c;
+      color: white;
+    }
+    #posView .bottom-nav button span { margin: 0; }
+    #posView .bottom-nav button b { line-height: 1; }
 
     @media (max-width: 760px) {
       .app { max-width: 520px; }
@@ -1651,11 +1672,13 @@
       try {
         users = await api("/users", { timeoutMs: 9000 });
       } catch {}
-      renderAdmin();
+      if ($("adminView") && !$("adminView").classList.contains("hidden")) renderAdmin();
     }
 
     async function refreshLiveData() {
       if (!user || liveRefreshBusy || !navigator.onLine) return;
+      const active = document.activeElement;
+      if (active && ["INPUT", "SELECT", "TEXTAREA"].includes(active.tagName)) return;
       liveRefreshBusy = true;
       try {
         await loadAdminData();
@@ -2433,12 +2456,13 @@
     }
 
     function expenseFormHtml() {
+      const expenseCategories = ["General", "Raw Material", "Staff", "Packing", "Maintenance", "Rent", "Utilities", "Delivery", "Other"];
       return `<div class="work-card">
         <h3>Add Expense</h3>
         <div class="form-grid">
           <input id="expenseTitleInput" placeholder="Expense title">
           <input id="expenseAmountInput" type="number" min="0" placeholder="Amount">
-          <input id="expenseCategoryInput" value="General" placeholder="Category">
+          <select id="expenseCategoryInput">${expenseCategories.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
           <button class="page-action" id="saveExpenseBtn" type="button">Add Expense</button>
         </div>
       </div>`;
@@ -2922,14 +2946,13 @@
     function setPosSection(section) {
       activePosSection = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
       closeOptionsModal();
+      if ($("adminView") && !$("adminView").classList.contains("hidden")) show("posView");
+      ensureUserNavKeys();
       const billingMode = activePosSection === "billing";
       $("posView").classList.toggle("option-mode", !billingMode);
       $("billingPanel").classList.toggle("hidden", !billingMode);
       $("optionPage").classList.toggle("hidden", billingMode);
-      document.querySelectorAll("#userNav button").forEach(btn => {
-        const label = (btn.querySelector("b")?.textContent || btn.textContent).trim();
-        btn.classList.toggle("active", label === (billingMode ? "Home" : pageTitle(activePosSection).split(" ")[0]));
-      });
+      updateUserNavActive(activePosSection);
       if (billingMode) {
         activeCategory = "All";
         itemSearch = "";
@@ -2983,6 +3006,20 @@
       localStorage.setItem("AXEN_REPORT_FROM", dateInputValue(start));
       localStorage.setItem("AXEN_REPORT_TO", dateInputValue(now));
       renderOptionPage();
+    }
+
+    function ensureUserNavKeys() {
+      const keys = ["billing", "bulk", "report", "settings"];
+      document.querySelectorAll("#userNav button").forEach((btn, index) => {
+        btn.dataset.nav = keys[index] || "billing";
+      });
+    }
+
+    function updateUserNavActive(section) {
+      const active = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
+      document.querySelectorAll("#userNav button").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.nav === active);
+      });
     }
 
     async function persistProductFromPos(product) {
@@ -3129,7 +3166,8 @@
         expenses = data.expenses || [data.expense, ...expenses].filter(Boolean);
         $("posMessage").textContent = "Expense saved";
         $("posMessage").className = "status ok";
-        renderOptionPage();
+        if ($("adminView") && !$("adminView").classList.contains("hidden")) renderAdmin();
+        else renderOptionPage();
       } catch {
         $("posMessage").textContent = "Expense save failed. Admin permission required.";
         $("posMessage").className = "status error";
@@ -3614,6 +3652,7 @@
     function financeAdminHtml() {
       const stats = dashboardStats();
       const expenseTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+      const expenseCategories = ["General", "Raw Material", "Staff", "Packing", "Maintenance", "Rent", "Utilities", "Delivery", "Other"];
       const creditorRows = (creditors || []).map(item => `<div class="user-line"><strong>${esc(item.name || "-")}</strong><span class="muted">${esc(item.phone || "")} ${item.reason ? `| ${esc(item.reason)}` : ""}</span></div>`).join("");
       return `
         <div class="kpis">
@@ -3623,7 +3662,7 @@
           <div class="kpi"><span>Credit</span><strong>${money(stats.credit)}</strong></div>
         </div>
         <div class="panel"><h2>Finance Summary</h2><div class="row-between"><span>Net Collection</span><strong>${money(stats.total - expenseTotal)}</strong></div><div class="row-between"><span>Total Expenses</span><strong>${money(expenseTotal)}</strong></div></div>
-        <div class="panel"><h2>Add Expense</h2><div class="form-grid"><input id="expenseTitleInput" placeholder="Expense title"><input id="expenseAmountInput" type="number" min="0" placeholder="Amount"><input id="expenseCategoryInput" value="General" placeholder="Category"><button class="primary" id="saveExpenseBtn" type="button">Add Expense</button></div></div>
+        <div class="panel"><h2>Add Expense</h2><div class="form-grid"><input id="expenseTitleInput" placeholder="Expense title"><input id="expenseAmountInput" type="number" min="0" placeholder="Amount"><select id="expenseCategoryInput">${expenseCategories.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select><button class="primary" id="saveExpenseBtn" type="button">Add Expense</button></div></div>
         <div class="panel"><h2>Expenses</h2><table class="data-table"><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml() || `<tr><td colspan="4">No expenses yet</td></tr>`}</tbody></table></div>
         <div class="panel"><h2>Creditors</h2>${creditorRows || `<div class="muted">No creditors added</div>`}</div>`;
     }
@@ -3945,12 +3984,6 @@
       await loadProducts();
       await loadAdminData();
       await syncPendingOrders();
-      if (user.role === "admin") {
-        adminTab = "dashboard";
-        show("adminView");
-        renderAdmin();
-        return;
-      }
       show("posView");
       renderCart();
       updateSyncStatus();
@@ -3958,6 +3991,7 @@
     }
 
     $("loginForm").addEventListener("submit", login);
+    ensureUserNavKeys();
     $("forgotPasswordBtn").addEventListener("click", () => {
       $("loginStatus").textContent = "Forgot password: contact Super Admin or Marketing team to reset this canteen login.";
       $("loginStatus").className = "status";
@@ -3979,14 +4013,8 @@
     $("userNav").addEventListener("click", event => {
       const button = event.target.closest("button");
       if (!button) return;
-      const label = String(button.querySelector("b")?.textContent || button.textContent || "").trim();
-      document.querySelectorAll("#userNav button").forEach(btn => btn.classList.toggle("active", btn === button));
-      if (label === "Home") {
-        setPosSection("billing");
-      }
-      if (label === "Orders") setPosSection("bulk");
-      if (label === "Reports") setPosSection("report");
-      if (label === "Settings") setPosSection("settings");
+      ensureUserNavKeys();
+      setPosSection(button.dataset.nav || "billing");
     });
     $("categoryTabs").addEventListener("click", event => {
       const btn = event.target.closest("[data-category]");
