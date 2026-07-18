@@ -299,6 +299,7 @@
       font-size: 14px;
       font-weight: 950;
       box-shadow: 0 8px 18px #ef444455;
+      pointer-events: none;
     }
     .half-count-badge {
       background: #dc2626;
@@ -320,6 +321,7 @@
       font-size: 15px;
       font-weight: 950;
       box-shadow: 0 8px 18px #11182730;
+      pointer-events: auto;
     }
 
     .cart-sheet {
@@ -1419,7 +1421,7 @@
       </div>
       <form class="login-card activation-card" id="ownerSetupForm">
         <h1>Activate Canteen</h1>
-        <p>Marketing employee ichina credentials verify ayyayi. Ippudu canteen owner login create cheyyandi.</p>
+        <p>Marketing credentials verified. Create the canteen owner login now.</p>
         <div class="activation-id"><span>Canteen ID</span><strong id="setupCanteenId">AXC-0000</strong></div>
         <div class="activation-id"><span>Canteen Name</span><strong id="setupCanteenName">Main Canteen</strong></div>
         <label>Owner name <input id="ownerSetupName" autocomplete="name" required></label>
@@ -1463,27 +1465,27 @@
       <section class="content">
         <div id="billingPanel">
           <div class="tabs" id="categoryTabs"></div>
-          <div class="section-title-row"><h2>Popular Items</h2><span>View All ›</span></div>
+          <div class="section-title-row"><h2>Popular Items</h2><span>View All &gt;</span></div>
           <div class="menu-grid" id="menuGrid"></div>
         </div>
         <div class="option-page hidden" id="optionPage"></div>
       </section>
       <nav class="bottom-nav user-nav" id="userNav">
-        <button class="active"><span aria-hidden="true">⌂</span><b>Home</b></button>
-        <button><span aria-hidden="true">▤</span><b>Orders</b></button>
-        <button><span aria-hidden="true">▥</span><b>Reports</b></button>
+        <button class="active"><span aria-hidden="true">H</span><b>Home</b></button>
+        <button><span aria-hidden="true">O</span><b>Orders</b></button>
+        <button><span aria-hidden="true">R</span><b>Reports</b></button>
       </nav>
       <section class="cart-sheet">
         <div class="cart-inner">
           <div class="cart-head">
             <div class="cart-title-wrap">
-              <span class="cart-icon">🛒</span>
+              <span class="cart-icon">Cart</span>
               <div>
                 <strong id="cartTitle">Cart (0 items)</strong>
                 <div class="muted" id="cartSubtitle">Cart empty</div>
               </div>
             </div>
-            <span class="cart-actions"><button class="cart-view-btn" id="viewCartBtn" type="button" aria-label="View cart">👁</button><button id="clearCart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>Clear</button></span>
+            <span class="cart-actions"><button class="cart-view-btn" id="viewCartBtn" type="button" aria-label="View cart">View</button><button id="clearCart" type="button"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>Clear</button></span>
           </div>
           <div class="cart-list" id="cartList"></div>
           <div class="cart-summary">
@@ -1560,7 +1562,7 @@
         return defaults;
       }
     })();
-    const appBuild = "2.6.0";
+    const appBuild = "2.7.0";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -1649,7 +1651,7 @@
     }
 
     function categoryIcon(category) {
-      return ({ All: "▦", Tiffin: "▤", Meals: "🍽", Tea: "☕", Snacks: "△", Juice: "🥤", Drinks: "🥤", Lunch: "🍛", Dinner: "🍽" })[category] || "□";
+      return ({ All: "All", Tiffin: "Tf", Meals: "Ml", Tea: "Te", Coffee: "Co", Snacks: "Sn", Juice: "Ju", Drinks: "Dr", Lunch: "Ri", Dinner: "Dn", "Single Items": "Si" })[category] || "It";
     }
 
     function categoryLabel(category) {
@@ -1666,13 +1668,13 @@
 
     function itemEmoji(item) {
       const name = String(item.name || "").toLowerCase();
-      if (name.includes("tea")) return "☕";
-      if (name.includes("coffee")) return "☕";
-      if (name.includes("meals")) return "🍽";
-      if (name.includes("idly") || name.includes("idli")) return "🟠";
-      if (name.includes("dosa")) return "🥞";
-      if (name.includes("samosa")) return "△";
-      if (name.includes("juice")) return "🥤";
+      if (name.includes("tea")) return "Te";
+      if (name.includes("coffee")) return "Co";
+      if (name.includes("meals")) return "Ml";
+      if (name.includes("idly") || name.includes("idli")) return "Id";
+      if (name.includes("dosa")) return "Do";
+      if (name.includes("samosa")) return "Sa";
+      if (name.includes("juice")) return "Ju";
       return categoryIcon(item.category || "All");
     }
 
@@ -1930,7 +1932,7 @@
       found.add(singleItemsCategory);
       const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
       $("categoryTabs").innerHTML = categories.map(category => `
-        <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${category}"><span>${categoryIcon(category)}</span>${categoryLabel(category)}</button>
+        <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${esc(category)}"><span>${esc(categoryIcon(category))}</span>${esc(categoryLabel(category))}</button>
       `).join("");
     }
 
@@ -1956,10 +1958,11 @@
         const singleAttrs = item.isSingleItem ? ` data-single-item="1"` : "";
         const cardOption = item.isSingleItem ? { name: "Single Item", price: displayPrice } : selectedOption;
         const cardLineId = cartLineId(item, cardOption);
-        const cardQty = cartLineQty(cardLineId);
+        const cardQty = item.isSingleItem ? cartLineQty(cardLineId) : cartQty(item.id);
+        const removeTarget = item.isSingleItem || selectedOption ? cardLineId : `product:${item.id}`;
         return `
         <button class="item-card ${item.isSingleItem ? "half-item-card" : ""} ${cardQty ? "selected" : ""}" data-item="${item.id}"${singleAttrs}>
-          ${cardQty ? `<span class="remove-badge" data-remove-card-line="${esc(cardLineId)}">X</span>` : ""}
+          ${cardQty ? `<span class="remove-badge" data-remove-card-line="${esc(removeTarget)}">X</span>` : ""}
           ${cardQty ? `<span class="count-badge ${item.isSingleItem ? "half-count-badge" : ""}">${cardQty}</span>` : ""}
           <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(displayName || "?").slice(0, 2).toUpperCase()}${item.isSingleItem ? `<span class="half-plate-mark">SINGLE</span><span class="half-plate-slash"></span>` : ""}</span>
           <span class="item-body">
@@ -2053,12 +2056,12 @@
       $("cartList").innerHTML = cart.map(item => `
         <div class="cart-row">
           <span class="cart-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
-          <div><strong>${item.name}</strong><small>${item.qty} x ${money(item.price)}</small></div>
-          <button class="cart-remove" data-remove-line="${item.lineId}" type="button">x</button>
+          <div><strong>${esc(item.name)}</strong><small>${item.qty} x ${money(item.price)}</small></div>
+          <button class="cart-remove" data-remove-line="${esc(item.lineId)}" type="button">x</button>
           <div class="qty">
-            <button data-qty="-1" data-id="${item.lineId}">-</button>
+            <button data-qty="-1" data-id="${esc(item.lineId)}">-</button>
             <span>${item.qty}</span>
-            <button data-qty="1" data-id="${item.lineId}">+</button>
+            <button data-qty="1" data-id="${esc(item.lineId)}">+</button>
           </div>
         </div>
       `).join("") || `<div class="muted">Cart empty</div>`;
@@ -2082,6 +2085,10 @@
     }
 
     function removeCartLine(id) {
+      if (String(id || "").startsWith("product:")) {
+        removeFromCart(String(id).slice(8));
+        return;
+      }
       const removed = cart.find(item => item.lineId === id);
       cart = cart.filter(item => item.lineId !== id);
       if (removed) delete selectedSubItems[removed.parentId || removed.id];
@@ -2385,6 +2392,10 @@
       return adminUnlocked || (user && user.role === "admin");
     }
 
+    function canViewProfitLoss() {
+      return adminUnlocked || (user && ["admin", "super_admin"].includes(user.role));
+    }
+
     function addressOptionsHtml(selected = "") {
       const current = String(selected || "");
       return `<option value="">Select branch/address</option>${addresses.map(address => {
@@ -2401,7 +2412,7 @@
         <input id="unlockMobile" placeholder="Admin mobile" autocomplete="username">
         <input id="unlockPassword" type="password" placeholder="Admin password" autocomplete="current-password">
         <button class="primary" type="submit">Unlock Admin Options</button>
-        <div class="muted">Admin login tarvata last 5 bills copy print, WhatsApp report settings access clear ga untayi.</div>
+        <div class="muted">After admin login, copy receipts and WhatsApp report settings will be available.</div>
       </form>`;
     }
 
@@ -2423,9 +2434,9 @@
 
     function printerOptionsHtml(printers) {
       if (!window.AxenPrinter || typeof window.AxenPrinter.listPrinters !== "function") {
-        return `<option value="">Android APK lo matrame printer select avuthundi</option>`;
+        return `<option value="">Printer selection is available only in the Android APK</option>`;
       }
-      if (!printers.length) return `<option value="">Paired Bluetooth devices levu</option>`;
+      if (!printers.length) return `<option value="">No paired Bluetooth devices found</option>`;
       return [
         `<option value="">Auto select printer</option>`,
         ...printers.map(printer => {
@@ -2551,7 +2562,7 @@
 
     function holdCurrentOrder() {
       if (!cart.length) {
-        $("posMessage").textContent = "Cart empty. Items add chesi hold cheyyandi.";
+        $("posMessage").textContent = "Cart is empty. Add items before holding the order.";
         $("posMessage").className = "status error";
         return false;
       }
@@ -2613,12 +2624,12 @@
 
     function applyDiscountFlow() {
       if (!cart.length) {
-        $("posMessage").textContent = "Cart empty. Discount apply cheyyadaniki items add cheyyandi.";
+        $("posMessage").textContent = "Cart is empty. Add items before applying a discount.";
         $("posMessage").className = "status error";
         return;
       }
       const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
-      const raw = prompt("Discount amount enter cheyyandi", String(cartDiscount || 0));
+      const raw = prompt("Enter discount amount", String(cartDiscount || 0));
       if (raw === null) return;
       cartDiscount = Math.min(subtotal, Math.max(0, Number(raw || 0)));
       renderCart();
@@ -2632,7 +2643,7 @@
         input.focus();
         input.select();
       }
-      $("posMessage").textContent = "QR scan ready. Scanner code search box lo capture avuthundi.";
+      $("posMessage").textContent = "QR scan is ready. Scanner input will appear in the search box.";
       $("posMessage").className = "status ok";
     }
 
@@ -2663,7 +2674,7 @@
         const status = balance <= 0 ? "Out" : balance <= 10 ? "Low" : "In Stock";
         return `<div class="option-row"><span>${esc(item.item || "Item")}<br><small>${item.type === "direct_sale" ? "Direct Sale" : "Used Material"}</small></span><strong>${balance} ${esc(item.unit)} ${status}</strong></div>`;
       }).join("");
-      return `<div class="option-card"><h3>Store Stock</h3>${rows || `<div class="muted">Store lo purchase invoice create cheyyandi.</div>`}</div>`;
+      return `<div class="option-card"><h3>Store Stock</h3>${rows || `<div class="muted">Create a purchase invoice in Store to see stock.</div>`}</div>`;
     }
 
     function pageTitle(section) {
@@ -2754,7 +2765,7 @@
       return `
         ${sectionHeader("bulk")}
         <div class="work-card">
-          <div class="bulk-order-grid">${rows || `<div class="muted">Menu items load avvaledu</div>`}</div>
+          <div class="bulk-order-grid">${rows || `<div class="muted">Menu items are not loaded</div>`}</div>
           <div class="option-card" style="margin-top:12px">
             <div class="option-row"><span>Order Draft Items</span><strong id="bulkCartCount">${draft.reduce((sum, item) => sum + Number(item.qty || 0), 0)}</strong></div>
             <div class="option-row"><span>Total</span><strong id="bulkCartTotal">${money(draftTotal)}</strong></div>
@@ -2780,6 +2791,12 @@
       const from = localStorage.getItem("AXEN_REPORT_FROM") || today;
       const to = localStorage.getItem("AXEN_REPORT_TO") || today;
       return { from, to };
+    }
+
+    function resetReportRangeToToday() {
+      const today = dateInputValue(new Date());
+      localStorage.setItem("AXEN_REPORT_FROM", today);
+      localStorage.setItem("AXEN_REPORT_TO", today);
     }
 
     function rangedOrders() {
@@ -2840,6 +2857,9 @@
     }
 
     function financePageHtml() {
+      if (!canViewProfitLoss()) {
+        return `${sectionHeader("finance")}${adminUnlockHtml()}<div class="work-card"><h3>Permission Required</h3><div class="muted">Admin or Super Admin approval is required to view Profit/Loss reports.</div></div>`;
+      }
       const range = reportRange();
       const sales = rangedOrders().reduce((sum, order) => sum + Number(order.total || 0), 0);
       const from = new Date(`${range.from}T00:00:00`);
@@ -2850,26 +2870,28 @@
         const date = row.createdAt ? new Date(row.createdAt) : row.date ? new Date(`${row.date}T00:00:00`) : new Date();
         return date >= from && date <= to;
       });
-      const storePurchaseTotal = purchaseInvoices.reduce((sum, row) => sum + purchaseTotal(row), 0);
-      const net = sales - expenseTotal - storePurchaseTotal;
+      const consumptionCost = purchaseInvoices.reduce((sum, row) => sum + purchaseTotal(row), 0);
+      const net = sales - expenseTotal - consumptionCost;
       return `
         ${sectionHeader("finance")}
         <div class="work-card report-filter">
-          <h3>Profit Loss Report</h3>
+          <h3>Profit/Loss Report</h3>
           <div class="muted">${esc(range.from)} to ${esc(range.to)}</div>
-          <div class="quick-ranges"><button data-report-range="week" type="button">Weekly</button><button data-report-range="month" type="button">Monthly</button><button data-report-range="year" type="button">Yearly</button></div>
+          <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
+          <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
+          <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Weekly</button><button data-report-range="month" type="button">Monthly</button><button data-report-range="year" type="button">Yearly</button></div>
         </div>
         <div class="work-grid">
           <div class="work-card metric-card"><span>Sales</span><strong>${money(sales)}</strong></div>
           <div class="work-card metric-card"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div>
-          <div class="work-card metric-card"><span>Store Purchase Invoice</span><strong>${money(storePurchaseTotal)}</strong></div>
+          <div class="work-card metric-card"><span>Consumption Cost</span><strong>${money(consumptionCost)}</strong></div>
           <div class="work-card metric-card"><span>${net >= 0 ? "Profit" : "Loss"}</span><strong>${money(Math.abs(net))}</strong></div>
         </div>
         <div class="work-card">
           <h3>Report Basis</h3>
           <div class="option-row"><span>Sales</span><strong>${money(sales)}</strong></div>
           <div class="option-row"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div>
-          <div class="option-row"><span>Store Purchase Invoice</span><strong>${money(storePurchaseTotal)}</strong></div>
+          <div class="option-row"><span>Consumption Cost</span><strong>${money(consumptionCost)}</strong></div>
           <button class="page-action full" id="shareFinancePdf" type="button">Share PDF</button>
           <div class="status" id="financeShareStatus"></div>
         </div>
@@ -2972,7 +2994,7 @@
             <button class="page-action" id="saveStoreUsage" type="button">Save Used Entry</button>
           </div>
         </div><div class="work-card"><h3>Today Used List</h3><div class="store-list">${usedRows || `<div class="muted">No used entries</div>`}</div></div>` : ""}
-        <div class="work-card"><h3>Stock Balance</h3><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Value</th></tr></thead><tbody>${inventoryRows || `<tr><td colspan="7">No stock yet. Purchase invoice save chesina ventane ikkada kanipistundi.</td></tr>`}</tbody></table></div>
+        <div class="work-card"><h3>Stock Balance</h3><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Value</th></tr></thead><tbody>${inventoryRows || `<tr><td colspan="7">No stock yet. Stock appears here after saving a purchase invoice.</td></tr>`}</tbody></table></div>
         <div class="work-card"><h3>Purchase List</h3><div class="store-list">${purchaseRows || `<div class="muted">No purchases yet</div>`}</div></div>`;
     }
 
@@ -3026,8 +3048,11 @@
         <tr><td>${date}</td><td>${item.bills}</td><td>${money(item.amount)}</td></tr>`).join("");
       const bills = rows.slice().reverse().slice(0, 15).map(order => `
         <tr><td>${esc(order.id || order.clientOrderId || "-")}</td><td>${esc(order.cashier || user?.name || "-")}</td><td>${money(order.total)}</td><td>${esc(order.payment || "Cash")}</td></tr>`).join("");
-      const foodCost = Math.round(totals.total * 0.48);
-      const net = totals.total - foodCost - expenseTotal;
+      const consumptionCost = Math.round(totals.total * 0.48);
+      const net = totals.total - consumptionCost - expenseTotal;
+      const profitLossHtml = canViewProfitLoss()
+        ? `<div class="work-card"><h3>Profit/Loss Report</h3><div class="option-row"><span>Total Sale</span><strong>${money(totals.total)}</strong></div><div class="option-row"><span>Consumption Cost</span><strong>${money(consumptionCost)}</strong></div><div class="option-row"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div><div class="option-row"><span>${net >= 0 ? "Net Profit" : "Net Loss"}</span><strong>${money(Math.abs(net))}</strong></div></div>`
+        : `<div class="work-card"><h3>Profit/Loss Report</h3><div class="muted">Admin or Super Admin approval is required to view Profit/Loss reports.</div></div>${adminUnlockHtml()}`;
       return `
         ${sectionHeader("report")}
         <div class="work-card report-filter">
@@ -3043,12 +3068,12 @@
           <div class="work-card metric-card"><span>Cash</span><strong>${money(totals.cash)}</strong></div>
           <div class="work-card metric-card"><span>Online</span><strong>${money(totals.online)}</strong></div>
           <div class="work-card metric-card"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div>
-          <div class="work-card metric-card"><span>${net >= 0 ? "Profit" : "Loss"}</span><strong>${money(Math.abs(net))}</strong></div>
+          ${canViewProfitLoss() ? `<div class="work-card metric-card"><span>${net >= 0 ? "Profit" : "Loss"}</span><strong>${money(Math.abs(net))}</strong></div>` : `<div class="work-card metric-card"><span>Profit/Loss</span><strong>Locked</strong></div>`}
         </div>
         <div class="work-card"><h3>Date Wise Report</h3><table class="data-table"><thead><tr><th>Date</th><th>Bills</th><th>Sale</th></tr></thead><tbody>${dateRows || `<tr><td colspan="3">No date wise sales</td></tr>`}</tbody></table></div>
         <div class="work-card"><h3>Item Wise Report</h3><table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody>${itemRows || `<tr><td colspan="3">No item sales</td></tr>`}</tbody></table></div>
         <div class="work-card"><h3>Payment Report</h3><div class="option-row"><span>Cash</span><strong>${money(totals.cash)}</strong></div><div class="option-row"><span>Online / UPI</span><strong>${money(totals.online)}</strong></div><div class="option-row"><span>Credit</span><strong>${money(totals.credit)}</strong></div></div>
-        <div class="work-card"><h3>Profit / Loss Report</h3><div class="option-row"><span>Total Sale</span><strong>${money(totals.total)}</strong></div><div class="option-row"><span>Food Cost</span><strong>${money(foodCost)}</strong></div><div class="option-row"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div><div class="option-row"><span>${net >= 0 ? "Net Profit" : "Net Loss"}</span><strong>${money(Math.abs(net))}</strong></div></div>
+        ${profitLossHtml}
         <div class="work-card"><h3>Expenses Report</h3><table class="data-table"><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml(filteredExpenses) || `<tr><td colspan="4">No expenses in selected range</td></tr>`}</tbody></table></div>
         <div class="work-card"><h3>Recent Bills</h3><div class="report-bills-scroll"><table class="data-table"><thead><tr><th>Bill</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${bills || `<tr><td colspan="4">No bills in selected date range</td></tr>`}</tbody></table></div></div>`;
     }
@@ -3189,7 +3214,7 @@
               <button class="secondary" id="copyDayClose" type="button">Copy</button>
               <button class="primary" id="shareDayClose" type="button">Share</button>
             </div>
-            <div class="status" id="dayCloseStatus">WhatsApp select chesi evariki pampalo choose cheyyandi.</div>
+            <div class="status" id="dayCloseStatus">Choose WhatsApp and select the recipient.</div>
           </div>
         </div>`;
       $("closeDayClose").addEventListener("click", closeOptionsModal);
@@ -3204,7 +3229,7 @@
         $("dayCloseStatus").textContent = "Copied";
         $("dayCloseStatus").className = "status ok";
       } catch {
-        $("dayCloseStatus").textContent = "Copy failed. Text select chesi copy cheyyandi.";
+        $("dayCloseStatus").textContent = "Copy failed. Select the text and copy it manually.";
         $("dayCloseStatus").className = "status error";
       }
     }
@@ -3294,8 +3319,8 @@
         sum.credit += pay.credit;
         return sum;
       }, { total: 0, cash: 0, online: 0, credit: 0 });
-      const foodCost = Math.round(totals.total * 0.48);
-      const net = totals.total - foodCost - expenseTotal;
+      const consumptionCost = Math.round(totals.total * 0.48);
+      const net = totals.total - consumptionCost - expenseTotal;
       return [
         `${settings.canteenName || "Axzen Canteen"} REPORT`,
         `${range.from} to ${range.to}`,
@@ -3306,7 +3331,7 @@
         `Online     : ${money(totals.online)}`,
         `Credit     : ${money(totals.credit)}`,
         `Expenses   : ${money(expenseTotal)}`,
-        `Food Cost  : ${money(foodCost)}`,
+        `Consumption Cost: ${money(consumptionCost)}`,
         `${net >= 0 ? "Profit" : "Loss"}     : ${money(Math.abs(net))}`,
         "------------------------------",
         "Date Wise",
@@ -3433,6 +3458,13 @@
 
     async function shareFinancePdf() {
       const status = $("financeShareStatus");
+      if (!canViewProfitLoss()) {
+        if (status) {
+          status.textContent = "Admin or Super Admin approval is required.";
+          status.className = "status error";
+        }
+        return;
+      }
       const range = reportRange();
       const sales = rangedOrders().reduce((sum, order) => sum + Number(order.total || 0), 0);
       const from = new Date(`${range.from}T00:00:00`);
@@ -3443,14 +3475,14 @@
         const date = row.createdAt ? new Date(row.createdAt) : row.date ? new Date(`${row.date}T00:00:00`) : new Date();
         return date >= from && date <= to;
       });
-      const storePurchaseTotal = purchaseInvoices.reduce((sum, row) => sum + purchaseTotal(row), 0);
-      const net = sales - expenseTotal - storePurchaseTotal;
+      const consumptionCost = purchaseInvoices.reduce((sum, row) => sum + purchaseTotal(row), 0);
+      const net = sales - expenseTotal - consumptionCost;
       const text = [
-        `${settings.canteenName} Profit Loss Report`,
+        `${settings.canteenName} Profit/Loss Report`,
         `${range.from} to ${range.to}`,
         `Sales: ${money(sales)}`,
         `Expenses: ${money(expenseTotal)}`,
-        `Store Purchase Invoice: ${money(storePurchaseTotal)}`,
+        `Consumption Cost: ${money(consumptionCost)}`,
         `${net >= 0 ? "Profit" : "Loss"}: ${money(Math.abs(net))}`
       ].join("\n");
       try {
@@ -3459,7 +3491,7 @@
           status.className = "status";
         }
         if (window.AxenShare && typeof window.AxenShare.sharePdf === "function") {
-          const result = window.AxenShare.sharePdf(text, `profit-loss-${Date.now()}.pdf`, "Profit Loss Report PDF");
+          const result = window.AxenShare.sharePdf(text, `profit-loss-${Date.now()}.pdf`, "Profit/Loss Report PDF");
           if (status) {
             status.textContent = String(result || "").toLowerCase().includes("opened") ? "PDF share opened" : result || "PDF ready";
             status.className = String(result || "").toLowerCase().includes("failed") ? "status error" : "status ok";
@@ -3490,7 +3522,7 @@
         const empty = balance <= 0;
         return `<tr><td>${esc(item.item || "Item")}</td><td>${item.type === "direct_sale" ? "Direct Sale" : "Used Material"}</td><td>${Number(item.bought || 0)} ${esc(item.unit)}</td><td>${Number(item.used || 0)} ${esc(item.unit)}</td><td>${Number(item.sold || 0)} ${esc(item.unit)}</td><td>${balance} ${esc(item.unit)}</td><td><span class="status-pill ${empty ? "danger" : low ? "warn" : ""}">${empty ? "Out of Stock" : low ? "Low Stock" : "In Stock"}</span></td></tr>`;
       }).join("");
-      return `${sectionHeader("stock", `<button class="page-action" data-go-store type="button">Open Store</button>`)}<div class="work-card"><h3>Store Stock Availability</h3><div class="muted">Purchase invoice lo enter chesina store stock matrame. Used Material Today Used nunchi minus avuthundi; Direct Sale sales bills nunchi auto minus avuthundi.</div><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="7">No store stock found. Store lo purchase invoice create cheyyandi.</td></tr>`}</tbody></table></div>`;
+      return `${sectionHeader("stock", `<button class="page-action" data-go-store type="button">Open Store</button>`)}<div class="work-card"><h3>Store Stock Availability</h3><div class="muted">Only stock entered in purchase invoices is shown. Used Material is reduced from Today Used entries; Direct Sale is reduced automatically from sales bills.</div><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="7">No store stock found. Create a purchase invoice in Store.</td></tr>`}</tbody></table></div>`;
     }
 
     function printerPageHtml() {
@@ -3598,7 +3630,7 @@
     }
 
     function simpleAdminPageHtml(section) {
-      return `${sectionHeader(section)}<div class="work-card"><h3>${pageTitle(section)}</h3><p class="muted">Admin panel lo manage cheyyandi. Billing ki vellali ante below button click cheyyandi.</p><button class="page-action" data-go-billing type="button">Go to Billing Panel</button></div>${adminUnlockHtml()}`;
+      return `${sectionHeader(section)}<div class="work-card"><h3>${pageTitle(section)}</h3><p class="muted">Manage this in the admin panel. Use the button below to return to billing.</p><button class="page-action" data-go-billing type="button">Go to Billing Panel</button></div>${adminUnlockHtml()}`;
     }
 
     function renderOptionPage() {
@@ -3624,6 +3656,7 @@
 
     function setPosSection(section) {
       activePosSection = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
+      if (["report", "finance"].includes(activePosSection)) resetReportRangeToToday();
       closeOptionsModal();
       if ($("adminView") && !$("adminView").classList.contains("hidden")) show("posView");
       ensureUserNavKeys();
@@ -3787,20 +3820,20 @@
         added += qty;
       });
       if (!added) {
-        $("posMessage").textContent = "Quantity enter cheyyandi";
+        $("posMessage").textContent = "Enter a quantity";
         $("posMessage").className = "status error";
         return;
       }
       setBulkDraft(draft);
       renderOptionPage();
-      $("posMessage").textContent = `${added} items order draft lo save ayyayi`;
+      $("posMessage").textContent = `${added} items saved to the order draft`;
       $("posMessage").className = "status ok";
     }
 
     function openBulkConfirmModal() {
       const draft = bulkDraft();
       if (!draft.length) {
-        $("posMessage").textContent = "Order draft empty. Quantity save cheyyandi.";
+        $("posMessage").textContent = "Order draft is empty. Save quantities first.";
         $("posMessage").className = "status error";
         return;
       }
@@ -4023,7 +4056,7 @@
         return;
       }
       if (!stock) {
-        $("posMessage").textContent = "Stock balance lo unna item ni select cheyyandi";
+        $("posMessage").textContent = "Select an item that exists in stock balance";
         $("posMessage").className = "status error";
         return;
       }
@@ -4101,7 +4134,7 @@
         return userManagementPageHtml();
       }
       if (section === "help") {
-        return `<div class="option-card"><h3>Help</h3><div class="muted">Item ni normal tap chesthe cart lo add avuthundi. Item ni hold chesi pattukunte sub items open avuthayi.</div></div>`;
+        return `<div class="option-card"><h3>Help</h3><div class="muted">Tap an item to add it to the cart. Press and hold an item to open sub items.</div></div>`;
       }
       return "";
     }
@@ -4182,7 +4215,7 @@
         } catch {
           $("syncNowBtn").disabled = false;
           $("syncNowBtn").querySelector("strong").textContent = "Sync Data";
-          $("posMessage").textContent = "Sync failed. Internet check cheyyandi.";
+          $("posMessage").textContent = "Sync failed. Check the internet connection.";
           $("posMessage").className = "status error";
           showSyncFlash("Sync failed", "error");
         }
@@ -4367,7 +4400,7 @@
       const creditInput = $("creditNameInput");
       const creditName = selectedPayment === "Credit" ? String((creditInput && creditInput.value) || "").trim() : "";
       if (selectedPayment === "Credit" && !creditName) {
-        setPaymentStatus("Credit name select or type cheyyandi", "status error");
+        setPaymentStatus("Select or type a credit name", "status error");
         return;
       }
       payment = selectedPayment;
@@ -4474,6 +4507,7 @@
       ).join("");
       tabs.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
         adminTab = btn.dataset.adminTab;
+        if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
         renderAdmin();
       }));
     }
@@ -4664,6 +4698,7 @@
       if ($("shareReportPdf")) $("shareReportPdf").addEventListener("click", shareReportPdf);
       document.querySelectorAll("[data-admin-jump]").forEach(btn => btn.addEventListener("click", () => {
         adminTab = btn.dataset.adminJump;
+        if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
         renderAdmin();
       }));
       document.querySelectorAll("[data-go-store]").forEach(btn => btn.addEventListener("click", () => {
@@ -4675,6 +4710,7 @@
         if (action === "billing") return openBillingFromAdmin();
         if (action === "logout") return logout();
         adminTab = action;
+        if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
         renderAdmin();
       }));
       document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => {
@@ -4700,24 +4736,24 @@
     }
 
     async function deleteBill(orderId) {
-      if (!confirm("Ee bill delete cheyyala?")) return;
+      if (!confirm("Delete this bill?")) return;
       try {
         await adminApi(`/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
         orders = orders.filter(order => String(order.clientOrderId || order.id) !== String(orderId));
         renderAdmin();
       } catch {
-        alert("Bill delete failed. Internet/server check cheyyandi.");
+        alert("Bill delete failed. Check the internet connection or server.");
       }
     }
 
     async function deleteAllBills() {
-      if (!confirm("All bills delete cheyyala? Reports total kuda clear avuthayi.")) return;
+      if (!confirm("Delete all bills? Report totals will also be cleared.")) return;
       try {
         await adminApi("/orders", { method: "DELETE" });
         orders = [];
         renderAdmin();
       } catch {
-        alert("Bills delete failed. Internet/server check cheyyandi.");
+        alert("Bills delete failed. Check the internet connection or server.");
       }
     }
 
@@ -4748,7 +4784,7 @@
         await loadAdminData();
         renderAdmin();
       } catch {
-        alert("User save failed. Admin login check cheyyandi.");
+        alert("User save failed. Check the admin login.");
       }
     }
 
@@ -4822,7 +4858,7 @@
         await loadAdminData();
         renderAdmin();
       } catch {
-        alert("Settings save failed. Admin login check cheyyandi.");
+        alert("Settings save failed. Check the admin login.");
       }
     }
 
@@ -4966,6 +5002,7 @@
     $("profileBtn").addEventListener("click", openMainMenu);
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
       adminTab = btn.dataset.adminTab;
+      if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
       renderAdmin();
     }));
     window.addEventListener("online", syncPendingOrders);
