@@ -1033,7 +1033,7 @@
     .purchase-lines { display: grid; gap: 8px; }
     .purchase-line {
       display: grid;
-      grid-template-columns: minmax(120px, 1.4fr) minmax(110px, 1fr) 78px 82px 92px 50px;
+      grid-template-columns: minmax(120px, 1.4fr) minmax(112px, 1fr) minmax(116px, 1fr) 78px 82px 92px 50px;
       gap: 8px;
       align-items: center;
       padding: 10px;
@@ -1226,13 +1226,24 @@
     .cart-summary { display: grid; gap: 10px; padding: 12px 0; border-bottom: 1px dashed #cbd5e1; }
     .cart-summary .green { color: #16a34a; }
     #posView .place { min-height: 60px; margin-top: 14px; background: linear-gradient(180deg, #2fc152, #20a83d); box-shadow: 0 12px 26px #22c55e30; font-size: 18px; }
-    #posView .bottom-nav { display: grid; width: min(964px, calc(100% - 40px)); bottom: 16px; border: 0; border-radius: 18px; overflow: hidden; background: #082653; box-shadow: 0 12px 28px #08265333; }
+    #posView .bottom-nav {
+      display: grid;
+      width: min(964px, calc(100% - 40px));
+      bottom: 16px;
+      border: 1px solid #ffffff24;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #020617d6;
+      box-shadow: 0 -10px 34px #02061742;
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+    }
     #posView .bottom-nav.user-nav { bottom: 16px; }
     #posView .bottom-nav button {
       height: 58px;
       min-height: 58px;
       border-radius: 0;
-      background: #082653;
+      background: transparent;
       color: white;
       font-size: 16px;
       display: inline-flex;
@@ -1246,7 +1257,7 @@
       height: 58px;
       min-height: 58px;
       border-radius: 0;
-      background: #ffffff1c;
+      background: #ffffff20;
       color: white;
     }
     #posView .bottom-nav button span { margin: 0; }
@@ -2091,7 +2102,7 @@
         line,
         center("ITEM DETAILS"),
         line,
-        "#  Item Name       Qty  Rate   Amount",
+        "#  Item Name       Qty  Rate       Rs",
         line,
         ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
         line,
@@ -2153,7 +2164,7 @@
         leftRight(`Cashier ${order.cashier || user?.name || "-"}`, `Token ${tokenNo}`),
         leftRight("Payment", paymentLabel),
         line,
-        "#  ITEM NAME    QTY  RATE  AMOUNT",
+        "#  ITEM NAME    QTY  RATE      Rs",
         line,
         ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
         line,
@@ -2398,17 +2409,31 @@
       storePurchases().forEach(row => {
         purchaseLineItems(row).forEach(line => {
           const key = `${line.item || "Item"}::${line.unit || "Kgs"}`;
-          const current = map.get(key) || { item: line.item || "Item", unit: line.unit || "Kgs", bought: 0, used: 0, amount: 0 };
+          const current = map.get(key) || { item: line.item || "Item", unit: line.unit || "Kgs", type: line.type || "raw_material", bought: 0, used: 0, sold: 0, amount: 0 };
           current.bought += Number(line.quantity || 0);
           current.amount += Number(line.price || 0);
+          current.type = line.type || current.type || "raw_material";
           map.set(key, current);
         });
       });
       storeUsage().forEach(row => {
         const key = `${row.item || "Item"}::${row.unit || "Kgs"}`;
-        const current = map.get(key) || { item: row.item || "Item", unit: row.unit || "Kgs", bought: 0, used: 0, amount: 0 };
+        const current = map.get(key) || { item: row.item || "Item", unit: row.unit || "Kgs", type: "raw_material", bought: 0, used: 0, sold: 0, amount: 0 };
         current.used += Number(row.quantity || 0);
         map.set(key, current);
+      });
+      const directSaleKeys = new Map();
+      map.forEach((row, key) => {
+        if (row.type === "direct_sale") directSaleKeys.set(normalizeStockName(row.item), key);
+      });
+      orders.forEach(order => {
+        (order.items || []).forEach(item => {
+          const key = directSaleKeys.get(normalizeStockName(item.name || ""));
+          if (!key) return;
+          const current = map.get(key);
+          current.sold += Number(item.qty || 0);
+          map.set(key, current);
+        });
       });
       return [...map.values()];
     }
@@ -2420,8 +2445,17 @@
         category: row.category || "Raw Material",
         quantity: Number(row.quantity || 0),
         unit: row.unit || "Kgs",
-        price: Number(row.price || 0)
+        price: Number(row.price || 0),
+        type: row.type || "raw_material"
       }];
+    }
+
+    function normalizeStockName(value) {
+      return String(value || "")
+        .split(" - ")[0]
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, " ");
     }
 
     function purchaseTotal(row) {
@@ -2537,12 +2571,12 @@
     }
 
     function stockAvailabilityHtml() {
-      const rows = products.slice(0, 12).map(item => {
-        const qty = Number(item.stock ?? item.quantity ?? item.quantityOnHand ?? item.qty ?? 0);
-        const status = qty > 10 ? "In Stock" : "Low Stock";
-        return `<div class="option-row"><span>${esc(item.name || "Item")}<br><small>${esc(item.category || "")}</small></span><strong>${qty || "-"} ${status}</strong></div>`;
+      const rows = storeInventoryRows().slice(0, 12).map(item => {
+        const balance = Math.max(0, Number(item.bought || 0) - Number(item.used || 0) - Number(item.sold || 0));
+        const status = balance <= 0 ? "Out" : balance <= 10 ? "Low" : "In Stock";
+        return `<div class="option-row"><span>${esc(item.item || "Item")}<br><small>${item.type === "direct_sale" ? "Direct Sale Item" : "Raw Material"}</small></span><strong>${balance} ${esc(item.unit)} ${status}</strong></div>`;
       }).join("");
-      return `<div class="option-card"><h3>Item Inventory</h3>${rows || `<div class="muted">Menu load ayyaka inventory kanipisthundi.</div>`}</div>`;
+      return `<div class="option-card"><h3>Store Stock</h3>${rows || `<div class="muted">Store lo purchase invoice create cheyyandi.</div>`}</div>`;
     }
 
     function pageTitle(section) {
@@ -2748,6 +2782,7 @@
     function purchaseLineHtml(index, categories = ["Raw Material"], units = ["Kgs", "Pcs", "Ltrs"]) {
       return `<div class="purchase-line" data-purchase-line>
         <input data-store-item placeholder="Item name">
+        <select data-store-type><option value="raw_material">Raw Material</option><option value="direct_sale">Direct Sale Item</option></select>
         <select data-store-category>${categories.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
         <input data-store-qty type="number" min="0" placeholder="Qty">
         <select data-store-unit>${units.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
@@ -2765,6 +2800,7 @@
       const usedToday = used.filter(row => dateInputValue(new Date(row.createdAt || row.date || Date.now())) === dateInputValue(new Date())).length;
       const categories = ["Raw Material", "Vegetables", "Rice", "Oil", "Packing", "Cleaning", "Other"];
       const units = ["Kgs", "Pcs", "Ltrs"];
+      const usedItemOptions = inventory.map(row => `<option value="${esc(row.item)}">${esc(row.item)} - ${row.type === "direct_sale" ? "Direct Sale Item" : "Raw Material"} - ${Math.max(0, Number(row.bought || 0) - Number(row.used || 0) - Number(row.sold || 0))} ${esc(row.unit)}</option>`).join("");
       const purchaseRows = purchases.map(row => `
         <div class="store-list-row">
           <div><strong>${esc(row.billNo || row.item || "Purchase Invoice")}</strong><small>${esc(row.date)} | ${esc(row.vendor)} | ${(purchaseLineItems(row) || []).length} items${row.address ? ` | ${esc(row.address)}` : ""}</small></div>
@@ -2775,8 +2811,10 @@
           <div><strong>${esc(row.item)}</strong><small>${esc(row.date)} | Used entry</small></div>
           <strong>${Number(row.quantity || 0)} ${esc(row.unit)}</strong>
         </div>`).join("");
-      const inventoryRows = inventory.map(row => `
-        <tr><td>${esc(row.item)}</td><td>${Number(row.bought || 0)} ${esc(row.unit)}</td><td>${Number(row.used || 0)} ${esc(row.unit)}</td><td>${Math.max(0, Number(row.bought || 0) - Number(row.used || 0))} ${esc(row.unit)}</td><td>${money(row.amount)}</td></tr>`).join("");
+      const inventoryRows = inventory.map(row => {
+        const balance = Math.max(0, Number(row.bought || 0) - Number(row.used || 0) - Number(row.sold || 0));
+        return `<tr><td>${esc(row.item)}</td><td>${row.type === "direct_sale" ? "Direct Sale Item" : "Raw Material"}</td><td>${Number(row.bought || 0)} ${esc(row.unit)}</td><td>${Number(row.used || 0)} ${esc(row.unit)}</td><td>${Number(row.sold || 0)} ${esc(row.unit)}</td><td>${balance} ${esc(row.unit)}</td><td>${money(row.amount)}</td></tr>`;
+      }).join("");
       return `
         ${sectionHeader("store")}
         <div class="store-actions">
@@ -2812,14 +2850,15 @@
         ${tab === "used" ? `<div class="work-card">
           <h3>Today Used Entry</h3>
           <div class="store-form-grid">
-            <input id="storeUsedItem" placeholder="Used item name">
+            <input id="storeUsedItem" list="storeUsedItemList" placeholder="Search stock item name">
+            <datalist id="storeUsedItemList">${usedItemOptions}</datalist>
             <input id="storeUsedQty" type="number" min="0" placeholder="Used quantity">
             <select id="storeUsedUnit">${units.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
             <button class="page-action" id="saveStoreUsage" type="button">Save Used Entry</button>
           </div>
         </div><div class="work-card"><h3>Today Used List</h3><div class="store-list">${usedRows || `<div class="muted">No used entries</div>`}</div></div>` : ""}
         <div class="work-card"><h3>Purchase List</h3><div class="store-list">${purchaseRows || `<div class="muted">No purchases yet</div>`}</div></div>
-        <div class="work-card"><h3>Stock Balance</h3><table class="data-table"><thead><tr><th>Item</th><th>Bought</th><th>Used</th><th>Balance</th><th>Value</th></tr></thead><tbody>${inventoryRows || `<tr><td colspan="5">No stock yet</td></tr>`}</tbody></table></div>`;
+        <div class="work-card"><h3>Stock Balance</h3><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Value</th></tr></thead><tbody>${inventoryRows || `<tr><td colspan="7">No stock yet</td></tr>`}</tbody></table></div>`;
     }
 
     function categoriesPageHtml() {
@@ -3278,12 +3317,13 @@
     }
 
     function stockPageHtml() {
-      const rows = products.map(item => {
-        const qty = Number(item.stock ?? item.quantity ?? item.quantityOnHand ?? item.qty ?? 0);
-        const low = qty > 0 && qty <= 10;
-        return `<tr><td>${esc(item.name || "Item")}</td><td>${esc(item.category || "-")}</td><td>${qty || "-"}</td><td><span class="status-pill ${low ? "warn" : ""}">${low ? "Low Stock" : "In Stock"}</span></td></tr>`;
+      const rows = storeInventoryRows().map(item => {
+        const balance = Math.max(0, Number(item.bought || 0) - Number(item.used || 0) - Number(item.sold || 0));
+        const low = balance > 0 && balance <= 10;
+        const empty = balance <= 0;
+        return `<tr><td>${esc(item.item || "Item")}</td><td>${item.type === "direct_sale" ? "Direct Sale Item" : "Raw Material"}</td><td>${Number(item.bought || 0)} ${esc(item.unit)}</td><td>${Number(item.used || 0)} ${esc(item.unit)}</td><td>${Number(item.sold || 0)} ${esc(item.unit)}</td><td>${balance} ${esc(item.unit)}</td><td><span class="status-pill ${empty ? "danger" : low ? "warn" : ""}">${empty ? "Out of Stock" : low ? "Low Stock" : "In Stock"}</span></td></tr>`;
       }).join("");
-      return `${sectionHeader("stock", `<button class="ghost-action" id="refreshMenuBtn" type="button">Refresh</button>`)}<div class="work-card"><h3>Item Inventory</h3><table class="data-table"><thead><tr><th>Item Name</th><th>Category</th><th>Qty</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="4">No items found</td></tr>`}</tbody></table></div>`;
+      return `${sectionHeader("stock", `<button class="page-action" data-go-store type="button">Open Store</button>`)}<div class="work-card"><h3>Store Stock Availability</h3><div class="muted">Purchase invoice lo enter chesina store stock matrame. Raw material Today Used nunchi minus avuthundi; Direct Sale Item sales bills nunchi auto minus avuthundi.</div><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="7">No store stock found. Store lo purchase invoice create cheyyandi.</td></tr>`}</tbody></table></div>`;
     }
 
     function printerPageHtml() {
@@ -3455,6 +3495,7 @@
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
       if ($("saveStorePurchase")) $("saveStorePurchase").addEventListener("click", saveStorePurchaseFromPos);
       if ($("saveStoreUsage")) $("saveStoreUsage").addEventListener("click", saveStoreUsageFromPos);
+      if ($("storeUsedItem")) $("storeUsedItem").addEventListener("input", syncStoreUsedUnit);
       if ($("addPurchaseLine")) $("addPurchaseLine").addEventListener("click", addPurchaseLine);
       bindPurchaseLineControls(document);
       updatePurchaseInvoiceTotal();
@@ -3469,6 +3510,7 @@
       document.querySelectorAll("[data-edit-item]").forEach(btn => btn.addEventListener("click", () => toggleItemEdit(btn.dataset.editItem)));
       document.querySelectorAll("[data-hide-item]").forEach(btn => btn.addEventListener("click", () => toggleItemHidden(btn.dataset.hideItem)));
       document.querySelectorAll("[data-go-billing]").forEach(btn => btn.addEventListener("click", () => setPosSection("billing")));
+      document.querySelectorAll("[data-go-store]").forEach(btn => btn.addEventListener("click", () => setPosSection("store")));
       document.querySelectorAll("[data-restore-held]").forEach(btn => btn.addEventListener("click", () => restoreHeldOrder(btn.dataset.restoreHeld)));
       document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
       document.querySelectorAll("[data-delete-held]").forEach(btn => btn.addEventListener("click", () => deleteHeldOrder(btn.dataset.deleteHeld)));
@@ -3696,11 +3738,12 @@
     function purchaseInvoiceItemsFromForm() {
       return [...document.querySelectorAll("[data-purchase-line]")].map(line => {
         const item = line.querySelector("[data-store-item]")?.value.trim() || "";
+        const type = line.querySelector("[data-store-type]")?.value || "raw_material";
         const category = line.querySelector("[data-store-category]")?.value || "Raw Material";
         const quantity = Number(line.querySelector("[data-store-qty]")?.value || 0);
         const unit = line.querySelector("[data-store-unit]")?.value || "Kgs";
         const price = Number(line.querySelector("[data-store-price]")?.value || 0);
-        return { item, category, quantity, unit, price };
+        return { item, type, category, quantity, unit, price };
       }).filter(row => row.item && row.quantity > 0 && row.price > 0);
     }
 
@@ -3742,9 +3785,15 @@
     function saveStoreUsageFromPos() {
       const item = $("storeUsedItem")?.value.trim();
       const quantity = Number($("storeUsedQty")?.value || 0);
-      const unit = $("storeUsedUnit")?.value || "Kgs";
+      const stock = storeInventoryRows().find(row => normalizeStockName(row.item) === normalizeStockName(item));
+      const unit = stock?.unit || $("storeUsedUnit")?.value || "Kgs";
       if (!item || quantity <= 0) {
         $("posMessage").textContent = "Used item and quantity required";
+        $("posMessage").className = "status error";
+        return;
+      }
+      if (!stock) {
+        $("posMessage").textContent = "Stock balance lo unna item ni select cheyyandi";
         $("posMessage").className = "status error";
         return;
       }
@@ -3753,6 +3802,14 @@
       $("posMessage").textContent = "Used entry saved";
       $("posMessage").className = "status ok";
       renderOptionPage();
+    }
+
+    function syncStoreUsedUnit() {
+      const input = $("storeUsedItem");
+      const unitSelect = $("storeUsedUnit");
+      if (!input || !unitSelect) return;
+      const stock = storeInventoryRows().find(row => normalizeStockName(row.item) === normalizeStockName(input.value));
+      if (stock) unitSelect.value = stock.unit || "Kgs";
     }
 
     function saveCategoryFromPos() {
@@ -4378,6 +4435,10 @@
       document.querySelectorAll("[data-admin-jump]").forEach(btn => btn.addEventListener("click", () => {
         adminTab = btn.dataset.adminJump;
         renderAdmin();
+      }));
+      document.querySelectorAll("[data-go-store]").forEach(btn => btn.addEventListener("click", () => {
+        show("posView");
+        setPosSection("store");
       }));
       document.querySelectorAll("[data-more-action]").forEach(btn => btn.addEventListener("click", () => {
         const action = btn.dataset.moreAction;

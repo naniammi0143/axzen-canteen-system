@@ -4,17 +4,17 @@ import {
   FlatList,
   Image,
   Pressable,
-  SafeAreaView,
   Share as NativeShare,
   ScrollView,
   StyleSheet,
-  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
   useWindowDimensions,
   View
 } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 import { generatePDF } from "react-native-html-to-pdf";
 import RNShare from "react-native-share";
 import { captureRef } from "react-native-view-shot";
@@ -25,6 +25,7 @@ const CARD = "#ffffff";
 const LINE = "#e5eaf0";
 const MUTED = "#667085";
 const GREEN = "#22c55e";
+const HALF_ITEMS_CATEGORY = "Half Items";
 
 const defaultItemCategories = [
   "Breakfast",
@@ -36,7 +37,8 @@ const defaultItemCategories = [
   "Tea",
   "Coffee",
   "Juices",
-  "Desserts"
+  "Desserts",
+  HALF_ITEMS_CATEGORY
 ];
 const registeredCanteen = {
   name: "Main Canteen",
@@ -44,7 +46,7 @@ const registeredCanteen = {
 };
 
 type Category = string;
-type BottomNavItem = "Home" | "Orders" | "Reports" | "Settings";
+type BottomNavItem = "Home" | "Orders" | "Reports";
 type PaymentMode = "Online" | "Cash" | "Split" | "Credit";
 type OrderDraft = [string, string, string, string];
 type DrawerOption =
@@ -135,6 +137,7 @@ type StoreUsage = {
 type PurchaseDraftItem = {
   id: string;
   item: string;
+  type: "Direct Sale" | "Used Material";
   category: string;
   customCategory: string;
   quantity: string;
@@ -218,6 +221,15 @@ const products: Product[] = [
 ];
 
 export default function HomeScreen() {
+  return (
+    <SafeAreaProvider>
+      <HomeScreenContent />
+    </SafeAreaProvider>
+  );
+}
+
+function HomeScreenContent() {
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const isTablet = width >= 720;
   const columns = isTablet ? 4 : 2;
@@ -251,10 +263,21 @@ export default function HomeScreen() {
   const drawerProgress = useRef(new Animated.Value(0)).current;
 
   const categoryTabs = useMemo(() => ["All", ...appCategories], [appCategories]);
-  const visibleProducts = useMemo(
-    () => catalog.filter(item => !item.hidden && (activeCategory === "All" || item.category === activeCategory)),
-    [activeCategory, catalog]
-  );
+  const visibleProducts = useMemo(() => {
+    const activeProducts = catalog.filter(item => !item.hidden);
+    if (activeCategory === HALF_ITEMS_CATEGORY) {
+      return activeProducts
+        .filter(item => item.category !== HALF_ITEMS_CATEGORY)
+        .map(item => ({
+          ...item,
+          id: `half-${item.id}`,
+          name: `Half ${item.name}`,
+          price: Math.max(1, Math.round(item.price / 2)),
+          category: HALF_ITEMS_CATEGORY
+        }));
+    }
+    return activeProducts.filter(item => activeCategory === "All" || item.category === activeCategory);
+  }, [activeCategory, catalog]);
 
   const addProduct = useCallback((product: Product) => {
     setCartCount(count => count + 1);
@@ -302,8 +325,7 @@ export default function HomeScreen() {
     const nextOption: Record<BottomNavItem, DrawerOption> = {
       Home: superAdminSettings.openAdminDashboardFirst ? "Dashboard" : "New Billing",
       Orders: "Orders",
-      Reports: "Reports",
-      Settings: "Settings"
+      Reports: "Reports"
     };
     setActiveOption(nextOption[item]);
   }, [superAdminSettings.openAdminDashboardFirst]);
@@ -311,10 +333,10 @@ export default function HomeScreen() {
   const showBillingGrid = activeOption === "Dashboard" || activeOption === "New Billing";
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+    <View style={styles.safe}>
+      <StatusBar style="dark" translucent={true} backgroundColor="transparent" />
       <View style={styles.page}>
-        <PremiumHeader onMenuPress={openDrawer} />
+        <PremiumHeader onMenuPress={openDrawer} topInset={insets.top} />
 
         {showBillingGrid ? (
           <FlatList
@@ -325,7 +347,7 @@ export default function HomeScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               styles.content,
-              { paddingHorizontal: horizontalPadding, paddingBottom: 292 }
+              { paddingHorizontal: horizontalPadding, paddingBottom: 292 + insets.bottom }
             ]}
             columnWrapperStyle={columns > 1 ? { gap: cardGap } : undefined}
             ListHeaderComponent={
@@ -360,11 +382,19 @@ export default function HomeScreen() {
             onOrderDraftsChange={setOrderDrafts}
             superAdminSettings={superAdminSettings}
             onSuperAdminSettingsChange={setSuperAdminSettings}
+            bottomInset={insets.bottom}
           />
         )}
 
-        {showBillingGrid && <CartPanel count={cartCount} total={total} onClear={clearCart} />}
-        <BottomNav activeOption={activeOption} onSelect={selectBottomNav} />
+        <View
+          pointerEvents="none"
+          style={[
+            styles.bottomScrim,
+            { height: (showBillingGrid ? 390 : 112) + insets.bottom }
+          ]}
+        />
+        {showBillingGrid && <CartPanel count={cartCount} total={total} onClear={clearCart} bottomInset={insets.bottom} />}
+        <BottomNav activeOption={activeOption} onSelect={selectBottomNav} bottomInset={insets.bottom} />
         {selectedProduct && <SubItemsSheet product={selectedProduct} onClose={closeSubItems} />}
         {drawerOpen && (
           <Drawer
@@ -376,7 +406,7 @@ export default function HomeScreen() {
           />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -407,14 +437,16 @@ function Header({ onMenuPress }: { onMenuPress: () => void }) {
 function PremiumHeader({
   onMenuPress,
   canteenName = registeredCanteen.name,
-  logoUri = registeredCanteen.logoUri
+  logoUri = registeredCanteen.logoUri,
+  topInset = 0
 }: {
   onMenuPress: () => void;
   canteenName?: string;
   logoUri?: string;
+  topInset?: number;
 }) {
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { marginTop: Math.max(10, topInset + 8) }]}>
       <Text style={styles.decorCutlery}>🍴</Text>
       <TouchableOpacity style={styles.menuButton} activeOpacity={0.8} onPress={onMenuPress}>
         <View style={styles.menuBars}>
@@ -574,7 +606,8 @@ function OptionContent({
   orderDrafts,
   onOrderDraftsChange,
   superAdminSettings,
-  onSuperAdminSettingsChange
+  onSuperAdminSettingsChange,
+  bottomInset
 }: {
   option: DrawerOption;
   horizontalPadding: number;
@@ -592,17 +625,18 @@ function OptionContent({
   onOrderDraftsChange: (next: OrderDraft[]) => void;
   superAdminSettings: SuperAdminSettings;
   onSuperAdminSettingsChange: (next: SuperAdminSettings) => void;
+  bottomInset: number;
 }) {
   return (
     <ScrollView
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={[styles.optionContent, { paddingHorizontal: horizontalPadding, paddingBottom: 184 }]}
+      contentContainerStyle={[styles.optionContent, { paddingHorizontal: horizontalPadding, paddingBottom: 184 + bottomInset }]}
     >
       <Text style={styles.optionTitle}>{option}</Text>
       {option === "Orders" && <OrdersScreen orders={orderDrafts} onOrdersChange={onOrderDraftsChange} />}
       {option === "Admin Panel" && <AdminPanelScreen products={products} expenses={expenses} showProfit={superAdminSettings.showProfitToCanteen} />}
       {option === "Reports" && <ReportsScreen products={products} expenses={expenses} showProfit={superAdminSettings.showProfitToCanteen} />}
-      {option === "Finance" && <FinanceScreen products={products} expenses={expenses} onExpensesChange={onExpensesChange} showProfit={superAdminSettings.showProfitToCanteen} />}
+      {option === "Finance" && <FinanceScreen products={products} expenses={expenses} purchases={storePurchases} onExpensesChange={onExpensesChange} />}
       {option === "Store" && (
         <StoreScreen
           expenses={expenses}
@@ -1185,18 +1219,20 @@ function StoreScreen({
 }) {
   const today = formatDateInput(new Date());
   const [activeStoreTab, setActiveStoreTab] = useState<"Used" | "Purchase" | "List">("Purchase");
+  const [billNumber, setBillNumber] = useState(`PI-${Date.now().toString().slice(-5)}`);
   const [date, setDate] = useState(today);
   const [vendor, setVendor] = useState("");
   const [vendorAddress, setVendorAddress] = useState("");
   const [vendorPhone, setVendorPhone] = useState("");
   const [purchaseItems, setPurchaseItems] = useState<PurchaseDraftItem[]>([
-    { id: "draft-1", item: "", category: "Raw Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }
+    { id: "draft-1", item: "", type: "Direct Sale", category: "Used Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }
   ]);
   const [usedItem, setUsedItem] = useState("");
   const [usedQty, setUsedQty] = useState("");
   const [usedUnit, setUsedUnit] = useState<"Kgs" | "Pcs" | "Ltrs">("Kgs");
   const [usageError, setUsageError] = useState("");
-  const storeCategories = ["Raw Material", "Vegetables", "Rice", "Oil", "Gas", "Packing", "Cleaning", "Other"];
+  const purchaseTypes: PurchaseDraftItem["type"][] = ["Direct Sale", "Used Material"];
+  const storeCategories = ["Used Material", "Vegetables", "Rice", "Oil", "Gas", "Packing", "Cleaning", "Other"];
   const units: ("Kgs" | "Pcs" | "Ltrs")[] = ["Kgs", "Pcs", "Ltrs"];
   const purchaseTotal = purchases.reduce((sum, row) => sum + Number(row.price || 0), 0);
   const usedCount = usage.filter(row => row.date === today).length;
@@ -1221,6 +1257,7 @@ function StoreScreen({
     : inventoryItems.slice(0, 8);
   const selectedUsagePurchase = purchases.find(row => row.item.toLowerCase() === usedItem.trim().toLowerCase());
   const selectedUsageCategory = selectedUsagePurchase?.category || "";
+  const draftInvoiceTotal = purchaseItems.reduce((sum, row) => sum + (Number(row.price) || 0), 0);
 
   const updatePurchaseItem = (id: string, changes: Partial<PurchaseDraftItem>) => {
     setPurchaseItems(rows => rows.map(row => row.id === id ? { ...row, ...changes } : row));
@@ -1229,8 +1266,15 @@ function StoreScreen({
   const addPurchaseItemRow = () => {
     setPurchaseItems(rows => [
       ...rows,
-      { id: `draft-${Date.now()}`, item: "", category: "Raw Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }
+      { id: `draft-${Date.now()}`, item: "", type: "Direct Sale", category: "Used Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }
     ]);
+  };
+
+  const clearPurchaseItemRow = (id: string) => {
+    setPurchaseItems(rows => rows.length === 1
+      ? [{ ...rows[0], item: "", type: "Direct Sale", category: "Used Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }]
+      : rows.filter(row => row.id !== id)
+    );
   };
 
   const addPurchase = () => {
@@ -1267,7 +1311,8 @@ function StoreScreen({
     setVendor("");
     setVendorAddress("");
     setVendorPhone("");
-    setPurchaseItems([{ id: "draft-1", item: "", category: "Raw Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }]);
+    setBillNumber(`PI-${Date.now().toString().slice(-5)}`);
+    setPurchaseItems([{ id: "draft-1", item: "", type: "Direct Sale", category: "Used Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }]);
   };
 
   const addUsage = () => {
@@ -1318,17 +1363,43 @@ function StoreScreen({
       </View>
 
       {activeStoreTab === "Purchase" && (
-        <View style={styles.formCard}>
-          <Text style={styles.summaryTitle}>Purchase Invoice</Text>
-          <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor="#8a94a6" style={styles.realInput} />
-          <TextInput value={vendor} onChangeText={setVendor} placeholder="Vendor name" placeholderTextColor="#8a94a6" style={styles.realInput} />
-          <TextInput value={vendorAddress} onChangeText={setVendorAddress} placeholder="Vendor address" placeholderTextColor="#8a94a6" style={styles.realInput} />
-          <TextInput value={vendorPhone} onChangeText={setVendorPhone} keyboardType="phone-pad" placeholder="Vendor phone number" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <View style={styles.invoiceCard}>
+          <View style={styles.invoiceHeader}>
+            <View>
+              <Text style={styles.invoiceEyebrow}>STORE PURCHASE</Text>
+              <Text style={styles.summaryTitle}>Purchase Invoice</Text>
+            </View>
+            <View style={styles.invoiceBadge}>
+              <Text style={styles.invoiceBadgeText}>{purchaseItems.length} item</Text>
+            </View>
+          </View>
+
+          <View style={styles.invoiceFieldGrid}>
+            <TextInput value={billNumber} onChangeText={setBillNumber} placeholder="Bill number" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.invoiceFieldInput]} />
+            <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.invoiceFieldInput]} />
+            <TextInput value={vendor} onChangeText={setVendor} placeholder="Vendor name" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.invoiceFieldInput]} />
+            <TextInput value={vendorPhone} onChangeText={setVendorPhone} keyboardType="phone-pad" placeholder="Vendor phone number" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.invoiceFieldInput]} />
+          </View>
+          <TextInput value={vendorAddress} onChangeText={setVendorAddress} placeholder="Vendor address" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.vendorAddressInput]} />
 
           {purchaseItems.map((row, index) => (
             <View key={row.id} style={styles.invoiceItemCard}>
-              <Text style={styles.invoiceItemTitle}>Item {index + 1}</Text>
+              <View style={styles.invoiceItemHeader}>
+                <Text style={styles.invoiceItemTitle}>Item {index + 1}</Text>
+                <TouchableOpacity activeOpacity={0.82} style={styles.clearLineButton} onPress={() => clearPurchaseItemRow(row.id)}>
+                  <Text style={styles.clearLineText}>{purchaseItems.length === 1 ? "Clear" : "Remove"}</Text>
+                </TouchableOpacity>
+              </View>
               <TextInput value={row.item} onChangeText={value => updatePurchaseItem(row.id, { item: value })} placeholder="Item name" placeholderTextColor="#8a94a6" style={styles.realInput} />
+
+              <View style={styles.invoiceTwoColumn}>
+                {purchaseTypes.map(typeName => (
+                  <TouchableOpacity key={typeName} activeOpacity={0.85} onPress={() => updatePurchaseItem(row.id, { type: typeName })} style={[styles.invoiceSelect, row.type === typeName && styles.invoiceSelectActive]}>
+                    <Text style={[styles.invoiceSelectText, row.type === typeName && styles.invoiceSelectTextActive]}>{typeName}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               <View style={styles.categoryPicker}>
                 {storeCategories.map(categoryName => (
                   <TouchableOpacity key={categoryName} activeOpacity={0.85} onPress={() => updatePurchaseItem(row.id, { category: categoryName })} style={[styles.smallChip, row.category === categoryName && styles.smallChipActive]}>
@@ -1355,8 +1426,12 @@ function StoreScreen({
           <TouchableOpacity activeOpacity={0.86} style={styles.secondaryAction} onPress={addPurchaseItemRow}>
             <Text style={styles.secondaryActionText}>Add Item</Text>
           </TouchableOpacity>
+          <View style={styles.invoiceTotalRow}>
+            <Text style={styles.invoiceTotalLabel}>Invoice Total</Text>
+            <Text style={styles.invoiceTotalValue}>Rs {draftInvoiceTotal}</Text>
+          </View>
           <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={addPurchase}>
-            <Text style={styles.primaryActionText}>Create Purchase</Text>
+            <Text style={styles.primaryActionText}>Save Purchase Invoice</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -1423,55 +1498,139 @@ function StoreScreen({
 function FinanceScreen({
   products,
   expenses,
-  onExpensesChange,
-  showProfit
+  purchases,
+  onExpensesChange
 }: {
   products: Product[];
   expenses: Expense[];
+  purchases: StorePurchase[];
   onExpensesChange: (next: Expense[]) => void;
-  showProfit: boolean;
 }) {
-  const today = formatDateInput(new Date());
-  const [range, setRange] = useState<ReportRange>("Today");
-  const [fromDate, setFromDate] = useState(today);
-  const [toDate, setToDate] = useState(today);
+  const [range, setRange] = useState<"Week" | "Month" | "Year">("Week");
+  const [shareStatus, setShareStatus] = useState("");
+  const [fromDate, toDate] = buildRange(range, "", "");
   const activeRange = buildRange(range, fromDate, toDate);
-  const summary = useMemo(() => buildReportSummary(products, expenses, activeRange), [activeRange, expenses, products]);
+  const summary = useMemo(() => buildReportSummary(products, [], activeRange), [activeRange, products]);
+  const financeExpenses = useMemo(
+    () => expenses.filter(item => item.category !== "Store Purchase" && isDateInRange(item.date, activeRange[0], activeRange[1])),
+    [activeRange, expenses]
+  );
+  const purchaseInvoices = useMemo(
+    () => purchases.filter(item => isDateInRange(item.date, activeRange[0], activeRange[1])),
+    [activeRange, purchases]
+  );
+  const totalExpenses = financeExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const storePurchaseTotal = purchaseInvoices.reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const netResult = summary.totalSales - totalExpenses - storePurchaseTotal;
+  const reportLabel = range === "Week" ? "Weekly" : range === "Month" ? "Monthly" : "Yearly";
 
-  const applyRange = (nextRange: ReportRange) => {
-    const [nextFrom, nextTo] = buildRange(nextRange, fromDate, toDate);
-    setRange(nextRange);
-    setFromDate(nextFrom);
-    setToDate(nextTo);
+  const shareFinancePdf = async () => {
+    setShareStatus("PDF preparing...");
+    const reportHtml = `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; color: #111827; padding: 24px; }
+            h1 { color: #082653; margin-bottom: 6px; }
+            .sub { color: #667085; margin-bottom: 18px; }
+            .metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 18px; }
+            .metric { border: 1px solid #e5eaf0; border-radius: 8px; padding: 12px; }
+            .metric strong { display: block; color: #082653; font-size: 20px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+            th, td { border: 1px solid #e5eaf0; padding: 10px; text-align: left; font-size: 12px; }
+            th { background: #f5f7fb; color: #082653; }
+          </style>
+        </head>
+        <body>
+          <h1>${registeredCanteen.name} Profit Loss Report</h1>
+          <div class="sub">${reportLabel}: ${activeRange[0]} to ${activeRange[1]}</div>
+          <div class="metrics">
+            <div class="metric"><strong>Rs ${summary.totalSales}</strong>Sales</div>
+            <div class="metric"><strong>Rs ${totalExpenses}</strong>Expenses</div>
+            <div class="metric"><strong>Rs ${storePurchaseTotal}</strong>Store Purchase Invoice</div>
+            <div class="metric"><strong>Rs ${Math.abs(netResult)}</strong>${netResult >= 0 ? "Profit" : "Loss"}</div>
+          </div>
+          <table>
+            <tr><th>Type</th><th>Amount</th><th>Basis</th></tr>
+            <tr><td>Sales</td><td>Rs ${summary.totalSales}</td><td>Billing sales</td></tr>
+            <tr><td>Expenses</td><td>Rs ${totalExpenses}</td><td>Manual expenses only</td></tr>
+            <tr><td>Store Purchase Invoice</td><td>Rs ${storePurchaseTotal}</td><td>Purchase invoices only</td></tr>
+            <tr><td>${netResult >= 0 ? "Profit" : "Loss"}</td><td>Rs ${Math.abs(netResult)}</td><td>Sales minus expenses and purchase invoices</td></tr>
+          </table>
+        </body>
+      </html>
+    `;
+
+    try {
+      const file = await generatePDF({
+        html: reportHtml,
+        fileName: `${registeredCanteen.name.replace(/\s+/g, "-").toLowerCase()}-${range.toLowerCase()}-profit-loss`,
+        directory: "Documents"
+      });
+      if (!file.filePath) throw new Error("PDF file path missing");
+      const url = file.filePath.startsWith("file://") ? file.filePath : `file://${file.filePath}`;
+      await RNShare.open({
+        title: `${registeredCanteen.name} Profit Loss Report`,
+        message: `${reportLabel} Profit Loss Report\n${activeRange[0]} to ${activeRange[1]}`,
+        url,
+        type: "application/pdf",
+        failOnCancel: false
+      });
+      setShareStatus("PDF report shared");
+    } catch {
+      await NativeShare.share({
+        title: `${registeredCanteen.name} Profit Loss Report`,
+        message: `${reportLabel} Profit Loss Report\nSales: Rs ${summary.totalSales}\nExpenses: Rs ${totalExpenses}\nStore Purchase Invoice: Rs ${storePurchaseTotal}\n${netResult >= 0 ? "Profit" : "Loss"}: Rs ${Math.abs(netResult)}`
+      });
+      setShareStatus("PDF failed, text report shared");
+    }
   };
 
   return (
     <View style={styles.optionStack}>
-      <View style={styles.reportFilterCard}>
-        <View style={styles.dateRow}>
-          <View style={styles.dateInputWrap}>
-            <Text style={styles.dateLabel}>From Date</Text>
-            <TextInput value={fromDate} onChangeText={value => { setRange("Custom"); setFromDate(value); }} style={styles.dateInput} />
+      <View style={styles.financeReportCard}>
+        <View style={styles.invoiceHeader}>
+          <View>
+            <Text style={styles.invoiceEyebrow}>FINANCE</Text>
+            <Text style={styles.summaryTitle}>Profit Loss Report</Text>
           </View>
-          <View style={styles.dateInputWrap}>
-            <Text style={styles.dateLabel}>To Date</Text>
-            <TextInput value={toDate} onChangeText={value => { setRange("Custom"); setToDate(value); }} style={styles.dateInput} />
+          <View style={styles.invoiceBadge}>
+            <Text style={styles.invoiceBadgeText}>{reportLabel}</Text>
           </View>
         </View>
         <View style={styles.quickRangeRow}>
-          {(["Today", "Week", "Month", "Year", "Custom"] as ReportRange[]).map(item => (
-            <TouchableOpacity key={item} activeOpacity={0.85} onPress={() => applyRange(item)} style={[styles.quickRangeChip, range === item && styles.quickRangeChipActive]}>
-              <Text style={[styles.quickRangeText, range === item && styles.quickRangeTextActive]}>{item}</Text>
+          {(["Week", "Month", "Year"] as const).map(item => (
+            <TouchableOpacity key={item} activeOpacity={0.85} onPress={() => setRange(item)} style={[styles.quickRangeChip, range === item && styles.quickRangeChipActive]}>
+              <Text style={[styles.quickRangeText, range === item && styles.quickRangeTextActive]}>
+                {item === "Week" ? "Weekly" : item === "Month" ? "Monthly" : "Yearly"}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
-      </View>
 
-      <View style={styles.financeBoxGrid}>
-        <ReportMetric label="Sales" value={`Rs ${summary.totalSales}`} />
-        <ReportMetric label="Food Cost" value={`Rs ${summary.totalCost}`} />
-        <ReportMetric label="Expenses" value={`Rs ${summary.totalExpenses}`} />
-        {showProfit && <ReportMetric label={summary.profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(summary.profit)}`} />}
+        <Text style={styles.listSub}>{activeRange[0]} to {activeRange[1]}</Text>
+
+        <View style={styles.financeBoxGrid}>
+          <ReportMetric label="Sales" value={`Rs ${summary.totalSales}`} />
+          <ReportMetric label="Expenses" value={`Rs ${totalExpenses}`} />
+          <ReportMetric label="Store Purchase" value={`Rs ${storePurchaseTotal}`} />
+        </View>
+
+        <View style={styles.invoiceTotalRow}>
+          <Text style={styles.invoiceTotalLabel}>{netResult >= 0 ? "Profit" : "Loss"}</Text>
+          <Text style={styles.invoiceTotalValue}>Rs {Math.abs(netResult)}</Text>
+        </View>
+
+        <ReportSection title="Report Basis">
+          <ReportRow label="Sales" value={`Rs ${summary.totalSales}`} detail="Billing sales only" />
+          <ReportRow label="Expenses" value={`Rs ${totalExpenses}`} detail={`${financeExpenses.length} expense entries`} />
+          <ReportRow label="Store Purchase Invoice" value={`Rs ${storePurchaseTotal}`} detail={`${purchaseInvoices.length} purchase invoice items`} />
+        </ReportSection>
+
+        <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={shareFinancePdf}>
+          <Text style={styles.primaryActionText}>Share PDF</Text>
+        </TouchableOpacity>
+        {!!shareStatus && <Text style={styles.shareStatus}>{shareStatus}</Text>}
       </View>
 
       <ExpensesScreen expenses={expenses} onExpensesChange={onExpensesChange} />
@@ -1903,6 +2062,8 @@ const ProductCard = memo(function ProductCard({
   onPress: (product: Product) => void;
   onLongPress: (product: Product) => void;
 }) {
+  const isHalfItem = product.category === HALF_ITEMS_CATEGORY;
+
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -1911,7 +2072,18 @@ const ProductCard = memo(function ProductCard({
       onLongPress={() => onLongPress(product)}
       style={[styles.productCard, { width }]}
     >
-      <Image source={{ uri: product.image }} style={styles.productImage} />
+      <View style={styles.productImageWrap}>
+        <Image source={{ uri: product.image }} style={styles.productImage} />
+        {isHalfItem && (
+          <>
+            <View style={styles.halfImageTint} />
+            <View style={styles.halfImageSlash} />
+            <View style={styles.halfPlateBadge}>
+              <Text style={styles.halfPlateBadgeText}>HALF</Text>
+            </View>
+          </>
+        )}
+      </View>
       <View style={styles.productInfo}>
         <Text numberOfLines={1} style={styles.productName}>{product.name}</Text>
         <Text style={styles.productPrice}>Rs {product.price}</Text>
@@ -1955,11 +2127,21 @@ function SubItemsSheet({ product, onClose }: { product: Product; onClose: () => 
   );
 }
 
-function CartPanel({ count, total, onClear }: { count: number; total: number; onClear: () => void }) {
+function CartPanel({
+  count,
+  total,
+  onClear,
+  bottomInset
+}: {
+  count: number;
+  total: number;
+  onClear: () => void;
+  bottomInset: number;
+}) {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("Online");
 
   return (
-    <View style={styles.cartPanel}>
+    <View style={[styles.cartPanel, { bottom: 94 + bottomInset }]}>
       <View style={styles.cartHeader}>
         <Text style={styles.cartTitle}>Cart ({count} items)</Text>
         <TouchableOpacity onPress={onClear} activeOpacity={0.8}>
@@ -2058,23 +2240,29 @@ function PaymentModeIcon({ mode, color }: { mode: PaymentMode; color: string }) 
   );
 }
 
-function BottomNav({ activeOption, onSelect }: { activeOption: DrawerOption; onSelect: (item: BottomNavItem) => void }) {
-  const items: BottomNavItem[] = ["Home", "Orders", "Reports", "Settings"];
+function BottomNav({
+  activeOption,
+  onSelect,
+  bottomInset
+}: {
+  activeOption: DrawerOption;
+  onSelect: (item: BottomNavItem) => void;
+  bottomInset: number;
+}) {
+  const items: BottomNavItem[] = ["Home", "Orders", "Reports"];
   const labels: Record<BottomNavItem, string> = {
     Home: "Billing",
     Orders: "Orders",
-    Reports: "Reports",
-    Settings: "Settings"
+    Reports: "Reports"
   };
   const activeItem: Record<BottomNavItem, boolean> = {
     Home: activeOption === "Dashboard" || activeOption === "New Billing",
     Orders: activeOption === "Orders",
-    Reports: activeOption === "Reports",
-    Settings: activeOption === "Settings"
+    Reports: activeOption === "Reports"
   };
 
   return (
-    <View style={styles.bottomNav}>
+    <View style={[styles.bottomNav, { bottom: 16 + bottomInset }]}>
       {items.map(item => {
         const active = activeItem[item];
         return (
@@ -2447,6 +2635,19 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 10
   },
+  financeReportCard: {
+    gap: 12,
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    shadowColor: "#101828",
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3
+  },
   reportMetric: {
     flexGrow: 1,
     flexBasis: "30%",
@@ -2556,10 +2757,50 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 7 },
     elevation: 2
   },
-  productImage: {
+  productImageWrap: {
     width: "100%",
     aspectRatio: 1.15,
+    backgroundColor: "#eef2f7",
+    overflow: "hidden"
+  },
+  productImage: {
+    width: "100%",
+    height: "100%",
     backgroundColor: "#eef2f7"
+  },
+  halfImageTint: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    right: 0,
+    width: "50%",
+    backgroundColor: "rgba(8,38,83,0.34)"
+  },
+  halfImageSlash: {
+    position: "absolute",
+    top: -24,
+    bottom: -24,
+    left: "49%",
+    width: 4,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    transform: [{ rotate: "24deg" }]
+  },
+  halfPlateBadge: {
+    position: "absolute",
+    left: 8,
+    top: 8,
+    minHeight: 26,
+    paddingHorizontal: 9,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.8)",
+    justifyContent: "center"
+  },
+  halfPlateBadgeText: {
+    color: NAVY,
+    fontSize: 10,
+    fontWeight: "900"
   },
   productInfo: {
     padding: 10
@@ -2881,17 +3122,138 @@ const styles = StyleSheet.create({
   storeActionTextActive: {
     color: CARD
   },
+  invoiceCard: {
+    gap: 12,
+    borderRadius: 20,
+    padding: 16,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    shadowColor: "#101828",
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3
+  },
+  invoiceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  invoiceEyebrow: {
+    color: MUTED,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0
+  },
+  invoiceBadge: {
+    minHeight: 32,
+    paddingHorizontal: 11,
+    borderRadius: 12,
+    backgroundColor: "#edf4ff",
+    borderWidth: 1,
+    borderColor: "#d7e4f6",
+    justifyContent: "center"
+  },
+  invoiceBadgeText: {
+    color: NAVY,
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  invoiceFieldGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10
+  },
+  invoiceFieldInput: {
+    flexGrow: 1,
+    flexBasis: "46%"
+  },
+  vendorAddressInput: {
+    minHeight: 56
+  },
   invoiceItemCard: {
-    gap: 10,
-    borderRadius: 16,
-    padding: 12,
+    gap: 11,
+    borderRadius: 18,
+    padding: 14,
     backgroundColor: "#f8fafc",
     borderWidth: 1,
     borderColor: "#eef2f7"
   },
+  invoiceItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10
+  },
   invoiceItemTitle: {
     color: NAVY,
     fontSize: 13,
+    fontWeight: "900"
+  },
+  clearLineButton: {
+    minHeight: 34,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: "#fff1f3",
+    borderWidth: 1,
+    borderColor: "#ffd5dc",
+    justifyContent: "center"
+  },
+  clearLineText: {
+    color: "#be123c",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  invoiceTwoColumn: {
+    flexDirection: "row",
+    gap: 10
+  },
+  invoiceSelect: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: 14,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8
+  },
+  invoiceSelectActive: {
+    backgroundColor: "#edf4ff",
+    borderColor: "#bcd1ee"
+  },
+  invoiceSelectText: {
+    color: "#111827",
+    fontSize: 13,
+    fontWeight: "900",
+    textAlign: "center"
+  },
+  invoiceSelectTextActive: {
+    color: NAVY
+  },
+  invoiceTotalRow: {
+    minHeight: 56,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    backgroundColor: "#eef6ff",
+    borderWidth: 1,
+    borderColor: "#d7eafe",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  invoiceTotalLabel: {
+    color: MUTED,
+    fontSize: 12,
+    fontWeight: "900",
+    textTransform: "uppercase"
+  },
+  invoiceTotalValue: {
+    color: "#111827",
+    fontSize: 16,
     fontWeight: "900"
   },
   inputRow: {
@@ -3246,7 +3608,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 22,
     shadowOffset: { width: 0, height: -8 },
-    elevation: 10
+    elevation: 12,
+    zIndex: 18
   },
   cartHeader: {
     flexDirection: "row",
@@ -3447,6 +3810,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900"
   },
+  bottomScrim: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(245,247,251,0.88)",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(255,255,255,0.72)",
+    zIndex: 8
+  },
   bottomNav: {
     position: "absolute",
     left: 16,
@@ -3455,11 +3828,19 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 18,
     backgroundColor: NAVY,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 8,
-    paddingVertical: 7
+    paddingVertical: 7,
+    shadowColor: NAVY,
+    shadowOpacity: 0.18,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: -4 },
+    elevation: 10,
+    zIndex: 20
   },
   navItem: {
     flex: 1,
@@ -3472,7 +3853,7 @@ const styles = StyleSheet.create({
     overflow: "hidden"
   },
   navActive: {
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: "rgba(255,255,255,0.16)",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.22)"
   },
