@@ -8,6 +8,7 @@ import {
   Share as NativeShare,
   ScrollView,
   StyleSheet,
+  StatusBar,
   Text,
   TextInput,
   TouchableOpacity,
@@ -113,6 +114,8 @@ type StorePurchase = {
   id: string;
   date: string;
   vendor: string;
+  vendorAddress: string;
+  vendorPhone: string;
   item: string;
   category: string;
   quantity: number;
@@ -124,8 +127,24 @@ type StoreUsage = {
   id: string;
   date: string;
   item: string;
+  category: string;
   quantity: number;
   unit: "Kgs" | "Pcs" | "Ltrs";
+};
+
+type PurchaseDraftItem = {
+  id: string;
+  item: string;
+  category: string;
+  customCategory: string;
+  quantity: string;
+  unit: "Kgs" | "Pcs" | "Ltrs";
+  price: string;
+};
+
+type SuperAdminSettings = {
+  showProfitToCanteen: boolean;
+  openAdminDashboardFirst: boolean;
 };
 
 const defaultExpenses: Expense[] = [
@@ -217,6 +236,10 @@ export default function HomeScreen() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [catalog, setCatalog] = useState<Product[]>(products);
   const [appCategories, setAppCategories] = useState<string[]>(defaultItemCategories);
+  const [superAdminSettings, setSuperAdminSettings] = useState<SuperAdminSettings>({
+    showProfitToCanteen: false,
+    openAdminDashboardFirst: false
+  });
   const [expenses, setExpenses] = useState<Expense[]>(defaultExpenses);
   const [storePurchases, setStorePurchases] = useState<StorePurchase[]>([]);
   const [storeUsage, setStoreUsage] = useState<StoreUsage[]>([]);
@@ -277,18 +300,19 @@ export default function HomeScreen() {
 
   const selectBottomNav = useCallback((item: BottomNavItem) => {
     const nextOption: Record<BottomNavItem, DrawerOption> = {
-      Home: "New Billing",
+      Home: superAdminSettings.openAdminDashboardFirst ? "Dashboard" : "New Billing",
       Orders: "Orders",
       Reports: "Reports",
       Settings: "Settings"
     };
     setActiveOption(nextOption[item]);
-  }, []);
+  }, [superAdminSettings.openAdminDashboardFirst]);
 
   const showBillingGrid = activeOption === "Dashboard" || activeOption === "New Billing";
 
   return (
     <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
       <View style={styles.page}>
         <PremiumHeader onMenuPress={openDrawer} />
 
@@ -334,6 +358,8 @@ export default function HomeScreen() {
             onStoreUsageChange={setStoreUsage}
             orderDrafts={orderDrafts}
             onOrderDraftsChange={setOrderDrafts}
+            superAdminSettings={superAdminSettings}
+            onSuperAdminSettingsChange={setSuperAdminSettings}
           />
         )}
 
@@ -546,7 +572,9 @@ function OptionContent({
   storeUsage,
   onStoreUsageChange,
   orderDrafts,
-  onOrderDraftsChange
+  onOrderDraftsChange,
+  superAdminSettings,
+  onSuperAdminSettingsChange
 }: {
   option: DrawerOption;
   horizontalPadding: number;
@@ -562,6 +590,8 @@ function OptionContent({
   onStoreUsageChange: (next: StoreUsage[]) => void;
   orderDrafts: OrderDraft[];
   onOrderDraftsChange: (next: OrderDraft[]) => void;
+  superAdminSettings: SuperAdminSettings;
+  onSuperAdminSettingsChange: (next: SuperAdminSettings) => void;
 }) {
   return (
     <ScrollView
@@ -570,9 +600,9 @@ function OptionContent({
     >
       <Text style={styles.optionTitle}>{option}</Text>
       {option === "Orders" && <OrdersScreen orders={orderDrafts} onOrdersChange={onOrderDraftsChange} />}
-      {option === "Admin Panel" && <AdminPanelScreen products={products} expenses={expenses} />}
-      {option === "Reports" && <ReportsScreen products={products} expenses={expenses} />}
-      {option === "Finance" && <FinanceScreen products={products} expenses={expenses} onExpensesChange={onExpensesChange} />}
+      {option === "Admin Panel" && <AdminPanelScreen products={products} expenses={expenses} showProfit={superAdminSettings.showProfitToCanteen} />}
+      {option === "Reports" && <ReportsScreen products={products} expenses={expenses} showProfit={superAdminSettings.showProfitToCanteen} />}
+      {option === "Finance" && <FinanceScreen products={products} expenses={expenses} onExpensesChange={onExpensesChange} showProfit={superAdminSettings.showProfitToCanteen} />}
       {option === "Store" && (
         <StoreScreen
           expenses={expenses}
@@ -592,7 +622,7 @@ function OptionContent({
       {option === "Stock Availability" && <StockAvailabilityScreen products={products} />}
       {option === "Printer Settings" && <PrinterSettingsScreen />}
       {option === "User" && <UserScreen />}
-      {option === "Settings" && <SettingsScreen />}
+      {option === "Settings" && <SettingsScreen settings={superAdminSettings} onSettingsChange={onSuperAdminSettingsChange} />}
       {option === "Sync Data" && <SyncDataScreen />}
       {option === "Logout" && <LogoutScreen />}
     </ScrollView>
@@ -704,7 +734,7 @@ function buildReportSummary(products: Product[], expenses: Expense[] = defaultEx
   return { itemReports, totalSales, totalQty, totalCost, expenses: filteredExpenses, totalExpenses, profit };
 }
 
-function AdminPanelScreen({ products, expenses }: { products: Product[]; expenses: Expense[] }) {
+function AdminPanelScreen({ products, expenses, showProfit }: { products: Product[]; expenses: Expense[]; showProfit: boolean }) {
   const summary = useMemo(() => buildReportSummary(products, expenses), [expenses, products]);
   const lowStock = Math.max(1, Math.round(products.filter(item => !item.hidden).length / 3));
 
@@ -718,7 +748,7 @@ function AdminPanelScreen({ products, expenses }: { products: Product[]; expense
         <ReportMetric label="Today Sales" value={`Rs ${summary.totalSales}`} />
         <ReportMetric label="Bills" value={String(Math.max(summary.totalQty, 1))} />
         <ReportMetric label="Expenses" value={`Rs ${summary.totalExpenses}`} />
-        <ReportMetric label={summary.profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(summary.profit)}`} />
+        {showProfit && <ReportMetric label={summary.profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(summary.profit)}`} />}
       </View>
       <ReportSection title="Admin Modules">
         <ReportRow label="Billing" value="Ready" detail="New bill, cart, payments" />
@@ -726,12 +756,22 @@ function AdminPanelScreen({ products, expenses }: { products: Product[]; expense
         <ReportRow label="Inventory" value={`${lowStock} low`} detail="Stock and price management" />
         <ReportRow label="Users" value="2 active" detail="Admin and cashier control" />
       </ReportSection>
-      <ReportsScreen products={products} expenses={expenses} compact />
+      <ReportsScreen products={products} expenses={expenses} compact showProfit={showProfit} />
     </View>
   );
 }
 
-function ReportsScreen({ products, expenses, compact = false }: { products: Product[]; expenses: Expense[]; compact?: boolean }) {
+function ReportsScreen({
+  products,
+  expenses,
+  compact = false,
+  showProfit = true
+}: {
+  products: Product[];
+  expenses: Expense[];
+  compact?: boolean;
+  showProfit?: boolean;
+}) {
   const reportCardRef = useRef<View | null>(null);
   const initialToday = formatDateInput(new Date());
   const [range, setRange] = useState<ReportRange>("Today");
@@ -779,7 +819,7 @@ function ReportsScreen({ products, expenses, compact = false }: { products: Prod
     `UPI/Online: Rs ${upi}`,
     `Card: Rs ${card}`,
     `Expenses: Rs ${totalExpenses}`,
-    `${profit >= 0 ? "Profit" : "Loss"}: Rs ${Math.abs(profit)}`
+    ...(showProfit ? [`${profit >= 0 ? "Profit" : "Loss"}: Rs ${Math.abs(profit)}`] : [])
   ].join("\n");
 
   const reportHtml = `
@@ -804,7 +844,7 @@ function ReportsScreen({ products, expenses, compact = false }: { products: Prod
           <div class="metric"><strong>Rs ${totalSales}</strong>Total Sale</div>
           <div class="metric"><strong>${totalQty}</strong>Items Sold</div>
           <div class="metric"><strong>Rs ${totalExpenses}</strong>Expenses</div>
-          <div class="metric"><strong>Rs ${Math.abs(profit)}</strong>${profit >= 0 ? "Profit" : "Loss"}</div>
+          ${showProfit ? `<div class="metric"><strong>Rs ${Math.abs(profit)}</strong>${profit >= 0 ? "Profit" : "Loss"}</div>` : ""}
         </div>
         <table>
           <tr><th>Report</th><th>Value</th><th>Details</th></tr>
@@ -813,7 +853,7 @@ function ReportsScreen({ products, expenses, compact = false }: { products: Prod
           <tr><td>Card</td><td>Rs ${card}</td><td>10%</td></tr>
           <tr><td>Food Cost</td><td>Rs ${totalCost}</td><td>Estimated item cost</td></tr>
           <tr><td>Total Expenses</td><td>Rs ${totalExpenses}</td><td>All expenses</td></tr>
-          <tr><td>${profit >= 0 ? "Net Profit" : "Net Loss"}</td><td>Rs ${Math.abs(profit)}</td><td>Sales minus cost and expenses</td></tr>
+          ${showProfit ? `<tr><td>${profit >= 0 ? "Net Profit" : "Net Loss"}</td><td>Rs ${Math.abs(profit)}</td><td>Sales minus cost and expenses</td></tr>` : ""}
         </table>
         <table>
           <tr><th>Item</th><th>Qty</th><th>Amount</th></tr>
@@ -944,7 +984,7 @@ function ReportsScreen({ products, expenses, compact = false }: { products: Prod
           <ReportMetric label="Cash" value={`Rs ${cash}`} />
           <ReportMetric label="Online" value={`Rs ${upi}`} />
           <ReportMetric label="Expenses" value={`Rs ${totalExpenses}`} />
-          <ReportMetric label={profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(profit)}`} />
+          {showProfit && <ReportMetric label={profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(profit)}`} />}
         </View>
 
         <ReportSection title="Today Report">
@@ -1147,15 +1187,16 @@ function StoreScreen({
   const [activeStoreTab, setActiveStoreTab] = useState<"Used" | "Purchase" | "List">("Purchase");
   const [date, setDate] = useState(today);
   const [vendor, setVendor] = useState("");
-  const [item, setItem] = useState("");
-  const [category, setCategory] = useState("Raw Material");
-  const [quantity, setQuantity] = useState("");
-  const [unit, setUnit] = useState<"Kgs" | "Pcs" | "Ltrs">("Kgs");
-  const [price, setPrice] = useState("");
+  const [vendorAddress, setVendorAddress] = useState("");
+  const [vendorPhone, setVendorPhone] = useState("");
+  const [purchaseItems, setPurchaseItems] = useState<PurchaseDraftItem[]>([
+    { id: "draft-1", item: "", category: "Raw Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }
+  ]);
   const [usedItem, setUsedItem] = useState("");
   const [usedQty, setUsedQty] = useState("");
   const [usedUnit, setUsedUnit] = useState<"Kgs" | "Pcs" | "Ltrs">("Kgs");
-  const storeCategories = ["Raw Material", "Vegetables", "Rice", "Oil", "Packing", "Cleaning", "Other"];
+  const [usageError, setUsageError] = useState("");
+  const storeCategories = ["Raw Material", "Vegetables", "Rice", "Oil", "Gas", "Packing", "Cleaning", "Other"];
   const units: ("Kgs" | "Pcs" | "Ltrs")[] = ["Kgs", "Pcs", "Ltrs"];
   const purchaseTotal = purchases.reduce((sum, row) => sum + Number(row.price || 0), 0);
   const usedCount = usage.filter(row => row.date === today).length;
@@ -1174,39 +1215,74 @@ function StoreScreen({
     inventory.set(key, current);
   });
 
+  const inventoryItems = Array.from(new Set([...inventory.values()].map(row => row.item)));
+  const usageMatches = usedItem.trim()
+    ? inventoryItems.filter(name => name.toLowerCase().includes(usedItem.trim().toLowerCase()))
+    : inventoryItems.slice(0, 8);
+  const selectedUsagePurchase = purchases.find(row => row.item.toLowerCase() === usedItem.trim().toLowerCase());
+  const selectedUsageCategory = selectedUsagePurchase?.category || "";
+
+  const updatePurchaseItem = (id: string, changes: Partial<PurchaseDraftItem>) => {
+    setPurchaseItems(rows => rows.map(row => row.id === id ? { ...row, ...changes } : row));
+  };
+
+  const addPurchaseItemRow = () => {
+    setPurchaseItems(rows => [
+      ...rows,
+      { id: `draft-${Date.now()}`, item: "", category: "Raw Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }
+    ]);
+  };
+
   const addPurchase = () => {
-    const qty = Number(quantity);
-    const amount = Number(price);
-    const name = item.trim();
-    if (!name || !vendor.trim() || qty <= 0 || amount <= 0) return;
-    const next: StorePurchase = {
-      id: String(Date.now()),
+    const vendorName = vendor.trim();
+    const validItems = purchaseItems
+      .map(row => ({
+        ...row,
+        item: row.item.trim(),
+        category: row.category === "Other" ? row.customCategory.trim() : row.category,
+        quantityNumber: Number(row.quantity),
+        priceNumber: Number(row.price)
+      }))
+      .filter(row => row.item && row.category && row.quantityNumber > 0 && row.priceNumber > 0);
+    if (!vendorName || !validItems.length) return;
+    const billId = String(Date.now());
+    const nextPurchases: StorePurchase[] = validItems.map((row, index) => ({
+      id: `${billId}-${index}`,
       date,
-      vendor: vendor.trim(),
-      item: name,
-      category,
-      quantity: qty,
-      unit,
-      price: amount
-    };
-    onPurchasesChange([next, ...purchases]);
+      vendor: vendorName,
+      vendorAddress: vendorAddress.trim(),
+      vendorPhone: vendorPhone.trim(),
+      item: row.item,
+      category: row.category,
+      quantity: row.quantityNumber,
+      unit: row.unit,
+      price: row.priceNumber
+    }));
+    const amount = nextPurchases.reduce((sum, row) => sum + row.price, 0);
+    onPurchasesChange([...nextPurchases, ...purchases]);
     onExpensesChange([
-      { id: `store-${next.id}`, date, category: "Store Purchase", amount, note: `${name} from ${vendor.trim()}` },
+      { id: `store-${billId}`, date, category: "Store Purchase", amount, note: `${validItems.length} items from ${vendorName}` },
       ...expenses
     ]);
-    setItem("");
     setVendor("");
-    setQuantity("");
-    setPrice("");
+    setVendorAddress("");
+    setVendorPhone("");
+    setPurchaseItems([{ id: "draft-1", item: "", category: "Raw Material", customCategory: "", quantity: "", unit: "Kgs", price: "" }]);
   };
 
   const addUsage = () => {
     const qty = Number(usedQty);
     const name = usedItem.trim();
+    const matchingPurchase = purchases.find(row => row.item.toLowerCase() === name.toLowerCase());
     if (!name || qty <= 0) return;
-    onUsageChange([{ id: String(Date.now()), date: today, item: name, quantity: qty, unit: usedUnit }, ...usage]);
+    if (!matchingPurchase) {
+      setUsageError("Select an item from purchase list only");
+      return;
+    }
+    onUsageChange([{ id: String(Date.now()), date: today, item: matchingPurchase.item, category: matchingPurchase.category, quantity: qty, unit: usedUnit }, ...usage]);
     setUsedItem("");
     setUsedQty("");
+    setUsageError("");
   };
 
   return (
@@ -1243,28 +1319,42 @@ function StoreScreen({
 
       {activeStoreTab === "Purchase" && (
         <View style={styles.formCard}>
-          <Text style={styles.summaryTitle}>Create Purchase</Text>
+          <Text style={styles.summaryTitle}>Purchase Invoice</Text>
           <TextInput value={date} onChangeText={setDate} placeholder="YYYY-MM-DD" placeholderTextColor="#8a94a6" style={styles.realInput} />
-          <TextInput value={vendor} onChangeText={setVendor} placeholder="Purchased from" placeholderTextColor="#8a94a6" style={styles.realInput} />
-          <TextInput value={item} onChangeText={setItem} placeholder="Item name" placeholderTextColor="#8a94a6" style={styles.realInput} />
-          <View style={styles.categoryPicker}>
-            {storeCategories.map(row => (
-              <TouchableOpacity key={row} activeOpacity={0.85} onPress={() => setCategory(row)} style={[styles.smallChip, category === row && styles.smallChipActive]}>
-                <Text style={[styles.smallChipText, category === row && styles.smallChipTextActive]}>{row}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View style={styles.inputRow}>
-            <TextInput value={quantity} onChangeText={setQuantity} keyboardType="numeric" placeholder="Qty" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.inputFlex]} />
-            <View style={styles.unitRow}>
-              {units.map(row => (
-                <TouchableOpacity key={row} activeOpacity={0.85} onPress={() => setUnit(row)} style={[styles.unitChip, unit === row && styles.unitChipActive]}>
-                  <Text style={[styles.unitChipText, unit === row && styles.unitChipTextActive]}>{row}</Text>
-                </TouchableOpacity>
-              ))}
+          <TextInput value={vendor} onChangeText={setVendor} placeholder="Vendor name" placeholderTextColor="#8a94a6" style={styles.realInput} />
+          <TextInput value={vendorAddress} onChangeText={setVendorAddress} placeholder="Vendor address" placeholderTextColor="#8a94a6" style={styles.realInput} />
+          <TextInput value={vendorPhone} onChangeText={setVendorPhone} keyboardType="phone-pad" placeholder="Vendor phone number" placeholderTextColor="#8a94a6" style={styles.realInput} />
+
+          {purchaseItems.map((row, index) => (
+            <View key={row.id} style={styles.invoiceItemCard}>
+              <Text style={styles.invoiceItemTitle}>Item {index + 1}</Text>
+              <TextInput value={row.item} onChangeText={value => updatePurchaseItem(row.id, { item: value })} placeholder="Item name" placeholderTextColor="#8a94a6" style={styles.realInput} />
+              <View style={styles.categoryPicker}>
+                {storeCategories.map(categoryName => (
+                  <TouchableOpacity key={categoryName} activeOpacity={0.85} onPress={() => updatePurchaseItem(row.id, { category: categoryName })} style={[styles.smallChip, row.category === categoryName && styles.smallChipActive]}>
+                    <Text style={[styles.smallChipText, row.category === categoryName && styles.smallChipTextActive]}>{categoryName}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {row.category === "Other" && (
+                <TextInput value={row.customCategory} onChangeText={value => updatePurchaseItem(row.id, { customCategory: value })} placeholder="Enter category" placeholderTextColor="#8a94a6" style={styles.realInput} />
+              )}
+              <View style={styles.inputRow}>
+                <TextInput value={row.quantity} onChangeText={value => updatePurchaseItem(row.id, { quantity: value })} keyboardType="numeric" placeholder="Qty" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.inputFlex]} />
+                <View style={styles.unitRow}>
+                  {units.map(unitName => (
+                    <TouchableOpacity key={unitName} activeOpacity={0.85} onPress={() => updatePurchaseItem(row.id, { unit: unitName })} style={[styles.unitChip, row.unit === unitName && styles.unitChipActive]}>
+                      <Text style={[styles.unitChipText, row.unit === unitName && styles.unitChipTextActive]}>{unitName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              <TextInput value={row.price} onChangeText={value => updatePurchaseItem(row.id, { price: value })} keyboardType="numeric" placeholder="Total price" placeholderTextColor="#8a94a6" style={styles.realInput} />
             </View>
-          </View>
-          <TextInput value={price} onChangeText={setPrice} keyboardType="numeric" placeholder="Total price" placeholderTextColor="#8a94a6" style={styles.realInput} />
+          ))}
+          <TouchableOpacity activeOpacity={0.86} style={styles.secondaryAction} onPress={addPurchaseItemRow}>
+            <Text style={styles.secondaryActionText}>Add Item</Text>
+          </TouchableOpacity>
           <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={addPurchase}>
             <Text style={styles.primaryActionText}>Create Purchase</Text>
           </TouchableOpacity>
@@ -1274,7 +1364,20 @@ function StoreScreen({
       {activeStoreTab === "Used" && (
         <View style={styles.formCard}>
           <Text style={styles.summaryTitle}>Today Used Entry</Text>
-          <TextInput value={usedItem} onChangeText={setUsedItem} placeholder="Used item name" placeholderTextColor="#8a94a6" style={styles.realInput} />
+          <TextInput value={usedItem} onChangeText={value => { setUsedItem(value); setUsageError(""); }} placeholder="Search purchased item" placeholderTextColor="#8a94a6" style={styles.realInput} />
+          <View style={styles.suggestionList}>
+            {usageMatches.map(name => (
+              <TouchableOpacity key={name} activeOpacity={0.84} style={[styles.suggestionChip, usedItem === name && styles.suggestionChipActive]} onPress={() => {
+                const match = purchases.find(row => row.item === name);
+                setUsedItem(name);
+                setUsedUnit(match?.unit || "Kgs");
+                setUsageError("");
+              }}>
+                <Text style={[styles.suggestionChipText, usedItem === name && styles.suggestionChipTextActive]}>{name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {!!selectedUsageCategory && <Text style={styles.listSub}>Category: {selectedUsageCategory}</Text>}
           <View style={styles.inputRow}>
             <TextInput value={usedQty} onChangeText={setUsedQty} keyboardType="numeric" placeholder="Used qty" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.inputFlex]} />
             <View style={styles.unitRow}>
@@ -1285,6 +1388,7 @@ function StoreScreen({
               ))}
             </View>
           </View>
+          {!!usageError && <Text style={styles.errorText}>{usageError}</Text>}
           <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={addUsage}>
             <Text style={styles.primaryActionText}>Save Used Entry</Text>
           </TouchableOpacity>
@@ -1319,11 +1423,13 @@ function StoreScreen({
 function FinanceScreen({
   products,
   expenses,
-  onExpensesChange
+  onExpensesChange,
+  showProfit
 }: {
   products: Product[];
   expenses: Expense[];
   onExpensesChange: (next: Expense[]) => void;
+  showProfit: boolean;
 }) {
   const today = formatDateInput(new Date());
   const [range, setRange] = useState<ReportRange>("Today");
@@ -1361,11 +1467,11 @@ function FinanceScreen({
         </View>
       </View>
 
-      <View style={styles.reportGrid}>
+      <View style={styles.financeBoxGrid}>
         <ReportMetric label="Sales" value={`Rs ${summary.totalSales}`} />
         <ReportMetric label="Food Cost" value={`Rs ${summary.totalCost}`} />
         <ReportMetric label="Expenses" value={`Rs ${summary.totalExpenses}`} />
-        <ReportMetric label={summary.profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(summary.profit)}`} />
+        {showProfit && <ReportMetric label={summary.profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(summary.profit)}`} />}
       </View>
 
       <ExpensesScreen expenses={expenses} onExpensesChange={onExpensesChange} />
@@ -1666,15 +1772,49 @@ function UserScreen() {
   );
 }
 
-function SettingsScreen() {
+function SettingsScreen({
+  settings,
+  onSettingsChange
+}: {
+  settings: SuperAdminSettings;
+  onSettingsChange: (next: SuperAdminSettings) => void;
+}) {
+  const toggle = (key: keyof SuperAdminSettings) => {
+    onSettingsChange({ ...settings, [key]: !settings[key] });
+  };
+
   return (
-    <View style={styles.summaryCard}>
-      <Text style={styles.summaryTitle}>Operational Settings</Text>
-      <InfoRow label="Outlet" value="Main Canteen" />
-      <InfoRow label="Currency" value="Rs" />
-      <InfoRow label="Tax" value="0%" />
-      <InfoRow label="Compact Mode" value="ON" />
-      <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Save Changes</Text></TouchableOpacity>
+    <View style={styles.optionStack}>
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Operational Settings</Text>
+        <InfoRow label="Outlet" value="Main Canteen" />
+        <InfoRow label="Currency" value="Rs" />
+        <InfoRow label="Tax" value="0%" />
+        <InfoRow label="Compact Mode" value="ON" />
+      </View>
+
+      <View style={styles.summaryCard}>
+        <Text style={styles.summaryTitle}>Super Admin Marketing</Text>
+        <TouchableOpacity activeOpacity={0.86} style={styles.settingToggleRow} onPress={() => toggle("showProfitToCanteen")}>
+          <View>
+            <Text style={styles.listTitle}>Show Profit To Canteen</Text>
+            <Text style={styles.listSub}>Tick on shows profit, tick off hides profit</Text>
+          </View>
+          <Text style={[styles.tickBox, settings.showProfitToCanteen && styles.tickBoxActive]}>
+            {settings.showProfitToCanteen ? "OK" : ""}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity activeOpacity={0.86} style={styles.settingToggleRow} onPress={() => toggle("openAdminDashboardFirst")}>
+          <View>
+            <Text style={styles.listTitle}>Admin Dashboard First</Text>
+            <Text style={styles.listSub}>Tick on opens Dashboard, tick off opens Sale Home</Text>
+          </View>
+          <Text style={[styles.tickBox, settings.openAdminDashboardFirst && styles.tickBoxActive]}>
+            {settings.openAdminDashboardFirst ? "OK" : ""}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Save Changes</Text></TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -1873,30 +2013,27 @@ function CartPanel({ count, total, onClear }: { count: number; total: number; on
 function PaymentModeIcon({ mode, color }: { mode: PaymentMode; color: string }) {
   if (mode === "Online") {
     return (
-      <View style={[styles.paymentIcon, { backgroundColor: "#eef6ff" }]}>
-        <Text style={[styles.upiText, { color }]}>UPI</Text>
-        <View style={styles.upiRail}>
-          <View style={[styles.upiMark, { backgroundColor: "#34a853" }]} />
-          <View style={[styles.upiMark, { backgroundColor: "#fbbc05" }]} />
-          <View style={[styles.upiMark, { backgroundColor: "#ea4335" }]} />
-        </View>
+      <View style={[styles.paymentLogo, { backgroundColor: "#eef6ff", borderColor: "#bfdbfe" }]}>
+        <Text style={styles.gpayG}>G</Text>
+        <Text style={[styles.logoPayText, { color }]}>Pay</Text>
       </View>
     );
   }
 
   if (mode === "Cash") {
     return (
-      <View style={[styles.paymentIcon, { backgroundColor: "#ecfdf3" }]}>
+      <View style={[styles.paymentLogo, { backgroundColor: "#ecfdf3", borderColor: "#bbf7d0" }]}>
         <View style={[styles.cashNote, { borderColor: color }]}>
           <Text style={[styles.cashText, { color }]}>Rs</Text>
         </View>
+        <Text style={[styles.logoPayText, { color }]}>Cash</Text>
       </View>
     );
   }
 
   if (mode === "Split") {
     return (
-      <View style={[styles.paymentIcon, { backgroundColor: "#f5f3ff" }]}>
+      <View style={[styles.paymentLogo, { backgroundColor: "#f5f3ff", borderColor: "#ddd6fe" }]}>
         <View style={styles.splitIconRow}>
           <View style={[styles.splitCircle, { backgroundColor: "#16a34a" }]}>
             <Text style={styles.splitCircleText}>C</Text>
@@ -1905,16 +2042,18 @@ function PaymentModeIcon({ mode, color }: { mode: PaymentMode; color: string }) 
             <Text style={styles.splitCircleText}>U</Text>
           </View>
         </View>
+        <Text style={[styles.logoPayText, { color }]}>Split</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.paymentIcon, { backgroundColor: "#fffbeb" }]}>
+    <View style={[styles.paymentLogo, { backgroundColor: "#fffbeb", borderColor: "#fde68a" }]}>
       <View style={[styles.creditCardIcon, { borderColor: color }]}>
         <View style={[styles.creditCardLine, { backgroundColor: color }]} />
         <Text style={[styles.creditText, { color }]}>CR</Text>
       </View>
+      <Text style={[styles.logoPayText, { color }]}>Credit</Text>
     </View>
   );
 }
@@ -1958,11 +2097,11 @@ function BottomNav({ activeOption, onSelect }: { activeOption: DrawerOption; onS
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: PAGE
+    backgroundColor: CARD
   },
   page: {
     flex: 1,
-    backgroundColor: PAGE
+    backgroundColor: CARD
   },
   header: {
     minHeight: 116,
@@ -2299,6 +2438,11 @@ const styles = StyleSheet.create({
     backgroundColor: PAGE
   },
   reportGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10
+  },
+  financeBoxGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10
@@ -2737,6 +2881,19 @@ const styles = StyleSheet.create({
   storeActionTextActive: {
     color: CARD
   },
+  invoiceItemCard: {
+    gap: 10,
+    borderRadius: 16,
+    padding: 12,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#eef2f7"
+  },
+  invoiceItemTitle: {
+    color: NAVY,
+    fontSize: 13,
+    fontWeight: "900"
+  },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -2792,6 +2949,61 @@ const styles = StyleSheet.create({
   },
   smallChipTextActive: {
     color: NAVY
+  },
+  suggestionList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  suggestionChip: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 13,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: LINE,
+    justifyContent: "center"
+  },
+  suggestionChipActive: {
+    backgroundColor: "#edf4ff",
+    borderColor: "#c8d8ef"
+  },
+  suggestionChipText: {
+    color: "#111827",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  suggestionChipTextActive: {
+    color: NAVY
+  },
+  settingToggleRow: {
+    minHeight: 66,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#eef2f7",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
+  },
+  tickBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: LINE,
+    backgroundColor: "#f8fafc",
+    color: CARD,
+    textAlign: "center",
+    lineHeight: 38,
+    fontSize: 11,
+    fontWeight: "900",
+    overflow: "hidden"
+  },
+  tickBoxActive: {
+    backgroundColor: GREEN,
+    borderColor: GREEN,
+    color: CARD
   },
   managerHeader: {
     marginTop: 4,
@@ -3118,6 +3330,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden"
+  },
+  paymentLogo: {
+    width: 58,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden"
+  },
+  gpayG: {
+    color: "#4285f4",
+    fontSize: 16,
+    lineHeight: 18,
+    fontWeight: "900"
+  },
+  logoPayText: {
+    marginTop: 1,
+    fontSize: 9,
+    lineHeight: 10,
+    fontWeight: "900"
   },
   upiText: {
     fontSize: 12,
