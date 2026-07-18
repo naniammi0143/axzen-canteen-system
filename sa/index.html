@@ -782,6 +782,11 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 12px;
     }
+    .report-metric-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
     .work-card {
       border: 1px solid #e8edf4;
       border-radius: 12px;
@@ -921,6 +926,52 @@
       margin-top: 8px;
       font-size: 26px;
     }
+    .store-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .store-action {
+      min-height: 92px;
+      border: 1px solid #e8edf4;
+      border-radius: 14px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      color: var(--ink);
+      display: grid;
+      place-items: center;
+      gap: 6px;
+      font-weight: 950;
+      box-shadow: 0 12px 28px #1118270d;
+    }
+    .store-action.active { background: linear-gradient(145deg, #102653, #1d4ed8); color: white; border-color: #102653; }
+    .store-action span {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      background: #eef5ff;
+      color: #102653;
+    }
+    .store-action.active span { background: #ffffff24; color: white; }
+    .store-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .store-form-grid input, .store-form-grid select {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fbfcff;
+      font-weight: 850;
+    }
+    .store-form-grid .full { grid-column: 1 / -1; }
+    .store-list { display: grid; gap: 8px; }
+    .store-list-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 62px;
+      border: 1px solid #e8edf4;
+      border-radius: 12px;
+      background: #fbfcff;
+      padding: 10px;
+    }
+    .store-list-row small { display: block; margin-top: 3px; color: var(--muted); font-weight: 850; }
     .data-table {
       width: 100%;
       border-collapse: collapse;
@@ -1122,6 +1173,14 @@
       .work-header { display: grid; padding: 14px; }
       .work-header h2 { font-size: 20px; }
       .work-grid { grid-template-columns: 1fr; }
+      .report-metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      .report-metric-grid .metric-card { min-height: 80px; padding: 11px 8px; }
+      .report-metric-grid .metric-card strong { font-size: 18px; }
+      .report-metric-grid .metric-card span { font-size: 10px; }
+      .store-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+      .store-action { min-height: 78px; font-size: 12px; }
+      .store-form-grid { grid-template-columns: 1fr; }
+      .store-form-grid .full { grid-column: auto; }
       .data-table { font-size: 12px; }
       .data-table th, .data-table td { padding: 9px 5px; }
       .search-row { display: none; }
@@ -1340,6 +1399,10 @@
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
     const heldOrdersKey = "AXEN_HELD_ORDERS";
+    const bulkDraftKey = "AXEN_BULK_ORDER_DRAFT";
+    const storePurchasesKey = "AXEN_STORE_PURCHASES";
+    const storeUsageKey = "AXEN_STORE_USAGE";
+    const storeTabKey = "AXEN_STORE_TAB";
     const sessionKey = "AXEN_SESSION";
     const tokenKey = "AXEN_TOKEN";
     const loginCacheKey = "AXEN_LOGIN_CACHE";
@@ -1964,8 +2027,8 @@
         const qty = Number(item.qty || 0);
         const rate = Number(item.price || 0);
         const amount = qty * rate;
-        const name = String(item.name || "Item").slice(0, 13).padEnd(13);
-        return `${String(index).padEnd(2)} ${name}${String(qty).padStart(2)} ${String(rate.toFixed(0)).padStart(4)} ${String(amount.toFixed(0)).padStart(5)}`;
+        const name = String(item.name || "Item").slice(0, 11).padEnd(11);
+        return `${String(index).padEnd(2)} ${name}${String(qty).padStart(2)} ${String(rate.toFixed(2)).padStart(7)} ${String(amount.toFixed(2)).padStart(8)}`.slice(0, width);
       };
       const totalQty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const total = Number(order.total || 0);
@@ -1989,14 +2052,17 @@
         leftRight(`Cashier ${order.cashier || user?.name || "-"}`, `Token ${tokenNo}`),
         leftRight("Payment", paymentLabel),
         line,
-        "#  ITEM NAME      QTY RATE    Rs",
+        "#  ITEM NAME    QTY  RATE  AMOUNT",
         line,
         ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
         line,
         leftRight("SUBTOTAL", amountText(subtotal)),
         leftRight("DISCOUNT", amountText(discount)),
         leftRight("TOTAL", amountText(total)),
+        line,
         center("THANK YOU! VISIT AGAIN"),
+        "",
+        "",
         ""
       ].join("\n");
     }
@@ -2193,6 +2259,57 @@
       writeJson(heldOrdersKey, value);
     }
 
+    function bulkDraft() {
+      return readJson(bulkDraftKey, []);
+    }
+
+    function setBulkDraft(value) {
+      writeJson(bulkDraftKey, value);
+    }
+
+    function storePurchases() {
+      return readJson(storePurchasesKey, []);
+    }
+
+    function setStorePurchases(value) {
+      writeJson(storePurchasesKey, value);
+    }
+
+    function storeUsage() {
+      return readJson(storeUsageKey, []);
+    }
+
+    function setStoreUsage(value) {
+      writeJson(storeUsageKey, value);
+    }
+
+    function storeTab() {
+      return localStorage.getItem(storeTabKey) || "purchase";
+    }
+
+    function setStoreTab(value) {
+      localStorage.setItem(storeTabKey, value);
+      renderOptionPage();
+    }
+
+    function storeInventoryRows() {
+      const map = new Map();
+      storePurchases().forEach(row => {
+        const key = `${row.item || "Item"}::${row.unit || "Kgs"}`;
+        const current = map.get(key) || { item: row.item || "Item", unit: row.unit || "Kgs", bought: 0, used: 0, amount: 0 };
+        current.bought += Number(row.quantity || 0);
+        current.amount += Number(row.price || 0);
+        map.set(key, current);
+      });
+      storeUsage().forEach(row => {
+        const key = `${row.item || "Item"}::${row.unit || "Kgs"}`;
+        const current = map.get(key) || { item: row.item || "Item", unit: row.unit || "Kgs", bought: 0, used: 0, amount: 0 };
+        current.used += Number(row.quantity || 0);
+        map.set(key, current);
+      });
+      return [...map.values()];
+    }
+
     function holdCurrentOrder() {
       if (!cart.length) {
         $("posMessage").textContent = "Cart empty. Items add chesi hold cheyyandi.";
@@ -2316,6 +2433,7 @@
         bulk: "Orders",
         report: "Reports",
         finance: "Finance",
+        store: "Store",
         expenses: "Expenses",
         cash: "Cash Summary",
         stock: "Stock Availability",
@@ -2334,6 +2452,7 @@
         bulk: "Bulk quantity order entry.",
         report: "Date wise, item wise and payment reports.",
         finance: "Date wise finance, expenses and profit/loss.",
+        store: "Purchases, today used entries and stock balance.",
         expenses: "Add and review restaurant expenses.",
         cash: "Cash, online and credit collection split.",
         stock: "Inventory view with low-stock status.",
@@ -2385,6 +2504,8 @@
     }
 
     function bulkOrderPageHtml() {
+      const draft = bulkDraft();
+      const draftTotal = draft.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0), 0);
       const rows = products.slice().sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0)).map(item => `
         <div class="bulk-order-row">
           <span class="bulk-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
@@ -2396,10 +2517,11 @@
         <div class="work-card">
           <div class="bulk-order-grid">${rows || `<div class="muted">Menu items load avvaledu</div>`}</div>
           <div class="option-card" style="margin-top:12px">
-            <div class="option-row"><span>Cart Items</span><strong id="bulkCartCount">${cart.reduce((sum, item) => sum + Number(item.qty || 0), 0)}</strong></div>
-            <div class="option-row"><span>Total</span><strong id="bulkCartTotal">${money(cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0), 0))}</strong></div>
-            <button class="page-action" id="bulkAddToCart" type="button">Add Quantities</button>
+            <div class="option-row"><span>Order Draft Items</span><strong id="bulkCartCount">${draft.reduce((sum, item) => sum + Number(item.qty || 0), 0)}</strong></div>
+            <div class="option-row"><span>Total</span><strong id="bulkCartTotal">${money(draftTotal)}</strong></div>
+            <button class="page-action" id="bulkAddToCart" type="button">Save Order Entry</button>
             <button class="primary" id="bulkProceedPayment" type="button">Proceed Payment</button>
+            <button class="danger" id="bulkClearDraft" type="button">Clear Draft</button>
           </div>
         </div>`;
     }
@@ -2505,6 +2627,68 @@
         </div>`;
     }
 
+    function storePageHtml() {
+      const tab = storeTab();
+      const purchases = storePurchases();
+      const used = storeUsage();
+      const inventory = storeInventoryRows();
+      const totalPurchase = purchases.reduce((sum, row) => sum + Number(row.price || 0), 0);
+      const usedToday = used.filter(row => dateInputValue(new Date(row.createdAt || row.date || Date.now())) === dateInputValue(new Date())).length;
+      const categories = ["Raw Material", "Vegetables", "Rice", "Oil", "Packing", "Cleaning", "Other"];
+      const units = ["Kgs", "Pcs", "Ltrs"];
+      const purchaseRows = purchases.map(row => `
+        <div class="store-list-row">
+          <div><strong>${esc(row.item)}</strong><small>${esc(row.date)} | ${esc(row.vendor)} | ${esc(row.category)} | ${Number(row.quantity || 0)} ${esc(row.unit)}</small></div>
+          <strong>${money(row.price)}</strong>
+        </div>`).join("");
+      const usedRows = used.map(row => `
+        <div class="store-list-row">
+          <div><strong>${esc(row.item)}</strong><small>${esc(row.date)} | Used entry</small></div>
+          <strong>${Number(row.quantity || 0)} ${esc(row.unit)}</strong>
+        </div>`).join("");
+      const inventoryRows = inventory.map(row => `
+        <tr><td>${esc(row.item)}</td><td>${Number(row.bought || 0)} ${esc(row.unit)}</td><td>${Number(row.used || 0)} ${esc(row.unit)}</td><td>${Math.max(0, Number(row.bought || 0) - Number(row.used || 0))} ${esc(row.unit)}</td><td>${money(row.amount)}</td></tr>`).join("");
+      return `
+        ${sectionHeader("store")}
+        <div class="store-actions">
+          <button class="store-action ${tab === "used" ? "active" : ""}" data-store-tab="used" type="button"><span>U</span>Today Used</button>
+          <button class="store-action ${tab === "purchase" ? "active" : ""}" data-store-tab="purchase" type="button"><span>+</span>Purchase</button>
+          <button class="store-action ${tab === "list" ? "active" : ""}" data-store-tab="list" type="button"><span>L</span>List</button>
+        </div>
+        <div class="report-metric-grid">
+          <div class="work-card metric-card"><span>Purchase Value</span><strong>${money(totalPurchase)}</strong></div>
+          <div class="work-card metric-card"><span>Purchase Bills</span><strong>${purchases.length}</strong></div>
+          <div class="work-card metric-card"><span>Used Today</span><strong>${usedToday}</strong></div>
+          <div class="work-card metric-card"><span>Stock Items</span><strong>${inventory.length}</strong></div>
+          <div class="work-card metric-card"><span>Expenses Added</span><strong>${money(totalPurchase)}</strong></div>
+          <div class="work-card metric-card"><span>Status</span><strong>Ready</strong></div>
+        </div>
+        ${tab === "purchase" ? `<div class="work-card">
+          <h3>Create Purchase</h3>
+          <div class="store-form-grid">
+            <input id="storePurchaseDate" type="date" value="${dateInputValue(new Date())}">
+            <input id="storeVendor" placeholder="Purchased from">
+            <input id="storeItem" placeholder="Item name">
+            <select id="storeCategory">${categories.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
+            <input id="storeQty" type="number" min="0" placeholder="Quantity">
+            <select id="storeUnit">${units.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
+            <input class="full" id="storePrice" type="number" min="0" placeholder="Total price">
+            <button class="page-action full" id="saveStorePurchase" type="button">Create Purchase</button>
+          </div>
+        </div>` : ""}
+        ${tab === "used" ? `<div class="work-card">
+          <h3>Today Used Entry</h3>
+          <div class="store-form-grid">
+            <input id="storeUsedItem" placeholder="Used item name">
+            <input id="storeUsedQty" type="number" min="0" placeholder="Used quantity">
+            <select id="storeUsedUnit">${units.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
+            <button class="page-action" id="saveStoreUsage" type="button">Save Used Entry</button>
+          </div>
+        </div><div class="work-card"><h3>Today Used List</h3><div class="store-list">${usedRows || `<div class="muted">No used entries</div>`}</div></div>` : ""}
+        <div class="work-card"><h3>Purchase List</h3><div class="store-list">${purchaseRows || `<div class="muted">No purchases yet</div>`}</div></div>
+        <div class="work-card"><h3>Stock Balance</h3><table class="data-table"><thead><tr><th>Item</th><th>Bought</th><th>Used</th><th>Balance</th><th>Value</th></tr></thead><tbody>${inventoryRows || `<tr><td colspan="5">No stock yet</td></tr>`}</tbody></table></div>`;
+    }
+
     function categoriesPageHtml() {
       return `
         ${sectionHeader("categories")}
@@ -2564,7 +2748,7 @@
           <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
           <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button><button data-report-range="year" type="button">Year</button></div>
         </div>
-        <div class="work-grid">
+        <div class="report-metric-grid">
           <div class="work-card metric-card"><span>Total Sale</span><strong>${money(totals.total)}</strong></div>
           <div class="work-card metric-card"><span>Total Bills</span><strong>${rows.length}</strong></div>
           <div class="work-card metric-card"><span>Cash</span><strong>${money(totals.cash)}</strong></div>
@@ -2930,6 +3114,7 @@
         : activePosSection === "bulk" ? bulkOrderPageHtml()
         : activePosSection === "report" ? reportPageHtml()
         : activePosSection === "finance" ? financePageHtml()
+        : activePosSection === "store" ? storePageHtml()
         : activePosSection === "expenses" ? expensesPageHtml()
         : activePosSection === "cash" ? cashPageHtml()
         : activePosSection === "stock" ? stockPageHtml()
@@ -2980,10 +3165,14 @@
       document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => setReportQuickRange(btn.dataset.reportRange)));
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
+      if ($("saveStorePurchase")) $("saveStorePurchase").addEventListener("click", saveStorePurchaseFromPos);
+      if ($("saveStoreUsage")) $("saveStoreUsage").addEventListener("click", saveStoreUsageFromPos);
       if ($("saveCategoryBtn")) $("saveCategoryBtn").addEventListener("click", saveCategoryFromPos);
       if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
       if ($("bulkAddToCart")) $("bulkAddToCart").addEventListener("click", addBulkItemsToCart);
       if ($("bulkProceedPayment")) $("bulkProceedPayment").addEventListener("click", openBulkConfirmModal);
+      if ($("bulkClearDraft")) $("bulkClearDraft").addEventListener("click", clearBulkDraft);
+      document.querySelectorAll("[data-store-tab]").forEach(btn => btn.addEventListener("click", () => setStoreTab(btn.dataset.storeTab)));
       document.querySelectorAll("[data-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem, input.value)));
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       document.querySelectorAll("[data-edit-item]").forEach(btn => btn.addEventListener("click", () => toggleItemEdit(btn.dataset.editItem)));
@@ -3034,15 +3223,16 @@
 
     function addBulkItemsToCart() {
       let added = 0;
+      const draft = bulkDraft();
       document.querySelectorAll("[data-bulk-item]").forEach(input => {
         const qty = Math.max(0, Number(input.value || 0));
         if (!qty) return;
         const product = products.find(item => Number(item.id) === Number(input.dataset.bulkItem));
         if (!product) return;
         const lineId = cartLineId(product, null);
-        const existing = cart.find(item => item.lineId === lineId);
+        const existing = draft.find(item => item.lineId === lineId);
         if (existing) existing.qty += qty;
-        else cart.push({
+        else draft.push({
           ...product,
           lineId,
           parentId: Number(product.id),
@@ -3058,26 +3248,26 @@
         $("posMessage").className = "status error";
         return;
       }
-      renderCart();
-      renderProducts();
+      setBulkDraft(draft);
       renderOptionPage();
-      $("posMessage").textContent = `${added} items cart lo add ayyayi`;
+      $("posMessage").textContent = `${added} items order draft lo save ayyayi`;
       $("posMessage").className = "status ok";
     }
 
     function openBulkConfirmModal() {
-      if (!cart.length) {
-        $("posMessage").textContent = "Cart empty. Quantity add cheyyandi.";
+      const draft = bulkDraft();
+      if (!draft.length) {
+        $("posMessage").textContent = "Order draft empty. Quantity save cheyyandi.";
         $("posMessage").className = "status error";
         return;
       }
-      const total = cart.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0), 0);
+      const total = draft.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0), 0);
       $("optionsModalMount").innerHTML = `
         <div class="modal-backdrop center-modal">
           <div class="payment-modal">
             <div class="modal-title-row"><h2>Confirm Bill Items</h2><button class="modal-x" id="closeBulkConfirm" type="button">X</button></div>
             <div class="cart-view-list">
-              ${cart.map(item => `<div class="cart-view-row"><div><strong>${esc(item.name)}</strong><small>${item.qty} x ${money(item.price)}</small></div><strong>${money(Number(item.price) * Number(item.qty))}</strong></div>`).join("")}
+              ${draft.map(item => `<div class="cart-view-row"><div><strong>${esc(item.name)}</strong><small>${item.qty} x ${money(item.price)}</small></div><strong>${money(Number(item.price) * Number(item.qty))}</strong></div>`).join("")}
             </div>
             <div class="row-between"><span>Total</span><strong>${money(total)}</strong></div>
             <button class="primary" id="bulkConfirmOk" type="button">OK - Select Payment</button>
@@ -3085,9 +3275,19 @@
         </div>`;
       $("closeBulkConfirm").addEventListener("click", closeOptionsModal);
       $("bulkConfirmOk").addEventListener("click", () => {
+        cart = draft.map(item => ({ ...item }));
+        cartDiscount = 0;
+        renderCart();
         closeOptionsModal();
         openPaymentModal();
       });
+    }
+
+    function clearBulkDraft() {
+      setBulkDraft([]);
+      renderOptionPage();
+      $("posMessage").textContent = "Order draft cleared";
+      $("posMessage").className = "status ok";
     }
 
     async function savePriceFromPos(id, value) {
@@ -3172,6 +3372,51 @@
         $("posMessage").textContent = "Expense save failed. Admin permission required.";
         $("posMessage").className = "status error";
       }
+    }
+
+    async function saveStorePurchaseFromPos() {
+      const date = $("storePurchaseDate")?.value || dateInputValue(new Date());
+      const vendor = $("storeVendor")?.value.trim();
+      const item = $("storeItem")?.value.trim();
+      const category = $("storeCategory")?.value || "Raw Material";
+      const quantity = Number($("storeQty")?.value || 0);
+      const unit = $("storeUnit")?.value || "Kgs";
+      const price = Number($("storePrice")?.value || 0);
+      if (!vendor || !item || quantity <= 0 || price <= 0) {
+        $("posMessage").textContent = "Vendor, item, quantity and price required";
+        $("posMessage").className = "status error";
+        return;
+      }
+      const purchase = { id: Date.now(), date, vendor, item, category, quantity, unit, price, createdAt: new Date().toISOString() };
+      setStorePurchases([purchase, ...storePurchases()]);
+      const expensePayload = { title: `${item} purchase`, amount: price, category: "Store Purchase", note: `${quantity} ${unit} from ${vendor}` };
+      try {
+        const data = await adminApi("/expenses", { method: "POST", body: JSON.stringify(expensePayload) });
+        expenses = data.expenses || [data.expense, ...expenses].filter(Boolean);
+        $("posMessage").textContent = "Purchase saved and expense created";
+        $("posMessage").className = "status ok";
+      } catch {
+        expenses = [{ id: `store-${purchase.id}`, date, title: expensePayload.title, amount: price, category: "Store Purchase", note: expensePayload.note, createdAt: purchase.createdAt }, ...expenses];
+        $("posMessage").textContent = "Purchase saved. Expense added locally.";
+        $("posMessage").className = "status ok";
+      }
+      renderOptionPage();
+    }
+
+    function saveStoreUsageFromPos() {
+      const item = $("storeUsedItem")?.value.trim();
+      const quantity = Number($("storeUsedQty")?.value || 0);
+      const unit = $("storeUsedUnit")?.value || "Kgs";
+      if (!item || quantity <= 0) {
+        $("posMessage").textContent = "Used item and quantity required";
+        $("posMessage").className = "status error";
+        return;
+      }
+      const entry = { id: Date.now(), date: dateInputValue(new Date()), item, quantity, unit, createdAt: new Date().toISOString() };
+      setStoreUsage([entry, ...storeUsage()]);
+      $("posMessage").textContent = "Used entry saved";
+      $("posMessage").className = "status ok";
+      renderOptionPage();
     }
 
     function saveCategoryFromPos() {
@@ -3268,6 +3513,7 @@
                 ${drawerItem("held", "Orders", "O", activeSection)}
                 ${drawerItem("report", "Reports", "R", activeSection)}
                 ${drawerItem("finance", "Finance", "F", activeSection)}
+                ${drawerItem("store", "Store", "S", activeSection)}
                 ${drawerItem("expenses", "Expenses", "X", activeSection)}
                 ${drawerItem("cash", "Cash Summary", "C", activeSection)}
                 <button class="drawer-item" id="dayCloseBtn" type="button"><span>D</span><strong>Day Close</strong><span class="drawer-arrow">›</span></button>
@@ -3540,6 +3786,7 @@
 
       setPaymentStatus("Success", "status ok");
       payment = "";
+      if (activePosSection === "bulk") setBulkDraft([]);
       clearCartState();
       renderAdmin();
       setTimeout(closePaymentModal, 250);
@@ -3980,14 +4227,14 @@
       if (!user) return show("loginView");
       if (user.mustChangePassword) return showOwnerSetup();
       renderUserChrome();
-      await loadSettings();
-      await loadProducts();
-      await loadAdminData();
-      await syncPendingOrders();
       show("posView");
       renderCart();
       updateSyncStatus();
       setPosSection("billing");
+      await loadSettings();
+      await loadProducts();
+      loadAdminData().catch(() => updateSyncStatus("Data load failed", "offline"));
+      syncPendingOrders().catch(() => updateSyncStatus());
     }
 
     $("loginForm").addEventListener("submit", login);
