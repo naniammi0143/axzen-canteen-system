@@ -272,6 +272,8 @@
       background: linear-gradient(145deg, #f0f7ff, #fff8e8);
       background-size: cover;
       background-position: center;
+      position: relative;
+      overflow: hidden;
       font-size: 0;
       font-weight: 900;
       color: var(--blue);
@@ -1194,6 +1196,41 @@
     #posView .item-card.selected .item-icon { outline: 3px solid #2f7d26; outline-offset: -3px; }
     #posView .item-card.selected .item-price { color: #2f7d26; }
     #posView .item-icon { height: 174px; border-radius: 10px; }
+    #posView .half-item-card .item-icon::after {
+      content: "";
+      position: absolute;
+      inset: 0 0 0 50%;
+      background: rgba(8, 38, 83, 0.34);
+      pointer-events: none;
+    }
+    .half-plate-slash {
+      position: absolute;
+      top: -22px;
+      bottom: -22px;
+      left: 50%;
+      width: 4px;
+      background: rgba(255, 255, 255, 0.94);
+      transform: rotate(24deg);
+      z-index: 2;
+      pointer-events: none;
+    }
+    .half-plate-mark {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      z-index: 3;
+      min-height: 24px;
+      padding: 0 9px;
+      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.94);
+      color: #082653;
+      display: inline-grid;
+      place-items: center;
+      font-size: 10px;
+      font-weight: 950;
+      letter-spacing: 0;
+      box-shadow: 0 6px 16px #11182722;
+    }
     #posView .item-card h3 { font-size: 19px; }
     #posView .item-card p { display: none; }
     .item-body { display: grid; gap: 7px; padding: 4px 6px 0; }
@@ -1233,8 +1270,8 @@
       border: 1px solid #ffffff24;
       border-radius: 18px;
       overflow: hidden;
-      background: #020617d6;
-      box-shadow: 0 -10px 34px #02061742;
+      background: #082653;
+      box-shadow: 0 -10px 28px #08265333;
       backdrop-filter: blur(18px) saturate(140%);
       -webkit-backdrop-filter: blur(18px) saturate(140%);
     }
@@ -1418,7 +1455,6 @@
         <button class="active"><span aria-hidden="true">⌂</span><b>Home</b></button>
         <button><span aria-hidden="true">▤</span><b>Orders</b></button>
         <button><span aria-hidden="true">▥</span><b>Reports</b></button>
-        <button><span aria-hidden="true">⚙</span><b>Settings</b></button>
       </nav>
       <section class="cart-sheet">
         <div class="cart-inner">
@@ -1498,7 +1534,7 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const categoryOrder = (() => {
-      const defaults = ["All", "Breakfast", "Meals", "Biryani", "Starters", "Chinese", "Tiffin", "Tea", "Coffee", "Drinks", "Snacks", "Lunch", "Juice", "Desserts", "Dinner"];
+      const defaults = ["All", "Breakfast", "Meals", "Biryani", "Starters", "Chinese", "Tiffin", "Tea", "Coffee", "Drinks", "Snacks", "Lunch", "Juice", "Desserts", "Dinner", "Half Items"];
       try {
         const saved = JSON.parse(localStorage.getItem("AXEN_CATEGORIES") || "[]");
         return [...new Set([...defaults, ...saved])];
@@ -1506,7 +1542,7 @@
         return defaults;
       }
     })();
-    const appBuild = "1.9.1";
+    const appBuild = "2.2.0";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -1864,6 +1900,7 @@
 
     function renderCategories() {
       const found = new Set(products.filter(item => !isItemHidden(item)).map(item => item.category || "Other"));
+      found.add("Half Items");
       const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
       $("categoryTabs").innerHTML = categories.map(category => `
         <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${category}"><span>${categoryIcon(category)}</span>${categoryLabel(category)}</button>
@@ -1873,24 +1910,33 @@
     function renderProducts() {
       renderCategories();
       const query = itemSearch.trim().toLowerCase();
-      const visible = (activeCategory === "All" ? products : products.filter(item => item.category === activeCategory))
-        .filter(item => !isItemHidden(item))
+      const baseProducts = products.filter(item => !isItemHidden(item));
+      const visible = (activeCategory === "All"
+        ? baseProducts
+        : activeCategory === "Half Items"
+        ? baseProducts
+          .filter(item => item.category !== "Half Items")
+          .map(item => ({ ...item, isHalfItem: true, displayName: `Half ${item.name || "Item"}`, displayPrice: Math.max(1, Math.round(Number(item.price || 0) / 2)) }))
+        : baseProducts.filter(item => item.category === activeCategory))
         .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
         .slice()
         .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
       $("menuGrid").innerHTML = visible.map(item => {
         const selectedOption = selectedSubItems[item.id] || null;
+        const displayName = item.displayName || item.name;
+        const displayPrice = item.displayPrice || item.price;
+        const halfAttrs = item.isHalfItem ? ` data-half-item="1"` : "";
         return `
-        <button class="item-card ${cartQty(item.id) ? "selected" : ""}" data-item="${item.id}">
+        <button class="item-card ${item.isHalfItem ? "half-item-card" : ""} ${cartQty(item.id) ? "selected" : ""}" data-item="${item.id}"${halfAttrs}>
           ${cartQty(item.id) ? `<span class="remove-badge" data-remove-item="${item.id}">X</span>` : ""}
           ${cartQty(item.id) ? `<span class="count-badge">${cartQty(item.id)}</span>` : ""}
-          <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(item.name || "?").slice(0, 2).toUpperCase()}</span>
+          <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(displayName || "?").slice(0, 2).toUpperCase()}${item.isHalfItem ? `<span class="half-plate-mark">HALF</span><span class="half-plate-slash"></span>` : ""}</span>
           <span class="item-body">
             <span class="item-name-line">
-              <span class="item-name-wrap"><span class="item-emoji">${itemEmoji(item)}</span><h3>${item.name}</h3></span>
-              <span class="item-price">${money(selectedOption ? selectedOption.price : item.price)}</span>
+              <span class="item-name-wrap"><span class="item-emoji">${itemEmoji(item)}</span><h3>${esc(displayName)}</h3></span>
+              <span class="item-price">${money(selectedOption ? selectedOption.price : displayPrice)}</span>
             </span>
-            ${productSubItems(item).length ? `<span class="variant-hint">${selectedOption ? esc(selectedOption.name) : "Hold for sub items"}</span>` : ""}
+            ${item.isHalfItem ? `<span class="variant-hint">Half plate price</span>` : productSubItems(item).length ? `<span class="variant-hint">${selectedOption ? esc(selectedOption.name) : "Hold for sub items"}</span>` : ""}
           </span>
         </button>
       `;
@@ -2442,7 +2488,7 @@
       if (Array.isArray(row && row.items) && row.items.length) return row.items;
       return [{
         item: row.item || "Item",
-        category: row.category || "Raw Material",
+        category: row.category || "Used Material",
         quantity: Number(row.quantity || 0),
         unit: row.unit || "Kgs",
         price: Number(row.price || 0),
@@ -2574,7 +2620,7 @@
       const rows = storeInventoryRows().slice(0, 12).map(item => {
         const balance = Math.max(0, Number(item.bought || 0) - Number(item.used || 0) - Number(item.sold || 0));
         const status = balance <= 0 ? "Out" : balance <= 10 ? "Low" : "In Stock";
-        return `<div class="option-row"><span>${esc(item.item || "Item")}<br><small>${item.type === "direct_sale" ? "Direct Sale Item" : "Raw Material"}</small></span><strong>${balance} ${esc(item.unit)} ${status}</strong></div>`;
+        return `<div class="option-row"><span>${esc(item.item || "Item")}<br><small>${item.type === "direct_sale" ? "Direct Sale" : "Used Material"}</small></span><strong>${balance} ${esc(item.unit)} ${status}</strong></div>`;
       }).join("");
       return `<div class="option-card"><h3>Store Stock</h3>${rows || `<div class="muted">Store lo purchase invoice create cheyyandi.</div>`}</div>`;
     }
@@ -2755,22 +2801,36 @@
     function financePageHtml() {
       const range = reportRange();
       const sales = rangedOrders().reduce((sum, order) => sum + Number(order.total || 0), 0);
-      const filteredExpenses = rangedExpenses();
+      const from = new Date(`${range.from}T00:00:00`);
+      const to = new Date(`${range.to}T23:59:59`);
+      const filteredExpenses = rangedExpenses().filter(expense => expense.category !== "Store Purchase");
       const expenseTotal = filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-      const foodCost = Math.round(sales * 0.48);
-      const net = sales - foodCost - expenseTotal;
+      const purchaseInvoices = storePurchases().filter(row => {
+        const date = row.createdAt ? new Date(row.createdAt) : row.date ? new Date(`${row.date}T00:00:00`) : new Date();
+        return date >= from && date <= to;
+      });
+      const storePurchaseTotal = purchaseInvoices.reduce((sum, row) => sum + purchaseTotal(row), 0);
+      const net = sales - expenseTotal - storePurchaseTotal;
       return `
         ${sectionHeader("finance")}
         <div class="work-card report-filter">
-          <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
-          <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
-          <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button><button data-report-range="year" type="button">Year</button></div>
+          <h3>Profit Loss Report</h3>
+          <div class="muted">${esc(range.from)} to ${esc(range.to)}</div>
+          <div class="quick-ranges"><button data-report-range="week" type="button">Weekly</button><button data-report-range="month" type="button">Monthly</button><button data-report-range="year" type="button">Yearly</button></div>
         </div>
         <div class="work-grid">
           <div class="work-card metric-card"><span>Sales</span><strong>${money(sales)}</strong></div>
-          <div class="work-card metric-card"><span>Food Cost</span><strong>${money(foodCost)}</strong></div>
           <div class="work-card metric-card"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div>
+          <div class="work-card metric-card"><span>Store Purchase Invoice</span><strong>${money(storePurchaseTotal)}</strong></div>
           <div class="work-card metric-card"><span>${net >= 0 ? "Profit" : "Loss"}</span><strong>${money(Math.abs(net))}</strong></div>
+        </div>
+        <div class="work-card">
+          <h3>Report Basis</h3>
+          <div class="option-row"><span>Sales</span><strong>${money(sales)}</strong></div>
+          <div class="option-row"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div>
+          <div class="option-row"><span>Store Purchase Invoice</span><strong>${money(storePurchaseTotal)}</strong></div>
+          <button class="page-action full" id="shareFinancePdf" type="button">Share PDF</button>
+          <div class="status" id="financeShareStatus"></div>
         </div>
         ${hasAdminAccess() ? expenseFormHtml() : adminUnlockHtml()}
         <div class="work-card">
@@ -2779,10 +2839,10 @@
         </div>`;
     }
 
-    function purchaseLineHtml(index, categories = ["Raw Material"], units = ["Kgs", "Pcs", "Ltrs"]) {
+    function purchaseLineHtml(index, categories = ["Used Material"], units = ["Kgs", "Pcs", "Ltrs"]) {
       return `<div class="purchase-line" data-purchase-line>
         <input data-store-item placeholder="Item name">
-        <select data-store-type><option value="raw_material">Raw Material</option><option value="direct_sale">Direct Sale Item</option></select>
+        <select data-store-type><option value="direct_sale">Direct Sale</option><option value="raw_material">Used Material</option></select>
         <select data-store-category>${categories.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
         <input data-store-qty type="number" min="0" placeholder="Qty">
         <select data-store-unit>${units.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
@@ -2798,12 +2858,12 @@
       const inventory = storeInventoryRows();
       const totalPurchase = purchases.reduce((sum, row) => sum + purchaseTotal(row), 0);
       const usedToday = used.filter(row => dateInputValue(new Date(row.createdAt || row.date || Date.now())) === dateInputValue(new Date())).length;
-      const categories = ["Raw Material", "Vegetables", "Rice", "Oil", "Packing", "Cleaning", "Other"];
+      const categories = ["Used Material", "Vegetables", "Rice", "Oil", "Gas", "Packing", "Cleaning", "Other"];
       const units = ["Kgs", "Pcs", "Ltrs"];
-      const usedItemOptions = inventory.map(row => `<option value="${esc(row.item)}">${esc(row.item)} - ${row.type === "direct_sale" ? "Direct Sale Item" : "Raw Material"} - ${Math.max(0, Number(row.bought || 0) - Number(row.used || 0) - Number(row.sold || 0))} ${esc(row.unit)}</option>`).join("");
+      const usedItemOptions = inventory.map(row => `<option value="${esc(row.item)}">${esc(row.item)} - ${row.type === "direct_sale" ? "Direct Sale" : "Used Material"} - ${Math.max(0, Number(row.bought || 0) - Number(row.used || 0) - Number(row.sold || 0))} ${esc(row.unit)}</option>`).join("");
       const purchaseRows = purchases.map(row => `
         <div class="store-list-row">
-          <div><strong>${esc(row.billNo || row.item || "Purchase Invoice")}</strong><small>${esc(row.date)} | ${esc(row.vendor)} | ${(purchaseLineItems(row) || []).length} items${row.address ? ` | ${esc(row.address)}` : ""}</small></div>
+          <div><strong>${esc(row.billNo || row.item || "Purchase Invoice")}</strong><small>${esc(row.date)} | ${esc(row.vendor)}${row.phone ? ` | ${esc(row.phone)}` : ""} | ${(purchaseLineItems(row) || []).length} items${row.address ? ` | ${esc(row.address)}` : ""}</small></div>
           <strong>${money(purchaseTotal(row))}</strong>
         </div>`).join("");
       const usedRows = used.map(row => `
@@ -2813,7 +2873,7 @@
         </div>`).join("");
       const inventoryRows = inventory.map(row => {
         const balance = Math.max(0, Number(row.bought || 0) - Number(row.used || 0) - Number(row.sold || 0));
-        return `<tr><td>${esc(row.item)}</td><td>${row.type === "direct_sale" ? "Direct Sale Item" : "Raw Material"}</td><td>${Number(row.bought || 0)} ${esc(row.unit)}</td><td>${Number(row.used || 0)} ${esc(row.unit)}</td><td>${Number(row.sold || 0)} ${esc(row.unit)}</td><td>${balance} ${esc(row.unit)}</td><td>${money(row.amount)}</td></tr>`;
+        return `<tr><td>${esc(row.item)}</td><td>${row.type === "direct_sale" ? "Direct Sale" : "Used Material"}</td><td>${Number(row.bought || 0)} ${esc(row.unit)}</td><td>${Number(row.used || 0)} ${esc(row.unit)}</td><td>${Number(row.sold || 0)} ${esc(row.unit)}</td><td>${balance} ${esc(row.unit)}</td><td>${money(row.amount)}</td></tr>`;
       }).join("");
       return `
         ${sectionHeader("store")}
@@ -2831,11 +2891,12 @@
           <div class="work-card metric-card"><span>Status</span><strong>Ready</strong></div>
         </div>
         ${tab === "purchase" ? `<div class="work-card purchase-invoice-card">
-          <h3>Clean Purchase Invoice</h3>
+          <h3>Purchase Invoice</h3>
           <div class="store-form-grid">
             <input id="storeBillNo" placeholder="Bill number">
             <input id="storePurchaseDate" type="date" value="${dateInputValue(new Date())}">
             <input id="storeVendor" placeholder="Vendor name">
+            <input id="storePhone" placeholder="Vendor phone">
             <input id="storeAddress" placeholder="Vendor address">
           </div>
           <div class="purchase-lines" id="purchaseLines">
@@ -3316,14 +3377,66 @@
       }
     }
 
+    async function shareFinancePdf() {
+      const status = $("financeShareStatus");
+      const range = reportRange();
+      const sales = rangedOrders().reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const from = new Date(`${range.from}T00:00:00`);
+      const to = new Date(`${range.to}T23:59:59`);
+      const filteredExpenses = rangedExpenses().filter(expense => expense.category !== "Store Purchase");
+      const expenseTotal = filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+      const purchaseInvoices = storePurchases().filter(row => {
+        const date = row.createdAt ? new Date(row.createdAt) : row.date ? new Date(`${row.date}T00:00:00`) : new Date();
+        return date >= from && date <= to;
+      });
+      const storePurchaseTotal = purchaseInvoices.reduce((sum, row) => sum + purchaseTotal(row), 0);
+      const net = sales - expenseTotal - storePurchaseTotal;
+      const text = [
+        `${settings.canteenName} Profit Loss Report`,
+        `${range.from} to ${range.to}`,
+        `Sales: ${money(sales)}`,
+        `Expenses: ${money(expenseTotal)}`,
+        `Store Purchase Invoice: ${money(storePurchaseTotal)}`,
+        `${net >= 0 ? "Profit" : "Loss"}: ${money(Math.abs(net))}`
+      ].join("\n");
+      try {
+        if (status) {
+          status.textContent = "Preparing PDF...";
+          status.className = "status";
+        }
+        if (window.AxenShare && typeof window.AxenShare.sharePdf === "function") {
+          const result = window.AxenShare.sharePdf(text, `profit-loss-${Date.now()}.pdf`, "Profit Loss Report PDF");
+          if (status) {
+            status.textContent = String(result || "").toLowerCase().includes("opened") ? "PDF share opened" : result || "PDF ready";
+            status.className = String(result || "").toLowerCase().includes("failed") ? "status error" : "status ok";
+          }
+          return;
+        }
+        const blob = new Blob([text], { type: "application/pdf" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `profit-loss-${Date.now()}.pdf`;
+        link.click();
+        if (status) {
+          status.textContent = "PDF file created";
+          status.className = "status ok";
+        }
+      } catch {
+        if (status) {
+          status.textContent = "PDF report failed";
+          status.className = "status error";
+        }
+      }
+    }
+
     function stockPageHtml() {
       const rows = storeInventoryRows().map(item => {
         const balance = Math.max(0, Number(item.bought || 0) - Number(item.used || 0) - Number(item.sold || 0));
         const low = balance > 0 && balance <= 10;
         const empty = balance <= 0;
-        return `<tr><td>${esc(item.item || "Item")}</td><td>${item.type === "direct_sale" ? "Direct Sale Item" : "Raw Material"}</td><td>${Number(item.bought || 0)} ${esc(item.unit)}</td><td>${Number(item.used || 0)} ${esc(item.unit)}</td><td>${Number(item.sold || 0)} ${esc(item.unit)}</td><td>${balance} ${esc(item.unit)}</td><td><span class="status-pill ${empty ? "danger" : low ? "warn" : ""}">${empty ? "Out of Stock" : low ? "Low Stock" : "In Stock"}</span></td></tr>`;
+        return `<tr><td>${esc(item.item || "Item")}</td><td>${item.type === "direct_sale" ? "Direct Sale" : "Used Material"}</td><td>${Number(item.bought || 0)} ${esc(item.unit)}</td><td>${Number(item.used || 0)} ${esc(item.unit)}</td><td>${Number(item.sold || 0)} ${esc(item.unit)}</td><td>${balance} ${esc(item.unit)}</td><td><span class="status-pill ${empty ? "danger" : low ? "warn" : ""}">${empty ? "Out of Stock" : low ? "Low Stock" : "In Stock"}</span></td></tr>`;
       }).join("");
-      return `${sectionHeader("stock", `<button class="page-action" data-go-store type="button">Open Store</button>`)}<div class="work-card"><h3>Store Stock Availability</h3><div class="muted">Purchase invoice lo enter chesina store stock matrame. Raw material Today Used nunchi minus avuthundi; Direct Sale Item sales bills nunchi auto minus avuthundi.</div><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="7">No store stock found. Store lo purchase invoice create cheyyandi.</td></tr>`}</tbody></table></div>`;
+      return `${sectionHeader("stock", `<button class="page-action" data-go-store type="button">Open Store</button>`)}<div class="work-card"><h3>Store Stock Availability</h3><div class="muted">Purchase invoice lo enter chesina store stock matrame. Used Material Today Used nunchi minus avuthundi; Direct Sale sales bills nunchi auto minus avuthundi.</div><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="7">No store stock found. Store lo purchase invoice create cheyyandi.</td></tr>`}</tbody></table></div>`;
     }
 
     function printerPageHtml() {
@@ -3491,6 +3604,7 @@
       if ($("shareReportImage")) $("shareReportImage").addEventListener("click", shareReportImage);
       if ($("downloadReportImage")) $("downloadReportImage").addEventListener("click", downloadReportImage);
       if ($("shareReportPdf")) $("shareReportPdf").addEventListener("click", shareReportPdf);
+      if ($("shareFinancePdf")) $("shareFinancePdf").addEventListener("click", shareFinancePdf);
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
       if ($("saveStorePurchase")) $("saveStorePurchase").addEventListener("click", saveStorePurchaseFromPos);
@@ -3531,7 +3645,7 @@
     }
 
     function ensureUserNavKeys() {
-      const keys = ["billing", "bulk", "report", "settings"];
+      const keys = ["billing", "bulk", "report"];
       document.querySelectorAll("#userNav button").forEach((btn, index) => {
         btn.dataset.nav = keys[index] || "billing";
       });
@@ -3708,7 +3822,7 @@
     }
 
     function addPurchaseLine() {
-      const categories = ["Raw Material", "Vegetables", "Rice", "Oil", "Packing", "Cleaning", "Other"];
+      const categories = ["Used Material", "Vegetables", "Rice", "Oil", "Gas", "Packing", "Cleaning", "Other"];
       const units = ["Kgs", "Pcs", "Ltrs"];
       const mount = $("purchaseLines");
       if (!mount) return;
@@ -3739,7 +3853,7 @@
       return [...document.querySelectorAll("[data-purchase-line]")].map(line => {
         const item = line.querySelector("[data-store-item]")?.value.trim() || "";
         const type = line.querySelector("[data-store-type]")?.value || "raw_material";
-        const category = line.querySelector("[data-store-category]")?.value || "Raw Material";
+        const category = line.querySelector("[data-store-category]")?.value || "Used Material";
         const quantity = Number(line.querySelector("[data-store-qty]")?.value || 0);
         const unit = line.querySelector("[data-store-unit]")?.value || "Kgs";
         const price = Number(line.querySelector("[data-store-price]")?.value || 0);
@@ -3759,6 +3873,7 @@
       const date = $("storePurchaseDate")?.value || dateInputValue(new Date());
       const vendor = $("storeVendor")?.value.trim();
       const address = $("storeAddress")?.value.trim() || "";
+      const phone = $("storePhone")?.value.trim() || "";
       const items = purchaseInvoiceItemsFromForm();
       const total = items.reduce((sum, row) => sum + Number(row.price || 0), 0);
       if (!vendor || !items.length || total <= 0) {
@@ -3766,7 +3881,7 @@
         $("posMessage").className = "status error";
         return;
       }
-      const purchase = { id: Date.now(), billNo, date, vendor, address, items, total, createdAt: new Date().toISOString() };
+      const purchase = { id: Date.now(), billNo, date, vendor, address, phone, items, total, createdAt: new Date().toISOString() };
       setStorePurchases([purchase, ...storePurchases()]);
       const expensePayload = { title: `Purchase invoice ${billNo}`, amount: total, category: "Store Purchase", note: `${items.length} items from ${vendor}` };
       try {
@@ -4694,11 +4809,16 @@
         return;
       }
       const btn = event.target.closest("[data-item]");
-      if (btn) addToCart(btn.dataset.item, selectedSubItems[btn.dataset.item] || null);
+      if (btn) {
+        const product = products.find(item => Number(item.id) === Number(btn.dataset.item));
+        const halfOption = btn.dataset.halfItem ? { name: "Half Plate", price: Math.max(1, Math.round(Number(product?.price || 0) / 2)) } : null;
+        addToCart(btn.dataset.item, halfOption || selectedSubItems[btn.dataset.item] || null);
+      }
     });
     $("menuGrid").addEventListener("pointerdown", event => {
       const btn = event.target.closest("[data-item]");
       if (!btn) return;
+      if (btn.dataset.halfItem) return;
       const product = products.find(item => Number(item.id) === Number(btn.dataset.item));
       if (!productSubItems(product).length) return;
       clearTimeout(longPressTimer);
