@@ -403,9 +403,66 @@
     }
     .payment-total { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-radius: 12px; background: #f8fafc; font-weight: 950; }
     .payment-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .payment-actions button { min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: white; font-weight: 950; }
+    .payment-actions button { min-height: 98px; border-radius: 14px; border: 1px solid var(--line); background: white; font-weight: 950; }
     .payment-actions button.primary-choice { background: var(--green); border-color: var(--green); color: white; }
-    .payment-actions button.selected { background: var(--green); border-color: var(--green); color: white; box-shadow: 0 10px 22px #2f7d2633; }
+    .payment-actions button.selected { background: #ecfdf3; border-color: var(--green); color: #166534; box-shadow: 0 10px 22px #2f7d2633; }
+    .payment-choice {
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 6px;
+      padding: 9px 6px;
+      color: var(--ink);
+    }
+    .payment-choice small { color: var(--muted); font-size: 10px; font-weight: 850; line-height: 1.15; }
+    .pay-visual {
+      width: 46px;
+      height: 46px;
+      border-radius: 15px;
+      display: grid;
+      place-items: center;
+      background: #f8fafc;
+      border: 1px solid #e8edf4;
+      overflow: hidden;
+    }
+    .upi-logo { color: #2563eb; font-size: 13px; font-weight: 950; }
+    .upi-marks { display: flex; gap: 2px; margin-top: 3px; }
+    .upi-marks i { width: 10px; height: 6px; border-radius: 999px; display: block; }
+    .cash-note {
+      width: 34px;
+      height: 24px;
+      border: 2px solid #16a34a;
+      border-radius: 7px;
+      display: grid;
+      place-items: center;
+      color: #16a34a;
+      background: white;
+      font-size: 11px;
+      font-weight: 950;
+    }
+    .split-visual { display: flex; align-items: center; }
+    .split-dot {
+      width: 27px;
+      height: 27px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      border: 2px solid white;
+      color: white;
+      font-size: 10px;
+      font-weight: 950;
+    }
+    .split-dot + .split-dot { margin-left: -8px; }
+    .credit-card-visual {
+      width: 34px;
+      height: 25px;
+      border: 2px solid #f59e0b;
+      border-radius: 8px;
+      background: white;
+      overflow: hidden;
+    }
+    .credit-card-visual i { display: block; height: 6px; margin-top: 4px; background: #f59e0b; }
+    .credit-card-visual b { display: block; color: #f59e0b; text-align: center; font-size: 9px; line-height: 13px; }
     .modal-close { width: 100%; }
     .credit-box {
       display: grid;
@@ -972,6 +1029,46 @@
       padding: 10px;
     }
     .store-list-row small { display: block; margin-top: 3px; color: var(--muted); font-weight: 850; }
+    .purchase-invoice-card { display: grid; gap: 12px; }
+    .purchase-lines { display: grid; gap: 8px; }
+    .purchase-line {
+      display: grid;
+      grid-template-columns: minmax(120px, 1.4fr) minmax(110px, 1fr) 78px 82px 92px 50px;
+      gap: 8px;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #e8edf4;
+      border-radius: 12px;
+      background: #fbfcff;
+    }
+    .purchase-line input, .purchase-line select {
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: white;
+      font-weight: 850;
+      padding: 0 10px;
+    }
+    .purchase-invoice-footer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .invoice-total {
+      min-height: 48px;
+      min-width: 180px;
+      border: 1px solid #d7e8ff;
+      border-radius: 12px;
+      background: #f2f7ff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 12px;
+      font-weight: 950;
+    }
+    .invoice-total span { color: var(--muted); font-size: 12px; text-transform: uppercase; }
     .data-table {
       width: 100%;
       border-collapse: collapse;
@@ -1181,6 +1278,10 @@
       .store-action { min-height: 78px; font-size: 12px; }
       .store-form-grid { grid-template-columns: 1fr; }
       .store-form-grid .full { grid-column: auto; }
+      .purchase-line { grid-template-columns: 1fr 1fr; }
+      .purchase-line [data-store-item], .purchase-line [data-store-price] { grid-column: 1 / -1; }
+      .purchase-invoice-footer { grid-template-columns: 1fr; }
+      .invoice-total { width: 100%; }
       .data-table { font-size: 12px; }
       .data-table th, .data-table td { padding: 9px 5px; }
       .search-row { display: none; }
@@ -2295,11 +2396,13 @@
     function storeInventoryRows() {
       const map = new Map();
       storePurchases().forEach(row => {
-        const key = `${row.item || "Item"}::${row.unit || "Kgs"}`;
-        const current = map.get(key) || { item: row.item || "Item", unit: row.unit || "Kgs", bought: 0, used: 0, amount: 0 };
-        current.bought += Number(row.quantity || 0);
-        current.amount += Number(row.price || 0);
-        map.set(key, current);
+        purchaseLineItems(row).forEach(line => {
+          const key = `${line.item || "Item"}::${line.unit || "Kgs"}`;
+          const current = map.get(key) || { item: line.item || "Item", unit: line.unit || "Kgs", bought: 0, used: 0, amount: 0 };
+          current.bought += Number(line.quantity || 0);
+          current.amount += Number(line.price || 0);
+          map.set(key, current);
+        });
       });
       storeUsage().forEach(row => {
         const key = `${row.item || "Item"}::${row.unit || "Kgs"}`;
@@ -2308,6 +2411,21 @@
         map.set(key, current);
       });
       return [...map.values()];
+    }
+
+    function purchaseLineItems(row) {
+      if (Array.isArray(row && row.items) && row.items.length) return row.items;
+      return [{
+        item: row.item || "Item",
+        category: row.category || "Raw Material",
+        quantity: Number(row.quantity || 0),
+        unit: row.unit || "Kgs",
+        price: Number(row.price || 0)
+      }];
+    }
+
+    function purchaseTotal(row) {
+      return Number(row.total || purchaseLineItems(row).reduce((sum, item) => sum + Number(item.price || 0), 0));
     }
 
     function holdCurrentOrder() {
@@ -2627,19 +2745,30 @@
         </div>`;
     }
 
+    function purchaseLineHtml(index, categories = ["Raw Material"], units = ["Kgs", "Pcs", "Ltrs"]) {
+      return `<div class="purchase-line" data-purchase-line>
+        <input data-store-item placeholder="Item name">
+        <select data-store-category>${categories.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
+        <input data-store-qty type="number" min="0" placeholder="Qty">
+        <select data-store-unit>${units.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
+        <input data-store-price type="number" min="0" placeholder="Price">
+        <button class="mini-danger" data-remove-purchase-line type="button" title="Remove item">${index === 0 ? "Clear" : "X"}</button>
+      </div>`;
+    }
+
     function storePageHtml() {
       const tab = storeTab();
       const purchases = storePurchases();
       const used = storeUsage();
       const inventory = storeInventoryRows();
-      const totalPurchase = purchases.reduce((sum, row) => sum + Number(row.price || 0), 0);
+      const totalPurchase = purchases.reduce((sum, row) => sum + purchaseTotal(row), 0);
       const usedToday = used.filter(row => dateInputValue(new Date(row.createdAt || row.date || Date.now())) === dateInputValue(new Date())).length;
       const categories = ["Raw Material", "Vegetables", "Rice", "Oil", "Packing", "Cleaning", "Other"];
       const units = ["Kgs", "Pcs", "Ltrs"];
       const purchaseRows = purchases.map(row => `
         <div class="store-list-row">
-          <div><strong>${esc(row.item)}</strong><small>${esc(row.date)} | ${esc(row.vendor)} | ${esc(row.category)} | ${Number(row.quantity || 0)} ${esc(row.unit)}</small></div>
-          <strong>${money(row.price)}</strong>
+          <div><strong>${esc(row.billNo || row.item || "Purchase Invoice")}</strong><small>${esc(row.date)} | ${esc(row.vendor)} | ${(purchaseLineItems(row) || []).length} items${row.address ? ` | ${esc(row.address)}` : ""}</small></div>
+          <strong>${money(purchaseTotal(row))}</strong>
         </div>`).join("");
       const usedRows = used.map(row => `
         <div class="store-list-row">
@@ -2663,18 +2792,22 @@
           <div class="work-card metric-card"><span>Expenses Added</span><strong>${money(totalPurchase)}</strong></div>
           <div class="work-card metric-card"><span>Status</span><strong>Ready</strong></div>
         </div>
-        ${tab === "purchase" ? `<div class="work-card">
-          <h3>Create Purchase</h3>
+        ${tab === "purchase" ? `<div class="work-card purchase-invoice-card">
+          <h3>Clean Purchase Invoice</h3>
           <div class="store-form-grid">
+            <input id="storeBillNo" placeholder="Bill number">
             <input id="storePurchaseDate" type="date" value="${dateInputValue(new Date())}">
-            <input id="storeVendor" placeholder="Purchased from">
-            <input id="storeItem" placeholder="Item name">
-            <select id="storeCategory">${categories.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
-            <input id="storeQty" type="number" min="0" placeholder="Quantity">
-            <select id="storeUnit">${units.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
-            <input class="full" id="storePrice" type="number" min="0" placeholder="Total price">
-            <button class="page-action full" id="saveStorePurchase" type="button">Create Purchase</button>
+            <input id="storeVendor" placeholder="Vendor name">
+            <input id="storeAddress" placeholder="Vendor address">
           </div>
+          <div class="purchase-lines" id="purchaseLines">
+            ${purchaseLineHtml(0, categories, units)}
+          </div>
+          <div class="purchase-invoice-footer">
+            <button class="secondary" id="addPurchaseLine" type="button">Add Item</button>
+            <div class="invoice-total"><span>Invoice Total</span><strong id="purchaseInvoiceTotal">${money(0)}</strong></div>
+          </div>
+          <button class="page-action full" id="saveStorePurchase" type="button">Save Purchase Invoice</button>
         </div>` : ""}
         ${tab === "used" ? `<div class="work-card">
           <h3>Today Used Entry</h3>
@@ -2747,6 +2880,8 @@
           <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
           <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
           <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button><button data-report-range="year" type="button">Year</button></div>
+          <div class="quick-ranges"><button class="page-action" id="shareReportImage" type="button">Share Image</button><button class="secondary" id="downloadReportImage" type="button">Download Image</button><button class="secondary" id="shareReportPdf" type="button">Share PDF</button></div>
+          <div class="status" id="reportShareStatus"></div>
         </div>
         <div class="report-metric-grid">
           <div class="work-card metric-card"><span>Total Sale</span><strong>${money(totals.total)}</strong></div>
@@ -2992,6 +3127,156 @@
       });
     }
 
+    function reportShareText() {
+      const range = reportRange();
+      const rows = rangedOrders();
+      const filteredExpenses = rangedExpenses();
+      const expenseTotal = filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
+      const totals = rows.reduce((sum, order) => {
+        const pay = orderBreakup(order);
+        sum.total += Number(order.total || 0);
+        sum.cash += pay.cash;
+        sum.online += pay.online;
+        sum.credit += pay.credit;
+        return sum;
+      }, { total: 0, cash: 0, online: 0, credit: 0 });
+      const foodCost = Math.round(totals.total * 0.48);
+      const net = totals.total - foodCost - expenseTotal;
+      return [
+        `${settings.canteenName || "Axzen Canteen"} REPORT`,
+        `${range.from} to ${range.to}`,
+        "------------------------------",
+        `Total Sale : ${money(totals.total)}`,
+        `Total Bills: ${rows.length}`,
+        `Cash       : ${money(totals.cash)}`,
+        `Online     : ${money(totals.online)}`,
+        `Credit     : ${money(totals.credit)}`,
+        `Expenses   : ${money(expenseTotal)}`,
+        `Food Cost  : ${money(foodCost)}`,
+        `${net >= 0 ? "Profit" : "Loss"}     : ${money(Math.abs(net))}`,
+        "------------------------------",
+        "Date Wise",
+        ...reportDateLines(rows),
+        "------------------------------",
+        "Generated by Axzen POS"
+      ].join("\n");
+    }
+
+    function reportDateLines(rows) {
+      const groups = new Map();
+      rows.forEach(order => {
+        const key = dateInputValue(orderDate(order)) || "Unknown";
+        const current = groups.get(key) || { bills: 0, amount: 0 };
+        current.bills += 1;
+        current.amount += Number(order.total || 0);
+        groups.set(key, current);
+      });
+      const lines = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, row]) => `${date}  Bills ${row.bills}  ${money(row.amount)}`);
+      return lines.length ? lines : ["No sales in selected range"];
+    }
+
+    function reportImageDataUrl() {
+      return makeReportCanvas(reportShareText()).then(canvas => canvas ? canvas.toDataURL("image/png", 1) : "");
+    }
+
+    function makeReportCanvas(text) {
+      return new Promise(resolve => {
+        try {
+          const lines = String(text || "").split("\n");
+          const scale = 3;
+          const width = 420;
+          const lineHeight = 23;
+          const height = 44 + lines.length * lineHeight + 28;
+          const canvas = document.createElement("canvas");
+          canvas.width = width * scale;
+          canvas.height = height * scale;
+          const ctx = canvas.getContext("2d");
+          ctx.scale(scale, scale);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, width, height);
+          ctx.fillStyle = "#0f172a";
+          ctx.font = "700 15px Consolas, 'Courier New', monospace";
+          ctx.textBaseline = "top";
+          lines.forEach((line, index) => {
+            const isTitle = index === 0;
+            ctx.font = isTitle ? "900 22px Arial, sans-serif" : "700 15px Consolas, 'Courier New', monospace";
+            ctx.fillStyle = isTitle ? "#102653" : "#0f172a";
+            const printable = isTitle ? line.trim() : line;
+            const x = isTitle ? Math.max(12, (width - ctx.measureText(printable).width) / 2) : 18;
+            ctx.fillText(printable, x, 22 + index * lineHeight);
+          });
+          resolve(canvas);
+        } catch {
+          resolve(null);
+        }
+      });
+    }
+
+    async function shareReportImage() {
+      const status = $("reportShareStatus");
+      try {
+        status.textContent = "Preparing report image...";
+        status.className = "status";
+        const dataUrl = await reportImageDataUrl();
+        if (window.AxenShare && typeof window.AxenShare.sharePng === "function") {
+          const result = window.AxenShare.sharePng(dataUrl, `report-${Date.now()}.png`, "Sales Report");
+          status.textContent = String(result || "").toLowerCase().includes("opened") ? "Image share opened" : result || "Image ready";
+          status.className = String(result || "").toLowerCase().includes("failed") ? "status error" : "status ok";
+          return;
+        }
+        const link = document.createElement("a");
+        link.href = dataUrl;
+        link.download = `report-${Date.now()}.png`;
+        link.click();
+        status.textContent = "Image downloaded";
+        status.className = "status ok";
+      } catch {
+        status.textContent = "Image report failed";
+        status.className = "status error";
+      }
+    }
+
+    async function downloadReportImage() {
+      const status = $("reportShareStatus");
+      try {
+        const dataUrl = await reportImageDataUrl();
+        const link = document.createElement("a");
+        link.href = dataUrl;
+        link.download = `report-${Date.now()}.png`;
+        link.click();
+        status.textContent = "Image file created";
+        status.className = "status ok";
+      } catch {
+        status.textContent = "Image download failed";
+        status.className = "status error";
+      }
+    }
+
+    async function shareReportPdf() {
+      const status = $("reportShareStatus");
+      try {
+        status.textContent = "Preparing PDF...";
+        status.className = "status";
+        const text = reportShareText();
+        if (window.AxenShare && typeof window.AxenShare.sharePdf === "function") {
+          const result = window.AxenShare.sharePdf(text, `report-${Date.now()}.pdf`, "Sales Report PDF");
+          status.textContent = String(result || "").toLowerCase().includes("opened") ? "PDF share opened" : result || "PDF ready";
+          status.className = String(result || "").toLowerCase().includes("failed") ? "status error" : "status ok";
+          return;
+        }
+        const blob = new Blob([text], { type: "application/pdf" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `report-${Date.now()}.pdf`;
+        link.click();
+        status.textContent = "PDF file created";
+        status.className = "status ok";
+      } catch {
+        status.textContent = "PDF report failed";
+        status.className = "status error";
+      }
+    }
+
     function stockPageHtml() {
       const rows = products.map(item => {
         const qty = Number(item.stock ?? item.quantity ?? item.quantityOnHand ?? item.qty ?? 0);
@@ -3163,10 +3448,16 @@
       if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_FROM", event.target.value); renderOptionPage(); });
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderOptionPage(); });
       document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => setReportQuickRange(btn.dataset.reportRange)));
+      if ($("shareReportImage")) $("shareReportImage").addEventListener("click", shareReportImage);
+      if ($("downloadReportImage")) $("downloadReportImage").addEventListener("click", downloadReportImage);
+      if ($("shareReportPdf")) $("shareReportPdf").addEventListener("click", shareReportPdf);
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
       if ($("saveStorePurchase")) $("saveStorePurchase").addEventListener("click", saveStorePurchaseFromPos);
       if ($("saveStoreUsage")) $("saveStoreUsage").addEventListener("click", saveStoreUsageFromPos);
+      if ($("addPurchaseLine")) $("addPurchaseLine").addEventListener("click", addPurchaseLine);
+      bindPurchaseLineControls(document);
+      updatePurchaseInvoiceTotal();
       if ($("saveCategoryBtn")) $("saveCategoryBtn").addEventListener("click", saveCategoryFromPos);
       if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
       if ($("bulkAddToCart")) $("bulkAddToCart").addEventListener("click", addBulkItemsToCart);
@@ -3374,30 +3665,75 @@
       }
     }
 
+    function addPurchaseLine() {
+      const categories = ["Raw Material", "Vegetables", "Rice", "Oil", "Packing", "Cleaning", "Other"];
+      const units = ["Kgs", "Pcs", "Ltrs"];
+      const mount = $("purchaseLines");
+      if (!mount) return;
+      mount.insertAdjacentHTML("beforeend", purchaseLineHtml(mount.querySelectorAll("[data-purchase-line]").length, categories, units));
+      bindPurchaseLineControls(mount.lastElementChild || mount);
+      updatePurchaseInvoiceTotal();
+    }
+
+    function bindPurchaseLineControls(root) {
+      root.querySelectorAll("[data-remove-purchase-line]").forEach(btn => btn.addEventListener("click", () => removePurchaseLine(btn)));
+      root.querySelectorAll("[data-store-price], [data-store-qty]").forEach(input => input.addEventListener("input", updatePurchaseInvoiceTotal));
+    }
+
+    function removePurchaseLine(button) {
+      const line = button.closest("[data-purchase-line]");
+      const all = document.querySelectorAll("[data-purchase-line]");
+      if (!line) return;
+      if (all.length <= 1) {
+        line.querySelectorAll("input").forEach(input => input.value = "");
+        line.querySelectorAll("select").forEach(select => select.selectedIndex = 0);
+      } else {
+        line.remove();
+      }
+      updatePurchaseInvoiceTotal();
+    }
+
+    function purchaseInvoiceItemsFromForm() {
+      return [...document.querySelectorAll("[data-purchase-line]")].map(line => {
+        const item = line.querySelector("[data-store-item]")?.value.trim() || "";
+        const category = line.querySelector("[data-store-category]")?.value || "Raw Material";
+        const quantity = Number(line.querySelector("[data-store-qty]")?.value || 0);
+        const unit = line.querySelector("[data-store-unit]")?.value || "Kgs";
+        const price = Number(line.querySelector("[data-store-price]")?.value || 0);
+        return { item, category, quantity, unit, price };
+      }).filter(row => row.item && row.quantity > 0 && row.price > 0);
+    }
+
+    function updatePurchaseInvoiceTotal() {
+      const totalNode = $("purchaseInvoiceTotal");
+      if (!totalNode) return;
+      const total = purchaseInvoiceItemsFromForm().reduce((sum, row) => sum + Number(row.price || 0), 0);
+      totalNode.textContent = money(total);
+    }
+
     async function saveStorePurchaseFromPos() {
+      const billNo = $("storeBillNo")?.value.trim() || `PUR-${Date.now().toString().slice(-6)}`;
       const date = $("storePurchaseDate")?.value || dateInputValue(new Date());
       const vendor = $("storeVendor")?.value.trim();
-      const item = $("storeItem")?.value.trim();
-      const category = $("storeCategory")?.value || "Raw Material";
-      const quantity = Number($("storeQty")?.value || 0);
-      const unit = $("storeUnit")?.value || "Kgs";
-      const price = Number($("storePrice")?.value || 0);
-      if (!vendor || !item || quantity <= 0 || price <= 0) {
-        $("posMessage").textContent = "Vendor, item, quantity and price required";
+      const address = $("storeAddress")?.value.trim() || "";
+      const items = purchaseInvoiceItemsFromForm();
+      const total = items.reduce((sum, row) => sum + Number(row.price || 0), 0);
+      if (!vendor || !items.length || total <= 0) {
+        $("posMessage").textContent = "Vendor and at least one valid item required";
         $("posMessage").className = "status error";
         return;
       }
-      const purchase = { id: Date.now(), date, vendor, item, category, quantity, unit, price, createdAt: new Date().toISOString() };
+      const purchase = { id: Date.now(), billNo, date, vendor, address, items, total, createdAt: new Date().toISOString() };
       setStorePurchases([purchase, ...storePurchases()]);
-      const expensePayload = { title: `${item} purchase`, amount: price, category: "Store Purchase", note: `${quantity} ${unit} from ${vendor}` };
+      const expensePayload = { title: `Purchase invoice ${billNo}`, amount: total, category: "Store Purchase", note: `${items.length} items from ${vendor}` };
       try {
         const data = await adminApi("/expenses", { method: "POST", body: JSON.stringify(expensePayload) });
         expenses = data.expenses || [data.expense, ...expenses].filter(Boolean);
-        $("posMessage").textContent = "Purchase saved and expense created";
+        $("posMessage").textContent = "Purchase invoice saved and expense created";
         $("posMessage").className = "status ok";
       } catch {
-        expenses = [{ id: `store-${purchase.id}`, date, title: expensePayload.title, amount: price, category: "Store Purchase", note: expensePayload.note, createdAt: purchase.createdAt }, ...expenses];
-        $("posMessage").textContent = "Purchase saved. Expense added locally.";
+        expenses = [{ id: `store-${purchase.id}`, date, title: expensePayload.title, amount: total, category: "Store Purchase", note: expensePayload.note, createdAt: purchase.createdAt }, ...expenses];
+        $("posMessage").textContent = "Purchase invoice saved. Expense added locally.";
         $("posMessage").className = "status ok";
       }
       renderOptionPage();
@@ -3675,10 +4011,22 @@
             <div class="modal-title-row"><h2>Select Payment</h2><button class="modal-x" id="closePaymentTop" type="button">X</button></div>
             <div class="payment-total"><span>Total Amount</span><strong>${money(orderTotal)}</strong></div>
             <div class="payment-actions">
-              <button data-modal-pay="Cash" type="button">Cash</button>
-              <button data-modal-pay="Online" type="button">Online</button>
-              <button data-show-split type="button">Split</button>
-              <button data-show-credit type="button">Credit</button>
+              <button class="payment-choice" data-modal-pay="Cash" type="button">
+                <span class="pay-visual"><span class="cash-note">Rs</span></span>
+                <strong>Cash</strong><small>Cash payment</small>
+              </button>
+              <button class="payment-choice" data-modal-pay="Online" type="button">
+                <span class="pay-visual"><span><span class="upi-logo">UPI</span><span class="upi-marks"><i style="background:#34a853"></i><i style="background:#fbbc05"></i><i style="background:#ea4335"></i></span></span></span>
+                <strong>Online</strong><small>UPI / GPay / PhonePe</small>
+              </button>
+              <button class="payment-choice" data-show-split type="button">
+                <span class="pay-visual"><span class="split-visual"><span class="split-dot" style="background:#16a34a">C</span><span class="split-dot" style="background:#7c3aed">U</span></span></span>
+                <strong>Split</strong><small>Cash + Online</small>
+              </button>
+              <button class="payment-choice" data-show-credit type="button">
+                <span class="pay-visual"><span class="credit-card-visual"><i></i><b>CR</b></span></span>
+                <strong>Credit</strong><small>Pending amount</small>
+              </button>
             </div>
             <div class="split-box hidden" id="modalSplitBox">
               <label>Cash <input id="modalSplitCash" type="number" min="0" inputmode="numeric" value="${Math.ceil(orderTotal / 2)}"></label>
@@ -4024,6 +4372,9 @@
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_FROM", event.target.value); renderAdmin(); });
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderAdmin(); });
+      if ($("shareReportImage")) $("shareReportImage").addEventListener("click", shareReportImage);
+      if ($("downloadReportImage")) $("downloadReportImage").addEventListener("click", downloadReportImage);
+      if ($("shareReportPdf")) $("shareReportPdf").addEventListener("click", shareReportPdf);
       document.querySelectorAll("[data-admin-jump]").forEach(btn => btn.addEventListener("click", () => {
         adminTab = btn.dataset.adminJump;
         renderAdmin();

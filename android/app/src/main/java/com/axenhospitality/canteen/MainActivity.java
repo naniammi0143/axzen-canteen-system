@@ -6,7 +6,10 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -256,6 +259,68 @@ public class MainActivity extends BridgeActivity {
                 shareIntent.putExtra(Intent.EXTRA_SUBJECT, title == null ? "Day Close Report" : title);
                 shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                 Intent chooser = Intent.createChooser(shareIntent, title == null ? "Share Report" : title);
+                chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                runOnUiThread(() -> startActivity(chooser));
+                return "Share opened";
+            } catch (Exception error) {
+                return "Share failed: " + error.getMessage();
+            }
+        }
+
+        @JavascriptInterface
+        public String sharePdf(String text, String fileName, String title) {
+            try {
+                String safeName = (fileName == null || fileName.trim().isEmpty() ? "report.pdf" : fileName)
+                        .replaceAll("[^a-zA-Z0-9._-]", "-");
+                if (!safeName.endsWith(".pdf")) safeName = safeName + ".pdf";
+                File dir = new File(getCacheDir(), "shared-reports");
+                if (!dir.exists() && !dir.mkdirs()) return "Share failed: cache not ready";
+                File file = new File(dir, safeName);
+
+                PdfDocument document = new PdfDocument();
+                Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                paint.setColor(Color.rgb(15, 23, 42));
+                paint.setTextSize(13);
+                paint.setTypeface(android.graphics.Typeface.MONOSPACE);
+
+                int pageWidth = 595;
+                int pageHeight = 842;
+                int margin = 36;
+                int y = 46;
+                int lineHeight = 18;
+                PdfDocument.Page page = document.startPage(new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create());
+                Canvas canvas = page.getCanvas();
+                String[] lines = (text == null ? "" : text).split("\\n");
+                int pageNo = 1;
+
+                for (String line : lines) {
+                    if (y > pageHeight - margin) {
+                        document.finishPage(page);
+                        pageNo++;
+                        page = document.startPage(new PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNo).create());
+                        canvas = page.getCanvas();
+                        y = 46;
+                    }
+                    canvas.drawText(line, margin, y, paint);
+                    y += lineHeight;
+                }
+                document.finishPage(page);
+                try (FileOutputStream stream = new FileOutputStream(file)) {
+                    document.writeTo(stream);
+                }
+                document.close();
+
+                Uri uri = FileProvider.getUriForFile(
+                        MainActivity.this,
+                        getPackageName() + ".fileprovider",
+                        file
+                );
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("application/pdf");
+                shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+                shareIntent.putExtra(Intent.EXTRA_SUBJECT, title == null ? "Sales Report PDF" : title);
+                shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                Intent chooser = Intent.createChooser(shareIntent, title == null ? "Share PDF" : title);
                 chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 runOnUiThread(() -> startActivity(chooser));
                 return "Share opened";
