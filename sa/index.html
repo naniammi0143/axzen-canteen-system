@@ -299,6 +299,10 @@
       font-weight: 950;
       box-shadow: 0 8px 18px #ef444455;
     }
+    .half-count-badge {
+      background: #dc2626;
+      box-shadow: 0 8px 18px #dc262666;
+    }
     .remove-badge {
       position: absolute;
       top: 6px;
@@ -1265,6 +1269,7 @@
     #posView .place { min-height: 60px; margin-top: 14px; background: linear-gradient(180deg, #2fc152, #20a83d); box-shadow: 0 12px 26px #22c55e30; font-size: 18px; }
     #posView .bottom-nav {
       display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       width: min(964px, calc(100% - 40px));
       bottom: 16px;
       border: 1px solid #ffffff24;
@@ -1288,6 +1293,15 @@
       justify-content: center;
       gap: 6px;
       white-space: nowrap;
+      transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+    }
+    #posView .bottom-nav button:hover {
+      background: #ffffff14;
+      transform: translateY(-1px);
+    }
+    #posView .bottom-nav button:active {
+      background: #ffffff24;
+      transform: translateY(1px) scale(.98);
     }
     #posView .bottom-nav button.active {
       margin: 0;
@@ -1296,6 +1310,7 @@
       border-radius: 0;
       background: #ffffff20;
       color: white;
+      box-shadow: inset 0 0 0 1px #ffffff18;
     }
     #posView .bottom-nav button span { margin: 0; }
     #posView .bottom-nav button b { line-height: 1; }
@@ -1542,7 +1557,7 @@
         return defaults;
       }
     })();
-    const appBuild = "2.3.0";
+    const appBuild = "2.4.0";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -1922,14 +1937,17 @@
         .slice()
         .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
       $("menuGrid").innerHTML = visible.map(item => {
-        const selectedOption = selectedSubItems[item.id] || null;
+        const selectedOption = item.isHalfItem ? null : selectedSubItems[item.id] || null;
         const displayName = item.displayName || item.name;
         const displayPrice = item.displayPrice || item.price;
         const halfAttrs = item.isHalfItem ? ` data-half-item="1"` : "";
+        const cardOption = item.isHalfItem ? { name: "Half Plate", price: displayPrice } : selectedOption;
+        const cardLineId = cartLineId(item, cardOption);
+        const cardQty = cartLineQty(cardLineId);
         return `
-        <button class="item-card ${item.isHalfItem ? "half-item-card" : ""} ${cartQty(item.id) ? "selected" : ""}" data-item="${item.id}"${halfAttrs}>
-          ${cartQty(item.id) ? `<span class="remove-badge" data-remove-item="${item.id}">X</span>` : ""}
-          ${cartQty(item.id) ? `<span class="count-badge">${cartQty(item.id)}</span>` : ""}
+        <button class="item-card ${item.isHalfItem ? "half-item-card" : ""} ${cardQty ? "selected" : ""}" data-item="${item.id}"${halfAttrs}>
+          ${cardQty ? `<span class="remove-badge" data-remove-card-line="${esc(cardLineId)}">X</span>` : ""}
+          ${cardQty ? `<span class="count-badge ${item.isHalfItem ? "half-count-badge" : ""}">${cardQty}</span>` : ""}
           <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(displayName || "?").slice(0, 2).toUpperCase()}${item.isHalfItem ? `<span class="half-plate-mark">HALF</span><span class="half-plate-slash"></span>` : ""}</span>
           <span class="item-body">
             <span class="item-name-line">
@@ -1959,6 +1977,12 @@
     function cartQty(id) {
       return cart
         .filter(row => Number(row.parentId || row.id) === Number(id))
+        .reduce((sum, item) => sum + Number(item.qty || 0), 0);
+    }
+
+    function cartLineQty(lineId) {
+      return cart
+        .filter(row => row.lineId === lineId)
         .reduce((sum, item) => sum + Number(item.qty || 0), 0);
     }
 
@@ -4803,6 +4827,12 @@
       if (removeBtn) {
         event.stopPropagation();
         removeFromCart(removeBtn.dataset.removeItem);
+        return;
+      }
+      const removeCardLine = event.target.closest("[data-remove-card-line]");
+      if (removeCardLine) {
+        event.stopPropagation();
+        removeCartLine(removeCardLine.dataset.removeCardLine);
         return;
       }
       if (longPressHandled) {
