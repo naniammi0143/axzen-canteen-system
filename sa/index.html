@@ -287,6 +287,7 @@
       position: absolute;
       top: 6px;
       right: 8px;
+      z-index: 3;
       min-width: 30px;
       height: 30px;
       border-radius: 999px;
@@ -307,6 +308,7 @@
       position: absolute;
       top: 6px;
       left: 8px;
+      z-index: 4;
       width: 30px;
       height: 30px;
       border-radius: 999px;
@@ -884,7 +886,7 @@
       padding: 0 11px;
       font-weight: 900;
     }
-    #newItemPrice, #newItemSubPrice, .item-manager-card [data-price-item] {
+    #newItemPrice, #newItemHalfPrice, #newItemSubPrice, .item-manager-card [data-price-item], .item-manager-card [data-half-price-item] {
       border-color: #bfdbfe;
       background: linear-gradient(180deg, #eff6ff, #ffffff);
       color: #1d4ed8;
@@ -1039,7 +1041,7 @@
     .purchase-lines { display: grid; gap: 8px; }
     .purchase-line {
       display: grid;
-      grid-template-columns: minmax(120px, 1.4fr) minmax(112px, 1fr) minmax(116px, 1fr) 78px 82px 92px 50px;
+      grid-template-columns: minmax(120px, 1.3fr) minmax(104px, .9fr) minmax(112px, 1fr) minmax(118px, 1fr) 78px 82px 92px 92px 92px 50px;
       gap: 8px;
       align-items: center;
       padding: 10px;
@@ -1342,7 +1344,7 @@
       .store-form-grid { grid-template-columns: 1fr; }
       .store-form-grid .full { grid-column: auto; }
       .purchase-line { grid-template-columns: 1fr 1fr; }
-      .purchase-line [data-store-item], .purchase-line [data-store-price] { grid-column: 1 / -1; }
+      .purchase-line [data-store-item], .purchase-line [data-store-image], .purchase-line [data-store-price], .purchase-line [data-store-half-price] { grid-column: 1 / -1; }
       .purchase-invoice-footer { grid-template-columns: 1fr; }
       .invoice-total { width: 100%; }
       .data-table { font-size: 12px; }
@@ -1548,16 +1550,17 @@
       ? productionApi
       : (storedApi || `http://${nativeHost}:5000`);
 
+    const singleItemsCategory = "Single Items";
     const categoryOrder = (() => {
-      const defaults = ["All", "Breakfast", "Meals", "Biryani", "Starters", "Chinese", "Tiffin", "Tea", "Coffee", "Drinks", "Snacks", "Lunch", "Juice", "Desserts", "Dinner", "Half Items"];
+      const defaults = ["All", singleItemsCategory, "Breakfast", "Meals", "Biryani", "Starters", "Chinese", "Tiffin", "Tea", "Coffee", "Drinks", "Snacks", "Lunch", "Juice", "Desserts", "Dinner"];
       try {
         const saved = JSON.parse(localStorage.getItem("AXEN_CATEGORIES") || "[]");
-        return [...new Set([...defaults, ...saved])];
+        return [...new Set([...defaults, ...saved.map(item => item === "Half Items" ? singleItemsCategory : item)])];
       } catch {
         return defaults;
       }
     })();
-    const appBuild = "2.4.0";
+    const appBuild = "2.6.0";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -1650,7 +1653,15 @@
     }
 
     function categoryLabel(category) {
-      return ({ Tiffin: "Tiffins", Lunch: "Rice" })[category] || category;
+      return ({ Tiffin: "Tiffins", Lunch: "Rice", "Half Items": singleItemsCategory })[category] || category;
+    }
+
+    function isSingleItemsCategory(category) {
+      return category === singleItemsCategory || category === "Half Items";
+    }
+
+    function singleItemPrice(item) {
+      return Number(item?.halfPrice || item?.singlePrice || item?.halfItemPrice || 0);
     }
 
     function itemEmoji(item) {
@@ -1915,7 +1926,8 @@
 
     function renderCategories() {
       const found = new Set(products.filter(item => !isItemHidden(item)).map(item => item.category || "Other"));
-      found.add("Half Items");
+      found.delete("Half Items");
+      found.add(singleItemsCategory);
       const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
       $("categoryTabs").innerHTML = categories.map(category => `
         <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${category}"><span>${categoryIcon(category)}</span>${categoryLabel(category)}</button>
@@ -1923,38 +1935,39 @@
     }
 
     function renderProducts() {
+      if (activeCategory === "Half Items") activeCategory = singleItemsCategory;
       renderCategories();
       const query = itemSearch.trim().toLowerCase();
       const baseProducts = products.filter(item => !isItemHidden(item));
       const visible = (activeCategory === "All"
         ? baseProducts
-        : activeCategory === "Half Items"
+        : isSingleItemsCategory(activeCategory)
         ? baseProducts
-          .filter(item => item.category !== "Half Items")
-          .map(item => ({ ...item, isHalfItem: true, displayName: `Half ${item.name || "Item"}`, displayPrice: Math.max(1, Math.round(Number(item.price || 0) / 2)) }))
+          .filter(item => !isSingleItemsCategory(item.category) && singleItemPrice(item) > 0)
+          .map(item => ({ ...item, isSingleItem: true, displayName: `Single ${item.name || "Item"}`, displayPrice: singleItemPrice(item) }))
         : baseProducts.filter(item => item.category === activeCategory))
         .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
         .slice()
         .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
       $("menuGrid").innerHTML = visible.map(item => {
-        const selectedOption = item.isHalfItem ? null : selectedSubItems[item.id] || null;
+        const selectedOption = item.isSingleItem ? null : selectedSubItems[item.id] || null;
         const displayName = item.displayName || item.name;
         const displayPrice = item.displayPrice || item.price;
-        const halfAttrs = item.isHalfItem ? ` data-half-item="1"` : "";
-        const cardOption = item.isHalfItem ? { name: "Half Plate", price: displayPrice } : selectedOption;
+        const singleAttrs = item.isSingleItem ? ` data-single-item="1"` : "";
+        const cardOption = item.isSingleItem ? { name: "Single Item", price: displayPrice } : selectedOption;
         const cardLineId = cartLineId(item, cardOption);
         const cardQty = cartLineQty(cardLineId);
         return `
-        <button class="item-card ${item.isHalfItem ? "half-item-card" : ""} ${cardQty ? "selected" : ""}" data-item="${item.id}"${halfAttrs}>
+        <button class="item-card ${item.isSingleItem ? "half-item-card" : ""} ${cardQty ? "selected" : ""}" data-item="${item.id}"${singleAttrs}>
           ${cardQty ? `<span class="remove-badge" data-remove-card-line="${esc(cardLineId)}">X</span>` : ""}
-          ${cardQty ? `<span class="count-badge ${item.isHalfItem ? "half-count-badge" : ""}">${cardQty}</span>` : ""}
-          <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(displayName || "?").slice(0, 2).toUpperCase()}${item.isHalfItem ? `<span class="half-plate-mark">HALF</span><span class="half-plate-slash"></span>` : ""}</span>
+          ${cardQty ? `<span class="count-badge ${item.isSingleItem ? "half-count-badge" : ""}">${cardQty}</span>` : ""}
+          <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(displayName || "?").slice(0, 2).toUpperCase()}${item.isSingleItem ? `<span class="half-plate-mark">SINGLE</span><span class="half-plate-slash"></span>` : ""}</span>
           <span class="item-body">
             <span class="item-name-line">
               <span class="item-name-wrap"><span class="item-emoji">${itemEmoji(item)}</span><h3>${esc(displayName)}</h3></span>
               <span class="item-price">${money(selectedOption ? selectedOption.price : displayPrice)}</span>
             </span>
-            ${item.isHalfItem ? `<span class="variant-hint">Half plate price</span>` : productSubItems(item).length ? `<span class="variant-hint">${selectedOption ? esc(selectedOption.name) : "Hold for sub items"}</span>` : ""}
+            ${item.isSingleItem ? `<span class="variant-hint">Single item price</span>` : productSubItems(item).length ? `<span class="variant-hint">${selectedOption ? esc(selectedOption.name) : "Hold for sub items"}</span>` : ""}
           </span>
         </button>
       `;
@@ -2515,6 +2528,9 @@
         quantity: Number(line.quantity || line.qty || 0),
         unit: line.unit || "Kgs",
         price: Number(line.price || line.amount || line.total || 0),
+        salePrice: Number(line.salePrice || line.sellingPrice || 0),
+        halfPrice: Number(line.halfPrice || line.singlePrice || line.halfItemPrice || 0),
+        image: line.image || line.imageUrl || "",
         type: line.type || "raw_material"
       });
       if (Array.isArray(row && row.items) && row.items.length) return row.items.map(normalizeLine);
@@ -2869,9 +2885,12 @@
         <input data-store-item placeholder="Item name">
         <select data-store-type><option value="direct_sale">Direct Sale</option><option value="raw_material">Used Material</option></select>
         <select data-store-category>${categories.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
+        <input data-store-image placeholder="Image URL">
         <input data-store-qty type="number" min="0" placeholder="Qty">
         <select data-store-unit>${units.map(item => `<option value="${esc(item)}">${esc(item)}</option>`).join("")}</select>
         <input data-store-price type="number" min="0" placeholder="Price">
+        <input data-store-sale-price type="number" min="0" placeholder="Sale price">
+        <input data-store-half-price type="number" min="0" placeholder="Half price">
         <button class="mini-danger" data-remove-purchase-line type="button" title="Remove item">${index === 0 ? "Clear" : "X"}</button>
       </div>`;
     }
@@ -2883,7 +2902,17 @@
       const inventory = storeInventoryRows();
       const totalPurchase = purchases.reduce((sum, row) => sum + purchaseTotal(row), 0);
       const usedToday = used.filter(row => dateInputValue(new Date(row.createdAt || row.date || Date.now())) === dateInputValue(new Date())).length;
-      const categories = ["Used Material", "Vegetables", "Rice", "Oil", "Gas", "Packing", "Cleaning", "Other"];
+      const categories = [...new Set([
+        ...categoryOrder.filter(item => item !== "All" && !isSingleItemsCategory(item)),
+        "Used Material",
+        "Vegetables",
+        "Rice",
+        "Oil",
+        "Gas",
+        "Packing",
+        "Cleaning",
+        "Other"
+      ])];
       const units = ["Kgs", "Pcs", "Ltrs"];
       const usedItemOptions = inventory.map(row => `<option value="${esc(row.item)}">${esc(row.item)} - ${row.type === "direct_sale" ? "Direct Sale" : "Used Material"} - ${Math.max(0, Number(row.bought || 0) - Number(row.used || 0) - Number(row.sold || 0))} ${esc(row.unit)}</option>`).join("");
       const purchaseRows = purchases.map(row => `
@@ -3539,8 +3568,9 @@
           ${editing ? `<div class="item-edit-grid">
             <input data-edit-name="${item.id}" value="${esc(item.name || "")}" placeholder="Item name">
             <input data-price-item="${item.id}" type="number" min="0" value="${Number(item.price || 0)}" placeholder="Price">
+            <input data-half-price-item="${item.id}" type="number" min="0" value="${singleItemPrice(item) || ""}" placeholder="Half item price">
             <input data-edit-image="${item.id}" value="${esc(item.image || "")}" placeholder="Image URL">
-            <select data-edit-category="${item.id}">${categoryOrder.filter(cat => cat !== "All").map(cat => `<option value="${esc(cat)}" ${cat === item.category ? "selected" : ""}>${esc(categoryLabel(cat))}</option>`).join("")}</select>
+            <select data-edit-category="${item.id}">${categoryOrder.filter(cat => cat !== "All" && !isSingleItemsCategory(cat)).map(cat => `<option value="${esc(cat)}" ${cat === item.category ? "selected" : ""}>${esc(categoryLabel(cat))}</option>`).join("")}</select>
           </div>` : ""}
           <div class="sub-chip-row">${subs.map(sub => `<span>${esc(sub.name)} - ${money(sub.price)}</span>`).join("") || `<span>Empty</span>`}</div>
           ${editing ? `<div class="add-sub-row">
@@ -3555,8 +3585,9 @@
         <div class="work-card item-add-card">
           <h3>Add Item</h3>
           <input id="newItemName" placeholder="Item name">
-          <select id="newItemCategory">${categoryOrder.filter(item => item !== "All").map(item => `<option value="${esc(item)}">${esc(categoryLabel(item))}</option>`).join("")}</select>
+          <select id="newItemCategory">${categoryOrder.filter(item => item !== "All" && !isSingleItemsCategory(item)).map(item => `<option value="${esc(item)}">${esc(categoryLabel(item))}</option>`).join("")}</select>
           <input id="newItemPrice" type="number" min="0" placeholder="Price">
+          <input id="newItemHalfPrice" type="number" min="0" placeholder="Half item price">
           <input id="newItemImage" placeholder="Image URL">
           <input id="newItemSubName" placeholder="Sub item optional">
           <input id="newItemSubPrice" type="number" min="0" placeholder="Sub item price optional">
@@ -3644,7 +3675,7 @@
       if ($("bulkProceedPayment")) $("bulkProceedPayment").addEventListener("click", openBulkConfirmModal);
       if ($("bulkClearDraft")) $("bulkClearDraft").addEventListener("click", clearBulkDraft);
       document.querySelectorAll("[data-store-tab]").forEach(btn => btn.addEventListener("click", () => setStoreTab(btn.dataset.storeTab)));
-      document.querySelectorAll("[data-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem, input.value)));
+      document.querySelectorAll("[data-price-item], [data-half-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem || input.dataset.halfPriceItem, document.querySelector(`[data-price-item="${input.dataset.priceItem || input.dataset.halfPriceItem}"]`)?.value)));
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       document.querySelectorAll("[data-edit-item]").forEach(btn => btn.addEventListener("click", () => toggleItemEdit(btn.dataset.editItem)));
       document.querySelectorAll("[data-hide-item]").forEach(btn => btn.addEventListener("click", () => toggleItemHidden(btn.dataset.hideItem)));
@@ -3691,6 +3722,46 @@
       renderProducts();
       if (!$("adminView").classList.contains("hidden") && adminTab === "menu") renderAdmin();
       else renderOptionPage();
+    }
+
+    async function upsertDirectSaleProductsFromPurchase(items) {
+      let changed = false;
+      const directSaleProducts = [];
+      items.filter(item => item.type === "direct_sale").forEach(line => {
+        const name = line.item || "Item";
+        const existingIndex = products.findIndex(product => normalizeStockName(product.name) === normalizeStockName(name));
+        const unitPrice = line.salePrice > 0
+          ? line.salePrice
+          : line.quantity > 0
+          ? Math.max(1, Math.round(Number(line.price || 0) / Number(line.quantity || 1)))
+          : Number(line.price || 0);
+        const nextProduct = {
+          ...(existingIndex >= 0 ? products[existingIndex] : {}),
+          id: existingIndex >= 0 ? products[existingIndex].id : Date.now() + Math.floor(Math.random() * 1000),
+          name,
+          category: line.category || "Drinks",
+          price: unitPrice,
+          halfPrice: Number(line.halfPrice || (existingIndex >= 0 ? singleItemPrice(products[existingIndex]) : 0) || 0),
+          image: line.image || (existingIndex >= 0 ? products[existingIndex].image : ""),
+          hidden: false,
+          sortOrder: existingIndex >= 0 ? products[existingIndex].sortOrder : products.length + 1
+        };
+        if (existingIndex >= 0) products[existingIndex] = nextProduct;
+        else products.push(nextProduct);
+        directSaleProducts.push(nextProduct);
+        changed = true;
+      });
+      if (!changed) return;
+      writeJson(productCacheKey, products);
+      renderProducts();
+      for (const product of directSaleProducts) {
+        try {
+          const saved = await adminApi("/products", { method: "POST", body: JSON.stringify(product) });
+          products = saved.products || products.map(item => Number(item.id) === Number(product.id) ? product : item);
+          writeJson(productCacheKey, products);
+        } catch {}
+      }
+      renderProducts();
     }
 
     function addBulkItemsToCart() {
@@ -3768,7 +3839,8 @@
       const name = document.querySelector(`[data-edit-name="${id}"]`)?.value.trim() || item.name;
       const image = document.querySelector(`[data-edit-image="${id}"]`)?.value.trim() ?? item.image;
       const category = document.querySelector(`[data-edit-category="${id}"]`)?.value || item.category;
-      await persistProductFromPos({ ...item, name, image, category, price: Number(value || item.price || 0), _editing: false });
+      const halfPrice = Number(document.querySelector(`[data-half-price-item="${id}"]`)?.value || 0);
+      await persistProductFromPos({ ...item, name, image, category, price: Number(value || item.price || 0), halfPrice, _editing: false });
     }
 
     async function toggleItemEdit(id) {
@@ -3779,7 +3851,8 @@
         const price = Number(document.querySelector(`[data-price-item="${id}"]`)?.value || item.price || 0);
         const image = document.querySelector(`[data-edit-image="${id}"]`)?.value.trim() ?? item.image;
         const category = document.querySelector(`[data-edit-category="${id}"]`)?.value || item.category;
-        await persistProductFromPos({ ...item, name, price, image, category, _editing: false });
+        const halfPrice = Number(document.querySelector(`[data-half-price-item="${id}"]`)?.value || 0);
+        await persistProductFromPos({ ...item, name, price, halfPrice, image, category, _editing: false });
         return;
       }
       products = products.map(row => Number(row.id) === Number(id) ? { ...row, _editing: true } : row);
@@ -3811,11 +3884,13 @@
       }
       const subName = $("newItemSubName").value.trim();
       const subPrice = Number($("newItemSubPrice").value || price);
+      const halfPrice = Number($("newItemHalfPrice").value || 0);
       const image = $("newItemImage").value.trim();
       const product = {
         id: Date.now(),
         name,
         price,
+        halfPrice,
         category: $("newItemCategory").value,
         image,
         sortOrder: products.length + 1,
@@ -3847,7 +3922,17 @@
     }
 
     function addPurchaseLine() {
-      const categories = ["Used Material", "Vegetables", "Rice", "Oil", "Gas", "Packing", "Cleaning", "Other"];
+      const categories = [...new Set([
+        ...categoryOrder.filter(item => item !== "All" && !isSingleItemsCategory(item)),
+        "Used Material",
+        "Vegetables",
+        "Rice",
+        "Oil",
+        "Gas",
+        "Packing",
+        "Cleaning",
+        "Other"
+      ])];
       const units = ["Kgs", "Pcs", "Ltrs"];
       const mount = $("purchaseLines");
       if (!mount) return;
@@ -3879,10 +3964,13 @@
         const item = line.querySelector("[data-store-item]")?.value.trim() || "";
         const type = line.querySelector("[data-store-type]")?.value || "raw_material";
         const category = line.querySelector("[data-store-category]")?.value || "Used Material";
+        const image = line.querySelector("[data-store-image]")?.value.trim() || "";
         const quantity = Number(line.querySelector("[data-store-qty]")?.value || 0);
         const unit = line.querySelector("[data-store-unit]")?.value || "Kgs";
         const price = Number(line.querySelector("[data-store-price]")?.value || 0);
-        return { item, type, category, quantity, unit, price };
+        const salePrice = Number(line.querySelector("[data-store-sale-price]")?.value || 0);
+        const halfPrice = Number(line.querySelector("[data-store-half-price]")?.value || 0);
+        return { item, type, category, image, quantity, unit, price, salePrice, halfPrice };
       }).filter(row => row.item && row.quantity > 0 && row.price > 0);
     }
 
@@ -3908,6 +3996,7 @@
       }
       const purchase = { id: Date.now(), billNo, date, vendor, address, phone, items, total, createdAt: new Date().toISOString() };
       setStorePurchases([purchase, ...storePurchases()]);
+      await upsertDirectSaleProductsFromPurchase(items);
       localStorage.setItem(storeTabKey, "list");
       const expensePayload = { title: `Purchase invoice ${billNo}`, amount: total, category: "Store Purchase", note: `${items.length} items from ${vendor}` };
       try {
@@ -4566,7 +4655,7 @@
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
       if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
       if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => { await loadProducts(); renderAdmin(); });
-      document.querySelectorAll("[data-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem, input.value)));
+      document.querySelectorAll("[data-price-item], [data-half-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem || input.dataset.halfPriceItem, document.querySelector(`[data-price-item="${input.dataset.priceItem || input.dataset.halfPriceItem}"]`)?.value)));
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_FROM", event.target.value); renderAdmin(); });
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderAdmin(); });
@@ -4843,14 +4932,14 @@
       const btn = event.target.closest("[data-item]");
       if (btn) {
         const product = products.find(item => Number(item.id) === Number(btn.dataset.item));
-        const halfOption = btn.dataset.halfItem ? { name: "Half Plate", price: Math.max(1, Math.round(Number(product?.price || 0) / 2)) } : null;
-        addToCart(btn.dataset.item, halfOption || selectedSubItems[btn.dataset.item] || null);
+        const singleOption = btn.dataset.singleItem ? { name: "Single Item", price: singleItemPrice(product) } : null;
+        addToCart(btn.dataset.item, singleOption || selectedSubItems[btn.dataset.item] || null);
       }
     });
     $("menuGrid").addEventListener("pointerdown", event => {
       const btn = event.target.closest("[data-item]");
       if (!btn) return;
-      if (btn.dataset.halfItem) return;
+      if (btn.dataset.singleItem) return;
       const product = products.find(item => Number(item.id) === Number(btn.dataset.item));
       if (!productSubItems(product).length) return;
       clearTimeout(longPressTimer);
