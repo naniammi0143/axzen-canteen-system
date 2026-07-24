@@ -412,10 +412,27 @@
       font-weight: 950;
     }
     .payment-total { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-radius: 12px; background: #f8fafc; font-weight: 950; }
-    .payment-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .payment-actions button { min-height: 98px; border-radius: 14px; border: 1px solid var(--line); background: white; font-weight: 950; }
+    .payment-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .payment-actions button { position: relative; min-height: 118px; border-radius: 18px; border: 1px solid var(--line); background: white; font-weight: 950; }
     .payment-actions button.primary-choice { background: var(--green); border-color: var(--green); color: white; }
     .payment-actions button.selected { background: #ecfdf3; border-color: var(--green); color: #166534; box-shadow: 0 10px 22px #2f7d2633; }
+    .payment-actions button.selected::after {
+      content: "✓";
+      position: absolute;
+      top: 9px;
+      right: 9px;
+      width: 26px;
+      height: 26px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #16c784;
+      color: #fff;
+      font-size: 18px;
+      line-height: 1;
+      font-weight: 950;
+      box-shadow: 0 8px 18px #16c7844d;
+    }
     .payment-choice {
       display: grid;
       justify-items: center;
@@ -426,53 +443,253 @@
     }
     .payment-choice small { color: var(--muted); font-size: 10px; font-weight: 850; line-height: 1.15; }
     .pay-visual {
-      width: 46px;
-      height: 46px;
-      border-radius: 15px;
+      width: 86px;
+      height: 54px;
+      border-radius: 16px;
       display: grid;
       place-items: center;
-      background: #f8fafc;
-      border: 1px solid #e8edf4;
+      background: #fff;
+      border: 1px solid #E8ECF3;
       overflow: hidden;
+      box-shadow: inset 0 1px 0 #ffffff14, 0 10px 20px #1118270d;
     }
-    .upi-logo { color: #2563eb; font-size: 13px; font-weight: 950; }
-    .upi-marks { display: flex; gap: 2px; margin-top: 3px; }
-    .upi-marks i { width: 10px; height: 6px; border-radius: 999px; display: block; }
-    .cash-note {
-      width: 34px;
-      height: 24px;
-      border: 2px solid #16a34a;
-      border-radius: 7px;
+    .cash-pay-logo { background: #ecfdf5; border-color: #bbf7d0; gap: 2px; }
+    .cash-note-logo {
+      position: relative;
+      width: 48px;
+      height: 28px;
       display: grid;
       place-items: center;
-      color: #16a34a;
-      background: white;
-      font-size: 11px;
-      font-weight: 950;
-    }
-    .split-visual { display: flex; align-items: center; }
-    .split-dot {
-      width: 27px;
-      height: 27px;
-      border-radius: 999px;
-      display: grid;
-      place-items: center;
-      border: 2px solid white;
-      color: white;
-      font-size: 10px;
-      font-weight: 950;
-    }
-    .split-dot + .split-dot { margin-left: -8px; }
-    .credit-card-visual {
-      width: 34px;
-      height: 25px;
-      border: 2px solid #f59e0b;
+      border: 2px solid #16c784;
       border-radius: 8px;
       background: white;
+      color: #047857;
+      font-size: 14px;
+      font-weight: 950;
       overflow: hidden;
     }
-    .credit-card-visual i { display: block; height: 6px; margin-top: 4px; background: #f59e0b; }
-    .credit-card-visual b { display: block; color: #f59e0b; text-align: center; font-size: 9px; line-height: 13px; }
+    .cash-note-logo::before {
+      content: "";
+      position: absolute;
+      left: 7px;
+      right: 7px;
+      top: 6px;
+      height: 3px;
+      border-radius: 999px;
+      background: #bbf7d0;
+    }
+    .cash-pay-logo em {
+      color: #047857;
+      font-size: 8px;
+      line-height: 1;
+      font-style: normal;
+      font-weight: 950;
+      letter-spacing: .8px;
+    }
+    .upi-brand,
+    .imps-brand {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      line-height: 1;
+    }
+    .upi-brand strong {
+      color: #808080;
+      font-size: 26px;
+      font-style: italic;
+      font-weight: 950;
+      letter-spacing: -1px;
+    }
+    .imps-brand strong {
+      color: #111827;
+      font-size: 0;
+      font-style: italic;
+      font-weight: 950;
+      letter-spacing: -1.2px;
+    }
+    .pay-arrow {
+      position: relative;
+      width: 18px;
+      height: 20px;
+      display: inline-block;
+    }
+    .pay-arrow i {
+      position: absolute;
+      top: 2px;
+      width: 8px;
+      height: 16px;
+      border-top-right-radius: 8px;
+      border-bottom-right-radius: 8px;
+      transform: skewX(-18deg);
+    }
+    .pay-arrow i:first-child { left: 1px; background: #16c784; }
+    .pay-arrow i:last-child { left: 8px; background: #f59e0b; }
+    .upi-pay-logo small,
+    .imps-pay-logo small {
+      display: block;
+      margin-top: 2px;
+      color: #4b5563;
+      font-size: 8px;
+      line-height: 1;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+    .upi-pay-logo {
+      width: 98px;
+      background: #fff;
+      border-color: #eef2f7;
+    }
+    .upi-pay-logo .pay-arrow {
+      width: 24px;
+      height: 27px;
+    }
+    .upi-pay-logo .pay-arrow i {
+      top: 0;
+      width: 11px;
+      height: 25px;
+      border-radius: 0 12px 12px 0;
+      transform: skewX(-18deg);
+    }
+    .upi-pay-logo .pay-arrow i:first-child { left: 2px; background: #f97316; }
+    .upi-pay-logo .pay-arrow i:last-child { left: 12px; background: #178f55; }
+    .split-pay-logo,
+    .credit-pay-logo {
+      background: #fff;
+      border-color: #eef2f7;
+    }
+    .split-receipts-logo {
+      position: relative;
+      width: 56px;
+      height: 45px;
+    }
+    .split-receipts-logo i {
+      position: absolute;
+      width: 34px;
+      height: 42px;
+      border: 3px solid currentColor;
+      border-radius: 10px 10px 6px 6px;
+      background: #f8fbff;
+      color: #55ca89;
+    }
+    .split-receipts-logo i:first-child {
+      left: 2px;
+      top: 2px;
+      transform: rotate(-8deg);
+    }
+    .split-receipts-logo i:last-child {
+      right: 2px;
+      top: 1px;
+      color: #6d42d7;
+      transform: rotate(7deg);
+    }
+    .split-receipts-logo i::before,
+    .split-receipts-logo i::after {
+      content: "";
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      height: 5px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .75;
+    }
+    .split-receipts-logo i::before { top: 15px; }
+    .split-receipts-logo i::after { top: 26px; }
+    .credit-hand-logo {
+      position: relative;
+      width: 70px;
+      height: 48px;
+    }
+    .credit-hand-logo .card {
+      position: absolute;
+      left: 20px;
+      top: 4px;
+      width: 44px;
+      height: 28px;
+      border-radius: 7px;
+      background: #63dc85;
+      box-shadow: inset 0 7px 0 #2f6a86;
+    }
+    .credit-hand-logo .card::after {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 15px;
+      width: 18px;
+      height: 4px;
+      border-radius: 999px;
+      background: #45aa6a;
+      box-shadow: 23px 0 0 -1px #45aa6a;
+    }
+    .credit-hand-logo .hand {
+      position: absolute;
+      left: 5px;
+      bottom: 4px;
+      width: 50px;
+      height: 16px;
+      border-radius: 12px 8px 8px 2px;
+      background: #ae765e;
+    }
+    .credit-hand-logo .hand::after {
+      content: "";
+      position: absolute;
+      right: -21px;
+      top: 0;
+      width: 28px;
+      height: 9px;
+      border-radius: 999px;
+      background: #ae765e;
+      transform: rotate(-38deg);
+      transform-origin: left center;
+    }
+    .credit-hand-logo .tick {
+      position: absolute;
+      right: 2px;
+      top: -2px;
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #5fc77a;
+      color: #fff;
+      font-size: 27px;
+      font-weight: 950;
+    }
+    .card-pay-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .visa-card-logo {
+      position: relative;
+      width: 36px;
+      height: 25px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #d1d5db;
+      border-radius: 3px;
+      background: white;
+      color: #1e3a8a;
+      font-size: 10px;
+      font-weight: 950;
+      overflow: hidden;
+    }
+    .visa-card-logo::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 4px;
+      background: #fbbf24;
+    }
+    .card-balls { display: inline-flex; align-items: center; }
+    .card-balls i { width: 23px; height: 23px; border-radius: 50%; display: block; }
+    .card-balls i:first-child { background: #ef4444; }
+    .card-balls i:last-child { margin-left: -8px; background: #f59e0b; opacity: .92; }
     .modal-close { width: 100%; }
     .credit-box {
       display: grid;
@@ -865,6 +1082,230 @@
       margin: 0 0 10px;
       font-size: 16px;
     }
+    .printer-settings-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .printer-setting-card {
+      display: grid;
+      gap: 12px;
+    }
+    .printer-setting-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .printer-setting-head h3 {
+      margin-bottom: 4px;
+    }
+    .printer-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #0b2e6d;
+      font-weight: 900;
+      letter-spacing: 0;
+    }
+    .printer-toggle input {
+      width: 18px;
+      height: 18px;
+      accent-color: #16c784;
+    }
+    .inventory-page {
+      display: grid;
+      gap: 14px;
+    }
+    .inventory-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 4px;
+    }
+    .inventory-title h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+      color: #111827;
+      font-weight: 950;
+    }
+    .inventory-title p {
+      margin: 8px 0 0;
+      color: #64748b;
+      font-weight: 700;
+    }
+    .inventory-chip-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .inventory-chip {
+      min-height: 46px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 16px;
+      border: 1px solid #E8ECF3;
+      border-radius: 10px;
+      background: #fff;
+      color: #111827;
+      box-shadow: 0 10px 24px #1018280d;
+      font-weight: 850;
+    }
+    .inventory-panel {
+      border: 1px solid #E8ECF3;
+      border-radius: 12px;
+      background: #fff;
+      padding: 20px;
+      box-shadow: 0 12px 28px #1018280d;
+    }
+    .inventory-panel h2 {
+      margin: 0 0 18px;
+      color: #111827;
+      font-size: 19px;
+      font-weight: 950;
+    }
+    .inventory-form {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+    .inventory-form.daily {
+      grid-template-columns: 1.05fr 1.25fr 1fr 1fr 1fr;
+    }
+    .inventory-field {
+      display: grid;
+      gap: 8px;
+    }
+    .inventory-field label {
+      color: #475569;
+      font-size: 12px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
+    .inventory-field input,
+    .inventory-field select,
+    .inventory-tools input {
+      width: 100%;
+      min-height: 46px;
+      border: 1px solid #DCE3ED;
+      border-radius: 8px;
+      background: #fff;
+      padding: 0 14px;
+      color: #111827;
+      font-weight: 750;
+      outline: 0;
+    }
+    .inventory-save {
+      min-height: 46px;
+      border: 0;
+      border-radius: 8px;
+      background: #0575F6;
+      color: #fff;
+      font-weight: 950;
+      box-shadow: 0 10px 22px #0575f626;
+    }
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .inventory-tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .inventory-tools input {
+      max-width: 270px;
+      min-height: 40px;
+    }
+    .inventory-export {
+      min-height: 40px;
+      border: 1px solid #DCE3ED;
+      border-radius: 8px;
+      background: #fff;
+      color: #0575F6;
+      padding: 0 16px;
+      font-weight: 950;
+    }
+    .inventory-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .inventory-table th {
+      padding: 12px 10px;
+      background: #F8FAFC;
+      color: #64748b;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      font-weight: 950;
+      border-bottom: 1px solid #DDE5EF;
+    }
+    .inventory-table td {
+      padding: 14px 10px;
+      border-bottom: 1px solid #E8ECF3;
+      color: #1F2937;
+      font-weight: 750;
+    }
+    .inventory-status {
+      display: inline-flex;
+      min-width: 42px;
+      justify-content: center;
+      border-radius: 8px;
+      padding: 6px 10px;
+      color: #EF4444;
+      background: #FEECEF;
+      font-weight: 900;
+    }
+    .inventory-status.ok {
+      color: #16A34A;
+      background: #EAFBF0;
+    }
+    .inventory-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-top: 14px;
+      color: #16A34A;
+      font-weight: 950;
+    }
+    .inventory-pages {
+      display: inline-flex;
+      gap: 8px;
+      color: #1F2937;
+    }
+    .inventory-pages span {
+      min-width: 30px;
+      height: 30px;
+      display: inline-grid;
+      place-items: center;
+      border: 1px solid #DCE3ED;
+      border-radius: 7px;
+      background: #fff;
+      font-weight: 850;
+    }
+    .inventory-pages .active {
+      color: #fff;
+      border-color: #0575F6;
+      background: #0575F6;
+    }
+    @media (max-width: 980px) {
+      .inventory-title,
+      .inventory-tools,
+      .inventory-footer { flex-direction: column; align-items: stretch; }
+      .inventory-form,
+      .inventory-form.daily,
+      .inventory-grid { grid-template-columns: 1fr; }
+      .inventory-panel { padding: 16px; overflow-x: auto; }
+      .inventory-table { min-width: 620px; }
+    }
     .report-filter {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1099,9 +1540,651 @@
     }
     .report-bills-scroll { max-height: 650px; overflow: auto; }
     .bulk-order-grid { display: grid; gap: 10px; }
-    .bulk-order-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) 96px; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+    .bulk-order-row { display: grid; grid-template-columns: 58px minmax(0, 1fr) 112px; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: white; }
     .bulk-thumb { width: 58px; height: 48px; border-radius: 8px; background: #eef2f7 center / cover; }
     .bulk-order-row input { min-height: 44px; text-align: center; font-size: 18px; font-weight: 950; }
+    .orders-hero {
+      display: grid;
+      grid-template-columns: 50px 1fr 46px;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid #E8ECF3;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 12px 28px #10182812;
+    }
+    .orders-hero-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: #EFF6FF;
+      color: #0B5FE8;
+    }
+    .orders-hero-icon svg,
+    .orders-fade-icon svg,
+    .order-tab-icon svg,
+    .orders-bar-icon svg,
+    .cart-page-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .orders-hero h2 {
+      margin: 0 0 3px;
+      color: #0F172A;
+      font-size: 21px;
+      line-height: 1.1;
+      font-weight: 950;
+    }
+    .orders-hero p { margin: 0; color: #6B7280; font-size: 13px; line-height: 1.2; font-weight: 750; }
+    .orders-fade-icon {
+      display: grid;
+      place-items: center;
+      color: #DCE7FA;
+    }
+    .orders-category-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 5px 0;
+    }
+    .orders-category-strip button {
+      min-height: 38px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid #E8ECF3;
+      border-radius: 999px;
+      background: #fff;
+      color: #111827;
+      padding: 0 12px;
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 850;
+      box-shadow: 0 8px 18px #10182808;
+    }
+    .orders-category-strip button.active {
+      background: #0B5FE8;
+      border-color: #0B5FE8;
+      color: #fff;
+      box-shadow: 0 12px 24px #0b5fe824;
+    }
+    .orders-list {
+      display: grid;
+      gap: 10px;
+      padding-bottom: 92px;
+    }
+    .orders-item-row {
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr) 142px;
+      align-items: center;
+      gap: 14px;
+      min-height: 112px;
+      border: 1px solid #E8ECF3;
+      border-radius: 18px;
+      background: #fff;
+      padding: 12px;
+      box-shadow: 0 10px 22px #1018280d;
+    }
+    .orders-item-thumb {
+      width: 86px;
+      height: 76px;
+      border-radius: 13px;
+      background: #F1F5F9 center / cover;
+    }
+    .orders-item-row h3 {
+      margin: 0 0 4px;
+      font-size: 18px;
+      line-height: 1.15;
+      color: #111827;
+      font-weight: 950;
+    }
+    .orders-item-row p {
+      margin: 0 0 4px;
+      color: #6B7280;
+      font-weight: 750;
+    }
+    .orders-item-row strong { color: #0B5FE8; font-size: 14px; }
+    .orders-qty {
+      display: grid;
+      grid-template-columns: 36px 1fr 36px;
+      align-items: center;
+      min-height: 54px;
+      border: 1px solid #BFD0F4;
+      border-radius: 15px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .orders-qty button {
+      height: 100%;
+      border: 0;
+      background: transparent;
+      color: #0B5FE8;
+      font-size: 24px;
+      font-weight: 950;
+    }
+    .orders-qty span {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      background: #FBFCFF;
+      color: #111827;
+      font-size: 18px;
+      font-weight: 950;
+    }
+    .orders-qty input {
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      border: 0;
+      border-inline: 1px solid #EEF2F8;
+      outline: 0;
+      background: #FBFCFF;
+      color: #111827;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 950;
+    }
+    .orders-qty-label {
+      display: block;
+      margin-top: 5px;
+      color: #6B7280;
+      font-size: 10px;
+      line-height: 1;
+      text-align: center;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+    .orders-bottom-bar {
+      position: sticky;
+      bottom: 0;
+      display: grid;
+      grid-template-columns: 52px 1fr 1fr 172px;
+      align-items: center;
+      gap: 12px;
+      margin-top: -82px;
+      border: 1px solid #DCE7FA;
+      border-radius: 20px;
+      background: #F3F7FF;
+      padding: 12px;
+      box-shadow: 0 -10px 24px #10182818;
+      z-index: 2;
+    }
+    .orders-bar-icon {
+      width: 50px;
+      height: 50px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      background: #E6F0FF;
+      color: #0B5FE8;
+    }
+    .orders-bottom-bar span {
+      display: block;
+      color: #6B7280;
+      font-size: 12px;
+      font-weight: 750;
+    }
+    .orders-bottom-bar strong {
+      display: block;
+      color: #111827;
+      font-size: 20px;
+      font-weight: 950;
+    }
+    .orders-view-cart {
+      min-height: 52px;
+      border: 0;
+      border-radius: 14px;
+      background: #0B5FE8;
+      color: #fff;
+      font-size: 17px;
+      font-weight: 950;
+    }
+    .cart-page-modal {
+      width: min(760px, 100vw);
+      max-height: 100vh;
+      min-height: 100vh;
+      overflow-y: auto;
+      border-radius: 0;
+      background: #fff;
+      padding: 0 24px 98px;
+    }
+    .cart-page-backdrop {
+      padding: 0 !important;
+      background: #fff !important;
+      backdrop-filter: none !important;
+      align-items: stretch !important;
+    }
+    .cart-page-header {
+      margin: 0 -24px 20px;
+      display: grid;
+      grid-template-columns: 48px 72px 1fr;
+      gap: 14px;
+      align-items: center;
+      min-height: 136px;
+      padding: 34px 24px 18px;
+      background: #0B3FAD;
+      color: #fff;
+    }
+    .cart-page-back,
+    .cart-page-icon {
+      width: 52px;
+      height: 52px;
+      border: 0;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      color: #0B5FE8;
+      background: #fff;
+      font-size: 24px;
+      font-weight: 950;
+    }
+    .cart-page-back { color: #fff; background: #1554C7; }
+    .cart-page-header h2 {
+      margin: 0 0 4px;
+      font-size: 27px;
+      line-height: 1.1;
+      font-weight: 950;
+    }
+    .cart-page-header p { margin: 0; opacity: .9; font-weight: 750; }
+    .cart-page-alert {
+      min-height: 54px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border: 1px solid #D9E6FF;
+      border-radius: 12px;
+      background: #F3F7FF;
+      padding: 0 16px;
+      color: #0B5FE8;
+      font-weight: 900;
+    }
+    .cart-page-alert button {
+      border: 0;
+      background: transparent;
+      color: #EF4444;
+      font-weight: 950;
+    }
+    .cart-page-list { display: grid; gap: 10px; margin: 18px 0; }
+    .cart-page-row {
+      display: grid;
+      grid-template-columns: 94px minmax(0, 1fr) 164px 86px 44px;
+      gap: 14px;
+      align-items: center;
+      border: 1px solid #E8ECF3;
+      border-radius: 18px;
+      background: #fff;
+      padding: 12px;
+      box-shadow: 0 9px 20px #1018280c;
+    }
+    .cart-page-thumb { width: 84px; height: 74px; border-radius: 12px; background: #F1F5F9 center / cover; }
+    .cart-page-row h3 { margin: 0 0 4px; font-size: 18px; line-height: 1.1; color: #111827; font-weight: 950; }
+    .cart-page-row p { margin: 0 0 4px; color: #6B7280; font-weight: 750; }
+    .cart-page-row .price { color: #0B5FE8; font-weight: 950; }
+    .cart-page-total { color: #111827; text-align: right; font-size: 18px; font-weight: 950; }
+    .cart-page-remove { width: 38px; height: 38px; border: 0; border-radius: 12px; background: #FEF2F2; color: #EF4444; font-size: 18px; font-weight: 950; }
+    .cart-page-remove svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .cart-page-card {
+      border: 1px solid #E8ECF3;
+      border-radius: 18px;
+      background: #fff;
+      padding: 18px;
+      box-shadow: 0 9px 20px #1018280c;
+      margin-bottom: 16px;
+    }
+    .cart-page-card h3 { margin: 0 0 16px; color: #111827; font-size: 20px; font-weight: 950; }
+    .cart-summary-line { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; color: #6B7280; font-weight: 800; }
+    .cart-summary-line.final { margin-top: 8px; border-top: 1px dashed #E8ECF3; color: #111827; font-size: 19px; font-weight: 950; }
+    .cart-summary-line.final strong { color: #0B5FE8; font-size: 24px; }
+    .cart-payment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .cart-payment-option {
+      min-height: 74px;
+      display: grid;
+      grid-template-columns: 46px 1fr 24px;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid #E8ECF3;
+      border-radius: 14px;
+      padding: 12px;
+      color: #111827;
+      font-weight: 900;
+    }
+    .cart-payment-option.active { border-color: #0B5FE8; background: #F4F8FF; }
+    .cart-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #CBD5E1; }
+    .cart-payment-option.active .cart-radio { border: 6px solid #0B5FE8; }
+    .cart-page-notes {
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: #9CA3AF;
+    }
+    .cart-page-footer {
+      position: fixed;
+      left: 50%;
+      bottom: 0;
+      transform: translateX(-50%);
+      width: min(760px, 100vw);
+      display: grid;
+      grid-template-columns: 54px 1fr 1fr 1.45fr;
+      gap: 12px;
+      align-items: center;
+      background: #F3F7FF;
+      padding: 12px 24px;
+      border-top: 1px solid #D9E6FF;
+    }
+    .cart-place-order {
+      min-height: 58px;
+      border: 0;
+      border-radius: 15px;
+      background: #0B5FE8;
+      color: #fff;
+      font-size: 18px;
+      font-weight: 950;
+    }
+    .report-modern-page {
+      display: grid;
+      gap: 14px;
+    }
+    .report-hero {
+      display: grid;
+      grid-template-columns: 58px 1fr 72px;
+      gap: 14px;
+      align-items: center;
+      border: 1px solid #E8ECF3;
+      border-radius: 18px;
+      background: #fff;
+      padding: 16px;
+      box-shadow: 0 10px 24px #1018280d;
+    }
+    .report-hero .orders-hero-icon { width: 52px; height: 52px; }
+    .report-hero h2 { margin: 0 0 4px; font-size: 23px; color: #111827; font-weight: 950; }
+    .report-hero p { margin: 0; color: #6B7280; font-weight: 750; }
+    .report-modern-filter { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .report-modern-filter label { display: grid; gap: 7px; color: #6B7280; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+    .report-modern-filter input { min-height: 44px; border: 1px solid #E8ECF3; border-radius: 12px; padding: 0 12px; font-weight: 850; }
+    .report-modern-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; grid-column: 1 / -1; }
+    .report-modern-actions button { min-height: 38px; border: 1px solid #E8ECF3; border-radius: 10px; background: #fff; color: #0B5FE8; font-weight: 900; }
+    .report-modern-actions button:first-child { background: #0B5FE8; color: #fff; }
+    .report-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .report-kpi-card { border: 1px solid #E8ECF3; border-radius: 16px; background: #fff; padding: 14px; box-shadow: 0 8px 18px #1018280d; }
+    .report-kpi-card span { display: block; color: #6B7280; font-size: 11px; font-weight: 950; text-transform: uppercase; }
+    .report-kpi-card strong { display: block; margin-top: 8px; color: #111827; font-size: 19px; font-weight: 950; }
+    .report-kpi-card small { display: block; margin-top: 7px; color: #16A34A; font-weight: 800; }
+    .sales-line-chart { height: 170px; border: 1px solid #E8ECF3; border-radius: 16px; background: linear-gradient(#fff, #F8FAFC); padding: 16px; }
+    .sales-line-chart svg { width: 100%; height: 100%; overflow: visible; }
+    .report-mini-table td,
+    .report-mini-table th { padding: 10px 8px; }
+    .report-view-all { display: block; margin: 12px auto 0; border: 0; background: transparent; color: #0B5FE8; font-weight: 950; }
+    .user-mini-icon {
+      width: 26px;
+      height: 26px;
+      display: inline-grid;
+      place-items: center;
+      margin-right: 8px;
+      border: 1px solid #BFD0F4;
+      border-radius: 999px;
+      color: #0B5FE8;
+      background: #F3F7FF;
+      font-size: 11px;
+      font-weight: 950;
+    }
+    @media (max-width: 760px) {
+      .option-page { padding-bottom: 160px !important; }
+      .orders-hero {
+        grid-template-columns: 48px minmax(0, 1fr) 42px !important;
+        gap: 12px !important;
+        padding: 12px 14px !important;
+        border-radius: 18px !important;
+      }
+      .orders-hero-icon {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 15px !important;
+      }
+      .orders-hero-icon svg,
+      .orders-fade-icon svg,
+      .order-tab-icon svg,
+      .orders-bar-icon svg,
+      .cart-page-icon svg {
+        width: 23px !important;
+        height: 23px !important;
+      }
+      .orders-hero h2 { font-size: 19px !important; margin-bottom: 2px !important; }
+      .orders-hero p { font-size: 12px !important; line-height: 1.2 !important; }
+      .orders-category-strip { gap: 7px !important; padding: 5px 0 4px !important; }
+      .orders-category-strip button {
+        min-height: 36px !important;
+        padding: 0 11px !important;
+        border-radius: 999px !important;
+        font-size: 12px !important;
+        gap: 6px !important;
+      }
+      .orders-list { gap: 10px !important; padding-bottom: 152px !important; }
+      .orders-item-row {
+        grid-template-columns: 78px minmax(0, 1fr) 124px !important;
+        gap: 10px !important;
+        min-height: 92px !important;
+        padding: 10px !important;
+        border-radius: 16px !important;
+      }
+      .orders-item-thumb {
+        width: 70px !important;
+        height: 60px !important;
+        border-radius: 12px !important;
+      }
+      .orders-item-row h3 {
+        font-size: 16px !important;
+        line-height: 1.12 !important;
+        margin-bottom: 2px !important;
+      }
+      .orders-item-row p {
+        font-size: 13px !important;
+        line-height: 1.1 !important;
+        margin-bottom: 3px !important;
+      }
+      .orders-item-row strong { font-size: 13px !important; }
+      .orders-qty {
+        grid-template-columns: 32px 1fr 32px !important;
+        min-height: 50px !important;
+        border-radius: 14px !important;
+      }
+      .orders-qty button {
+        font-size: 24px !important;
+        line-height: 1 !important;
+      }
+      .orders-qty span,
+      .orders-qty input {
+        font-size: 18px !important;
+      }
+      .orders-bottom-bar {
+        position: fixed !important;
+        left: 50% !important;
+        right: auto !important;
+        bottom: 68px !important;
+        transform: translateX(-50%) !important;
+        width: min(480px, calc(100% - 32px)) !important;
+        grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 124px !important;
+        gap: 8px !important;
+        margin: 0 !important;
+        padding: 9px !important;
+        border-radius: 18px !important;
+        z-index: 8 !important;
+      }
+      .orders-bar-icon {
+        width: 42px !important;
+        height: 42px !important;
+        border-radius: 13px !important;
+      }
+      .orders-bottom-bar strong { font-size: 16px !important; line-height: 1.15 !important; }
+      .orders-bottom-bar span { font-size: 11px !important; line-height: 1.1 !important; }
+      .orders-view-cart {
+        min-height: 44px !important;
+        border-radius: 13px !important;
+        font-size: 14px !important;
+      }
+      .cart-page-modal { padding: 0 14px 86px !important; }
+      .cart-page-header {
+        margin: 0 -14px 16px !important;
+        grid-template-columns: 46px 56px minmax(0, 1fr) !important;
+        gap: 12px !important;
+        min-height: 118px !important;
+        padding: 28px 20px 14px !important;
+      }
+      .cart-page-back,
+      .cart-page-icon {
+        width: 46px !important;
+        height: 46px !important;
+        border-radius: 13px !important;
+      }
+      .cart-page-header h2 { font-size: 24px !important; }
+      .cart-page-alert {
+        min-height: 48px !important;
+        padding: 0 14px !important;
+        font-size: 14px !important;
+      }
+      .cart-page-list { gap: 10px !important; margin: 14px 0 !important; }
+      .cart-page-row {
+        position: relative !important;
+        grid-template-columns: 72px minmax(0, 1fr) 118px !important;
+        grid-template-rows: auto auto !important;
+        gap: 8px 10px !important;
+        min-height: 112px !important;
+        padding: 10px 48px 10px 10px !important;
+        border-radius: 16px !important;
+      }
+      .cart-page-thumb {
+        grid-column: 1 !important;
+        grid-row: 1 / 3 !important;
+        width: 64px !important;
+        height: 58px !important;
+        border-radius: 11px !important;
+      }
+      .cart-page-row > div:first-of-type {
+        grid-column: 2 !important;
+        grid-row: 1 / 3 !important;
+        min-width: 0 !important;
+      }
+      .cart-page-row .orders-qty {
+        grid-column: 3 !important;
+        grid-row: 1 !important;
+        width: 118px !important;
+      }
+      .cart-page-total {
+        grid-column: 3 !important;
+        grid-row: 2 !important;
+        align-self: center !important;
+        font-size: 15px !important;
+        text-align: right !important;
+      }
+      .cart-page-remove {
+        position: absolute !important;
+        right: 10px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 34px !important;
+        height: 34px !important;
+        border-radius: 11px !important;
+        display: grid !important;
+        place-items: center !important;
+      }
+      .cart-page-remove svg { width: 17px !important; height: 17px !important; }
+      .cart-page-row h3 { font-size: 15px !important; line-height: 1.08 !important; }
+      .cart-page-row p,
+      .cart-page-row .price { font-size: 13px !important; line-height: 1.1 !important; }
+      .cart-page-card {
+        padding: 14px !important;
+        border-radius: 16px !important;
+        margin-bottom: 12px !important;
+      }
+      .cart-page-card h3 { font-size: 18px !important; margin-bottom: 12px !important; }
+      .cart-summary-line { padding: 7px 0 !important; font-size: 14px !important; }
+      .cart-summary-line.final { font-size: 17px !important; }
+      .cart-summary-line.final strong { font-size: 22px !important; }
+      .cart-payment-options { grid-template-columns: 1fr !important; }
+      .cart-page-footer {
+        grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 132px !important;
+        gap: 8px !important;
+        padding: 9px 14px !important;
+      }
+      .cart-page-footer strong,
+      .cart-page-footer span {
+        display: block !important;
+        line-height: 1.15 !important;
+      }
+      .cart-page-footer strong { font-size: 15px !important; }
+      .cart-page-footer span { font-size: 11px !important; }
+      .cart-place-order {
+        min-height: 50px !important;
+        border-radius: 14px !important;
+        font-size: 16px !important;
+      }
+      .report-modern-page {
+        gap: 10px !important;
+        padding-bottom: 80px !important;
+      }
+      .report-hero {
+        grid-template-columns: 48px minmax(0, 1fr) 42px !important;
+        gap: 12px !important;
+        padding: 12px !important;
+        border-radius: 16px !important;
+      }
+      .report-hero .orders-hero-icon { width: 46px !important; height: 46px !important; }
+      .report-hero h2 { font-size: 22px !important; }
+      .report-hero p { font-size: 13px !important; line-height: 1.25 !important; }
+      .report-modern-filter {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        padding: 12px !important;
+        border-radius: 16px !important;
+      }
+      .report-modern-filter label {
+        gap: 6px !important;
+        font-size: 10px !important;
+      }
+      .report-modern-filter input {
+        min-height: 40px !important;
+        border-radius: 12px !important;
+        font-size: 13px !important;
+      }
+      .report-modern-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+      }
+      .report-modern-actions button {
+        min-height: 36px !important;
+        border-radius: 10px !important;
+        font-size: 13px !important;
+      }
+      .report-kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 8px !important; }
+      .report-kpi-card {
+        min-height: 116px !important;
+        padding: 10px !important;
+        border-radius: 14px !important;
+      }
+      .report-kpi-card span { font-size: 10px !important; }
+      .report-kpi-card strong { font-size: 16px !important; margin-top: 7px !important; }
+      .report-kpi-card small { font-size: 11px !important; line-height: 1.25 !important; }
+      .sales-line-chart { height: 150px !important; padding: 12px !important; }
+      .report-mini-table td,
+      .report-mini-table th { padding: 8px 6px !important; font-size: 11px !important; }
+    }
     .day-close-summary { display: grid; justify-items: center; gap: 12px; max-height: 68vh; overflow-y: auto; }
     .day-close-text { width: min(100%, 384px); min-height: 240px; border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fff; color: var(--ink); font-family: ui-monospace, SFMono-Regular, Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.45; white-space: pre; overflow: auto; box-shadow: 0 10px 24px #1118270d; }
     .day-close-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -1387,6 +2470,606 @@
     .powered, .tagline, label, .status, .muted, .title-block span, .card span, .kpi span, .cart-row small, .option-row, td, th { font-weight: 500; }
     .primary, .secondary, .danger, .ghost, .tab, .bottom-nav button, .admin-tabs button, .pay-toggle button, .qty button, .pill, .mini-danger, .filter-btn, .login-links button { font-weight: 600; }
     .brand-name, .login-card h1, .title-block strong, .section-title-row h2, .panel h2, .work-header h2, .item-card h3, .card strong, .kpi strong, .item-price, #cartTotal { font-weight: 700; }
+    /* Final APK POS visual overrides */
+    #posView { background: #FAFAFC !important; }
+    #posView .topbar {
+      min-height: 96px !important;
+      margin: 8px 10px 0 !important;
+      padding: 12px 14px !important;
+      border: 1px solid #E8ECF3 !important;
+      border-radius: 24px !important;
+      background: #fff !important;
+      box-shadow: 0 12px 28px #10182814 !important;
+    }
+    #posView .brand-mark {
+      width: 64px !important;
+      height: 64px !important;
+      border-radius: 22px !important;
+      background: #0B2E6D !important;
+      box-shadow: 0 10px 20px #10182818 !important;
+    }
+    #posView .title-block strong {
+      color: #111827 !important;
+      font-size: 21px !important;
+      line-height: 27px !important;
+    }
+    #posView .shift-line b { color: #047857 !important; }
+    #posView .tabs {
+      gap: 10px !important;
+      padding: 18px 0 18px !important;
+    }
+    #posView .tab {
+      min-height: 54px !important;
+      border-radius: 18px !important;
+      padding: 0 20px !important;
+      border-color: #E8ECF3 !important;
+      background: #fff !important;
+      color: #111827 !important;
+      box-shadow: 0 8px 18px #1018280d !important;
+      font-size: 15px !important;
+      font-weight: 850 !important;
+    }
+    #posView .tab span { display: none !important; }
+    #posView .tab.active {
+      border-color: #BFDBFE !important;
+      background: #EFF6FF !important;
+      color: #0B2E6D !important;
+    }
+    #posView .section-title-row h2 {
+      color: #111827 !important;
+      font-size: 24px !important;
+      font-weight: 950 !important;
+    }
+    #posView .section-title-row span {
+      color: #2563EB !important;
+      font-weight: 950 !important;
+    }
+    #posView .item-card {
+      border-color: #E8ECF3 !important;
+      border-radius: 22px !important;
+      background: #fff !important;
+      box-shadow: 0 12px 26px #10182812 !important;
+    }
+    #posView .item-icon { border-radius: 14px !important; }
+    #posView .item-card h3 {
+      color: #111827 !important;
+      font-weight: 950 !important;
+    }
+    #posView .item-price {
+      color: #111827 !important;
+      font-weight: 950 !important;
+    }
+    #posView .cart-sheet {
+      border-color: #E8ECF3 !important;
+      border-radius: 26px !important;
+      background: #fff !important;
+      box-shadow: 0 -12px 32px #10182822 !important;
+    }
+    #posView #cartTotal {
+      color: #111827 !important;
+      font-size: 34px !important;
+      font-weight: 950 !important;
+    }
+    #posView .place {
+      min-height: 58px !important;
+      border-radius: 18px !important;
+      background: #16C784 !important;
+      box-shadow: 0 12px 26px #16c78435 !important;
+    }
+    #posView .bottom-nav {
+      height: 72px !important;
+      border: 1px solid #E8ECF3 !important;
+      border-radius: 28px !important;
+      background: #fff !important;
+      box-shadow: 0 -10px 28px #10182824 !important;
+      overflow: hidden !important;
+    }
+    #posView .bottom-nav button {
+      height: 54px !important;
+      min-height: 54px !important;
+      margin: 8px 2px !important;
+      border-radius: 22px !important;
+      color: #6B7280 !important;
+      background: transparent !important;
+      font-size: 14px !important;
+      font-weight: 850 !important;
+    }
+    #posView .bottom-nav button.active {
+      color: #2563EB !important;
+      background: #EFF6FF !important;
+      box-shadow: inset 0 0 0 1px #BFDBFE !important;
+    }
+    @media (max-width: 760px) {
+      #posView .content { padding: 16px 14px 188px !important; }
+      #posView .topbar { grid-template-columns: 36px 64px minmax(0, 1fr) !important; }
+      #posView .brand-mark { width: 58px !important; height: 58px !important; }
+      #posView .item-card {
+        min-height: 188px !important;
+        grid-template-rows: 134px auto !important;
+        padding: 8px !important;
+      }
+      #posView .item-icon { height: 134px !important; }
+      #posView .item-card h3 { font-size: 15px !important; }
+      #posView .cart-sheet {
+        bottom: 92px !important;
+        max-height: 152px !important;
+      }
+      #posView .bottom-nav { width: min(480px, calc(100% - 20px)) !important; }
+    }
+    /* Fresh mobile POS refinement */
+    #posView .tab span {
+      display: inline-grid !important;
+      place-items: center !important;
+      width: 24px !important;
+      height: 24px !important;
+      color: currentColor !important;
+      flex: 0 0 24px !important;
+    }
+    #posView .tab span svg {
+      width: 23px !important;
+      height: 23px !important;
+      fill: none !important;
+      stroke: currentColor !important;
+      stroke-width: 2.2 !important;
+      stroke-linecap: round !important;
+      stroke-linejoin: round !important;
+    }
+    #posView .tab.active {
+      background: #0B4FE8 !important;
+      border-color: #0B4FE8 !important;
+      color: #fff !important;
+      box-shadow: 0 12px 22px #0b4fe824 !important;
+    }
+    #posView .place {
+      background: #08B85A !important;
+      box-shadow: 0 12px 24px #08b85a2e !important;
+    }
+    @media (max-width: 760px) {
+      #posView .content {
+        padding: 12px 14px 300px !important;
+      }
+      #posView .topbar {
+        min-height: 78px !important;
+        margin: 6px 10px 0 !important;
+        padding: 9px 12px !important;
+        grid-template-columns: 34px 52px minmax(0, 1fr) !important;
+        border-radius: 22px !important;
+      }
+      #posView .brand-mark {
+        width: 52px !important;
+        height: 52px !important;
+        border-radius: 18px !important;
+      }
+      #posView .title-block strong {
+        font-size: 22px !important;
+        line-height: 25px !important;
+        font-weight: 950 !important;
+        color: #0B2E6D !important;
+        text-transform: uppercase !important;
+      }
+      #posView .shift-line {
+        margin-top: 1px !important;
+      }
+      #posView .tabs {
+        gap: 10px !important;
+        padding: 16px 0 18px !important;
+      }
+      #posView .tab {
+        min-height: 50px !important;
+        border-radius: 18px !important;
+        padding: 0 15px !important;
+        gap: 9px !important;
+        font-size: 14px !important;
+        white-space: nowrap !important;
+      }
+      #posView .menu-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 10px !important;
+      }
+      #posView .item-card {
+        min-height: 154px !important;
+        grid-template-rows: 92px 1fr !important;
+        gap: 8px !important;
+        padding: 7px !important;
+        border-radius: 16px !important;
+        box-shadow: 0 8px 18px #10182810 !important;
+      }
+      #posView .item-icon {
+        height: 92px !important;
+        border-radius: 12px !important;
+      }
+      #posView .item-body {
+        gap: 2px !important;
+        padding: 0 3px 2px !important;
+      }
+      #posView .item-name-line {
+        display: block !important;
+      }
+      #posView .item-name-wrap {
+        display: flex !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+      }
+      #posView .item-emoji {
+        display: inline-grid !important;
+        place-items: center !important;
+        width: 14px !important;
+        height: 16px !important;
+        min-width: 14px !important;
+        color: #0B2E6D !important;
+        line-height: 16px !important;
+      }
+      #posView .item-emoji svg {
+        width: 13px !important;
+        height: 13px !important;
+        fill: none !important;
+        stroke: currentColor !important;
+        stroke-width: 2.3 !important;
+        stroke-linecap: round !important;
+        stroke-linejoin: round !important;
+      }
+      #posView .item-card h3 {
+        font-size: 13px !important;
+        line-height: 16px !important;
+        min-height: 32px !important;
+        overflow: hidden !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        word-break: normal !important;
+        overflow-wrap: normal !important;
+      }
+      #posView .item-price {
+        display: block !important;
+        margin-top: 2px !important;
+        color: #059447 !important;
+        font-size: 14px !important;
+        line-height: 17px !important;
+      }
+      #posView .cart-sheet {
+        bottom: 74px !important;
+        width: min(480px, calc(100% - 20px)) !important;
+        max-height: none !important;
+        border-radius: 20px !important;
+        box-shadow: 0 -10px 26px #1018281f !important;
+      }
+      #posView .cart-inner {
+        padding: 11px 18px 12px !important;
+      }
+      #posView .cart-head {
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 8px !important;
+      }
+      #posView .cart-head strong {
+        font-size: 14px !important;
+        line-height: 18px !important;
+      }
+      #posView .cart-head .muted {
+        display: none !important;
+      }
+      #posView .cart-actions {
+        display: inline-flex !important;
+        gap: 8px !important;
+      }
+      #posView .cart-view-btn,
+      #posView .cart-head button {
+        min-height: 34px !important;
+        border-radius: 12px !important;
+        padding: 0 10px !important;
+        font-size: 12px !important;
+        background: #F1F6FF !important;
+      }
+      #posView .cart-head button svg {
+        width: 15px !important;
+        height: 15px !important;
+      }
+      #posView .row-between {
+        gap: 8px !important;
+      }
+      #posView .row-between span {
+        font-size: 14px !important;
+        font-weight: 850 !important;
+      }
+      #posView #cartTotal {
+        font-size: 30px !important;
+        line-height: 34px !important;
+      }
+      #posView .place {
+        min-height: 46px !important;
+        margin-top: 8px !important;
+        border-radius: 16px !important;
+        font-size: 14px !important;
+      }
+      #posView .bottom-nav {
+        bottom: 10px !important;
+        height: 58px !important;
+        border-radius: 22px !important;
+        padding: 5px !important;
+        box-shadow: 0 -8px 22px #1018281c !important;
+      }
+      #posView .bottom-nav button {
+        height: 44px !important;
+        min-height: 44px !important;
+        margin: 2px 1px !important;
+        border-radius: 18px !important;
+        font-size: 13px !important;
+        position: relative !important;
+      }
+      #posView .bottom-nav button span {
+        display: inline-grid !important;
+        place-items: center !important;
+        width: 20px !important;
+        height: 20px !important;
+      }
+      #posView .bottom-nav button svg {
+        width: 20px !important;
+        height: 20px !important;
+        fill: none !important;
+        stroke: currentColor !important;
+        stroke-width: 2.2 !important;
+        stroke-linecap: round !important;
+        stroke-linejoin: round !important;
+      }
+      #posView .bottom-nav button.active::after {
+        content: "" !important;
+        position: absolute !important;
+        left: 28% !important;
+        right: 28% !important;
+        bottom: 3px !important;
+        height: 3px !important;
+        border-radius: 999px !important;
+        background: #2563EB !important;
+      }
+    }
+    /* Final compact mobile shell + report match */
+    @media (max-width: 760px) {
+      #posView .content {
+        padding: 10px 14px 74px !important;
+      }
+      #posView.option-mode .content {
+        padding: 10px 14px 74px !important;
+      }
+      #posView .topbar {
+        min-height: 70px !important;
+        margin: 6px 10px 0 !important;
+        padding: 8px 12px !important;
+        grid-template-columns: 32px 48px minmax(0, 1fr) !important;
+        column-gap: 10px !important;
+        border-radius: 18px !important;
+        box-shadow: 0 8px 20px #10182812 !important;
+      }
+      #posView .icon-btn,
+      #posView .icon-btn.menu-trigger {
+        width: 32px !important;
+        height: 38px !important;
+      }
+      #posView .icon-btn.menu-trigger::before {
+        width: 24px !important;
+        height: 16px !important;
+        background-size: 100% 3px, 100% 3px, 100% 3px !important;
+      }
+      #posView .brand-mark {
+        width: 48px !important;
+        height: 48px !important;
+        border-radius: 15px !important;
+      }
+      .brand-logo-fallback {
+        width: 25px !important;
+        height: 25px !important;
+      }
+      #posView .title-block {
+        gap: 3px !important;
+      }
+      #posView .title-block strong {
+        font-size: 16px !important;
+        line-height: 19px !important;
+        color: #111827 !important;
+      }
+      .shift-line b {
+        font-size: 10px !important;
+        line-height: 12px !important;
+      }
+      #posView .cart-sheet {
+        bottom: 66px !important;
+      }
+      #posView .bottom-nav {
+        bottom: 8px !important;
+        height: 52px !important;
+        width: min(480px, calc(100% - 18px)) !important;
+        padding: 4px !important;
+        border-radius: 20px !important;
+      }
+      #posView .bottom-nav button {
+        height: 42px !important;
+        min-height: 42px !important;
+        margin: 1px !important;
+        border-radius: 16px !important;
+        gap: 5px !important;
+        font-size: 12px !important;
+      }
+      #posView .bottom-nav button span {
+        width: 18px !important;
+        height: 18px !important;
+      }
+      #posView .bottom-nav button svg {
+        width: 18px !important;
+        height: 18px !important;
+      }
+      #posView .bottom-nav button.active::after {
+        bottom: 2px !important;
+        height: 3px !important;
+      }
+      .report-modern-page {
+        gap: 9px !important;
+        padding-bottom: 4px !important;
+      }
+      .report-hero {
+        grid-template-columns: 44px minmax(0, 1fr) 40px !important;
+        gap: 11px !important;
+        padding: 11px 12px !important;
+        border-radius: 15px !important;
+        box-shadow: 0 8px 18px #1018280d !important;
+      }
+      .report-hero .orders-hero-icon {
+        width: 42px !important;
+        height: 42px !important;
+        border-radius: 13px !important;
+        background: #EAF3FF !important;
+      }
+      .report-hero h2 {
+        font-size: 21px !important;
+        line-height: 25px !important;
+        margin: 0 0 2px !important;
+      }
+      .report-hero p {
+        font-size: 12px !important;
+        line-height: 17px !important;
+      }
+      .report-modern-filter {
+        gap: 8px !important;
+        padding: 11px !important;
+        border-radius: 14px !important;
+        box-shadow: 0 8px 18px #1018280b !important;
+      }
+      .report-modern-filter label {
+        font-size: 9px !important;
+      }
+      .report-modern-filter input {
+        min-height: 38px !important;
+        padding: 0 10px !important;
+        font-size: 12px !important;
+        border-radius: 11px !important;
+      }
+      .report-modern-actions {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+        gap: 8px !important;
+      }
+      .report-modern-actions.report-share-actions {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      }
+      .report-modern-actions button {
+        min-height: 34px !important;
+        padding: 0 6px !important;
+        border-radius: 10px !important;
+        font-size: 11px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 5px !important;
+      }
+      .report-modern-actions svg {
+        width: 14px !important;
+        height: 14px !important;
+        fill: none !important;
+        stroke: currentColor !important;
+        stroke-width: 2.2 !important;
+        stroke-linecap: round !important;
+        stroke-linejoin: round !important;
+      }
+      .report-kpi-grid {
+        gap: 7px !important;
+      }
+      .report-kpi-card {
+        min-height: 86px !important;
+        padding: 9px !important;
+        border-radius: 13px !important;
+        box-shadow: 0 8px 18px #1018280d !important;
+      }
+      .report-kpi-top {
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        min-width: 0 !important;
+      }
+      .report-kpi-icon {
+        width: 27px !important;
+        height: 27px !important;
+        display: inline-grid !important;
+        place-items: center !important;
+        border-radius: 999px !important;
+        flex: 0 0 27px !important;
+      }
+      .report-kpi-icon svg {
+        width: 15px !important;
+        height: 15px !important;
+        fill: none !important;
+        stroke: currentColor !important;
+        stroke-width: 2.1 !important;
+        stroke-linecap: round !important;
+        stroke-linejoin: round !important;
+      }
+      .report-kpi-card span {
+        font-size: 8.5px !important;
+        line-height: 11px !important;
+      }
+      .report-kpi-card strong {
+        font-size: 15px !important;
+        line-height: 18px !important;
+        margin-top: 7px !important;
+      }
+      .report-kpi-card small {
+        margin-top: 5px !important;
+        font-size: 9px !important;
+        line-height: 12px !important;
+      }
+      .report-kpi-icon.blue { color: #2563EB !important; background: #EAF3FF !important; }
+      .report-kpi-icon.purple { color: #7C3AED !important; background: #F1EAFF !important; }
+      .report-kpi-icon.green { color: #16A34A !important; background: #EAF8EF !important; }
+      .report-kpi-icon.orange { color: #EA580C !important; background: #FFF1E7 !important; }
+      .report-kpi-icon.red { color: #E11D48 !important; background: #FFEAF0 !important; }
+      .report-card-compact {
+        padding: 11px !important;
+        border-radius: 14px !important;
+        box-shadow: 0 8px 18px #1018280b !important;
+      }
+      .report-card-title {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+        margin-bottom: 8px !important;
+      }
+      .report-card-title h3 {
+        margin: 0 !important;
+        font-size: 14px !important;
+        line-height: 18px !important;
+      }
+      .report-card-title select {
+        width: auto !important;
+        min-height: 30px !important;
+        padding: 0 24px 0 10px !important;
+        border-radius: 9px !important;
+        font-size: 10px !important;
+      }
+      .sales-line-chart {
+        height: 142px !important;
+        padding: 8px 6px 4px !important;
+        border-radius: 13px !important;
+        background: #fff !important;
+      }
+      .sales-line-chart text {
+        font-family: Inter, system-ui, sans-serif !important;
+        fill: #6B7280 !important;
+        font-weight: 750 !important;
+      }
+      .report-mini-table td,
+      .report-mini-table th {
+        padding: 7px 5px !important;
+        font-size: 10px !important;
+        line-height: 13px !important;
+      }
+      .report-view-all {
+        margin-top: 8px !important;
+        font-size: 11px !important;
+      }
+      .user-mini-icon {
+        width: 21px !important;
+        height: 21px !important;
+        margin-right: 6px !important;
+        font-size: 9px !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1471,9 +3154,9 @@
         <div class="option-page hidden" id="optionPage"></div>
       </section>
       <nav class="bottom-nav user-nav" id="userNav">
-        <button class="active"><span aria-hidden="true">H</span><b>Home</b></button>
-        <button><span aria-hidden="true">O</span><b>Orders</b></button>
-        <button><span aria-hidden="true">R</span><b>Reports</b></button>
+        <button class="active"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></span><b>Home</b></button>
+        <button><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h10l2 4v14H5V7l2-4Z"/><path d="M7 7h10"/><path d="M9 12h6"/><path d="M9 16h6"/></svg></span><b>Orders</b></button>
+        <button><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 20V10"/><path d="M12 20V4"/><path d="M19 20v-7"/><path d="M3 20h18"/></svg></span><b>Reports</b></button>
       </nav>
       <section class="cart-sheet">
         <div class="cart-inner">
@@ -1562,7 +3245,7 @@
         return defaults;
       }
     })();
-    const appBuild = "2.7.0";
+    const appBuild = "3.2";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -1575,6 +3258,10 @@
     const tokenKey = "AXEN_TOKEN";
     const loginCacheKey = "AXEN_LOGIN_CACHE";
     const selectedPrinterKey = "AXEN_SELECTED_PRINTER";
+    const billingPrinterKey = "AXEN_BILLING_PRINTER";
+    const billingPrinterEnabledKey = "AXEN_BILLING_PRINTER_ENABLED";
+    const kitchenPrinterKey = "AXEN_KITCHEN_PRINTER";
+    const kitchenPrinterEnabledKey = "AXEN_KITCHEN_PRINTER_ENABLED";
     const userRoles = [
       ["user", "User"],
       ["cashier", "Cashier"],
@@ -1606,6 +3293,10 @@
     let adminUnlocked = false;
     let adminAccessToken = "";
     let selectedPrinter = localStorage.getItem(selectedPrinterKey) || "";
+    let billingPrinter = localStorage.getItem(billingPrinterKey) || selectedPrinter || "";
+    let billingPrinterEnabled = localStorage.getItem(billingPrinterEnabledKey) !== "false";
+    let kitchenPrinter = localStorage.getItem(kitchenPrinterKey) || "";
+    let kitchenPrinterEnabled = localStorage.getItem(kitchenPrinterEnabledKey) === "true";
     let selectedSubItems = {};
     let longPressTimer = null;
     let longPressHandled = false;
@@ -1614,7 +3305,7 @@
     let menuOpening = false;
 
     const $ = id => document.getElementById(id);
-    const money = value => "Rs " + Number(value || 0).toFixed(0);
+    const money = value => "Rs " + Number(value || 0).toFixed(2);
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
     const readJson = (key, fallback) => {
       try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
@@ -1651,7 +3342,21 @@
     }
 
     function categoryIcon(category) {
-      return ({ All: "All", Tiffin: "Tf", Meals: "Ml", Tea: "Te", Coffee: "Co", Snacks: "Sn", Juice: "Ju", Drinks: "Dr", Lunch: "Ri", Dinner: "Dn", "Single Items": "Si" })[category] || "It";
+      return ({ All: "grid", Tiffin: "cloche", Meals: "meal", Tea: "cup", Coffee: "cup", Snacks: "snack", Juice: "juice", Drinks: "juice", Lunch: "meal", Dinner: "meal", "Single Items": "cloche" })[category] || "item";
+    }
+
+    function categoryIconSvg(category) {
+      const icon = categoryIcon(category);
+      const icons = {
+        grid: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>`,
+        cloche: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17h16"/><path d="M6 17a6 6 0 0 1 12 0"/><path d="M12 7V5"/><path d="M9 5h6"/><path d="M7 20h10"/></svg>`,
+        cup: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h11v6a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4V8Z"/><path d="M16 10h2a2 2 0 0 1 0 4h-2"/><path d="M7 4h8"/></svg>`,
+        meal: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v18"/><path d="M5 3v5a2 2 0 0 0 4 0V3"/><path d="M16 3v18"/><path d="M16 3c3 2 4 5 2 8h-2"/></svg>`,
+        snack: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14l-2 12H7L5 8Z"/><path d="M8 8l1-4h6l1 4"/><path d="M9 12h6"/></svg>`,
+        juice: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10l-1 14H8L7 7Z"/><path d="M9 7l1-4h7"/><path d="M8 12h8"/></svg>`,
+        item: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"/><path d="M6 7l1 13h10l1-13"/><path d="M9 4h6"/></svg>`
+      };
+      return icons[icon] || icons.item;
     }
 
     function categoryLabel(category) {
@@ -1668,14 +3373,12 @@
 
     function itemEmoji(item) {
       const name = String(item.name || "").toLowerCase();
-      if (name.includes("tea")) return "Te";
-      if (name.includes("coffee")) return "Co";
-      if (name.includes("meals")) return "Ml";
-      if (name.includes("idly") || name.includes("idli")) return "Id";
-      if (name.includes("dosa")) return "Do";
-      if (name.includes("samosa")) return "Sa";
-      if (name.includes("juice")) return "Ju";
-      return categoryIcon(item.category || "All");
+      if (name.includes("tea") || name.includes("coffee")) return categoryIconSvg("Tea");
+      if (name.includes("water") || name.includes("juice")) return categoryIconSvg("Juice");
+      if (name.includes("meals")) return categoryIconSvg("Meals");
+      if (name.includes("idly") || name.includes("idli") || name.includes("dosa") || name.includes("vada") || name.includes("bonda") || name.includes("poori")) return categoryIconSvg("Tiffin");
+      if (name.includes("samosa") || name.includes("laddu") || name.includes("halwa")) return categoryIconSvg("Snacks");
+      return categoryIconSvg(item.category || "All");
     }
 
     function itemSubtitle(item) {
@@ -1932,7 +3635,7 @@
       found.add(singleItemsCategory);
       const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
       $("categoryTabs").innerHTML = categories.map(category => `
-        <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${esc(category)}"><span>${esc(categoryIcon(category))}</span>${esc(categoryLabel(category))}</button>
+        <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${esc(category)}"><span>${categoryIconSvg(category)}</span>${esc(categoryLabel(category))}</button>
       `).join("");
     }
 
@@ -2069,19 +3772,74 @@
 
     function openCartViewModal() {
       const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const total = Math.max(0, subtotal - cartDiscount);
+      const qty = cart.reduce((sum, item) => sum + Number(item.qty || 0), 0);
       $("optionsModalMount").innerHTML = `
-        <div class="modal-backdrop center-modal">
-          <div class="payment-modal">
-            <div class="modal-title-row"><h2>Cart Items</h2><button class="modal-x" id="closeCartView" type="button">X</button></div>
-            <div class="cart-view-list">
-              ${cart.map(item => `<div class="cart-view-row"><div><strong>${esc(item.name)}</strong><small>${item.qty} x ${money(item.price)}</small></div><strong>${money(Number(item.price) * item.qty)}</strong></div>`).join("") || `<div class="muted">Cart empty</div>`}
+        <div class="modal-backdrop cart-page-backdrop">
+          <div class="cart-page-modal">
+            <div class="cart-page-header">
+              <button class="cart-page-back" id="closeCartView" type="button">&lt;</button>
+              <span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M6 7h15l-2 9H8L6 7Z"/><path d="M6 7 5 3H3"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg></span>
+              <div><h2>Your Cart</h2><p>Review your items</p></div>
             </div>
-            <div class="row-between"><span>Total</span><strong>${money(Math.max(0, subtotal - cartDiscount))}</strong></div>
-            <button class="secondary modal-close" type="button" id="closeCartViewBottom">Close</button>
+            <div class="cart-page-alert"><span>You have ${cart.length} items in your cart</span><button id="cartPageClear" type="button">Clear Cart</button></div>
+            <div class="cart-page-list">
+              ${cart.map(item => `<div class="cart-page-row">
+                <span class="cart-page-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
+                <div><h3>${esc(item.name)}</h3><p>${esc(item.category || item.optionName || "Item")}</p><span class="price">${money(item.price)}</span></div>
+              <div class="orders-qty"><button data-cart-page-qty="-1" data-id="${esc(item.lineId)}" type="button">-</button><input data-cart-page-input="${esc(item.lineId)}" type="number" min="0" inputmode="numeric" value="${item.qty}"><button data-cart-page-qty="1" data-id="${esc(item.lineId)}" type="button">+</button></div>
+                <strong class="cart-page-total">${money(Number(item.price) * item.qty)}</strong>
+                <button class="cart-page-remove" data-cart-page-remove="${esc(item.lineId)}" type="button" aria-label="Remove item"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M8 7l1 13h6l1-13"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
+              </div>`).join("") || `<div class="work-card">Cart empty</div>`}
+            </div>
+            <div class="cart-page-card">
+              <h3>Order Summary</h3>
+              <div class="cart-summary-line"><span>Total Items</span><strong>${cart.length}</strong></div>
+              <div class="cart-summary-line"><span>Total Quantity</span><strong>${qty}</strong></div>
+              <div class="cart-summary-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
+              <div class="cart-summary-line"><span>Discount</span><strong style="color:#16A34A">${money(cartDiscount)}</strong></div>
+              <div class="cart-summary-line"><span>Delivery Charge</span><strong>Rs 0</strong></div>
+              <div class="cart-summary-line final"><span>Total Amount</span><strong>${money(total)}</strong></div>
+            </div>
+            <div class="cart-page-card">
+              <h3>Payment Method</h3>
+              <div class="cart-payment-options">
+                <div class="cart-payment-option active"><span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M7 11h5"/><path d="M7 14h3"/></svg></span><div><strong>Cash on Delivery</strong><p class="muted">Pay when order delivered</p></div><span class="cart-radio"></span></div>
+                <div class="cart-payment-option"><span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M4 10h16"/><path d="M7 14h3"/></svg></span><div><strong>Online Payment</strong><p class="muted">UPI, Card, Netbanking</p></div><span class="cart-radio"></span></div>
+              </div>
+            </div>
+            <div class="cart-page-card cart-page-notes"><span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v5h5"/><path d="M8 14h8"/></svg></span><div><strong>Order Notes (Optional)</strong><p class="muted">Add any special instructions...</p></div></div>
+            <div class="cart-page-footer">
+              <span class="orders-bar-icon"><svg viewBox="0 0 24 24"><path d="M6 7h15l-2 9H8L6 7Z"/><path d="M6 7 5 3H3"/></svg></span>
+              <div><strong>${cart.length} Items</strong><span>${qty} Quantity</span></div>
+              <div><strong>${money(total)}</strong><span>Total Amount</span></div>
+              <button class="cart-place-order" id="cartPagePlaceOrder" type="button">Place Order &gt;</button>
+            </div>
           </div>
         </div>`;
       $("closeCartView").addEventListener("click", closeOptionsModal);
-      $("closeCartViewBottom").addEventListener("click", closeOptionsModal);
+      $("cartPageClear").addEventListener("click", () => { clearCartState(); if (activePosSection === "bulk") setBulkDraft([]); closeOptionsModal(); });
+      document.querySelectorAll("[data-cart-page-qty]").forEach(btn => btn.addEventListener("click", () => {
+        changeQty(btn.dataset.id, Number(btn.dataset.cartPageQty));
+        if (activePosSection === "bulk") setBulkDraft(cart.map(item => ({ ...item })));
+        openCartViewModal();
+      }));
+      document.querySelectorAll("[data-cart-page-input]").forEach(input => input.addEventListener("change", () => {
+        const nextQty = Math.max(0, Number(input.value || 0));
+        cart = cart.map(item => item.lineId === input.dataset.cartPageInput ? { ...item, qty: nextQty } : item).filter(item => Number(item.qty || 0) > 0);
+        if (activePosSection === "bulk") setBulkDraft(cart.map(item => ({ ...item })));
+        renderCart();
+        openCartViewModal();
+      }));
+      document.querySelectorAll("[data-cart-page-remove]").forEach(btn => btn.addEventListener("click", () => {
+        removeCartLine(btn.dataset.cartPageRemove);
+        if (activePosSection === "bulk") setBulkDraft(cart.map(item => ({ ...item })));
+        openCartViewModal();
+      }));
+      $("cartPagePlaceOrder").addEventListener("click", () => {
+        closeOptionsModal();
+        placeOrderFlow();
+      });
     }
 
     function removeCartLine(id) {
@@ -2138,12 +3896,12 @@
       return { cash: total, online: 0, credit: 0 };
     }
 
-    function receiptText(order, copy = false) {
+    function receiptTextLegacyUnused(order, copy = false) {
       const width = 42;
       const line = "-".repeat(width);
       const thick = "=".repeat(width);
       const center = value => String(value || "").slice(0, width).padStart(Math.floor((width + String(value || "").slice(0, width).length) / 2)).padEnd(width);
-      const moneyText = value => `₹${Number(value || 0).toFixed(2)}`;
+      const moneyText = value => `Rs ${Number(value || 0).toFixed(2)}`;
       const leftRight = (left, right) => {
         const l = String(left || "");
         const r = String(right || "");
@@ -2157,11 +3915,9 @@
         const name = String(item.name || "Item").slice(0, 15).padEnd(15);
         return `${String(index).padEnd(2)} ${name} ${String(qty).padStart(3)} ${rate.toFixed(0).padStart(5)} ${amount.toFixed(2).padStart(8)}`;
       };
-      const totalQty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const total = Number(order.total || 0);
       const subtotal = Number(order.subtotal || total);
       const discount = Number(order.discount || 0);
-      const paid = order.payment === "Cancel" ? 0 : total;
       const paymentLabel = order.payment === "Credit" && order.creditName ? `Credit - ${order.creditName}` : order.payment || "Cash";
       const billNo = `BILL-${String(order.id || Date.now()).slice(-6).padStart(6, "0")}`;
       const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
@@ -2219,49 +3975,57 @@
       const line = "-".repeat(width);
       const thick = "=".repeat(width);
       const center = value => String(value || "").slice(0, width).padStart(Math.floor((width + String(value || "").slice(0, width).length) / 2)).padEnd(width);
-      const amountText = value => `Rs ${Number(value || 0).toFixed(2)}`.padStart(12);
+      const centerWide = value => String(value || "").slice(0, 16).padStart(Math.floor((16 + String(value || "").slice(0, 16).length) / 2)).padEnd(16);
+      const amountText = value => `Rs ${Number(value || 0).toFixed(2)}`.padStart(10);
       const leftRight = (left, right) => {
         const l = String(left || "");
         const r = String(right || "");
         return (l + " ".repeat(Math.max(1, width - l.length - r.length)) + r).slice(0, width);
       };
+      const boldOn = "\x1B\x45\x01";
+      const boldOff = "\x1B\x45\x00";
+      const alignCenter = "\x1B\x61\x01";
+      const alignLeft = "\x1B\x61\x00";
+      const titleOn = "\x1D\x21\x01";
+      const bigOn = "\x1D\x21\x11";
+      const bigOff = "\x1D\x21\x00";
       const itemLine = (index, item) => {
         const qty = Number(item.qty || 0);
         const rate = Number(item.price || 0);
         const amount = qty * rate;
-        const name = String(item.name || "Item").slice(0, 11).padEnd(11);
-        return `${String(index).padEnd(2)} ${name}${String(qty).padStart(2)} ${String(rate.toFixed(2)).padStart(7)} ${String(amount.toFixed(2)).padStart(8)}`.slice(0, width);
+        const name = String(item.name || "Item").toUpperCase().slice(0, 10).padEnd(10);
+        return `${String(index).padEnd(2)} ${name}${String(qty).padStart(3)} ${rate.toFixed(2).padStart(6)} ${amount.toFixed(2).padStart(7)}`.slice(0, width);
       };
-      const totalQty = (order.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const total = Number(order.total || 0);
       const subtotal = Number(order.subtotal || total);
       const discount = Number(order.discount || 0);
-      const paid = order.payment === "Cancel" ? 0 : total;
       const tokenNo = String(order.id || Date.now()).slice(-4).padStart(4, "0");
       const paymentLabel = order.payment === "Credit" && order.creditName ? `Credit - ${order.creditName}` : order.payment || "Cash";
       const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
       const dateText = billDate.toLocaleDateString("en-IN");
       const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
+      const headerName = String(order.canteen || settings.canteenName || "axzen Canteen");
       const header = [
-        center(String(order.canteen || settings.canteenName || "axzen Canteen")),
-        center("axzen INFOTECH")
+        alignCenter + boldOn + titleOn + headerName.slice(0, 16) + bigOff + boldOff,
+        "axzen infotech"
       ];
       if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
       return [
         ...header,
-        line,
+        alignLeft + line,
         leftRight(`Date ${dateText}`, `Time ${timeText}`),
         leftRight(`Cashier ${order.cashier || user?.name || "-"}`, `Token ${tokenNo}`),
         leftRight("Payment", paymentLabel),
         line,
-        "#  ITEM NAME    QTY  RATE      Rs",
+        "#  ITEM NAME     QTY RATE   AMT",
         line,
         ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
         line,
         leftRight("SUBTOTAL", amountText(subtotal)),
         leftRight("DISCOUNT", amountText(discount)),
-        leftRight("TOTAL", amountText(total)),
         line,
+        boldOn + leftRight("", `TOTAL Rs : ${Number(total || 0).toFixed(2)}`) + boldOff,
+        thick,
         center("THANK YOU! VISIT AGAIN"),
         "",
         "",
@@ -2271,14 +4035,11 @@
 
     async function receipt(order) {
       const text = receiptText(order);
-      if (window.AxenPrinter && (typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
+      if (window.AxenPrinter && (typeof window.AxenPrinter.printToPrinterAsync === "function" || typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
         try {
-          applySelectedPrinterToBridge();
-          const result = typeof window.AxenPrinter.printAsync === "function"
-            ? window.AxenPrinter.printAsync(text)
-            : window.AxenPrinter.print(text);
-          $("posMessage").textContent = result === "Print queued" || result === "Print sent" ? "Order saved and print started" : (result || "Order saved. Printer not connected.");
-          $("posMessage").className = result === "Print queued" || result === "Print sent" ? "status ok" : "status error";
+          const result = printToEnabledPrinters(text);
+          $("posMessage").textContent = result === "Print queued" || result === "Print sent" || result === "Print queued to 2 printers" ? "Order saved and print started" : (result || "Order saved. Printer not connected.");
+          $("posMessage").className = result === "Print queued" || result === "Print sent" || result === "Print queued to 2 printers" ? "status ok" : "status error";
           return;
         } catch (error) {
           $("posMessage").textContent = "Order saved. Printer not connected.";
@@ -2301,18 +4062,15 @@
     }
 
     function testPrint() {
-      if (!window.AxenPrinter || (typeof window.AxenPrinter.printAsync !== "function" && typeof window.AxenPrinter.print !== "function")) {
+      if (!window.AxenPrinter || (typeof window.AxenPrinter.printToPrinterAsync !== "function" && typeof window.AxenPrinter.printAsync !== "function" && typeof window.AxenPrinter.print !== "function")) {
         $("posMessage").textContent = "Direct Bluetooth print works only inside the Android APK.";
         $("posMessage").className = "status error";
         return;
       }
       try {
-        applySelectedPrinterToBridge();
-        const result = typeof window.AxenPrinter.printAsync === "function"
-          ? window.AxenPrinter.printAsync(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n`)
-          : window.AxenPrinter.print(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n`);
+        const result = printToEnabledPrinters(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n`);
         $("posMessage").textContent = result;
-        $("posMessage").className = result === "Print queued" || result === "Print sent" ? "status ok" : "status error";
+        $("posMessage").className = result === "Print queued" || result === "Print sent" || result === "Print queued to 2 printers" ? "status ok" : "status error";
       } catch (error) {
         $("posMessage").textContent = `Printer failed: ${error.message || "Unknown error"}`;
         $("posMessage").className = "status error";
@@ -2432,18 +4190,51 @@
       return `<div class="option-card"><h3>Last 5 Bills</h3>${rows || `<div class="muted">No bills yet</div>`}</div>`;
     }
 
-    function printerOptionsHtml(printers) {
+    function printerOptionsHtml(printers, selectedAddress = "", blockedAddress = "") {
       if (!window.AxenPrinter || typeof window.AxenPrinter.listPrinters !== "function") {
         return `<option value="">Printer selection is available only in the Android APK</option>`;
       }
       if (!printers.length) return `<option value="">No paired Bluetooth devices found</option>`;
+      const blocked = String(blockedAddress || "");
       return [
         `<option value="">Auto select printer</option>`,
-        ...printers.map(printer => {
+        ...printers.filter(printer => !blocked || printer.address !== blocked).map(printer => {
           const label = `${printer.name || "Bluetooth Device"}${printer.address ? ` (${printer.address})` : ""}`;
-          return `<option value="${esc(printer.address)}" ${printer.address === selectedPrinter ? "selected" : ""}>${esc(label)}</option>`;
+          return `<option value="${esc(printer.address)}" ${printer.address === selectedAddress ? "selected" : ""}>${esc(label)}</option>`;
         })
       ].join("");
+    }
+
+    function printerStatusText(name, enabled, address) {
+      if (!enabled) return `${name} is off`;
+      return address ? `${name} selected` : `${name} auto selection active`;
+    }
+
+    function printerSettingsHtml(pairedPrinters, compact = false) {
+      const cardClass = compact ? "option-card" : "work-card";
+      return `
+        <div class="${cardClass} printer-setting-card">
+          <div class="printer-setting-head">
+            <div>
+              <h3>Billing Printer</h3>
+              <div class="muted">Printer 1</div>
+            </div>
+            <label class="printer-toggle"><input id="billingPrinterToggle" type="checkbox" ${billingPrinterEnabled ? "checked" : ""}><span>${billingPrinterEnabled ? "ON" : "OFF"}</span></label>
+          </div>
+          <select id="billingPrinterSelect" ${billingPrinterEnabled ? "" : "disabled"}>${printerOptionsHtml(pairedPrinters, billingPrinter, kitchenPrinter)}</select>
+          <div class="muted" id="billingPrinterStatus">${printerStatusText("Billing Printer", billingPrinterEnabled, billingPrinter)}</div>
+        </div>
+        <div class="${cardClass} printer-setting-card">
+          <div class="printer-setting-head">
+            <div>
+              <h3>Kitchen Printer</h3>
+              <div class="muted">Printer 2</div>
+            </div>
+            <label class="printer-toggle"><input id="kitchenPrinterToggle" type="checkbox" ${kitchenPrinterEnabled ? "checked" : ""}><span>${kitchenPrinterEnabled ? "ON" : "OFF"}</span></label>
+          </div>
+          <select id="kitchenPrinterSelect" ${kitchenPrinterEnabled ? "" : "disabled"}>${printerOptionsHtml(pairedPrinters, kitchenPrinter, billingPrinter)}</select>
+          <div class="muted" id="kitchenPrinterStatus">${printerStatusText("Kitchen Printer", kitchenPrinterEnabled, kitchenPrinter)}</div>
+        </div>`;
     }
 
     function getPairedPrinters() {
@@ -2503,16 +4294,17 @@
       storePurchases().forEach(row => {
         purchaseLineItems(row).forEach(line => {
           const key = `${line.item || "Item"}::${line.unit || "Kgs"}`;
-          const current = map.get(key) || { item: line.item || "Item", unit: line.unit || "Kgs", type: line.type || "raw_material", bought: 0, used: 0, sold: 0, amount: 0 };
+          const current = map.get(key) || { item: line.item || "Item", unit: line.unit || "Kgs", type: line.type || "raw_material", bought: 0, used: 0, sold: 0, amount: 0, minimum: 0 };
           current.bought += Number(line.quantity || 0);
           current.amount += Number(line.price || 0);
           current.type = line.type || current.type || "raw_material";
+          current.minimum = Math.max(Number(current.minimum || 0), Number(line.minimum || 0));
           map.set(key, current);
         });
       });
       storeUsage().forEach(row => {
         const key = `${row.item || "Item"}::${row.unit || "Kgs"}`;
-        const current = map.get(key) || { item: row.item || "Item", unit: row.unit || "Kgs", type: "raw_material", bought: 0, used: 0, sold: 0, amount: 0 };
+        const current = map.get(key) || { item: row.item || "Item", unit: row.unit || "Kgs", type: "raw_material", bought: 0, used: 0, sold: 0, amount: 0, minimum: Number(row.minimum || 0) };
         current.used += Number(row.quantity || 0);
         map.set(key, current);
       });
@@ -2541,6 +4333,7 @@
         price: Number(line.price || line.amount || line.total || 0),
         salePrice: Number(line.salePrice || line.sellingPrice || 0),
         halfPrice: Number(line.halfPrice || line.singlePrice || line.halfItemPrice || 0),
+        minimum: Number(line.minimum || line.min || line.minimumStock || 0),
         image: line.image || line.imageUrl || "",
         type: line.type || "raw_material"
       });
@@ -2657,10 +4450,84 @@
       return selectedPrinter ? "Printer selected" : "Auto select printer";
     }
 
+    function setBillingPrinter(address) {
+      const next = String(address || "");
+      if (next && next === kitchenPrinter) return "This device is already selected for Kitchen Printer";
+      billingPrinter = next;
+      selectedPrinter = next;
+      if (billingPrinter) localStorage.setItem(billingPrinterKey, billingPrinter);
+      else localStorage.removeItem(billingPrinterKey);
+      if (selectedPrinter) localStorage.setItem(selectedPrinterKey, selectedPrinter);
+      else localStorage.removeItem(selectedPrinterKey);
+      if (window.AxenPrinter && typeof window.AxenPrinter.selectPrinter === "function") {
+        try { window.AxenPrinter.selectPrinter(billingPrinter || ""); } catch {}
+      }
+      return billingPrinter ? "Billing Printer saved" : "Billing Printer auto selection active";
+    }
+
+    function setKitchenPrinter(address) {
+      const next = String(address || "");
+      if (next && next === billingPrinter) return "This device is already selected for Billing Printer";
+      kitchenPrinter = next;
+      if (kitchenPrinter) localStorage.setItem(kitchenPrinterKey, kitchenPrinter);
+      else localStorage.removeItem(kitchenPrinterKey);
+      return kitchenPrinter ? "Kitchen Printer saved" : "Kitchen Printer auto selection active";
+    }
+
+    function setPrinterEnabled(type, enabled) {
+      if (type === "billing") {
+        billingPrinterEnabled = Boolean(enabled);
+        localStorage.setItem(billingPrinterEnabledKey, billingPrinterEnabled ? "true" : "false");
+        return printerStatusText("Billing Printer", billingPrinterEnabled, billingPrinter);
+      }
+      kitchenPrinterEnabled = Boolean(enabled);
+      localStorage.setItem(kitchenPrinterEnabledKey, kitchenPrinterEnabled ? "true" : "false");
+      return printerStatusText("Kitchen Printer", kitchenPrinterEnabled, kitchenPrinter);
+    }
+
     function applySelectedPrinterToBridge() {
       if (window.AxenPrinter && typeof window.AxenPrinter.selectPrinter === "function") {
-        try { window.AxenPrinter.selectPrinter(selectedPrinter || ""); } catch {}
+        try { window.AxenPrinter.selectPrinter(billingPrinter || selectedPrinter || ""); } catch {}
       }
+    }
+
+    function enabledPrinterTargets() {
+      const targets = [];
+      const seen = new Set();
+      [
+        { name: "Billing Printer", enabled: billingPrinterEnabled, address: billingPrinter },
+        { name: "Kitchen Printer", enabled: kitchenPrinterEnabled, address: kitchenPrinter }
+      ].forEach(target => {
+        if (!target.enabled) return;
+        const key = target.address || `auto-${target.name}`;
+        if (target.address && seen.has(key)) return;
+        seen.add(key);
+        targets.push(target);
+      });
+      return targets;
+    }
+
+    function printToAddress(address, text) {
+      if (window.AxenPrinter && typeof window.AxenPrinter.printToPrinterAsync === "function") {
+        return window.AxenPrinter.printToPrinterAsync(address || "", text);
+      }
+      if (window.AxenPrinter && typeof window.AxenPrinter.selectPrinter === "function") {
+        window.AxenPrinter.selectPrinter(address || "");
+      }
+      if (window.AxenPrinter && typeof window.AxenPrinter.printAsync === "function") return window.AxenPrinter.printAsync(text);
+      if (window.AxenPrinter && typeof window.AxenPrinter.print === "function") return window.AxenPrinter.print(text);
+      return "Printer not connected";
+    }
+
+    function printToEnabledPrinters(text) {
+      const targets = enabledPrinterTargets();
+      if (!targets.length) return "No printer enabled";
+      const results = targets.map(target => printToAddress(target.address, text));
+      applySelectedPrinterToBridge();
+      if (targets.length > 1 && results.every(result => result === "Print queued" || result === "Print sent")) {
+        return "Print queued to 2 printers";
+      }
+      return results.find(Boolean) || "Print queued";
     }
 
     function drawerItem(section, label, icon, activeSection) {
@@ -2756,23 +4623,44 @@
     function bulkOrderPageHtml() {
       const draft = bulkDraft();
       const draftTotal = draft.reduce((sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0), 0);
-      const rows = products.slice().sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0)).map(item => `
-        <div class="bulk-order-row">
-          <span class="bulk-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
-          <div><strong>${esc(item.name || "Item")}</strong><div class="muted">${esc(item.category || "")} | ${money(item.price)}</div></div>
-          <input data-bulk-item="${item.id}" type="number" inputmode="numeric" pattern="[0-9]*" min="0" placeholder="0">
-        </div>`).join("");
+      const draftQty = draft.reduce((sum, item) => sum + Number(item.qty || 0), 0);
+      const categories = [
+        ["All", `All Items (${products.length})`, `<svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg>`],
+        ["Tiffin", "Tiffin", `<svg viewBox="0 0 24 24"><path d="M4 17h16"/><path d="M6 17a6 6 0 0 1 12 0"/><path d="M12 7V5"/><path d="M9 5h6"/></svg>`],
+        ["Snacks", "Snacks", `<svg viewBox="0 0 24 24"><path d="M5 8h14l-2 12H7L5 8Z"/><path d="M8 8l1-4h6l1 4"/></svg>`],
+        ["Drinks", "Beverages", `<svg viewBox="0 0 24 24"><path d="M7 7h10l-1 14H8L7 7Z"/><path d="M9 7l1-4h7"/></svg>`]
+      ];
+      const rows = products.slice()
+        .filter(item => (activeCategory === "All" || activeCategory === "Drinks") ? (activeCategory === "All" || ["Drinks", "Juice", "Tea", "Coffee"].includes(item.category)) : item.category === activeCategory)
+        .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0))
+        .map(item => {
+          const lineId = cartLineId(item, null);
+          const qty = draft.find(row => row.lineId === lineId)?.qty || 0;
+          return `
+            <div class="orders-item-row">
+              <span class="orders-item-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
+              <div><h3>${esc(item.name || "Item")}</h3><p>${esc(categoryLabel(item.category || "Tiffin"))}</p><strong>${money(item.price)}</strong></div>
+              <div>
+                <div class="orders-qty"><button data-bulk-qty="-1" data-bulk-id="${item.id}" type="button">-</button><input data-bulk-input="${item.id}" type="number" min="0" inputmode="numeric" placeholder="0" value="${qty || ""}"><button data-bulk-qty="1" data-bulk-id="${item.id}" type="button">+</button></div>
+                <span class="orders-qty-label">Qty ${qty}</span>
+              </div>
+            </div>`;
+        }).join("");
       return `
-        ${sectionHeader("bulk")}
-        <div class="work-card">
-          <div class="bulk-order-grid">${rows || `<div class="muted">Menu items are not loaded</div>`}</div>
-          <div class="option-card" style="margin-top:12px">
-            <div class="option-row"><span>Order Draft Items</span><strong id="bulkCartCount">${draft.reduce((sum, item) => sum + Number(item.qty || 0), 0)}</strong></div>
-            <div class="option-row"><span>Total</span><strong id="bulkCartTotal">${money(draftTotal)}</strong></div>
-            <button class="page-action" id="bulkAddToCart" type="button">Save Order Entry</button>
-            <button class="primary" id="bulkProceedPayment" type="button">Proceed Payment</button>
-            <button class="danger" id="bulkClearDraft" type="button">Clear Draft</button>
-          </div>
+        <div class="orders-hero">
+          <span class="orders-hero-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10l2 4v14H5V7l2-4Z"/><path d="M7 7h10"/><path d="M9 12h6"/><path d="M9 16h6"/></svg></span>
+          <div><h2>Orders</h2><p>Bulk quantity order entry.</p></div>
+          <span class="orders-fade-icon"><svg viewBox="0 0 24 24"><path d="M8 7h11v13H8z"/><path d="M5 4h11v3"/><path d="M11 11h5"/><path d="M11 15h5"/></svg></span>
+        </div>
+        <div class="orders-category-strip">
+          ${categories.map(([key, label, icon]) => `<button class="${activeCategory === key ? "active" : ""}" data-bulk-category="${key}" type="button"><span class="order-tab-icon">${icon}</span>${label}</button>`).join("")}
+        </div>
+        <div class="orders-list">${rows || `<div class="work-card">No items found</div>`}</div>
+        <div class="orders-bottom-bar">
+          <span class="orders-bar-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10l2 4v14H5V7l2-4Z"/><path d="M9 12h6"/><path d="M9 16h4"/></svg></span>
+          <div><strong>${draftQty} Items</strong><span>Total Quantity</span></div>
+          <div><strong>${money(draftTotal)}</strong><span>Total Amount</span></div>
+          <button class="orders-view-cart" id="bulkViewCart" type="button">View Cart | &gt;</button>
         </div>`;
     }
 
@@ -3039,13 +4927,50 @@
       const dateGroups = new Map();
       rows.forEach(order => {
         const key = dateInputValue(orderDate(order)) || "Unknown";
-        const current = dateGroups.get(key) || { bills: 0, amount: 0 };
+        const pay = orderBreakup(order);
+        const current = dateGroups.get(key) || { bills: 0, amount: 0, cash: 0, online: 0 };
         current.bills += 1;
         current.amount += Number(order.total || 0);
+        current.cash += pay.cash;
+        current.online += pay.online;
         dateGroups.set(key, current);
       });
       const dateRows = [...dateGroups.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([date, item]) => `
-        <tr><td>${date}</td><td>${item.bills}</td><td>${money(item.amount)}</td></tr>`).join("");
+        <tr><td>${date}</td><td>${item.bills}</td><td>${money(item.amount)}</td><td>${money(item.cash)}</td><td>${money(item.online)}</td><td>&rsaquo;</td></tr>`).join("");
+      const userGroups = new Map();
+      rows.forEach(order => {
+        const cashier = String(order.cashier || order.cashierName || user?.name || "Unknown").trim() || "Unknown";
+        const pay = orderBreakup(order);
+        const current = userGroups.get(cashier) || { bills: 0, cash: 0, online: 0, credit: 0, total: 0 };
+        current.bills += 1;
+        current.cash += pay.cash;
+        current.online += pay.online;
+        current.credit += pay.credit;
+        current.total += Number(order.total || 0);
+        userGroups.set(cashier, current);
+      });
+      const userRows = [...userGroups.entries()].sort((a, b) => b[1].total - a[1].total).map(([cashier, item]) => `
+        <tr><td>${esc(cashier)}</td><td>${item.bills}</td><td>${money(item.cash)}</td><td>${money(item.online)}</td><td>${money(item.credit)}</td><td>${money(item.total)}</td></tr>`).join("");
+      const userRowsCompact = [...userGroups.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 4).map(([cashier, item]) => `
+        <tr><td><span class="user-mini-icon">U</span>${esc(cashier)}</td><td>${item.bills}</td><td>${money(item.total)}</td></tr>`).join("");
+      const itemRowsCompact = [...totals.items.entries()].sort((a, b) => b[1].amount - a[1].amount).slice(0, 4).map(([name, item]) => `
+        <tr><td>${esc(name)}</td><td>${item.qty}</td><td>${money(item.amount)}</td></tr>`).join("");
+      const chartEntries = [...dateGroups.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-7);
+      const chartData = chartEntries.length ? chartEntries : [[range.to, { amount: totals.total || 0 }]];
+      const chartValues = chartData.map(([, item]) => Number(item.amount || 0));
+      const chartMax = Math.max(...chartValues, 1);
+      const shortMoney = value => Number(value || 0) >= 1000 ? `${(Number(value || 0) / 1000).toFixed(1)}K` : String(Math.round(Number(value || 0)));
+      const shortDate = value => {
+        const date = new Date(`${value}T00:00:00`);
+        if (Number.isNaN(date.getTime())) return String(value || "").slice(5);
+        return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+      };
+      const chartPoints = chartData.map(([, item], index) => `${36 + index * (258 / Math.max(1, chartData.length - 1))},${110 - (Number(item.amount || 0) / chartMax) * 82}`).join(" ");
+      const chartDots = chartData.map(([date, item], index) => {
+        const x = 36 + index * (258 / Math.max(1, chartData.length - 1));
+        const y = 110 - (Number(item.amount || 0) / chartMax) * 82;
+        return `<circle cx="${x}" cy="${y}" r="3.4" fill="#2563EB"/><text x="${x}" y="${Math.max(16, y - 9)}" text-anchor="middle" font-size="8">${shortMoney(item.amount)}</text><text x="${x}" y="130" text-anchor="middle" font-size="8">${shortDate(date)}</text>`;
+      }).join("");
       const bills = rows.slice().reverse().slice(0, 15).map(order => `
         <tr><td>${esc(order.id || order.clientOrderId || "-")}</td><td>${esc(order.cashier || user?.name || "-")}</td><td>${money(order.total)}</td><td>${esc(order.payment || "Cash")}</td></tr>`).join("");
       const consumptionCost = Math.round(totals.total * 0.48);
@@ -3054,28 +4979,32 @@
         ? `<div class="work-card"><h3>Profit/Loss Report</h3><div class="option-row"><span>Total Sale</span><strong>${money(totals.total)}</strong></div><div class="option-row"><span>Consumption Cost</span><strong>${money(consumptionCost)}</strong></div><div class="option-row"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div><div class="option-row"><span>${net >= 0 ? "Net Profit" : "Net Loss"}</span><strong>${money(Math.abs(net))}</strong></div></div>`
         : `<div class="work-card"><h3>Profit/Loss Report</h3><div class="muted">Admin or Super Admin approval is required to view Profit/Loss reports.</div></div>${adminUnlockHtml()}`;
       return `
-        ${sectionHeader("report")}
-        <div class="work-card report-filter">
-          <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
-          <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
-          <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button><button data-report-range="year" type="button">Year</button></div>
-          <div class="quick-ranges"><button class="page-action" id="shareReportImage" type="button">Share Image</button><button class="secondary" id="downloadReportImage" type="button">Download Image</button><button class="secondary" id="shareReportPdf" type="button">Share PDF</button></div>
-          <div class="status" id="reportShareStatus"></div>
-        </div>
-        <div class="report-metric-grid">
-          <div class="work-card metric-card"><span>Total Sale</span><strong>${money(totals.total)}</strong></div>
-          <div class="work-card metric-card"><span>Total Bills</span><strong>${rows.length}</strong></div>
-          <div class="work-card metric-card"><span>Cash</span><strong>${money(totals.cash)}</strong></div>
-          <div class="work-card metric-card"><span>Online</span><strong>${money(totals.online)}</strong></div>
-          <div class="work-card metric-card"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div>
-          ${canViewProfitLoss() ? `<div class="work-card metric-card"><span>${net >= 0 ? "Profit" : "Loss"}</span><strong>${money(Math.abs(net))}</strong></div>` : `<div class="work-card metric-card"><span>Profit/Loss</span><strong>Locked</strong></div>`}
-        </div>
-        <div class="work-card"><h3>Date Wise Report</h3><table class="data-table"><thead><tr><th>Date</th><th>Bills</th><th>Sale</th></tr></thead><tbody>${dateRows || `<tr><td colspan="3">No date wise sales</td></tr>`}</tbody></table></div>
-        <div class="work-card"><h3>Item Wise Report</h3><table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Amount</th></tr></thead><tbody>${itemRows || `<tr><td colspan="3">No item sales</td></tr>`}</tbody></table></div>
-        <div class="work-card"><h3>Payment Report</h3><div class="option-row"><span>Cash</span><strong>${money(totals.cash)}</strong></div><div class="option-row"><span>Online / UPI</span><strong>${money(totals.online)}</strong></div><div class="option-row"><span>Credit</span><strong>${money(totals.credit)}</strong></div></div>
-        ${profitLossHtml}
-        <div class="work-card"><h3>Expenses Report</h3><table class="data-table"><thead><tr><th>Date</th><th>Title</th><th>Category</th><th>Amount</th></tr></thead><tbody>${expenseRowsHtml(filteredExpenses) || `<tr><td colspan="4">No expenses in selected range</td></tr>`}</tbody></table></div>
-        <div class="work-card"><h3>Recent Bills</h3><div class="report-bills-scroll"><table class="data-table"><thead><tr><th>Bill</th><th>Cashier</th><th>Amount</th><th>Mode</th></tr></thead><tbody>${bills || `<tr><td colspan="4">No bills in selected date range</td></tr>`}</tbody></table></div></div>`;
+        <div class="report-modern-page">
+          <div class="report-hero">
+            <span class="orders-hero-icon"><svg viewBox="0 0 24 24"><path d="M5 20V10"/><path d="M12 20V4"/><path d="M19 20v-7"/><path d="M3 20h18"/></svg></span>
+            <div><h2>Reports</h2><p>Date wise, item wise and payment reports.</p></div>
+            <span class="orders-fade-icon"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v5h5"/><path d="M8 15h8"/></svg></span>
+          </div>
+          <div class="work-card report-modern-filter">
+            <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
+            <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
+            <div class="report-modern-actions"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button><button data-report-range="year" type="button">Year</button></div>
+            <div class="report-modern-actions report-share-actions"><button class="secondary" id="shareReportImage" type="button"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="m8 14 2.5-2.5L13 14l2-2 3 4"/><circle cx="9" cy="9" r="1"/></svg>Share Image</button><button class="secondary" id="downloadReportImage" type="button"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>Download Image</button><button class="secondary" id="shareReportPdf" type="button"><svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>Share PDF</button></div>
+            <div class="status" id="reportShareStatus"></div>
+          </div>
+          <div class="report-kpi-grid">
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><path d="M4 18l5-5 4 3 7-8"/><path d="M14 8h6v6"/></svg></i><span>Total Sale</span></div><strong>${money(totals.total)}</strong><small>Up 12.5% vs yesterday</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon purple"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg></i><span>Total Bills</span></div><strong>${rows.length}</strong><small>Up 16.7% vs yesterday</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon green"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4"/><path d="M18 10v4"/></svg></i><span>Cash</span></div><strong>${money(totals.cash)}</strong><small>Up 8.2% vs yesterday</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18"/><path d="M12 3c-3 3-3 15 0 18"/></svg></i><span>Online</span></div><strong>${money(totals.online)}</strong><small>Up 18.9% vs yesterday</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon orange"><svg viewBox="0 0 24 24"><path d="M4 8h16v11H4z"/><path d="M8 8V6h8v2"/><path d="M8 13h8"/></svg></i><span>Expenses</span></div><strong>${money(expenseTotal)}</strong><small>- 0% vs yesterday</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon red"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M12 3a9 9 0 0 1 9 9h-9z"/></svg></i><span>Profit/Loss</span></div><strong>${canViewProfitLoss() ? money(Math.abs(net)) : "Locked"}</strong><small>${canViewProfitLoss() ? (net >= 0 ? "Profit" : "Loss") : "Locked by admin"}</small></div>
+          </div>
+          <div class="work-card report-card-compact"><div class="report-card-title"><h3>Sales Overview</h3><select aria-label="Sales range"><option>This Week</option></select></div><div class="sales-line-chart"><svg viewBox="0 0 320 140" preserveAspectRatio="none"><path d="M32 24H304M32 52H304M32 80H304M32 108H304" stroke="#E8ECF3" stroke-width="1"/><text x="7" y="27" font-size="8">4K</text><text x="7" y="55" font-size="8">3K</text><text x="7" y="83" font-size="8">2K</text><text x="12" y="111" font-size="8">0</text><polyline points="36,132 ${chartPoints} 304,132" fill="#2563EB18" stroke="none"/><polyline points="${chartPoints}" fill="none" stroke="#2563EB" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>${chartDots}</svg></div></div>
+          <div class="work-card report-card-compact"><h3>Date Wise Report</h3><table class="data-table report-mini-table"><thead><tr><th>Date</th><th>Bills</th><th>Sale</th><th>Cash</th><th>Online</th><th></th></tr></thead><tbody>${dateRows || `<tr><td colspan="6">No date wise sales</td></tr>`}</tbody></table><button class="report-view-all" type="button">View All &gt;</button></div>
+          <div class="work-card report-card-compact"><h3>Top Selling Items</h3><table class="data-table report-mini-table"><thead><tr><th>Item</th><th>Quantity</th><th>Sale</th></tr></thead><tbody>${itemRowsCompact || `<tr><td colspan="3">No item sales</td></tr>`}</tbody></table><button class="report-view-all" type="button">View All &gt;</button></div>
+          <div class="work-card report-card-compact"><h3>User Wise Report</h3><table class="data-table report-mini-table"><thead><tr><th>User</th><th>Bills</th><th>Sale</th></tr></thead><tbody>${userRowsCompact || `<tr><td colspan="3">No user wise sales</td></tr>`}</tbody></table><button class="report-view-all" type="button">View All &gt;</button></div>
+        </div>`;
     }
 
     function cashPageHtml() {
@@ -3516,23 +5445,69 @@
     }
 
     function stockPageHtml() {
-      const rows = storeInventoryRows().map(item => {
+      const inventory = storeInventoryRows();
+      const today = dateInputValue(new Date());
+      const stockOptions = inventory.map(item => `<option value="${esc(item.item)}">${esc(item.item)} (${esc(item.unit)})</option>`).join("");
+      const stockRows = inventory.map(item => {
         const balance = Math.max(0, Number(item.bought || 0) - Number(item.used || 0) - Number(item.sold || 0));
-        const low = balance > 0 && balance <= 10;
+        const minimum = Number(item.minimum || 0);
+        const low = minimum > 0 ? balance <= minimum : balance > 0 && balance <= 10;
         const empty = balance <= 0;
-        return `<tr><td>${esc(item.item || "Item")}</td><td>${item.type === "direct_sale" ? "Direct Sale" : "Used Material"}</td><td>${Number(item.bought || 0)} ${esc(item.unit)}</td><td>${Number(item.used || 0)} ${esc(item.unit)}</td><td>${Number(item.sold || 0)} ${esc(item.unit)}</td><td>${balance} ${esc(item.unit)}</td><td><span class="status-pill ${empty ? "danger" : low ? "warn" : ""}">${empty ? "Out of Stock" : low ? "Low Stock" : "In Stock"}</span></td></tr>`;
+        return `<tr data-stock-row><td>${esc(item.item || "Item")}</td><td>${balance.toFixed(3)}</td><td>${minimum.toFixed(3)}</td><td>${esc(user?.name || "Admin")}</td><td><span class="inventory-status ${empty || low ? "" : "ok"}">${empty ? "Out" : low ? "Low" : "OK"}</span></td></tr>`;
       }).join("");
-      return `${sectionHeader("stock", `<button class="page-action" data-go-store type="button">Open Store</button>`)}<div class="work-card"><h3>Store Stock Availability</h3><div class="muted">Only stock entered in purchase invoices is shown. Used Material is reduced from Today Used entries; Direct Sale is reduced automatically from sales bills.</div><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Status</th></tr></thead><tbody>${rows || `<tr><td colspan="7">No store stock found. Create a purchase invoice in Store.</td></tr>`}</tbody></table></div>`;
+      const usageRows = storeUsage().slice().reverse().map(row => `
+        <tr><td>${esc(row.date || "-")}</td><td>${esc(row.item || "Item")}</td><td>${Number(row.quantity || 0).toFixed(3)} ${esc(row.unit || "Kg")}</td><td>${esc(row.user || row.by || user?.name || "Admin")}</td><td>${esc(row.notes || "-")}</td></tr>
+      `).join("");
+      return `
+        <div class="inventory-page">
+          <div class="inventory-title">
+            <div><h1>Inventory / Stock</h1><p>Home &bull; Inventory / Stock</p></div>
+            <div class="inventory-chip-row"><span class="inventory-chip">${new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</span><span class="inventory-chip">Hello, ${esc(user?.name || "Owner")}</span></div>
+          </div>
+          <div class="inventory-panel">
+            <h2>Add / Update Stock</h2>
+            <div class="inventory-form">
+              <div class="inventory-field"><label>Item</label><input id="adminStockItem" placeholder="Enter item name"></div>
+              <div class="inventory-field"><label>Stock</label><input id="adminStockQty" type="number" min="0" step="0.001" placeholder="Enter stock quantity"></div>
+              <div class="inventory-field"><label>Unit</label><input id="adminStockUnit" placeholder="Eg: Kg, Ltr, Nos"></div>
+              <div class="inventory-field"><label>Minimum</label><input id="adminStockMinimum" type="number" min="0" step="0.001" placeholder="Minimum stock level"></div>
+              <button class="inventory-save" id="adminSaveStock" type="button">Save Stock</button>
+            </div>
+          </div>
+          <div class="inventory-panel">
+            <h2>Daily Stock Used</h2>
+            <div class="inventory-form daily">
+              <div class="inventory-field"><label>Date</label><input id="adminUsedDate" type="date" value="${today}"></div>
+              <div class="inventory-field"><label>Item</label><select id="adminUsedItem"><option value="">-- Select Item --</option>${stockOptions}</select></div>
+              <div class="inventory-field"><label>Used Qty</label><input id="adminUsedQty" type="number" min="0" step="0.001" placeholder="Enter used quantity"></div>
+              <div class="inventory-field"><label>Stock User/By</label><input id="adminUsedBy" value="${esc(user?.name || "Admin")}"></div>
+              <div class="inventory-field"><label>Notes</label><input id="adminUsedNotes" placeholder="Optional"></div>
+            </div>
+            <button class="inventory-save" id="adminSaveUsedStock" type="button" style="width:min(260px,100%);margin-top:14px">Save Daily Stock</button>
+          </div>
+          <div class="inventory-grid">
+            <div class="inventory-panel">
+              <h2>Stock List</h2>
+              <div class="inventory-tools"><input id="adminStockSearch" placeholder="Search item..."><button class="inventory-export" type="button">Export</button></div>
+              <table class="inventory-table"><thead><tr><th>Item</th><th>Stock</th><th>Minimum</th><th>Store/Kitchen</th><th>Status</th></tr></thead><tbody>${stockRows || `<tr><td colspan="5">No stock found</td></tr>`}</tbody></table>
+              <div class="inventory-footer"><span>Total Items: ${inventory.length}</span><div class="inventory-pages"><span>&lsaquo;</span><span class="active">1</span><span>2</span><span>3</span><span>...</span><span>5</span><span>&rsaquo;</span></div></div>
+            </div>
+            <div class="inventory-panel">
+              <h2>Date Wise Stock Usage Report</h2>
+              <div class="inventory-tools"><input id="adminUsageDate" type="date" value="${today}"><button class="inventory-export" type="button">Export</button></div>
+              <table class="inventory-table"><thead><tr><th>Date</th><th>Item</th><th>Used</th><th>Store/Kitchen</th><th>Notes</th></tr></thead><tbody>${usageRows || `<tr><td colspan="5">No usage records</td></tr>`}</tbody></table>
+              <div class="inventory-footer"><span>Total Records: ${storeUsage().length}</span><div class="inventory-pages"><span>&lsaquo;</span><span class="active">1</span><span>2</span><span>3</span><span>...</span><span>10</span><span>&rsaquo;</span></div></div>
+            </div>
+          </div>
+        </div>`;
     }
 
     function printerPageHtml() {
       const pairedPrinters = getPairedPrinters();
       return `
         ${sectionHeader("printer")}
-        <div class="work-card">
-          <h3>Available Printers</h3>
-          <select id="printerSelect">${printerOptionsHtml(pairedPrinters)}</select>
-          <div class="muted" id="printerStatus">${selectedPrinter ? "Selected printer saved" : "Auto printer selection active"}</div>
+        <div class="work-grid printer-settings-grid">
+          ${printerSettingsHtml(pairedPrinters)}
         </div>
         <div class="work-grid">
           <button class="page-action" id="menuTestPrint" type="button">Test Print</button>
@@ -3657,6 +5632,7 @@
     function setPosSection(section) {
       activePosSection = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
       if (["report", "finance"].includes(activePosSection)) resetReportRangeToToday();
+      if (activePosSection === "bulk" && !["All", "Tiffin", "Snacks", "Drinks"].includes(activeCategory)) activeCategory = "All";
       closeOptionsModal();
       if ($("adminView") && !$("adminView").classList.contains("hidden")) show("posView");
       ensureUserNavKeys();
@@ -3676,11 +5652,7 @@
     }
 
     function bindOptionPageActions() {
-      if ($("printerSelect")) $("printerSelect").addEventListener("change", event => {
-        const result = setSelectedPrinter(event.target.value);
-        $("printerStatus").textContent = result || "Printer saved";
-        $("printerStatus").className = result && result.includes("failed") ? "status error" : "status ok";
-      });
+      bindPrinterSettingsControls();
       if ($("menuTestPrint")) $("menuTestPrint").addEventListener("click", testPrint);
       if ($("refreshPrinterPage")) $("refreshPrinterPage").addEventListener("click", () => renderOptionPage());
       if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => { await loadProducts(); renderOptionPage(); });
@@ -3707,6 +5679,13 @@
       if ($("bulkAddToCart")) $("bulkAddToCart").addEventListener("click", addBulkItemsToCart);
       if ($("bulkProceedPayment")) $("bulkProceedPayment").addEventListener("click", openBulkConfirmModal);
       if ($("bulkClearDraft")) $("bulkClearDraft").addEventListener("click", clearBulkDraft);
+      if ($("bulkViewCart")) $("bulkViewCart").addEventListener("click", openBulkCartView);
+      document.querySelectorAll("[data-bulk-qty]").forEach(btn => btn.addEventListener("click", () => changeBulkDraftQty(btn.dataset.bulkId, Number(btn.dataset.bulkQty))));
+      document.querySelectorAll("[data-bulk-input]").forEach(input => input.addEventListener("change", () => setBulkDraftQty(input.dataset.bulkInput, Number(input.value || 0))));
+      document.querySelectorAll("[data-bulk-category]").forEach(btn => btn.addEventListener("click", () => {
+        activeCategory = btn.dataset.bulkCategory || "All";
+        renderOptionPage();
+      }));
       document.querySelectorAll("[data-store-tab]").forEach(btn => btn.addEventListener("click", () => setStoreTab(btn.dataset.storeTab)));
       document.querySelectorAll("[data-price-item], [data-half-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem || input.dataset.halfPriceItem, document.querySelector(`[data-price-item="${input.dataset.priceItem || input.dataset.halfPriceItem}"]`)?.value)));
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
@@ -3717,6 +5696,39 @@
       document.querySelectorAll("[data-restore-held]").forEach(btn => btn.addEventListener("click", () => restoreHeldOrder(btn.dataset.restoreHeld)));
       document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
       document.querySelectorAll("[data-delete-held]").forEach(btn => btn.addEventListener("click", () => deleteHeldOrder(btn.dataset.deleteHeld)));
+    }
+
+    function bindPrinterSettingsControls() {
+      const billingToggle = $("billingPrinterToggle");
+      const kitchenToggle = $("kitchenPrinterToggle");
+      const billingSelect = $("billingPrinterSelect");
+      const kitchenSelect = $("kitchenPrinterSelect");
+      if (billingToggle) billingToggle.addEventListener("change", event => {
+        const result = setPrinterEnabled("billing", event.target.checked);
+        renderOptionPage();
+        $("posMessage").textContent = result;
+        $("posMessage").className = "status ok";
+      });
+      if (kitchenToggle) kitchenToggle.addEventListener("change", event => {
+        const result = setPrinterEnabled("kitchen", event.target.checked);
+        renderOptionPage();
+        $("posMessage").textContent = result;
+        $("posMessage").className = "status ok";
+      });
+      if (billingSelect) billingSelect.addEventListener("change", event => {
+        const result = setBillingPrinter(event.target.value);
+        const isError = result.includes("already selected");
+        renderOptionPage();
+        $("posMessage").textContent = result || "Billing Printer saved";
+        $("posMessage").className = isError ? "status error" : "status ok";
+      });
+      if (kitchenSelect) kitchenSelect.addEventListener("change", event => {
+        const result = setKitchenPrinter(event.target.value);
+        const isError = result.includes("already selected");
+        renderOptionPage();
+        $("posMessage").textContent = result || "Kitchen Printer saved";
+        $("posMessage").className = isError ? "status error" : "status ok";
+      });
     }
 
     function setReportQuickRange(range) {
@@ -3828,6 +5840,63 @@
       renderOptionPage();
       $("posMessage").textContent = `${added} items saved to the order draft`;
       $("posMessage").className = "status ok";
+    }
+
+    function changeBulkDraftQty(productId, amount) {
+      const product = products.find(item => Number(item.id) === Number(productId));
+      if (!product) return;
+      const lineId = cartLineId(product, null);
+      const draft = bulkDraft();
+      const existing = draft.find(item => item.lineId === lineId);
+      if (existing) existing.qty = Math.max(0, Number(existing.qty || 0) + Number(amount || 0));
+      else if (amount > 0) draft.push({
+        ...product,
+        lineId,
+        parentId: Number(product.id),
+        optionName: "",
+        name: product.name,
+        price: Number(product.price || 0),
+        qty: Number(amount || 0)
+      });
+      setBulkDraft(draft.filter(item => Number(item.qty || 0) > 0));
+      renderOptionPage();
+    }
+
+    function setBulkDraftQty(productId, qty) {
+      const product = products.find(item => Number(item.id) === Number(productId));
+      if (!product) return;
+      const lineId = cartLineId(product, null);
+      const nextQty = Math.max(0, Number(qty || 0));
+      const draft = bulkDraft().filter(item => item.lineId !== lineId);
+      if (nextQty > 0) draft.push({
+        ...product,
+        lineId,
+        parentId: Number(product.id),
+        optionName: "",
+        name: product.name,
+        price: Number(product.price || 0),
+        qty: nextQty
+      });
+      setBulkDraft(draft);
+      renderOptionPage();
+    }
+
+    function syncBulkDraftToCart() {
+      const draft = bulkDraft();
+      cart = draft.map(item => ({ ...item }));
+      cartDiscount = 0;
+      renderCart();
+      return cart;
+    }
+
+    function openBulkCartView() {
+      if (!bulkDraft().length) {
+        $("posMessage").textContent = "Order draft is empty.";
+        $("posMessage").className = "status error";
+        return;
+      }
+      syncBulkDraftToCart();
+      openCartViewModal();
     }
 
     function openBulkConfirmModal() {
@@ -4067,6 +6136,60 @@
       renderOptionPage();
     }
 
+    function saveAdminStock() {
+      const item = $("adminStockItem")?.value.trim();
+      const quantity = Number($("adminStockQty")?.value || 0);
+      const unit = $("adminStockUnit")?.value.trim() || "Kg";
+      const minimum = Number($("adminStockMinimum")?.value || 0);
+      if (!item || quantity <= 0) {
+        alert("Item and stock quantity required");
+        return;
+      }
+      const purchase = {
+        id: Date.now(),
+        billNo: `STK-${Date.now().toString().slice(-6)}`,
+        date: dateInputValue(new Date()),
+        vendor: "Stock Update",
+        address: "",
+        phone: "",
+        total: 0,
+        createdAt: new Date().toISOString(),
+        items: [{ item, quantity, unit, minimum, price: 0, type: "raw_material", category: "Used Material" }]
+      };
+      setStorePurchases([purchase, ...storePurchases()]);
+      renderAdmin();
+    }
+
+    function saveAdminUsedStock() {
+      const item = $("adminUsedItem")?.value.trim();
+      const quantity = Number($("adminUsedQty")?.value || 0);
+      const stock = storeInventoryRows().find(row => normalizeStockName(row.item) === normalizeStockName(item));
+      const unit = stock?.unit || "Kg";
+      if (!item || quantity <= 0) {
+        alert("Select item and enter used quantity");
+        return;
+      }
+      const entry = {
+        id: Date.now(),
+        date: $("adminUsedDate")?.value || dateInputValue(new Date()),
+        item,
+        quantity,
+        unit,
+        user: $("adminUsedBy")?.value.trim() || user?.name || "Admin",
+        notes: $("adminUsedNotes")?.value.trim() || "-",
+        createdAt: new Date().toISOString()
+      };
+      setStoreUsage([entry, ...storeUsage()]);
+      renderAdmin();
+    }
+
+    function filterAdminStockRows() {
+      const query = String($("adminStockSearch")?.value || "").trim().toLowerCase();
+      document.querySelectorAll("[data-stock-row]").forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(query) ? "" : "none";
+      });
+    }
+
     function syncStoreUsedUnit() {
       const input = $("storeUsedItem");
       const unitSelect = $("storeUsedUnit");
@@ -4121,7 +6244,7 @@
       if (section === "report") return reportPageHtml();
       if (section === "cash") return cashSummaryHtml();
       if (section === "printer") {
-        return `<div class="option-card"><h3>Available Printers</h3><select id="printerSelect">${printerOptionsHtml(pairedPrinters)}</select><div class="muted" id="printerStatus">${selectedPrinter ? "Selected printer saved" : "Auto printer selection active"}</div></div><button class="secondary" id="menuTestPrint" type="button">Test Print</button>`;
+        return `${printerSettingsHtml(pairedPrinters, true)}<button class="secondary" id="menuTestPrint" type="button">Test Print</button>`;
       }
       if (section === "stock") return stockAvailabilityHtml();
       if (section === "settings") {
@@ -4250,13 +6373,10 @@
         $("posMessage").className = "status error";
         return;
       }
-      if (window.AxenPrinter && (typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
-        applySelectedPrinterToBridge();
-        const result = typeof window.AxenPrinter.printAsync === "function"
-          ? window.AxenPrinter.printAsync(receiptText(order, true))
-          : window.AxenPrinter.print(receiptText(order, true));
+      if (window.AxenPrinter && (typeof window.AxenPrinter.printToPrinterAsync === "function" || typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
+        const result = printToEnabledPrinters(receiptText(order, true));
         $("posMessage").textContent = result || "Copy receipt sent";
-        $("posMessage").className = result === "Print queued" || result === "Print sent" ? "status ok" : "status error";
+        $("posMessage").className = result === "Print queued" || result === "Print sent" || result === "Print queued to 2 printers" ? "status ok" : "status error";
       } else {
         console.log(receiptText(order, true));
         $("posMessage").textContent = "Copy receipt ready only inside Android APK printer mode.";
@@ -4332,19 +6452,19 @@
             <div class="payment-total"><span>Total Amount</span><strong>${money(orderTotal)}</strong></div>
             <div class="payment-actions">
               <button class="payment-choice" data-modal-pay="Cash" type="button">
-                <span class="pay-visual"><span class="cash-note">Rs</span></span>
+                <span class="pay-visual cash-pay-logo"><span class="cash-note-logo">Rs</span><em>CASH</em></span>
                 <strong>Cash</strong><small>Cash payment</small>
               </button>
               <button class="payment-choice" data-modal-pay="Online" type="button">
-                <span class="pay-visual"><span><span class="upi-logo">UPI</span><span class="upi-marks"><i style="background:#34a853"></i><i style="background:#fbbc05"></i><i style="background:#ea4335"></i></span></span></span>
+                <span class="pay-visual upi-pay-logo"><span><span class="upi-brand"><strong>UPI</strong><span class="pay-arrow"><i></i><i></i></span></span><small>Unified Payments Interface</small></span></span>
                 <strong>Online</strong><small>UPI / GPay / PhonePe</small>
               </button>
-              <button class="payment-choice" data-show-split type="button">
-                <span class="pay-visual"><span class="split-visual"><span class="split-dot" style="background:#16a34a">C</span><span class="split-dot" style="background:#7c3aed">U</span></span></span>
+              <button class="payment-choice" data-modal-pay="Split" type="button">
+                <span class="pay-visual split-pay-logo"><span class="split-receipts-logo"><i></i><i></i></span></span>
                 <strong>Split</strong><small>Cash + Online</small>
               </button>
-              <button class="payment-choice" data-show-credit type="button">
-                <span class="pay-visual"><span class="credit-card-visual"><i></i><b>CR</b></span></span>
+              <button class="payment-choice" data-modal-pay="Credit" type="button">
+                <span class="pay-visual credit-pay-logo"><span class="credit-hand-logo"><i class="card"></i><i class="hand"></i><i class="tick">✓</i></span></span>
                 <strong>Credit</strong><small>Pending amount</small>
               </button>
             </div>
@@ -4366,21 +6486,9 @@
         </div>`;
       document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", () => {
         setModalSelection(btn);
+        setPaymentStatus("Payment selected. Printing...", "status ok");
         completeOrder(btn.dataset.modalPay);
       }));
-      document.querySelector("[data-show-split]").addEventListener("click", event => {
-        payment = "Split";
-        setModalSelection(event.currentTarget);
-        $("modalCreditBox").classList.add("hidden");
-        $("modalSplitBox").classList.remove("hidden");
-      });
-      document.querySelector("[data-show-credit]").addEventListener("click", event => {
-        payment = "Credit";
-        setModalSelection(event.currentTarget);
-        $("modalSplitBox").classList.add("hidden");
-        $("modalCreditBox").classList.remove("hidden");
-        $("creditNameInput").focus();
-      });
       $("closePaymentModal").addEventListener("click", closePaymentModal);
       $("closePaymentTop").addEventListener("click", closePaymentModal);
       $("modalSplitCash").addEventListener("input", () => {
@@ -4398,11 +6506,7 @@
       cartDiscount = Math.min(orderSubtotal, Math.max(0, Number(cartDiscount || 0)));
       const orderTotal = Math.max(0, orderSubtotal - cartDiscount);
       const creditInput = $("creditNameInput");
-      const creditName = selectedPayment === "Credit" ? String((creditInput && creditInput.value) || "").trim() : "";
-      if (selectedPayment === "Credit" && !creditName) {
-        setPaymentStatus("Select or type a credit name", "status error");
-        return;
-      }
+      const creditName = selectedPayment === "Credit" ? String((creditInput && creditInput.value) || "Credit Customer").trim() : "";
       payment = selectedPayment;
       const payload = {
         id: Date.now(),
@@ -4434,7 +6538,11 @@
       }
       if (selectedPayment === "Cancel") payload.total = 0;
       setPaymentStatus("Saving order and starting print...");
-      setTimeout(() => receipt(payload), 0);
+      receipt(payload);
+      setTimeout(() => {
+        closePaymentModal();
+        if (!$("posView").classList.contains("hidden")) setPosSection("billing");
+      }, 140);
 
       try {
         if (!navigator.onLine) throw new Error("offline");
@@ -4457,7 +6565,6 @@
       if (activePosSection === "bulk") setBulkDraft([]);
       clearCartState();
       renderAdmin();
-      setTimeout(closePaymentModal, 250);
       setTimeout(() => loadAdminData(), 80);
       if (pendingOrders().length) setTimeout(syncPendingOrders, 900);
     }
@@ -4478,7 +6585,7 @@
       ["dashboard", "home", "Dashboard"],
       ["sales", "bar", "Sales"],
       ["menu", "list", "Menu"],
-      ["stock", "box", "Stock"],
+      ["stock", "box", "Inventory / Stock"],
       ["finance", "wallet", "Finance"],
       ["more", "more", "More"]
     ];
@@ -4687,6 +6794,9 @@
       if ($("settingsForm")) $("settingsForm").addEventListener("submit", saveSettings);
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
+      if ($("adminSaveStock")) $("adminSaveStock").addEventListener("click", saveAdminStock);
+      if ($("adminSaveUsedStock")) $("adminSaveUsedStock").addEventListener("click", saveAdminUsedStock);
+      if ($("adminStockSearch")) $("adminStockSearch").addEventListener("input", filterAdminStockRows);
       if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
       if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => { await loadProducts(); renderAdmin(); });
       document.querySelectorAll("[data-price-item], [data-half-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem || input.dataset.halfPriceItem, document.querySelector(`[data-price-item="${input.dataset.priceItem || input.dataset.halfPriceItem}"]`)?.value)));
