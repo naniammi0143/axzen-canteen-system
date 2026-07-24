@@ -110,8 +110,8 @@ public class MainActivity extends BridgeActivity {
             try {
                 OutputStream output = ensurePrinterOutput();
                 output.write(new byte[]{0x1B, 0x40});
-                output.write(text.getBytes(Charset.forName("UTF-8")));
-                output.write(new byte[]{0x0A, 0x0A, 0x1D, 0x56, 0x01});
+                writeChunked(output, text.getBytes(Charset.forName("UTF-8")));
+                writeChunked(output, new byte[]{0x0A, 0x0A, 0x1D, 0x56, 0x01});
                 output.flush();
                 return "Print sent";
             } catch (Exception error) {
@@ -125,6 +125,38 @@ public class MainActivity extends BridgeActivity {
             new Thread(() -> {
                 try {
                     print(text);
+                } catch (Exception ignored) {}
+            }).start();
+            return "Print queued";
+        }
+
+        @JavascriptInterface
+        public synchronized String printToPrinter(String address, String text) {
+            if (!hasBluetoothPermission()) {
+                requestBluetoothPermission();
+                return "Bluetooth permission needed";
+            }
+
+            try {
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (adapter == null || !adapter.isEnabled()) throw new Exception("Bluetooth is off");
+
+                Set<BluetoothDevice> devices = adapter.getBondedDevices();
+                if (devices == null || devices.isEmpty()) throw new Exception("Pair the 58mm printer first");
+
+                BluetoothDevice printer = printerForAddress(devices, address);
+                writeReceiptToPrinter(adapter, printer, text);
+                return "Print sent";
+            } catch (Exception error) {
+                return "Printer failed: " + error.getMessage();
+            }
+        }
+
+        @JavascriptInterface
+        public String printToPrinterAsync(String address, String text) {
+            new Thread(() -> {
+                try {
+                    printToPrinter(address, text);
                 } catch (Exception ignored) {}
             }).start();
             return "Print queued";
@@ -215,6 +247,53 @@ public class MainActivity extends BridgeActivity {
                 throw new Exception("Selected printer not paired");
             }
             return findPrinter(devices);
+        }
+
+        private BluetoothDevice printerForAddress(Set<BluetoothDevice> devices, String address) throws Exception {
+            String targetAddress = address == null ? "" : address.trim();
+            if (targetAddress.isEmpty()) return findPrinter(devices);
+            for (BluetoothDevice device : devices) {
+                if (targetAddress.equals(device.getAddress())) {
+                    return device;
+                }
+            }
+            throw new Exception("Selected printer not paired");
+        }
+
+        private void writeReceiptToPrinter(BluetoothAdapter adapter, BluetoothDevice printer, String text) throws Exception {
+            BluetoothSocket targetSocket = null;
+            OutputStream targetOutput = null;
+            try {
+                if (hasBluetoothScanPermission()) {
+                    adapter.cancelDiscovery();
+                }
+                targetSocket = printer.createRfcommSocketToServiceRecord(SPP_UUID);
+                targetSocket.connect();
+                targetOutput = targetSocket.getOutputStream();
+                targetOutput.write(new byte[]{0x1B, 0x40});
+                writeChunked(targetOutput, text.getBytes(Charset.forName("UTF-8")));
+                writeChunked(targetOutput, new byte[]{0x0A, 0x0A, 0x1D, 0x56, 0x01});
+                targetOutput.flush();
+            } finally {
+                try {
+                    if (targetOutput != null) targetOutput.close();
+                } catch (Exception ignored) {}
+                try {
+                    if (targetSocket != null) targetSocket.close();
+                } catch (Exception ignored) {}
+            }
+        }
+
+        private void writeChunked(OutputStream targetOutput, byte[] bytes) throws Exception {
+            int offset = 0;
+            int chunkSize = 96;
+            while (offset < bytes.length) {
+                int count = Math.min(chunkSize, bytes.length - offset);
+                targetOutput.write(bytes, offset, count);
+                targetOutput.flush();
+                offset += count;
+                Thread.sleep(24);
+            }
         }
 
         private BluetoothDevice findPrinter(Set<BluetoothDevice> devices) {

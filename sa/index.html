@@ -1507,6 +1507,50 @@
       gap: 10px;
       align-items: center;
     }
+    .purchase-mobile-hero {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr) 48px;
+      align-items: center;
+      gap: 12px;
+      margin: -8px -8px 12px;
+      padding: 18px 16px;
+      border-radius: 0 0 18px 18px;
+      background: linear-gradient(135deg, #155BE8, #0B46CB);
+      color: #fff;
+    }
+    .purchase-mobile-hero button,
+    .purchase-hero-icon {
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, .16);
+      color: #fff;
+      font-size: 22px;
+      font-weight: 900;
+    }
+    .purchase-hero-icon { width: 48px; height: 48px; background: #fff; color: #155BE8; }
+    .purchase-mobile-hero h2 { margin: 0; font-size: 24px; line-height: 29px; }
+    .purchase-mobile-hero p { margin: 2px 0 0; color: rgba(255,255,255,.86); font-weight: 800; }
+    .purchase-section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      color: #0B4FE8;
+      font-size: 18px;
+      font-weight: 950;
+    }
+    .purchase-section-title span {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: #EEF4FF;
+    }
     .invoice-total {
       min-height: 48px;
       min-width: 180px;
@@ -3104,6 +3148,73 @@
         margin-right: 6px !important;
         font-size: 9px !important;
       }
+      .purchase-invoice-card {
+        margin: -10px -14px 0 !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        background: #F7FAFF !important;
+        box-shadow: none !important;
+        padding: 0 14px 92px !important;
+        gap: 12px !important;
+      }
+      .purchase-mobile-hero {
+        margin: 0 -14px 2px !important;
+        border-radius: 0 !important;
+        padding: 16px 18px !important;
+      }
+      .purchase-mobile-hero h2 {
+        font-size: 23px !important;
+        line-height: 27px !important;
+      }
+      .purchase-section-card {
+        border: 1px solid #E1E8F4 !important;
+        border-radius: 16px !important;
+        background: #fff !important;
+        padding: 14px !important;
+        box-shadow: 0 8px 18px #1018280d !important;
+      }
+      .purchase-section-card .store-form-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+      }
+      .purchase-section-card .store-form-grid input,
+      .purchase-section-card .store-form-grid select,
+      .purchase-line input,
+      .purchase-line select {
+        min-height: 48px !important;
+        border-radius: 12px !important;
+        font-size: 13px !important;
+        min-width: 0 !important;
+      }
+      .purchase-section-card .store-form-grid #storeVendor,
+      .purchase-section-card .store-form-grid #storeAddress,
+      .purchase-line [data-store-item],
+      .purchase-line [data-store-image],
+      .purchase-line [data-store-price] {
+        grid-column: 1 / -1 !important;
+      }
+      .purchase-lines {
+        gap: 12px !important;
+      }
+      .purchase-line {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        padding: 0 !important;
+        border: 0 !important;
+        background: transparent !important;
+      }
+      .purchase-line .mini-danger {
+        min-height: 46px !important;
+        grid-column: 1 / 2 !important;
+      }
+      .purchase-invoice-footer {
+        grid-template-columns: 1fr 1fr !important;
+      }
+      .purchase-invoice-footer .secondary,
+      .purchase-invoice-footer .invoice-total {
+        min-height: 48px !important;
+        border-radius: 12px !important;
+      }
     }
   </style>
 </head>
@@ -3280,7 +3391,7 @@
         return defaults;
       }
     })();
-    const appBuild = "3.4";
+    const appBuild = "3.5";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -3353,7 +3464,6 @@
     const isItemHidden = item => item?.hidden === true || item?.available === false || item?.isAvailable === false || item?.status === "hidden";
 
     if (localStorage.getItem(appBuildKey) !== appBuild) {
-      localStorage.removeItem(productCacheKey);
       localStorage.setItem(appBuildKey, appBuild);
     }
 
@@ -4066,6 +4176,7 @@
       const alignCenter = "\x1B\x61\x01";
       const alignLeft = "\x1B\x61\x00";
       const titleOn = "\x1D\x21\x01";
+      const totalOn = "\x1D\x21\x01";
       const bigOn = "\x1D\x21\x11";
       const bigOff = "\x1D\x21\x00";
       const itemLine = (index, item) => {
@@ -4103,7 +4214,7 @@
         leftRight("SUBTOTAL", amountText(subtotal)),
         leftRight("DISCOUNT", amountText(discount)),
         line,
-        boldOn + leftRight("", `TOTAL Rs : ${Number(total || 0).toFixed(2)}`) + boldOff,
+        boldOn + totalOn + leftRight("TOTAL", `Rs ${Number(total || 0).toFixed(2)}`) + bigOff + boldOff,
         thick,
         center("THANK YOU! VISIT AGAIN"),
         "",
@@ -4939,16 +5050,26 @@
           <div class="work-card metric-card"><span>Status</span><strong>Ready</strong></div>
         </div>
         ${tab === "purchase" ? `<div class="work-card purchase-invoice-card">
-          <h3>Purchase Invoice</h3>
-          <div class="store-form-grid">
-            <input id="storeBillNo" placeholder="Bill number">
-            <input id="storePurchaseDate" type="date" value="${dateInputValue(new Date())}">
-            <input id="storeVendor" placeholder="Vendor name">
-            <input id="storePhone" placeholder="Vendor phone">
-            <input id="storeAddress" placeholder="Vendor address">
+          <div class="purchase-mobile-hero">
+            <button data-store-tab="used" type="button">‹</button>
+            <div><h2>Purchase Invoice</h2><p>Create and manage purchase invoices</p></div>
+            <span class="purchase-hero-icon">▣</span>
           </div>
-          <div class="purchase-lines" id="purchaseLines">
-            ${purchaseLineHtml(0, categories, units)}
+          <div class="purchase-section-card">
+            <div class="purchase-section-title"><span>▤</span>Invoice Details</div>
+            <div class="store-form-grid">
+              <input id="storeBillNo" placeholder="Invoice No.">
+              <input id="storePurchaseDate" type="date" value="${dateInputValue(new Date())}">
+              <input id="storeVendor" placeholder="Supplier name">
+              <input id="storePhone" placeholder="Supplier phone">
+              <input id="storeAddress" placeholder="Supplier address">
+            </div>
+          </div>
+          <div class="purchase-section-card">
+            <div class="purchase-section-title"><span>+</span>Add Item</div>
+            <div class="purchase-lines" id="purchaseLines">
+              ${purchaseLineHtml(0, categories, units)}
+            </div>
           </div>
           <div class="purchase-invoice-footer">
             <button class="secondary" id="addPurchaseLine" type="button">Add Item</button>
@@ -5039,8 +5160,19 @@
         <tr><td><span class="user-mini-icon">U</span>${esc(cashier)}</td><td>${item.bills}</td><td>${money(item.total)}</td></tr>`).join("");
       const itemRowsCompact = [...totals.items.entries()].sort((a, b) => b[1].amount - a[1].amount).slice(0, 4).map(([name, item]) => `
         <tr><td>${esc(name)}</td><td>${item.qty}</td><td>${money(item.amount)}</td></tr>`).join("");
-      const chartEntries = [...dateGroups.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-7);
-      const chartData = chartEntries.length ? chartEntries : [[range.to, { amount: totals.total || 0 }]];
+      const overviewGroups = new Map();
+      orders.forEach(order => {
+        const key = dateInputValue(orderDate(order)) || "Unknown";
+        const current = overviewGroups.get(key) || { amount: 0 };
+        current.amount += Number(order.total || 0);
+        overviewGroups.set(key, current);
+      });
+      const chartData = Array.from({ length: 7 }, (_, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() - (6 - index));
+        const key = dateInputValue(date);
+        return [key, overviewGroups.get(key) || { amount: 0 }];
+      });
       const chartValues = chartData.map(([, item]) => Number(item.amount || 0));
       const chartMax = Math.max(...chartValues, 1);
       const shortMoney = value => Number(value || 0) >= 1000 ? `${(Number(value || 0) / 1000).toFixed(1)}K` : String(Math.round(Number(value || 0)));
@@ -7133,8 +7265,8 @@
       renderCart();
       updateSyncStatus();
       setPosSection("billing");
-      await loadSettings();
-      await loadProducts();
+      loadProducts().catch(() => renderProducts());
+      loadSettings().catch(() => applySettings(settings));
       loadAdminData().catch(() => updateSyncStatus("Data load failed", "offline"));
       syncPendingOrders().catch(() => updateSyncStatus());
     }
