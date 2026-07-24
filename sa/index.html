@@ -416,6 +416,7 @@
     .payment-actions button { position: relative; min-height: 118px; border-radius: 18px; border: 1px solid var(--line); background: white; font-weight: 950; }
     .payment-actions button.primary-choice { background: var(--green); border-color: var(--green); color: white; }
     .payment-actions button.selected { background: #ecfdf3; border-color: var(--green); color: #166534; box-shadow: 0 10px 22px #2f7d2633; }
+    .payment-actions button:disabled { opacity: .62; pointer-events: none; }
     .payment-actions button.selected::after {
       content: "✓";
       position: absolute;
@@ -1746,6 +1747,19 @@
       color: #fff;
       font-size: 17px;
       font-weight: 950;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+    .orders-view-cart svg {
+      width: 19px;
+      height: 19px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
     .cart-page-modal {
       width: min(760px, 100vw);
@@ -2495,18 +2509,18 @@
     }
     #posView .shift-line b { color: #047857 !important; }
     #posView .tabs {
-      gap: 10px !important;
-      padding: 18px 0 18px !important;
+      gap: 8px !important;
+      padding: 12px 0 12px !important;
     }
     #posView .tab {
-      min-height: 54px !important;
-      border-radius: 18px !important;
-      padding: 0 20px !important;
+      min-height: 40px !important;
+      border-radius: 14px !important;
+      padding: 0 12px !important;
       border-color: #E8ECF3 !important;
       background: #fff !important;
       color: #111827 !important;
       box-shadow: 0 8px 18px #1018280d !important;
-      font-size: 15px !important;
+      font-size: 12px !important;
       font-weight: 850 !important;
     }
     #posView .tab span { display: none !important; }
@@ -2517,7 +2531,8 @@
     }
     #posView .section-title-row h2 {
       color: #111827 !important;
-      font-size: 24px !important;
+      font-size: 17px !important;
+      line-height: 22px !important;
       font-weight: 950 !important;
     }
     #posView .section-title-row span {
@@ -2651,15 +2666,15 @@
         margin-top: 1px !important;
       }
       #posView .tabs {
-        gap: 10px !important;
-        padding: 16px 0 18px !important;
+        gap: 8px !important;
+        padding: 12px 0 12px !important;
       }
       #posView .tab {
-        min-height: 50px !important;
-        border-radius: 18px !important;
-        padding: 0 15px !important;
-        gap: 9px !important;
-        font-size: 14px !important;
+        min-height: 38px !important;
+        border-radius: 14px !important;
+        padding: 0 11px !important;
+        gap: 7px !important;
+        font-size: 12px !important;
         white-space: nowrap !important;
       }
       #posView .menu-grid {
@@ -2825,7 +2840,7 @@
     /* Final compact mobile shell + report match */
     @media (max-width: 760px) {
       #posView .content {
-        padding: 10px 14px 74px !important;
+        padding: 10px 14px 300px !important;
       }
       #posView.option-mode .content {
         padding: 10px 14px 74px !important;
@@ -3245,7 +3260,7 @@
         return defaults;
       }
     })();
-    const appBuild = "3.2";
+    const appBuild = "3.3";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -3303,6 +3318,7 @@
     let liveRefreshBusy = false;
     let lastDataSyncAt = "";
     let menuOpening = false;
+    let orderSubmitting = false;
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(2);
@@ -3578,12 +3594,26 @@
 
     async function loadProducts() {
       const cached = readJson(productCacheKey, []);
-      if (cached.length) products = cached;
+      if (cached.length) {
+        products = cached;
+        renderProducts();
+        preloadProductImages(products);
+      }
       try {
-        products = await api("/products");
+        products = await api("/products", { timeoutMs: cached.length ? 1600 : 3500 });
         writeJson(productCacheKey, products);
+        preloadProductImages(products);
       } catch {}
       renderProducts();
+    }
+
+    function preloadProductImages(rows) {
+      (rows || []).slice(0, 80).forEach(item => {
+        if (!item || !item.image) return;
+        const img = new Image();
+        img.loading = "eager";
+        img.src = item.image;
+      });
     }
 
     async function loadAdminData() {
@@ -3745,6 +3775,14 @@
       renderProducts();
     }
 
+    function clearActiveCartState() {
+      clearCartState();
+      if (activePosSection === "bulk") {
+        setBulkDraft([]);
+        renderOptionPage();
+      }
+    }
+
     function renderCart() {
       const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
       cartDiscount = Math.min(subtotal, Math.max(0, Number(cartDiscount || 0)));
@@ -3818,7 +3856,10 @@
           </div>
         </div>`;
       $("closeCartView").addEventListener("click", closeOptionsModal);
-      $("cartPageClear").addEventListener("click", () => { clearCartState(); if (activePosSection === "bulk") setBulkDraft([]); closeOptionsModal(); });
+      $("cartPageClear").addEventListener("click", () => {
+        clearActiveCartState();
+        openCartViewModal();
+      });
       document.querySelectorAll("[data-cart-page-qty]").forEach(btn => btn.addEventListener("click", () => {
         changeQty(btn.dataset.id, Number(btn.dataset.cartPageQty));
         if (activePosSection === "bulk") setBulkDraft(cart.map(item => ({ ...item })));
@@ -3837,7 +3878,6 @@
         openCartViewModal();
       }));
       $("cartPagePlaceOrder").addEventListener("click", () => {
-        closeOptionsModal();
         placeOrderFlow();
       });
     }
@@ -4660,7 +4700,7 @@
           <span class="orders-bar-icon"><svg viewBox="0 0 24 24"><path d="M7 3h10l2 4v14H5V7l2-4Z"/><path d="M9 12h6"/><path d="M9 16h4"/></svg></span>
           <div><strong>${draftQty} Items</strong><span>Total Quantity</span></div>
           <div><strong>${money(draftTotal)}</strong><span>Total Amount</span></div>
-          <button class="orders-view-cart" id="bulkViewCart" type="button">View Cart | &gt;</button>
+          <button class="orders-view-cart" id="bulkViewCart" type="button"><svg viewBox="0 0 24 24"><path d="M6 7h15l-2 9H8L6 7Z"/><path d="M6 7 5 3H3"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg><span>View Cart</span></button>
         </div>`;
     }
 
@@ -5657,7 +5697,7 @@
       if ($("refreshPrinterPage")) $("refreshPrinterPage").addEventListener("click", () => renderOptionPage());
       if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => { await loadProducts(); renderOptionPage(); });
       if ($("clearSearchBtn")) $("clearSearchBtn").addEventListener("click", () => { itemSearch = ""; if ($("itemSearch")) $("itemSearch").value = ""; });
-      if ($("clearCartSettingsBtn")) $("clearCartSettingsBtn").addEventListener("click", clearCartState);
+      if ($("clearCartSettingsBtn")) $("clearCartSettingsBtn").addEventListener("click", clearActiveCartState);
       if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
       if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_FROM", event.target.value); renderOptionPage(); });
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderOptionPage(); });
@@ -6436,9 +6476,14 @@
     }
 
     function placeOrderFlow() {
-      if (!cart.length) return;
+      if (!cart.length) {
+        $("posMessage").textContent = "Cart empty. Add items first.";
+        $("posMessage").className = "status error";
+        return;
+      }
       payment = "";
       renderCart();
+      closeOptionsModal();
       openPaymentModal();
     }
 
@@ -6484,10 +6529,27 @@
             <div class="status" id="paymentModalStatus"></div>
           </div>
         </div>`;
-      document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", () => {
+      document.querySelectorAll("[data-modal-pay]").forEach(btn => btn.addEventListener("click", async () => {
+        if (orderSubmitting) return;
+        const selectedPay = btn.dataset.modalPay;
+        if (selectedPay === "Split" && !btn.closest("#modalSplitBox")) {
+          setModalSelection(btn);
+          $("modalSplitBox").classList.remove("hidden");
+          $("modalCreditBox").classList.add("hidden");
+          setPaymentStatus("Enter split amount, then confirm.", "status");
+          return;
+        }
+        if (selectedPay === "Credit" && !btn.closest("#modalCreditBox")) {
+          setModalSelection(btn);
+          $("modalCreditBox").classList.remove("hidden");
+          $("modalSplitBox").classList.add("hidden");
+          setPaymentStatus("Enter credit name, then confirm.", "status");
+          return;
+        }
         setModalSelection(btn);
         setPaymentStatus("Payment selected. Printing...", "status ok");
-        completeOrder(btn.dataset.modalPay);
+        document.querySelectorAll("[data-modal-pay]").forEach(item => item.disabled = true);
+        await completeOrder(selectedPay);
       }));
       $("closePaymentModal").addEventListener("click", closePaymentModal);
       $("closePaymentTop").addEventListener("click", closePaymentModal);
@@ -6501,7 +6563,9 @@
     }
 
     async function completeOrder(selectedPayment) {
+      if (orderSubmitting) return;
       if (!cart.length) return closePaymentModal();
+      orderSubmitting = true;
       const orderSubtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
       cartDiscount = Math.min(orderSubtotal, Math.max(0, Number(cartDiscount || 0)));
       const orderTotal = Math.max(0, orderSubtotal - cartDiscount);
@@ -6534,15 +6598,13 @@
       };
       if (selectedPayment === "Split" && Math.round((payload.paymentBreakup.cash + payload.paymentBreakup.online) * 100) !== Math.round(payload.total * 100)) {
         setPaymentStatus(`Split amount must equal ${money(payload.total)}`, "status error");
+        orderSubmitting = false;
+        document.querySelectorAll("[data-modal-pay]").forEach(item => item.disabled = false);
         return;
       }
       if (selectedPayment === "Cancel") payload.total = 0;
       setPaymentStatus("Saving order and starting print...");
-      receipt(payload);
-      setTimeout(() => {
-        closePaymentModal();
-        if (!$("posView").classList.contains("hidden")) setPosSection("billing");
-      }, 140);
+      await receipt(payload);
 
       try {
         if (!navigator.onLine) throw new Error("offline");
@@ -6564,9 +6626,12 @@
       payment = "";
       if (activePosSection === "bulk") setBulkDraft([]);
       clearCartState();
+      closePaymentModal();
+      if (!$("posView").classList.contains("hidden")) setPosSection("billing");
       renderAdmin();
       setTimeout(() => loadAdminData(), 80);
       if (pendingOrders().length) setTimeout(syncPendingOrders, 900);
+      orderSubmitting = false;
     }
 
     function dashboardStats() {
@@ -7107,7 +7172,7 @@
       if (btn) changeQty(btn.dataset.id, Number(btn.dataset.qty));
     });
     $("viewCartBtn").addEventListener("click", openCartViewModal);
-    $("clearCart").addEventListener("click", clearCartState);
+    $("clearCart").addEventListener("click", clearActiveCartState);
     $("placeOrder").addEventListener("click", placeOrderFlow);
     $("profileBtn").addEventListener("click", openMainMenu);
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {

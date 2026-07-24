@@ -662,7 +662,7 @@ function Drawer({
           <TouchableOpacity activeOpacity={0.86} style={styles.logoutButton} onPress={() => onSelect("Logout")}>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
-          <Text style={styles.versionText}>App Version 3.2</Text>
+          <Text style={styles.versionText}>App Version 3.3</Text>
         </View>
       </Animated.View>
     </View>
