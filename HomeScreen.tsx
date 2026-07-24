@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo, useRef, useState } from "react";
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
   FlatList,
@@ -19,12 +19,12 @@ import { generatePDF } from "react-native-html-to-pdf";
 import RNShare from "react-native-share";
 import { captureRef } from "react-native-view-shot";
 
-const NAVY = "#082653";
-const PAGE = "#f5f7fb";
+const NAVY = "#0B2E6D";
+const PAGE = "#FAFAFC";
 const CARD = "#ffffff";
-const LINE = "#e5eaf0";
-const MUTED = "#667085";
-const GREEN = "#22c55e";
+const LINE = "#E8ECF3";
+const MUTED = "#6B7280";
+const GREEN = "#16C784";
 const HALF_ITEMS_CATEGORY = "Half Items";
 
 const defaultItemCategories = [
@@ -49,6 +49,9 @@ type Category = string;
 type BottomNavItem = "Home" | "Orders" | "Reports";
 type PaymentMode = "Online" | "Cash" | "Split" | "Credit";
 type OrderDraft = [string, string, string, string];
+type CartLine = Product & {
+  qty: number;
+};
 type DrawerOption =
   | "Dashboard"
   | "New Billing"
@@ -164,8 +167,8 @@ const paymentModeOptions: {
   color: string;
   bg: string;
 }[] = [
-  { id: "Online", title: "Online", subtitle: "UPI / GPay / PhonePe", color: "#2563eb", bg: "#eff6ff" },
   { id: "Cash", title: "Cash", subtitle: "Cash payment", color: "#16a34a", bg: "#ecfdf3" },
+  { id: "Online", title: "Online", subtitle: "UPI / GPay / PhonePe", color: "#2563eb", bg: "#eff6ff" },
   { id: "Split", title: "Split", subtitle: "Cash + Online", color: "#7c3aed", bg: "#f5f3ff" },
   { id: "Credit", title: "Credit", subtitle: "Pending amount", color: "#f59e0b", bg: "#fffbeb" }
 ];
@@ -241,8 +244,7 @@ function HomeScreenContent() {
   );
 
   const [activeCategory, setActiveCategory] = useState("All");
-  const [cartCount, setCartCount] = useState(0);
-  const [total, setTotal] = useState(0);
+  const [cartItems, setCartItems] = useState<CartLine[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOption, setActiveOption] = useState<DrawerOption>("New Billing");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -262,7 +264,16 @@ function HomeScreenContent() {
   ]);
   const drawerProgress = useRef(new Animated.Value(0)).current;
 
+  useEffect(() => {
+    catalog.forEach(item => {
+      if (item.image) Image.prefetch(item.image);
+    });
+  }, [catalog]);
+
   const categoryTabs = useMemo(() => ["All", ...appCategories], [appCategories]);
+  const cartCount = useMemo(() => cartItems.reduce((sum, item) => sum + item.qty, 0), [cartItems]);
+  const total = useMemo(() => cartItems.reduce((sum, item) => sum + item.price * item.qty, 0), [cartItems]);
+
   const visibleProducts = useMemo(() => {
     const activeProducts = catalog.filter(item => !item.hidden);
     if (activeCategory === HALF_ITEMS_CATEGORY) {
@@ -280,14 +291,83 @@ function HomeScreenContent() {
   }, [activeCategory, catalog]);
 
   const addProduct = useCallback((product: Product) => {
-    setCartCount(count => count + 1);
-    setTotal(amount => amount + product.price);
+    setCartItems(current => {
+      const existing = current.find(item => item.id === product.id);
+      if (existing) {
+        return current.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+      }
+      return [...current, { ...product, qty: 1 }];
+    });
   }, []);
 
   const clearCart = useCallback(() => {
-    setCartCount(0);
-    setTotal(0);
+    setCartItems([]);
   }, []);
+
+  const placeOrder = useCallback(async (paymentMode: PaymentMode) => {
+    if (!cartItems.length) return "Add items before placing order";
+
+    const orderId = `#${Date.now().toString().slice(-5)}`;
+    const createdAt = new Date();
+    const orderTotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const receiptRows = cartItems
+      .map(item => `
+        <tr>
+          <td>${item.name}</td>
+          <td>${item.qty}</td>
+          <td>Rs ${formatMoney(item.price)}</td>
+          <td>Rs ${formatMoney(item.price * item.qty)}</td>
+        </tr>
+      `)
+      .join("");
+    const receiptHtml = `
+      <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; color: #111827; padding: 18px; }
+            h1 { color: #082653; font-size: 22px; margin: 0 0 4px; }
+            .sub { color: #667085; font-size: 12px; margin-bottom: 14px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border-bottom: 1px solid #e5eaf0; padding: 8px 4px; text-align: left; font-size: 12px; }
+            th { color: #082653; }
+            .total { margin-top: 14px; padding-top: 10px; border-top: 2px solid #082653; font-size: 18px; font-weight: 700; }
+          </style>
+        </head>
+        <body>
+          <h1>${registeredCanteen.name}</h1>
+          <div class="sub">Receipt ${orderId}<br/>${createdAt.toLocaleString()}<br/>Payment: ${paymentMode}</div>
+          <table>
+            <tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
+            ${receiptRows}
+          </table>
+          <div class="total">Total: Rs ${formatMoney(orderTotal)}</div>
+        </body>
+      </html>
+    `;
+
+    const file = await generatePDF({
+      html: receiptHtml,
+      fileName: `${registeredCanteen.name.replace(/\s+/g, "-").toLowerCase()}-${orderId.replace("#", "")}-receipt`,
+      directory: "Documents"
+    });
+
+    if (!file.filePath) {
+      throw new Error("Receipt file path missing");
+    }
+
+    const url = file.filePath.startsWith("file://") ? file.filePath : `file://${file.filePath}`;
+    await RNShare.open({
+      title: `${registeredCanteen.name} Receipt ${orderId}`,
+      message: `Receipt ${orderId}\nPayment: ${paymentMode}\nTotal: Rs ${formatMoney(orderTotal)}`,
+      url,
+      type: "application/pdf",
+      failOnCancel: false
+    });
+
+    setOrderDrafts(current => [[orderId, `${cartCount} items`, `Rs ${formatMoney(orderTotal)}`, paymentMode], ...current]);
+    setCartItems([]);
+    return "Receipt ready";
+  }, [cartCount, cartItems]);
 
   const openSubItems = useCallback((product: Product) => {
     setSelectedProduct(product);
@@ -347,21 +427,25 @@ function HomeScreenContent() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               styles.content,
-              { paddingHorizontal: horizontalPadding, paddingBottom: 292 + insets.bottom }
+              { paddingHorizontal: horizontalPadding, paddingBottom: 430 + insets.bottom }
             ]}
             columnWrapperStyle={columns > 1 ? { gap: cardGap } : undefined}
             ListHeaderComponent={
               <>
                 <SearchBar />
                 <CategoryTabs categories={categoryTabs} active={activeCategory} onChange={setActiveCategory} />
+                <View style={styles.popularHeader}>
+                  <Text style={styles.popularTitle}>Popular Items</Text>
+                  <Text style={styles.viewAllText}>View All</Text>
+                </View>
               </>
             }
             renderItem={({ item }) => (
               <ProductCard product={item} width={productWidth} onPress={addProduct} onLongPress={openSubItems} />
             )}
-            initialNumToRender={8}
-            maxToRenderPerBatch={8}
-            windowSize={5}
+            initialNumToRender={Math.max(12, visibleProducts.length)}
+            maxToRenderPerBatch={12}
+            windowSize={9}
             removeClippedSubviews
           />
         ) : (
@@ -393,7 +477,15 @@ function HomeScreenContent() {
             { height: (showBillingGrid ? 390 : 112) + insets.bottom }
           ]}
         />
-        {showBillingGrid && <CartPanel count={cartCount} total={total} onClear={clearCart} bottomInset={insets.bottom} />}
+        {showBillingGrid && (
+          <CartPanel
+            count={cartCount}
+            total={total}
+            onClear={clearCart}
+            onPlaceOrder={placeOrder}
+            bottomInset={insets.bottom}
+          />
+        )}
         <BottomNav activeOption={activeOption} onSelect={selectBottomNav} bottomInset={insets.bottom} />
         {selectedProduct && <SubItemsSheet product={selectedProduct} onClose={closeSubItems} />}
         {drawerOpen && (
@@ -570,7 +662,7 @@ function Drawer({
           <TouchableOpacity activeOpacity={0.86} style={styles.logoutButton} onPress={() => onSelect("Logout")}>
             <Text style={styles.logoutText}>Logout</Text>
           </TouchableOpacity>
-          <Text style={styles.versionText}>App Version 1.0.0</Text>
+          <Text style={styles.versionText}>App Version 3.1</Text>
         </View>
       </Animated.View>
     </View>
@@ -671,18 +763,32 @@ function OrdersScreen({
   onOrdersChange: (next: OrderDraft[]) => void;
 }) {
   const [bulkEntry, setBulkEntry] = useState("");
+  const bulkLines = useMemo(() => bulkEntry.split("\n").map(line => line.trim()).filter(Boolean), [bulkEntry]);
+  const bulkQuantity = useMemo(
+    () => bulkLines.reduce((sum, line) => {
+      const match = line.match(/(?:x|qty|quantity)\s*(\d+)/i) || line.match(/(\d+)\s*$/);
+      return sum + (match ? Number(match[1]) : 1);
+    }, 0),
+    [bulkLines]
+  );
 
   const addBulkOrder = () => {
-    const lines = bulkEntry.split("\n").map(line => line.trim()).filter(Boolean);
-    if (!lines.length) return;
-    onOrdersChange([[`#${Date.now().toString().slice(-5)}`, `${lines.length} entries`, "Bulk", "Draft"], ...orders]);
+    if (!bulkLines.length) return;
+    onOrdersChange([[`#${Date.now().toString().slice(-5)}`, `${bulkLines.length} entries • ${bulkQuantity} qty`, `Qty ${bulkQuantity}`, "Draft"], ...orders]);
     setBulkEntry("");
   };
 
   return (
     <View style={styles.optionStack}>
       <View style={styles.formCard}>
-        <Text style={styles.summaryTitle}>Bulk Order Entry</Text>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.summaryTitle}>Bulk Order Entry</Text>
+          {orders.length > 0 && (
+            <TouchableOpacity activeOpacity={0.86} onPress={() => onOrdersChange([])}>
+              <Text style={styles.clearText}>Clear Orders</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <TextInput
           value={bulkEntry}
           onChangeText={setBulkEntry}
@@ -691,11 +797,18 @@ function OrdersScreen({
           placeholderTextColor="#8a94a6"
           style={[styles.realInput, styles.bulkInput]}
         />
+        <View style={styles.bulkEntryStats}>
+          <View style={styles.bulkEntryPill}>
+            <Text style={styles.bulkEntryLabel}>Entries</Text>
+            <Text style={styles.bulkEntryValue}>{bulkLines.length}</Text>
+          </View>
+          <View style={styles.bulkEntryPill}>
+            <Text style={styles.bulkEntryLabel}>Qty</Text>
+            <Text style={styles.bulkEntryValue}>{bulkQuantity}</Text>
+          </View>
+        </View>
         <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={addBulkOrder}>
           <Text style={styles.primaryActionText}>Add Bulk Order</Text>
-        </TouchableOpacity>
-        <TouchableOpacity activeOpacity={0.86} style={styles.secondaryAction} onPress={() => onOrdersChange([])}>
-          <Text style={styles.secondaryActionText}>Clear Orders</Text>
         </TouchableOpacity>
       </View>
 
@@ -706,7 +819,7 @@ function OrdersScreen({
             <Text style={styles.listSub}>20:13 • {row[1]}</Text>
           </View>
           <View style={styles.rightInfo}>
-            <Text style={styles.listAmount}>{row[2]}</Text>
+            <Text style={styles.listAmount} numberOfLines={1}>{row[2]}</Text>
             <Text style={styles.badgeText}>{row[3]}</Text>
           </View>
         </View>
@@ -722,6 +835,10 @@ function formatDateInput(date: Date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function formatMoney(amount: number) {
+  return amount.toFixed(2);
 }
 
 function buildRange(range: ReportRange, fromDate: string, toDate: string): [string, string] {
@@ -1911,7 +2028,7 @@ function PrinterSettingsScreen() {
       ))}
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Settings</Text>
-        <InfoRow label="Paper Width" value="58mm" />
+        <InfoRow label="Paper Width" value="57mm" />
         <InfoRow label="Default Printer" value="ON" />
         <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Test Print</Text></TouchableOpacity>
       </View>
@@ -2085,8 +2202,13 @@ const ProductCard = memo(function ProductCard({
         )}
       </View>
       <View style={styles.productInfo}>
-        <Text numberOfLines={1} style={styles.productName}>{product.name}</Text>
-        <Text style={styles.productPrice}>Rs {product.price}</Text>
+        <View style={styles.productTextBlock}>
+          <Text numberOfLines={1} style={styles.productName}>{product.name}</Text>
+          <Text style={styles.productPrice}>Rs {product.price}</Text>
+        </View>
+        <View style={styles.productAddBadge}>
+          <Text style={styles.productAddText}>+</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -2131,14 +2253,32 @@ function CartPanel({
   count,
   total,
   onClear,
+  onPlaceOrder,
   bottomInset
 }: {
   count: number;
   total: number;
   onClear: () => void;
+  onPlaceOrder: (paymentMode: PaymentMode) => Promise<string>;
   bottomInset: number;
 }) {
   const [paymentMode, setPaymentMode] = useState<PaymentMode>("Online");
+  const [status, setStatus] = useState("");
+  const [printing, setPrinting] = useState(false);
+
+  const submitOrder = async () => {
+    if (printing) return;
+    setPrinting(true);
+    setStatus("Preparing receipt...");
+    try {
+      const nextStatus = await onPlaceOrder(paymentMode);
+      setStatus(nextStatus);
+    } catch {
+      setStatus("Receipt failed. Try again.");
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   return (
     <View style={[styles.cartPanel, { bottom: 94 + bottomInset }]}>
@@ -2151,7 +2291,7 @@ function CartPanel({
 
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>Total Amount</Text>
-        <Text style={styles.totalValue}>Rs {total}</Text>
+        <Text style={styles.totalValue} numberOfLines={1}>Rs {formatMoney(total)}</Text>
       </View>
 
       <View style={styles.paymentModeHeader}>
@@ -2166,7 +2306,10 @@ function CartPanel({
             <TouchableOpacity
               key={mode.id}
               activeOpacity={0.88}
-              onPress={() => setPaymentMode(mode.id)}
+              onPress={() => {
+                setPaymentMode(mode.id);
+                setStatus("");
+              }}
               style={[
                 styles.paymentModeCard,
                 { backgroundColor: selected ? mode.bg : "#fbfcff", borderColor: selected ? mode.color : LINE },
@@ -2185,8 +2328,10 @@ function CartPanel({
         })}
       </View>
 
-      <TouchableOpacity activeOpacity={0.9} style={styles.payButton}>
-        <Text style={styles.payText}>{paymentMode} Payment</Text>
+      {!!status && <Text style={styles.cartStatus}>{status}</Text>}
+
+      <TouchableOpacity activeOpacity={0.9} style={[styles.payButton, printing && styles.payButtonDisabled]} onPress={submitOrder}>
+        <Text style={styles.payText}>{printing ? "Printing Receipt..." : `Place Order - ${paymentMode}`}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -2195,47 +2340,56 @@ function CartPanel({
 function PaymentModeIcon({ mode, color }: { mode: PaymentMode; color: string }) {
   if (mode === "Online") {
     return (
-      <View style={[styles.paymentLogo, { backgroundColor: "#eef6ff", borderColor: "#bfdbfe" }]}>
-        <Text style={styles.gpayG}>G</Text>
-        <Text style={[styles.logoPayText, { color }]}>Pay</Text>
+      <View style={[styles.paymentLogo, styles.upiLogo]}>
+        <View style={styles.upiWordRow}>
+          <Text style={styles.upiWord}>UPI</Text>
+          <View style={styles.upiArrowWrap}>
+            <View style={[styles.upiArrow, styles.upiArrowGreen]} />
+            <View style={[styles.upiArrow, styles.upiArrowOrange]} />
+          </View>
+        </View>
+        <Text style={styles.logoPayText}>Unified Payments</Text>
       </View>
     );
   }
 
   if (mode === "Cash") {
     return (
-      <View style={[styles.paymentLogo, { backgroundColor: "#ecfdf3", borderColor: "#bbf7d0" }]}>
-        <View style={[styles.cashNote, { borderColor: color }]}>
-          <Text style={[styles.cashText, { color }]}>Rs</Text>
+      <View style={[styles.paymentLogo, styles.cashLogo]}>
+        <View style={styles.cashNote}>
+          <View style={styles.cashNoteLine} />
+          <Text style={styles.cashText}>Rs</Text>
         </View>
-        <Text style={[styles.logoPayText, { color }]}>Cash</Text>
+        <Text style={styles.cashLogoLabel}>CASH</Text>
       </View>
     );
   }
 
   if (mode === "Split") {
     return (
-      <View style={[styles.paymentLogo, { backgroundColor: "#f5f3ff", borderColor: "#ddd6fe" }]}>
-        <View style={styles.splitIconRow}>
-          <View style={[styles.splitCircle, { backgroundColor: "#16a34a" }]}>
-            <Text style={styles.splitCircleText}>C</Text>
-          </View>
-          <View style={[styles.splitCircle, styles.splitCircleOverlap, { backgroundColor: color }]}>
-            <Text style={styles.splitCircleText}>U</Text>
+      <View style={[styles.paymentLogo, styles.impsLogo]}>
+        <View style={styles.impsRow}>
+          <Text style={styles.impsText}>IMPS</Text>
+          <View style={styles.impsArrowWrap}>
+            <View style={[styles.impsArrow, styles.upiArrowGreen]} />
+            <View style={[styles.impsArrow, styles.upiArrowOrange]} />
           </View>
         </View>
-        <Text style={[styles.logoPayText, { color }]}>Split</Text>
+        <Text style={styles.impsSubText}>Instant Payment</Text>
       </View>
     );
   }
 
   return (
-    <View style={[styles.paymentLogo, { backgroundColor: "#fffbeb", borderColor: "#fde68a" }]}>
-      <View style={[styles.creditCardIcon, { borderColor: color }]}>
-        <View style={[styles.creditCardLine, { backgroundColor: color }]} />
-        <Text style={[styles.creditText, { color }]}>CR</Text>
+    <View style={[styles.paymentLogo, styles.creditLogo]}>
+      <View style={styles.visaCard}>
+        <Text style={styles.visaText}>VISA</Text>
+        <View style={styles.visaGoldLine} />
       </View>
-      <Text style={[styles.logoPayText, { color }]}>Credit</Text>
+      <View style={styles.cardCircles}>
+        <View style={[styles.cardCircle, styles.cardCircleRed]} />
+        <View style={[styles.cardCircle, styles.cardCircleGold]} />
+      </View>
     </View>
   );
 }
@@ -2255,6 +2409,11 @@ function BottomNav({
     Orders: "Orders",
     Reports: "Reports"
   };
+  const icons: Record<BottomNavItem, string> = {
+    Home: "⌂",
+    Orders: "▤",
+    Reports: "◷"
+  };
   const activeItem: Record<BottomNavItem, boolean> = {
     Home: activeOption === "Dashboard" || activeOption === "New Billing",
     Orders: activeOption === "Orders",
@@ -2272,9 +2431,11 @@ function BottomNav({
             onPress={() => onSelect(item)}
             style={[styles.navItem, active && styles.navActive]}
           >
+            <Text style={[styles.navIcon, active && styles.navActiveText]}>{icons[item]}</Text>
             <Text numberOfLines={1} adjustsFontSizeToFit style={[styles.navText, active && styles.navActiveText]}>
               {labels[item]}
             </Text>
+            {active && <View style={styles.navIndicator} />}
           </TouchableOpacity>
         );
       })}
@@ -2289,38 +2450,38 @@ const styles = StyleSheet.create({
   },
   page: {
     flex: 1,
-    backgroundColor: CARD
+    backgroundColor: PAGE
   },
   header: {
-    minHeight: 116,
-    marginHorizontal: 14,
+    minHeight: 96,
+    marginHorizontal: 12,
     marginTop: 10,
-    paddingHorizontal: 16,
-    borderRadius: 28,
-    backgroundColor: "#fdfefe",
+    paddingHorizontal: 14,
+    borderRadius: 26,
+    backgroundColor: CARD,
     flexDirection: "row",
     alignItems: "center",
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "#f1f4f8",
+    borderColor: LINE,
     shadowColor: "#101828",
-    shadowOpacity: 0.1,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 5
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 8
   },
   decorCutlery: {
     position: "absolute",
     right: -4,
     bottom: -34,
-    color: NAVY,
+    color: "#111827",
     fontSize: 116,
-    opacity: 0.06,
+    opacity: 0.025,
     transform: [{ rotate: "-12deg" }]
   },
   menuButton: {
-    width: 58,
-    height: 58,
+    width: 52,
+    height: 52,
     borderRadius: 18,
     backgroundColor: CARD,
     alignItems: "center",
@@ -2328,17 +2489,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: LINE,
     shadowColor: "#101828",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 2
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 7 },
+    elevation: 3
   },
   menuBars: {
-    width: 27,
-    gap: 6
+    width: 24,
+    gap: 5
   },
   menuBar: {
-    height: 4,
+    height: 3,
     borderRadius: 4,
     backgroundColor: NAVY
   },
@@ -2348,30 +2509,30 @@ const styles = StyleSheet.create({
     fontWeight: "900"
   },
   logo: {
-    width: 66,
-    height: 66,
-    marginLeft: 14,
-    borderRadius: 33,
-    backgroundColor: CARD,
-    borderWidth: 7,
-    borderColor: "#f6f8fb",
+    width: 64,
+    height: 64,
+    marginLeft: 12,
+    borderRadius: 22,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: LINE,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
     shadowColor: "#101828",
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 2
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4
   },
   logoImage: {
     width: "100%",
     height: "100%",
-    borderRadius: 33
+    borderRadius: 22
   },
   logoIcon: {
-    color: "#24324a",
-    fontSize: 28,
+    color: NAVY,
+    fontSize: 26,
     fontWeight: "900"
   },
   headerTitle: {
@@ -2387,8 +2548,9 @@ const styles = StyleSheet.create({
     rowGap: 6
   },
   title: {
-    color: "#071a3d",
-    fontSize: 22,
+    color: "#111827",
+    fontSize: 21,
+    lineHeight: 27,
     fontWeight: "900"
   },
   statusRow: {
@@ -2397,35 +2559,36 @@ const styles = StyleSheet.create({
     marginTop: 9,
     gap: 8,
     alignSelf: "flex-start",
-    minHeight: 28,
-    paddingHorizontal: 11,
+    minHeight: 26,
+    paddingHorizontal: 10,
     borderRadius: 999,
-    backgroundColor: "#ecfdf3",
+    backgroundColor: "#ECFDF5",
     borderWidth: 1,
-    borderColor: "#bbf7d0"
+    borderColor: "#BBF7D0"
   },
   statusDot: {
-    width: 10,
-    height: 10,
+    width: 9,
+    height: 9,
     borderRadius: 5,
-    backgroundColor: "#16a34a"
+    backgroundColor: GREEN
   },
   connected: {
-    color: "#16a34a",
-    fontSize: 14,
+    color: "#047857",
+    fontSize: 12,
     fontWeight: "900"
   },
   content: {
-    paddingTop: 16
+    paddingTop: 18
   },
   optionContent: {
     paddingTop: 18
   },
   optionTitle: {
     color: "#111827",
-    fontSize: 22,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: "900",
-    marginBottom: 14
+    marginBottom: 10
   },
   optionStack: {
     gap: 12
@@ -2450,30 +2613,37 @@ const styles = StyleSheet.create({
     lineHeight: 19
   },
   searchBar: {
-    minHeight: 58,
-    borderRadius: 18,
+    minHeight: 56,
+    borderRadius: 20,
     backgroundColor: CARD,
     borderWidth: 1,
     borderColor: LINE,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     shadowColor: "#101828",
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 1
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3
   },
   searchIcon: {
-    color: MUTED,
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: "#F8FAFC",
+    color: NAVY,
     fontSize: 20,
-    marginRight: 10
+    lineHeight: 38,
+    marginRight: 10,
+    textAlign: "center",
+    overflow: "hidden"
   },
   searchInput: {
     flex: 1,
     color: "#111827",
-    fontSize: 16,
-    fontWeight: "700"
+    fontSize: 15,
+    fontWeight: "800"
   },
   statsRow: {
     flexDirection: "row",
@@ -2718,55 +2888,85 @@ const styles = StyleSheet.create({
   },
   tabs: {
     flexDirection: "row",
-    gap: 10,
-    marginTop: 18,
-    marginBottom: 14
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+    marginBottom: 12
   },
   tab: {
-    minHeight: 48,
-    paddingHorizontal: 18,
-    borderRadius: 16,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderRadius: 14,
     backgroundColor: CARD,
     borderWidth: 1,
     borderColor: LINE,
     alignItems: "center",
-    justifyContent: "center"
-  },
-  activeTab: {
-    backgroundColor: "#edf4ff",
-    borderColor: "#c8d8ef"
-  },
-  tabText: {
-    color: "#111827",
-    fontSize: 15,
-    fontWeight: "900"
-  },
-  activeTabText: {
-    color: NAVY
-  },
-  productCard: {
-    marginBottom: 12,
-    borderRadius: 14,
-    backgroundColor: CARD,
-    borderWidth: 1,
-    borderColor: "#e8edf4",
-    overflow: "hidden",
+    justifyContent: "center",
     shadowColor: "#101828",
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.04,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 7 },
     elevation: 2
   },
+  activeTab: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5
+  },
+  tabText: {
+    color: "#111827",
+    fontSize: 12,
+    fontWeight: "900"
+  },
+  activeTabText: {
+    color: CARD
+  },
+  popularHeader: {
+    minHeight: 30,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  popularTitle: {
+    color: "#111827",
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: "900"
+  },
+  viewAllText: {
+    color: "#2563EB",
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: "900"
+  },
+  productCard: {
+    marginBottom: 16,
+    borderRadius: 22,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
+    overflow: "hidden",
+    shadowColor: "#101828",
+    shadowOpacity: 0.08,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 5
+  },
   productImageWrap: {
     width: "100%",
-    aspectRatio: 1.15,
-    backgroundColor: "#eef2f7",
+    aspectRatio: 1.08,
+    backgroundColor: "#F3F6FA",
     overflow: "hidden"
   },
   productImage: {
     width: "100%",
     height: "100%",
-    backgroundColor: "#eef2f7"
+    backgroundColor: "#F3F6FA"
   },
   halfImageTint: {
     position: "absolute",
@@ -2787,14 +2987,14 @@ const styles = StyleSheet.create({
   },
   halfPlateBadge: {
     position: "absolute",
-    left: 8,
-    top: 8,
-    minHeight: 26,
-    paddingHorizontal: 9,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.92)",
+    left: 10,
+    top: 10,
+    minHeight: 28,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.96)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.8)",
+    borderColor: LINE,
     justifyContent: "center"
   },
   halfPlateBadgeText: {
@@ -2803,17 +3003,49 @@ const styles = StyleSheet.create({
     fontWeight: "900"
   },
   productInfo: {
-    padding: 10
+    minHeight: 76,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10
+  },
+  productTextBlock: {
+    flex: 1,
+    minWidth: 0
   },
   productName: {
     color: "#111827",
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "900"
   },
   productPrice: {
-    marginTop: 5,
-    color: NAVY,
-    fontSize: 15,
+    marginTop: 6,
+    color: GREEN,
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: "900"
+  },
+  productAddBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: CARD,
+    borderWidth: 1.5,
+    borderColor: "#2563EB",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#2563EB",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 3
+  },
+  productAddText: {
+    color: "#2563EB",
+    fontSize: 24,
+    lineHeight: 28,
     fontWeight: "900"
   },
   subSheetLayer: {
@@ -2929,12 +3161,14 @@ const styles = StyleSheet.create({
     fontWeight: "700"
   },
   rightInfo: {
-    alignItems: "flex-end"
+    alignItems: "flex-end",
+    maxWidth: 118
   },
   listAmount: {
-    color: "#111827",
-    fontSize: 14,
-    fontWeight: "900"
+    color: NAVY,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "800"
   },
   badgeText: {
     marginTop: 5,
@@ -2969,9 +3203,17 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     color: "#111827",
-    fontSize: 17,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "900",
-    marginBottom: 12
+    marginBottom: 8
+  },
+  sectionHeaderRow: {
+    minHeight: 30,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12
   },
   infoRow: {
     minHeight: 36,
@@ -3054,6 +3296,32 @@ const styles = StyleSheet.create({
     minHeight: 118,
     paddingTop: 12,
     textAlignVertical: "top"
+  },
+  bulkEntryStats: {
+    flexDirection: "row",
+    gap: 8
+  },
+  bulkEntryPill: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 14,
+    paddingHorizontal: 12,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: LINE,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  bulkEntryLabel: {
+    color: MUTED,
+    fontSize: 11,
+    fontWeight: "900"
+  },
+  bulkEntryValue: {
+    color: NAVY,
+    fontSize: 15,
+    fontWeight: "900"
   },
   errorText: {
     color: "#b42318",
@@ -3291,9 +3559,9 @@ const styles = StyleSheet.create({
     color: "#15803d"
   },
   smallChip: {
-    minHeight: 38,
-    paddingHorizontal: 13,
-    borderRadius: 14,
+    minHeight: 34,
+    paddingHorizontal: 11,
+    borderRadius: 12,
     backgroundColor: CARD,
     borderWidth: 1,
     borderColor: LINE,
@@ -3306,7 +3574,7 @@ const styles = StyleSheet.create({
   },
   smallChipText: {
     color: "#111827",
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900"
   },
   smallChipTextActive: {
@@ -3598,17 +3866,19 @@ const styles = StyleSheet.create({
   },
   cartPanel: {
     position: "absolute",
-    left: 16,
-    right: 16,
+    left: 12,
+    right: 12,
     bottom: 94,
     padding: 16,
-    borderRadius: 22,
+    borderRadius: 26,
     backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: LINE,
     shadowColor: "#101828",
-    shadowOpacity: 0.15,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: -8 },
-    elevation: 12,
+    shadowOpacity: 0.18,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: -10 },
+    elevation: 14,
     zIndex: 18
   },
   cartHeader: {
@@ -3619,27 +3889,36 @@ const styles = StyleSheet.create({
   cartTitle: {
     color: "#111827",
     fontSize: 18,
+    lineHeight: 24,
     fontWeight: "900"
   },
   clearText: {
-    color: "#ef4444",
-    fontSize: 14,
+    color: "#2563EB",
+    fontSize: 13,
     fontWeight: "900"
   },
   totalRow: {
-    marginTop: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between"
+    marginTop: 14,
+    minHeight: 88,
+    borderRadius: 22,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#F8FAFC",
+    borderWidth: 1,
+    borderColor: LINE,
+    justifyContent: "center"
   },
   totalLabel: {
-    color: "#111827",
-    fontSize: 16,
+    color: MUTED,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: "900"
   },
   totalValue: {
-    color: "#111827",
-    fontSize: 24,
+    marginTop: 2,
+    color: NAVY,
+    fontSize: 46,
+    lineHeight: 52,
     fontWeight: "900"
   },
   paymentModeHeader: {
@@ -3657,7 +3936,7 @@ const styles = StyleSheet.create({
     minHeight: 26,
     paddingHorizontal: 10,
     borderRadius: 13,
-    backgroundColor: "#eef2f7",
+    backgroundColor: "#EFF6FF",
     color: NAVY,
     fontSize: 12,
     lineHeight: 26,
@@ -3665,19 +3944,24 @@ const styles = StyleSheet.create({
     overflow: "hidden"
   },
   paymentModeGrid: {
-    marginTop: 10,
+    marginTop: 12,
     flexDirection: "row",
     gap: 8
   },
   paymentModeCard: {
     flex: 1,
     minHeight: 104,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     paddingHorizontal: 7,
     paddingVertical: 9,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    shadowColor: "#101828",
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 1
   },
   paymentModeCardActive: {
     shadowColor: "#101828",
@@ -3695,24 +3979,68 @@ const styles = StyleSheet.create({
     overflow: "hidden"
   },
   paymentLogo: {
-    width: 58,
-    height: 44,
-    borderRadius: 14,
+    width: 66,
+    height: 48,
+    borderRadius: 16,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden"
   },
-  gpayG: {
-    color: "#4285f4",
-    fontSize: 16,
-    lineHeight: 18,
+  upiLogo: {
+    backgroundColor: "#111827",
+    borderColor: "#2b3340"
+  },
+  upiWordRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  upiWord: {
+    color: CARD,
+    fontSize: 18,
+    lineHeight: 20,
+    fontStyle: "italic",
+    fontWeight: "900"
+  },
+  upiArrowWrap: {
+    width: 14,
+    height: 16,
+    marginLeft: 2,
+    justifyContent: "center"
+  },
+  upiArrow: {
+    position: "absolute",
+    width: 7,
+    height: 13,
+    borderTopRightRadius: 7,
+    borderBottomRightRadius: 7,
+    transform: [{ skewX: "-18deg" }]
+  },
+  upiArrowGreen: {
+    left: 0,
+    backgroundColor: "#16C784"
+  },
+  upiArrowOrange: {
+    left: 5,
+    backgroundColor: "#F59E0B"
+  },
+  cashLogo: {
+    backgroundColor: "#ECFDF5",
+    borderColor: "#BBF7D0"
+  },
+  cashLogoLabel: {
+    marginTop: 2,
+    color: "#047857",
+    fontSize: 8,
+    lineHeight: 9,
     fontWeight: "900"
   },
   logoPayText: {
     marginTop: 1,
-    fontSize: 9,
-    lineHeight: 10,
+    color: "#D1D5DB",
+    fontSize: 6,
+    lineHeight: 8,
     fontWeight: "900"
   },
   upiText: {
@@ -3730,22 +4058,66 @@ const styles = StyleSheet.create({
     borderRadius: 3
   },
   cashNote: {
-    width: 30,
+    width: 38,
     height: 22,
     borderRadius: 7,
-    borderWidth: 2,
+    borderWidth: 1.5,
+    borderColor: "#16C784",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: CARD
+    backgroundColor: CARD,
+    overflow: "hidden"
+  },
+  cashNoteLine: {
+    position: "absolute",
+    left: 5,
+    right: 5,
+    top: 5,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: "#BBF7D0"
   },
   cashText: {
+    color: "#047857",
     fontSize: 11,
+    lineHeight: 14,
     fontWeight: "900"
   },
-  splitIconRow: {
+  impsLogo: {
+    backgroundColor: "#111827",
+    borderColor: "#2b3340"
+  },
+  impsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center"
+  },
+  impsText: {
+    color: "#A1A1AA",
+    fontSize: 16,
+    lineHeight: 19,
+    fontStyle: "italic",
+    fontWeight: "900"
+  },
+  impsArrowWrap: {
+    width: 13,
+    height: 15,
+    marginLeft: 1,
+    justifyContent: "center"
+  },
+  impsArrow: {
+    position: "absolute",
+    width: 6,
+    height: 12,
+    borderTopRightRadius: 6,
+    borderBottomRightRadius: 6,
+    transform: [{ skewX: "-18deg" }]
+  },
+  impsSubText: {
+    color: "#3F3F46",
+    fontSize: 5,
+    lineHeight: 6,
+    fontWeight: "900"
   },
   splitCircle: {
     width: 25,
@@ -3782,6 +4154,54 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: "900"
   },
+  creditLogo: {
+    backgroundColor: "#111827",
+    borderColor: "#2b3340",
+    flexDirection: "row",
+    gap: 6
+  },
+  visaCard: {
+    width: 28,
+    height: 20,
+    borderRadius: 2,
+    backgroundColor: CARD,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden"
+  },
+  visaText: {
+    color: "#1E3A8A",
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: "900"
+  },
+  visaGoldLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 3,
+    backgroundColor: "#FBBF24"
+  },
+  cardCircles: {
+    flexDirection: "row",
+    alignItems: "center"
+  },
+  cardCircle: {
+    width: 18,
+    height: 18,
+    borderRadius: 9
+  },
+  cardCircleRed: {
+    backgroundColor: "#EF4444"
+  },
+  cardCircleGold: {
+    marginLeft: -6,
+    backgroundColor: "#F59E0B",
+    opacity: 0.9
+  },
   paymentModeCardTitle: {
     marginTop: 7,
     color: "#111827",
@@ -3798,16 +4218,33 @@ const styles = StyleSheet.create({
     textAlign: "center"
   },
   payButton: {
-    minHeight: 54,
-    marginTop: 12,
-    borderRadius: 16,
+    minHeight: 56,
+    marginTop: 14,
+    borderRadius: 18,
     backgroundColor: GREEN,
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
+    shadowColor: GREEN,
+    shadowOpacity: 0.22,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4
+  },
+  payButtonDisabled: {
+    opacity: 0.72
+  },
+  cartStatus: {
+    marginTop: 10,
+    color: MUTED,
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: "800",
+    textAlign: "center"
   },
   payText: {
     color: CARD,
-    fontSize: 16,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "900"
   },
   bottomScrim: {
@@ -3815,7 +4252,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(245,247,251,0.88)",
+    backgroundColor: "rgba(250,250,252,0.92)",
     borderTopWidth: 1,
     borderTopColor: "rgba(255,255,255,0.72)",
     zIndex: 8
@@ -3825,27 +4262,27 @@ const styles = StyleSheet.create({
     left: 16,
     right: 16,
     bottom: 16,
-    height: 64,
-    borderRadius: 18,
-    backgroundColor: NAVY,
+    height: 72,
+    borderRadius: 28,
+    backgroundColor: CARD,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.16)",
+    borderColor: LINE,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 7,
-    shadowColor: NAVY,
-    shadowOpacity: 0.18,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -4 },
-    elevation: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    shadowColor: "#101828",
+    shadowOpacity: 0.16,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 14,
     zIndex: 20
   },
   navItem: {
     flex: 1,
-    height: 50,
-    borderRadius: 12,
+    height: 54,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
     marginHorizontal: 2,
@@ -3853,12 +4290,20 @@ const styles = StyleSheet.create({
     overflow: "hidden"
   },
   navActive: {
-    backgroundColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "#EFF6FF",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.22)"
+    borderColor: "#BFDBFE"
+  },
+  navIcon: {
+    color: MUTED,
+    fontSize: 18,
+    lineHeight: 20,
+    fontWeight: "900",
+    textAlign: "center",
+    includeFontPadding: false
   },
   navText: {
-    color: CARD,
+    color: MUTED,
     fontSize: 12,
     lineHeight: 15,
     fontWeight: "900",
@@ -3866,7 +4311,14 @@ const styles = StyleSheet.create({
     includeFontPadding: false
   },
   navActiveText: {
-    color: CARD
+    color: "#2563EB"
+  },
+  navIndicator: {
+    width: 18,
+    height: 3,
+    marginTop: 3,
+    borderRadius: 999,
+    backgroundColor: "#2563EB"
   },
   drawerLayer: {
     ...StyleSheet.absoluteFill,
