@@ -1843,7 +1843,7 @@
     .cart-page-row h3 { margin: 0 0 4px; font-size: 18px; line-height: 1.1; color: #111827; font-weight: 950; }
     .cart-page-row p { margin: 0 0 4px; color: #6B7280; font-weight: 750; }
     .cart-page-row .price { color: #0B5FE8; font-weight: 950; }
-    .cart-page-total { color: #111827; text-align: right; font-size: 18px; font-weight: 950; }
+    .cart-page-total { color: #111827; text-align: right; font-size: 23px; font-weight: 950; }
     .cart-page-remove { width: 38px; height: 38px; border: 0; border-radius: 12px; background: #FEF2F2; color: #EF4444; font-size: 18px; font-weight: 950; }
     .cart-page-remove svg {
       width: 18px;
@@ -1864,10 +1864,11 @@
     }
     .cart-page-card h3 { margin: 0 0 16px; color: #111827; font-size: 20px; font-weight: 950; }
     .cart-summary-line { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; color: #6B7280; font-weight: 800; }
-    .cart-summary-line.final { margin-top: 8px; border-top: 1px dashed #E8ECF3; color: #111827; font-size: 19px; font-weight: 950; }
-    .cart-summary-line.final strong { color: #0B5FE8; font-size: 24px; }
+    .cart-summary-line.final { margin-top: 8px; border-top: 1px dashed #E8ECF3; color: #111827; font-size: 24px; font-weight: 950; }
+    .cart-summary-line.final strong { color: #0B5FE8; font-size: 29px; }
     .cart-payment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .cart-payment-option {
+      position: relative;
       min-height: 74px;
       display: grid;
       grid-template-columns: 46px 1fr 24px;
@@ -1878,10 +1879,29 @@
       padding: 12px;
       color: #111827;
       font-weight: 900;
+      text-align: left;
     }
     .cart-payment-option.active { border-color: #0B5FE8; background: #F4F8FF; }
+    .cart-payment-option.selected { border-color: #16A34A; background: #ECFDF3; color: #166534; }
+    .cart-payment-option.selected::after {
+      content: "✓";
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: #16A34A;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 950;
+    }
+    .cart-payment-option:disabled { opacity: .68; pointer-events: none; }
     .cart-radio { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #CBD5E1; }
     .cart-payment-option.active .cart-radio { border: 6px solid #0B5FE8; }
+    .cart-payment-option.selected .cart-radio { border: 6px solid #16A34A; }
     .cart-page-notes {
       min-height: 64px;
       display: flex;
@@ -2129,8 +2149,8 @@
       }
       .cart-page-card h3 { font-size: 18px !important; margin-bottom: 12px !important; }
       .cart-summary-line { padding: 7px 0 !important; font-size: 14px !important; }
-      .cart-summary-line.final { font-size: 17px !important; }
-      .cart-summary-line.final strong { font-size: 22px !important; }
+      .cart-summary-line.final { font-size: 22px !important; }
+      .cart-summary-line.final strong { font-size: 27px !important; }
       .cart-payment-options { grid-template-columns: 1fr !important; }
       .cart-page-footer {
         grid-template-columns: 44px minmax(0, 1fr) minmax(0, 1fr) 132px !important;
@@ -2142,7 +2162,7 @@
         display: block !important;
         line-height: 1.15 !important;
       }
-      .cart-page-footer strong { font-size: 15px !important; }
+      .cart-page-footer strong { font-size: 20px !important; }
       .cart-page-footer span { font-size: 11px !important; }
       .cart-place-order {
         min-height: 50px !important;
@@ -2562,7 +2582,7 @@
     }
     #posView #cartTotal {
       color: #111827 !important;
-      font-size: 34px !important;
+      font-size: 39px !important;
       font-weight: 950 !important;
     }
     #posView .place {
@@ -2787,8 +2807,8 @@
         font-weight: 850 !important;
       }
       #posView #cartTotal {
-        font-size: 30px !important;
-        line-height: 34px !important;
+        font-size: 35px !important;
+        line-height: 39px !important;
       }
       #posView .place {
         min-height: 46px !important;
@@ -3260,7 +3280,7 @@
         return defaults;
       }
     })();
-    const appBuild = "3.3";
+    const appBuild = "3.4";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -3300,6 +3320,7 @@
     let activeCategory = "All";
     let cart = [];
     let payment = "";
+    let cartPaymentMode = "Cash";
     let itemSearch = "";
     let cartDiscount = 0;
     let adminTab = "dashboard";
@@ -3812,6 +3833,12 @@
       const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
       const total = Math.max(0, subtotal - cartDiscount);
       const qty = cart.reduce((sum, item) => sum + Number(item.qty || 0), 0);
+      const cartPaymentOptions = [
+        ["Cash", "Cash", "Cash payment", `<svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M7 11h5"/><path d="M7 14h3"/></svg>`],
+        ["Online", "Online", "UPI / GPay", `<svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M4 10h16"/><path d="M7 14h3"/></svg>`],
+        ["Split", "Split", "Cash + Online", `<svg viewBox="0 0 24 24"><path d="M7 4h10v16H7z"/><path d="M11 8h4"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>`],
+        ["Credit", "Credit", "Pending amount", `<svg viewBox="0 0 24 24"><path d="M5 6h14v11H5z"/><path d="M8 10h8"/><path d="M8 14h5"/></svg>`]
+      ];
       $("optionsModalMount").innerHTML = `
         <div class="modal-backdrop cart-page-backdrop">
           <div class="cart-page-modal">
@@ -3820,7 +3847,7 @@
               <span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M6 7h15l-2 9H8L6 7Z"/><path d="M6 7 5 3H3"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg></span>
               <div><h2>Your Cart</h2><p>Review your items</p></div>
             </div>
-            <div class="cart-page-alert"><span>You have ${cart.length} items in your cart</span><button id="cartPageClear" type="button">Clear Cart</button></div>
+            <div class="cart-page-alert"><span><strong>${cart.length}</strong> items • <strong>${qty}</strong> qty in your cart</span><button id="cartPageClear" type="button">Clear Cart</button></div>
             <div class="cart-page-list">
               ${cart.map(item => `<div class="cart-page-row">
                 <span class="cart-page-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
@@ -3836,14 +3863,19 @@
               <div class="cart-summary-line"><span>Total Quantity</span><strong>${qty}</strong></div>
               <div class="cart-summary-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
               <div class="cart-summary-line"><span>Discount</span><strong style="color:#16A34A">${money(cartDiscount)}</strong></div>
-              <div class="cart-summary-line"><span>Delivery Charge</span><strong>Rs 0</strong></div>
+              <div class="cart-summary-line"><span>Delivery Charge</span><strong>${money(0)}</strong></div>
               <div class="cart-summary-line final"><span>Total Amount</span><strong>${money(total)}</strong></div>
             </div>
             <div class="cart-page-card">
               <h3>Payment Method</h3>
               <div class="cart-payment-options">
-                <div class="cart-payment-option active"><span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M7 11h5"/><path d="M7 14h3"/></svg></span><div><strong>Cash on Delivery</strong><p class="muted">Pay when order delivered</p></div><span class="cart-radio"></span></div>
-                <div class="cart-payment-option"><span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M4 10h16"/><path d="M7 14h3"/></svg></span><div><strong>Online Payment</strong><p class="muted">UPI, Card, Netbanking</p></div><span class="cart-radio"></span></div>
+                ${cartPaymentOptions.map(([mode, title, subtitle, icon]) => `
+                  <button class="cart-payment-option ${cartPaymentMode === mode ? "active" : ""}" data-cart-pay="${mode}" type="button">
+                    <span class="cart-page-icon">${icon}</span>
+                    <div><strong>${title}</strong><p class="muted">${subtitle}</p></div>
+                    <span class="cart-radio"></span>
+                  </button>
+                `).join("")}
               </div>
             </div>
             <div class="cart-page-card cart-page-notes"><span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v5h5"/><path d="M8 14h8"/></svg></span><div><strong>Order Notes (Optional)</strong><p class="muted">Add any special instructions...</p></div></div>
@@ -3851,7 +3883,7 @@
               <span class="orders-bar-icon"><svg viewBox="0 0 24 24"><path d="M6 7h15l-2 9H8L6 7Z"/><path d="M6 7 5 3H3"/></svg></span>
               <div><strong>${cart.length} Items</strong><span>${qty} Quantity</span></div>
               <div><strong>${money(total)}</strong><span>Total Amount</span></div>
-              <button class="cart-place-order" id="cartPagePlaceOrder" type="button">Place Order &gt;</button>
+              <button class="cart-place-order" id="cartPagePlaceOrder" type="button">${cartPaymentMode} Pay &gt;</button>
             </div>
           </div>
         </div>`;
@@ -3860,6 +3892,13 @@
         clearActiveCartState();
         openCartViewModal();
       });
+      document.querySelectorAll("[data-cart-pay]").forEach(btn => btn.addEventListener("click", async () => {
+        if (orderSubmitting) return;
+        cartPaymentMode = btn.dataset.cartPay || "Cash";
+        btn.classList.add("selected");
+        document.querySelectorAll("[data-cart-pay]").forEach(item => item.disabled = true);
+        setTimeout(() => completeOrder(cartPaymentMode), 90);
+      }));
       document.querySelectorAll("[data-cart-page-qty]").forEach(btn => btn.addEventListener("click", () => {
         changeQty(btn.dataset.id, Number(btn.dataset.cartPageQty));
         if (activePosSection === "bulk") setBulkDraft(cart.map(item => ({ ...item })));
@@ -3878,7 +3917,7 @@
         openCartViewModal();
       }));
       $("cartPagePlaceOrder").addEventListener("click", () => {
-        placeOrderFlow();
+        completeOrder(cartPaymentMode);
       });
     }
 
@@ -4548,11 +4587,11 @@
     }
 
     function printToAddress(address, text) {
+      if (window.AxenPrinter && typeof window.AxenPrinter.selectPrinter === "function") {
+        try { window.AxenPrinter.selectPrinter(address || ""); } catch {}
+      }
       if (window.AxenPrinter && typeof window.AxenPrinter.printToPrinterAsync === "function") {
         return window.AxenPrinter.printToPrinterAsync(address || "", text);
-      }
-      if (window.AxenPrinter && typeof window.AxenPrinter.selectPrinter === "function") {
-        window.AxenPrinter.selectPrinter(address || "");
       }
       if (window.AxenPrinter && typeof window.AxenPrinter.printAsync === "function") return window.AxenPrinter.printAsync(text);
       if (window.AxenPrinter && typeof window.AxenPrinter.print === "function") return window.AxenPrinter.print(text);
@@ -4562,8 +4601,13 @@
     function printToEnabledPrinters(text) {
       const targets = enabledPrinterTargets();
       if (!targets.length) return "No printer enabled";
-      const results = targets.map(target => printToAddress(target.address, text));
       applySelectedPrinterToBridge();
+      const results = [];
+      targets.forEach((target, index) => {
+        const send = () => results.push(printToAddress(target.address, text));
+        if (index === 0) send();
+        else setTimeout(send, index * 280);
+      });
       if (targets.length > 1 && results.every(result => result === "Print queued" || result === "Print sent")) {
         return "Print queued to 2 printers";
       }
@@ -6549,7 +6593,7 @@
         setModalSelection(btn);
         setPaymentStatus("Payment selected. Printing...", "status ok");
         document.querySelectorAll("[data-modal-pay]").forEach(item => item.disabled = true);
-        await completeOrder(selectedPay);
+        setTimeout(() => completeOrder(selectedPay), 90);
       }));
       $("closePaymentModal").addEventListener("click", closePaymentModal);
       $("closePaymentTop").addEventListener("click", closePaymentModal);
@@ -6603,35 +6647,40 @@
         return;
       }
       if (selectedPayment === "Cancel") payload.total = 0;
-      setPaymentStatus("Saving order and starting print...");
-      await receipt(payload);
-
-      try {
-        if (!navigator.onLine) throw new Error("offline");
-        const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload), timeoutMs: 1800 });
-        serverOnline = true;
-        orders.push(saved.order || payload);
-        updateSyncStatus();
-        $("posMessage").textContent = "Order saved";
-        $("posMessage").className = "status ok";
-      } catch {
-        serverOnline = false;
-        setPendingOrders([...pendingOrders(), payload]);
-        orders.push(payload);
-        $("posMessage").textContent = "Offline saved. Auto sync pending.";
-        $("posMessage").className = "status ok";
-      }
-
-      setPaymentStatus("Success", "status ok");
+      setPaymentStatus("Success. Printing...", "status ok");
+      receipt(payload).catch(() => {
+        $("posMessage").textContent = "Order saved. Printer not connected.";
+        $("posMessage").className = "status error";
+      });
       payment = "";
       if (activePosSection === "bulk") setBulkDraft([]);
       clearCartState();
       closePaymentModal();
+      closeOptionsModal();
       if (!$("posView").classList.contains("hidden")) setPosSection("billing");
-      renderAdmin();
-      setTimeout(() => loadAdminData(), 80);
-      if (pendingOrders().length) setTimeout(syncPendingOrders, 900);
-      orderSubmitting = false;
+
+      (async () => {
+        try {
+          if (!navigator.onLine) throw new Error("offline");
+          const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload), timeoutMs: 1800 });
+          serverOnline = true;
+          orders.push(saved.order || payload);
+          updateSyncStatus();
+          $("posMessage").textContent = "Order saved and print started";
+          $("posMessage").className = "status ok";
+        } catch {
+          serverOnline = false;
+          setPendingOrders([...pendingOrders(), payload]);
+          orders.push(payload);
+          $("posMessage").textContent = "Offline saved. Print started. Auto sync pending.";
+          $("posMessage").className = "status ok";
+        } finally {
+          renderAdmin();
+          setTimeout(() => loadAdminData(), 80);
+          if (pendingOrders().length) setTimeout(syncPendingOrders, 900);
+          orderSubmitting = false;
+        }
+      })();
     }
 
     function dashboardStats() {
