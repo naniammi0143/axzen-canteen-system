@@ -574,7 +574,7 @@
         <div class="canteen-facts">
           <div class="fact"><span>Canteen ID</span><strong>${esc(item.activatedCanteenId || "After approval")}</strong></div>
           <div class="fact"><span>Payment</span><strong>${money(item.paidAmount)} / Pending ${money(item.pendingAmount)}</strong></div>
-          <div class="fact"><span>Plan</span><strong>${esc(item.selectedPlan)} - ${esc(item.planType)}</strong></div>
+          <div class="fact"><span>Plan</span><strong>${esc(item.selectedPlan)} - ${esc(item.planType)}${item.planExpiryDate ? `<br>Expiry: ${esc(item.planExpiryDate)}` : ""}</strong></div>
           <div class="fact"><span>Printers</span><strong>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</strong></div>
         </div>
         <div class="credential-box">
@@ -586,7 +586,7 @@
       return `<div class="canteen-result"><div class="mobile-canteens">${mobileCards}</div><div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map((item, index) => `<tr class="tone-${index % 4}">
         <td><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.city)}, ${esc(item.state)}</span></td>
         <td>${esc(item.ownerName)}<br><span class="muted">${esc(item.ownerMobile)}</span></td>
-        <td>${esc(item.selectedPlan)}<br><span class="muted">${esc(item.planType)}</span></td>
+        <td>${esc(item.selectedPlan)}<br><span class="muted">${esc(item.planType)}${item.planExpiryDate ? ` | Expiry: ${esc(item.planExpiryDate)}` : ""}</span></td>
         <td>${money(item.paidAmount)}<br><span class="muted">Pending ${money(item.pendingAmount)}</span></td>
         <td>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</td>
         <td><span class="pill ${statusClass(item.status)}">${esc(item.status)}</span></td>
@@ -629,7 +629,15 @@
       document.querySelectorAll("[data-plan]").forEach(btn => btn.addEventListener("click", () => {
         const item = state.canteens.find(row => Number(row.id) === Number(btn.dataset.plan));
         const statusValue = prompt("Status: Active / Trial / Expired", item.status || "Trial");
-        if (statusValue) updateAction(`/marketing-api/canteens/${item.id}/plan`, { status: statusValue, planType: statusValue, selectedPlan: item.selectedPlan, planExpiryDate: item.planExpiryDate }, "Plan updated");
+        if (!statusValue) return;
+        const body = { status: statusValue, planType: statusValue, selectedPlan: item.selectedPlan, planExpiryDate: item.planExpiryDate };
+        if (statusValue.toLowerCase() === "trial") {
+          const trialDays = prompt("Trial days", "7");
+          if (trialDays === null) return;
+          body.trialDays = trialDays;
+          body.planExpiryDate = "";
+        }
+        updateAction(`/marketing-api/canteens/${item.id}/plan`, body, "Plan updated");
       }));
     }
     async function updateAction(path, body, message) {

@@ -2304,7 +2304,7 @@
       min-height: 100vh;
       background: #ffffff;
     }
-    #posView .topbar { position: sticky; top: 0; z-index: 7; display: grid; grid-template-columns: 36px 48px minmax(0, 1fr); align-items: center; column-gap: 12px; min-height: 88px; margin: 8px 10px 0; padding: 12px 14px; background: #ffffff; border: 0; border-bottom: 1px solid #e9eef5; border-radius: 0; box-shadow: 0 8px 22px #0f172a0d; overflow: hidden; }
+    #posView .topbar { position: sticky; top: 0; z-index: 7; display: grid; grid-template-columns: 36px 48px minmax(0, 1fr) 44px; align-items: center; column-gap: 12px; min-height: 88px; margin: 8px 10px 0; padding: 12px 14px; background: #ffffff; border: 0; border-bottom: 1px solid #e9eef5; border-radius: 0; box-shadow: 0 8px 22px #0f172a0d; overflow: hidden; }
     #posView .decor-cutlery {
       position: absolute;
       display: none;
@@ -2316,7 +2316,7 @@
     #posView .title-block { position: relative; z-index: 1; }
     #posView .topbar .icon-btn,
     #posView .brand-mark { display: grid; color: #082653; }
-    #posView .top-actions-pos { display: none; }
+    #posView .top-actions-pos { display: flex; justify-content: flex-end; }
     #posView .title-block { display: flex; min-width: 0; flex-direction: column; justify-content: center; align-items: flex-start; gap: 5px; }
     #posView .title-block strong { display: block; width: 100%; min-width: 0; color: #071a3d; font-size: 28px !important; line-height: 1.02; font-weight: 950 !important; text-transform: uppercase; letter-spacing: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .counter-pill { display: inline-flex; min-height: 28px; align-items: center; border-radius: 999px; background: #f0f2f5; color: #4b5563; padding: 0 13px; font-size: 13px; font-weight: 850; }
@@ -2336,6 +2336,18 @@
     .brand-logo-img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 14px; }
     .brand-logo-fallback { width: 29px; height: 29px; color: white; line-height: 1; }
     .top-actions-pos { display: flex; align-items: center; gap: 14px; }
+    .home-category-btn {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #dbe7f6;
+      border-radius: 15px;
+      background: #f3f8ff;
+      color: #082653;
+      box-shadow: 0 8px 18px #1018280d;
+    }
+    .home-category-btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
     .admin-chip { display: inline-flex; align-items: center; gap: 10px; border: 0; background: white; color: #0f172a; font-weight: 950; }
     .avatar-chip { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(180deg, #f3f4f6, #d8dce3); color: #64748b; font-size: 24px; }
     .notif-dot { position: relative; }
@@ -2364,6 +2376,9 @@
     #posView .item-card.selected { border-color: #2f7d26; background: #f1fbef; box-shadow: 0 16px 34px #2f7d2630; }
     #posView .item-card.selected .item-icon { outline: 3px solid #2f7d26; outline-offset: -3px; }
     #posView .item-card.selected .item-price { color: #2f7d26; }
+    #posView .category-card .item-icon { display: grid; place-items: center; background: #eef5ff center / cover no-repeat; color: #0b2e6d; font-size: 32px; font-weight: 950; }
+    #posView .category-card .item-icon::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, #ffffff14, #08265310); pointer-events: none; }
+    #posView .category-card h3 { text-transform: uppercase; }
     #posView .item-icon { height: 174px; border-radius: 10px; }
     #posView .half-item-card .item-icon::after {
       content: "";
@@ -2482,13 +2497,13 @@
 
     @media (max-width: 760px) {
       .app { max-width: 520px; }
-      #posView .topbar { grid-template-columns: 36px 48px minmax(0, 1fr); min-height: 84px; margin: 6px 8px 0; padding: 10px 12px; column-gap: 11px; border-radius: 0; box-shadow: 0 8px 20px #0f172a0d; }
+      #posView .topbar { grid-template-columns: 36px 48px minmax(0, 1fr) 42px; min-height: 84px; margin: 6px 8px 0; padding: 10px 12px; column-gap: 11px; border-radius: 0; box-shadow: 0 8px 20px #0f172a0d; }
       #posView .decor-cutlery { display: none; }
       #posView .title-block { gap: 5px; }
       #posView .title-block strong { font-size: 23px !important; line-height: 1.04; color: #071a3d; letter-spacing: 0; }
       .connection-pill { min-height: 18px; padding: 0; gap: 0; }
       .shift-line b { font-size: 11px; }
-      .counter-pill, .top-actions-pos .icon-btn, .admin-chip span, .shift-line .date-part, .shift-line .shift-part { display: none; }
+      .counter-pill, .top-actions-pos .icon-btn:not(.home-category-btn), .admin-chip span, .shift-line .date-part, .shift-line .shift-part { display: none; }
       #posView .icon-btn, #posView .icon-btn.menu-trigger { width: 36px; height: 42px; }
       #posView .icon-btn.menu-trigger::before { width: 27px; height: 18px; }
       .brand-mark { width: 48px; height: 48px; border-width: 1px; }
@@ -2913,7 +2928,7 @@
         min-height: 70px !important;
         margin: 6px 10px 0 !important;
         padding: 8px 12px !important;
-        grid-template-columns: 32px 48px minmax(0, 1fr) !important;
+        grid-template-columns: 32px 48px minmax(0, 1fr) 42px !important;
         column-gap: 10px !important;
         border-radius: 18px !important;
         box-shadow: 0 8px 20px #10182812 !important;
@@ -2922,6 +2937,11 @@
       #posView .icon-btn.menu-trigger {
         width: 32px !important;
         height: 38px !important;
+      }
+      #posView .home-category-btn {
+        width: 42px !important;
+        height: 42px !important;
+        border-radius: 14px !important;
       }
       #posView .icon-btn.menu-trigger::before {
         width: 24px !important;
@@ -3287,6 +3307,9 @@
           <span class="shift-line"><span class="connection-pill offline" id="connectionPill"><b id="syncStatus">Offline</b></span></span>
         </div>
         <div class="top-actions-pos">
+          <button class="icon-btn home-category-btn" id="homeCategoryBtn" type="button" aria-label="Open categories">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+          </button>
           <button class="icon-btn" type="button" aria-label="Notifications">!</button>
           <button class="admin-chip" id="profileBtn" type="button" aria-label="Profile"><span class="avatar-chip">A</span><span id="posUserLabel">Admin</span> v</button>
         </div>
@@ -3294,7 +3317,7 @@
       <section class="content">
         <div id="billingPanel">
           <div class="tabs" id="categoryTabs"></div>
-          <div class="section-title-row"><h2>Popular Items</h2><span>View All &gt;</span></div>
+          <div class="section-title-row"><h2 id="billingSectionTitle">Popular Items</h2><span id="billingSectionMeta">View All &gt;</span></div>
           <div class="menu-grid" id="menuGrid"></div>
         </div>
         <div class="option-page hidden" id="optionPage"></div>
@@ -3391,7 +3414,7 @@
         return defaults;
       }
     })();
-    const appBuild = "3.5";
+    const appBuild = "3.7";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -3436,6 +3459,7 @@
     let cartDiscount = 0;
     let adminTab = "dashboard";
     let activePosSection = "billing";
+    let showingCategoryHome = false;
     let serverOnline = navigator.onLine;
     let adminUnlocked = false;
     let adminAccessToken = "";
@@ -3800,9 +3824,48 @@
       `).join("");
     }
 
+    function visibleCategories() {
+      const found = new Set(products.filter(item => !isItemHidden(item)).map(item => item.category || "Other"));
+      found.delete("Half Items");
+      found.add(singleItemsCategory);
+      return [...categoryOrder.filter(item => item !== "All" && found.has(item)), ...[...found].filter(item => item !== "All" && !categoryOrder.includes(item))];
+    }
+
+    function categoryCardImage(category) {
+      const source = isSingleItemsCategory(category)
+        ? products.find(item => !isItemHidden(item) && singleItemPrice(item) > 0 && item.image)
+        : products.find(item => !isItemHidden(item) && item.category === category && item.image);
+      return source?.image || "";
+    }
+
+    function renderCategoryHome() {
+      renderCategories();
+      if ($("billingSectionTitle")) $("billingSectionTitle").textContent = "Categories";
+      if ($("billingSectionMeta")) $("billingSectionMeta").textContent = "Select category";
+      $("menuGrid").innerHTML = visibleCategories().map(category => {
+        const image = categoryCardImage(category);
+        return `
+        <button class="item-card category-card" data-category-card="${esc(category)}">
+          <span class="item-icon ${image ? "" : "initials"}" style="${image ? `background-image:url('${image.replace(/'/g, "%27")}')` : ""}">${image ? "" : categoryLabel(category).slice(0, 2).toUpperCase()}</span>
+          <span class="item-body">
+            <span class="item-name-line">
+              <span class="item-name-wrap"><span class="item-emoji">${categoryIconSvg(category)}</span><h3>${esc(categoryLabel(category))}</h3></span>
+            </span>
+            <span class="variant-hint">Open category</span>
+          </span>
+        </button>`;
+      }).join("") || `<div class="panel">No categories</div>`;
+    }
+
     function renderProducts() {
       if (activeCategory === "Half Items") activeCategory = singleItemsCategory;
+      if (showingCategoryHome) {
+        renderCategoryHome();
+        return;
+      }
       renderCategories();
+      if ($("billingSectionTitle")) $("billingSectionTitle").textContent = activeCategory === "All" ? "Popular Items" : categoryLabel(activeCategory);
+      if ($("billingSectionMeta")) $("billingSectionMeta").textContent = activeCategory === "All" ? "View All >" : "Category items";
       const query = itemSearch.trim().toLowerCase();
       const baseProducts = products.filter(item => !isItemHidden(item));
       const visible = (activeCategory === "All"
@@ -4160,31 +4223,92 @@
     }
 
     function receiptText(order, copy = false) {
-      const width = 32;
+      const width = 42;
       const line = "-".repeat(width);
       const thick = "=".repeat(width);
-      const center = value => String(value || "").slice(0, width).padStart(Math.floor((width + String(value || "").slice(0, width).length) / 2)).padEnd(width);
-      const centerWide = value => String(value || "").slice(0, 16).padStart(Math.floor((16 + String(value || "").slice(0, 16).length) / 2)).padEnd(16);
-      const amountText = value => `Rs ${Number(value || 0).toFixed(2)}`.padStart(10);
+      const cleanText = value => String(value || "").replace(/[^\x20-\x7E]/g, "").replace(/\s+/g, " ").trim();
+      const center = value => {
+        const text = cleanText(value).slice(0, width);
+        const left = Math.max(0, Math.floor((width - text.length) / 2));
+        return `${" ".repeat(left)}${text}`.padEnd(width);
+      };
+      const pad = (value, size, alignRight = false) => {
+        const text = cleanText(value);
+        return alignRight ? text.padStart(size).slice(-size) : text.padEnd(size).slice(0, size);
+      };
+      const amountText = value => `Rs ${Number(value || 0).toFixed(2)}`;
       const leftRight = (left, right) => {
-        const l = String(left || "");
-        const r = String(right || "");
+        const l = cleanText(left);
+        const r = cleanText(right);
         return (l + " ".repeat(Math.max(1, width - l.length - r.length)) + r).slice(0, width);
+      };
+      const wrapText = (value, size) => {
+        const words = cleanText(value).toUpperCase().split(/\s+/).filter(Boolean);
+        const lines = [];
+        words.forEach(word => {
+          const chunks = word.length > size ? word.match(new RegExp(`.{1,${size}}`, "g")) : [word];
+          chunks.forEach(chunk => {
+            const current = lines[lines.length - 1] || "";
+            if (!current) lines.push(chunk);
+            else if (`${current} ${chunk}`.length <= size) lines[lines.length - 1] = `${current} ${chunk}`;
+            else lines.push(chunk);
+          });
+        });
+        return lines.length ? lines : ["ITEM"];
+      };
+      const wrapItemName = (value, wideSize, finalSize) => {
+        const lines = wrapText(value, wideSize);
+        while (lines.length && lines[lines.length - 1].length > finalSize) {
+          const last = lines.pop();
+          if (last.includes(" ")) {
+            const words = last.split(" ");
+            const finalWords = [];
+            while (words.length) {
+              const candidate = [words[words.length - 1], ...finalWords].join(" ");
+              if (candidate.length > finalSize) break;
+              finalWords.unshift(words.pop());
+            }
+            const carry = words.join(" ");
+            if (carry) {
+              const previous = lines[lines.length - 1] || "";
+              if (previous && `${previous} ${carry}`.length <= wideSize) lines[lines.length - 1] = `${previous} ${carry}`;
+              else lines.push(carry);
+            }
+            lines.push(finalWords.join(" ") || last.slice(0, finalSize));
+          } else {
+            lines.push(...(last.match(new RegExp(`.{1,${finalSize}}`, "g")) || [last]));
+          }
+        }
+        return lines.length ? lines : ["ITEM"];
       };
       const boldOn = "\x1B\x45\x01";
       const boldOff = "\x1B\x45\x00";
       const alignCenter = "\x1B\x61\x01";
       const alignLeft = "\x1B\x61\x00";
+      const compactFont = "\x1B\x4D\x01";
+      const normalFont = "\x1B\x4D\x00";
       const titleOn = "\x1D\x21\x01";
       const totalOn = "\x1D\x21\x01";
-      const bigOn = "\x1D\x21\x11";
       const bigOff = "\x1D\x21\x00";
       const itemLine = (index, item) => {
         const qty = Number(item.qty || 0);
         const rate = Number(item.price || 0);
         const amount = qty * rate;
-        const name = String(item.name || "Item").toUpperCase().slice(0, 10).padEnd(10);
-        return `${String(index).padEnd(2)} ${name}${String(qty).padStart(3)} ${rate.toFixed(2).padStart(6)} ${amount.toFixed(2).padStart(7)}`.slice(0, width);
+        const idx = pad(index, 3);
+        const qtyText = pad(qty, 3, true);
+        const rateText = pad(rate.toFixed(2), 7, true);
+        const amountValue = amount.toFixed(2);
+        const amountText = pad(amountValue, Math.max(7, amountValue.length), true);
+        const numbers = `${qtyText} ${rateText} ${amountText}`;
+        const nameWidth = width - idx.length - numbers.length - 1;
+        const wideNameWidth = Math.min(width - idx.length, nameWidth + 4);
+        const nameLines = wrapItemName(item.name, Math.max(8, wideNameWidth), Math.max(8, nameWidth));
+        return nameLines.map((name, lineIndex) => {
+          const prefix = lineIndex === 0 ? idx : " ".repeat(idx.length);
+          const suffix = lineIndex === nameLines.length - 1 ? numbers : "";
+          const availableNameWidth = width - prefix.length - suffix.length - (suffix ? 1 : 0);
+          return `${prefix}${pad(name, availableNameWidth)}${suffix ? " " + suffix : ""}`.slice(0, width);
+        }).join("\n");
       };
       const total = Number(order.total || 0);
       const subtotal = Number(order.subtotal || total);
@@ -4194,29 +4318,37 @@
       const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
       const dateText = billDate.toLocaleDateString("en-IN");
       const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-      const headerName = String(order.canteen || settings.canteenName || "axzen Canteen");
+      const headerName = "SHAD KITCHEN";
       const header = [
-        alignCenter + boldOn + titleOn + headerName.slice(0, 16) + bigOff + boldOff,
-        "axzen infotech"
+        compactFont + alignCenter + "    ( )",
+        "  /|\\ /\\",
+        "    X",
+        boldOn + titleOn + center(headerName.toUpperCase()) + bigOff + boldOff,
+        center("axzen infotech")
       ];
       if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
       return [
         ...header,
         alignLeft + line,
-        leftRight(`Date ${dateText}`, `Time ${timeText}`),
-        leftRight(`Cashier ${order.cashier || user?.name || "-"}`, `Token ${tokenNo}`),
-        leftRight("Payment", paymentLabel),
+        leftRight(`Date : ${dateText}`, `Time : ${timeText}`),
+        leftRight(`Cashier : ${order.cashier || user?.name || "-"}`, `Token : ${tokenNo}`),
+        `Payment : ${paymentLabel}`.slice(0, width),
         line,
-        "#  ITEM NAME     QTY RATE   AMT",
-        line,
-        ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
+        `${pad("#", 3)}${pad("ITEM NAME", 19)}${pad("QTY", 3, true)} ${pad("RATE", 7, true)} ${pad("AMT", 7, true)}`,
+        ...(order.items || []).flatMap((item, index, rows) => {
+          const itemRows = [itemLine(index + 1, item)];
+          if (index < rows.length - 1) itemRows.push(line);
+          return itemRows;
+        }),
         line,
         leftRight("SUBTOTAL", amountText(subtotal)),
         leftRight("DISCOUNT", amountText(discount)),
         line,
         boldOn + totalOn + leftRight("TOTAL", `Rs ${Number(total || 0).toFixed(2)}`) + bigOff + boldOff,
         thick,
-        center("THANK YOU! VISIT AGAIN"),
+        center("THANK YOU!"),
+        center("VISIT AGAIN"),
+        normalFont,
         "",
         "",
         ""
@@ -5038,7 +5170,7 @@
         ${sectionHeader("store")}
         <div class="store-actions">
           <button class="store-action ${tab === "used" ? "active" : ""}" data-store-tab="used" type="button"><span>U</span>Today Used</button>
-          <button class="store-action ${tab === "purchase" ? "active" : ""}" data-store-tab="purchase" type="button"><span>+</span>Purchase</button>
+          <button class="store-action ${tab === "purchase" || tab === "purchaseForm" ? "active" : ""}" data-store-tab="purchase" type="button"><span>+</span>Purchase</button>
           <button class="store-action ${tab === "list" ? "active" : ""}" data-store-tab="list" type="button"><span>L</span>List</button>
         </div>
         <div class="report-metric-grid">
@@ -5049,7 +5181,14 @@
           <div class="work-card metric-card"><span>Expenses Added</span><strong>${money(totalPurchase)}</strong></div>
           <div class="work-card metric-card"><span>Status</span><strong>Ready</strong></div>
         </div>
-        ${tab === "purchase" ? `<div class="work-card purchase-invoice-card">
+        ${tab === "purchase" ? `<div class="work-card">
+          <div class="section-title-row">
+            <h3>Purchase List</h3>
+            <button class="page-action" data-store-tab="purchaseForm" type="button">New Purchase</button>
+          </div>
+          <div class="store-list">${purchaseRows || `<div class="muted">No purchases yet. Tap New Purchase to create one.</div>`}</div>
+        </div>` : ""}
+        ${tab === "purchaseForm" ? `<div class="work-card purchase-invoice-card">
           <div class="purchase-mobile-hero">
             <button data-store-tab="used" type="button">‹</button>
             <div><h2>Purchase Invoice</h2><p>Create and manage purchase invoices</p></div>
@@ -5088,7 +5227,7 @@
           </div>
         </div><div class="work-card"><h3>Today Used List</h3><div class="store-list">${usedRows || `<div class="muted">No used entries</div>`}</div></div>` : ""}
         <div class="work-card"><h3>Stock Balance</h3><table class="data-table"><thead><tr><th>Item</th><th>Type</th><th>Bought</th><th>Used</th><th>Sales</th><th>Balance</th><th>Value</th></tr></thead><tbody>${inventoryRows || `<tr><td colspan="7">No stock yet. Stock appears here after saving a purchase invoice.</td></tr>`}</tbody></table></div>
-        <div class="work-card"><h3>Purchase List</h3><div class="store-list">${purchaseRows || `<div class="muted">No purchases yet</div>`}</div></div>`;
+        ${tab !== "purchase" && tab !== "purchaseForm" ? `<div class="work-card"><h3>Purchase List</h3><div class="store-list">${purchaseRows || `<div class="muted">No purchases yet</div>`}</div></div>` : ""}`;
     }
 
     function categoriesPageHtml() {
@@ -5859,6 +5998,7 @@
       updateUserNavActive(activePosSection);
       if (billingMode) {
         activeCategory = "All";
+        showingCategoryHome = false;
         itemSearch = "";
         if ($("itemSearch")) $("itemSearch").value = "";
         renderProducts();
@@ -6725,7 +6865,7 @@
         setModalSelection(btn);
         setPaymentStatus("Payment selected. Printing...", "status ok");
         document.querySelectorAll("[data-modal-pay]").forEach(item => item.disabled = true);
-        setTimeout(() => completeOrder(selectedPay), 90);
+        completeOrder(selectedPay);
       }));
       $("closePaymentModal").addEventListener("click", closePaymentModal);
       $("closePaymentTop").addEventListener("click", closePaymentModal);
@@ -7297,13 +7437,21 @@
       ensureUserNavKeys();
       setPosSection(button.dataset.nav || "billing");
     });
-    $("categoryTabs").addEventListener("click", event => {
-      const btn = event.target.closest("[data-category]");
-      if (!btn) return;
-      activeCategory = btn.dataset.category;
-      renderProducts();
-    });
-    $("menuGrid").addEventListener("click", event => {
+      $("categoryTabs").addEventListener("click", event => {
+        const btn = event.target.closest("[data-category]");
+        if (!btn) return;
+        activeCategory = btn.dataset.category;
+        showingCategoryHome = false;
+        renderProducts();
+      });
+      $("menuGrid").addEventListener("click", event => {
+      const categoryCard = event.target.closest("[data-category-card]");
+      if (categoryCard) {
+        activeCategory = categoryCard.dataset.categoryCard;
+        showingCategoryHome = false;
+        renderProducts();
+        return;
+      }
       const removeBtn = event.target.closest("[data-remove-item]");
       if (removeBtn) {
         event.stopPropagation();
@@ -7355,6 +7503,12 @@
     $("viewCartBtn").addEventListener("click", openCartViewModal);
     $("clearCart").addEventListener("click", clearActiveCartState);
     $("placeOrder").addEventListener("click", placeOrderFlow);
+    $("homeCategoryBtn").addEventListener("click", () => {
+      closeOptionsModal();
+      if (activePosSection !== "billing") setPosSection("billing");
+      showingCategoryHome = true;
+      renderProducts();
+    });
     $("profileBtn").addEventListener("click", openMainMenu);
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
       adminTab = btn.dataset.adminTab;

@@ -21,6 +21,9 @@ const VERIFY_TOKEN = process.env.VERIFY_TOKEN;
 const DEFAULT_CANTEEN_ID = "AXC-0001";
 const DEFAULT_ADMIN_PASSWORD = "Axzen@123";
 const CANTEEN_ROLES = ["admin", "user", "cashier", "store_keeper", "manager", "accountant", "chef", "waiter", "billing", "inventory"];
+const SALES_CONTACT_PHONE = "8790568446";
+const SALES_WEBSITE = "www.axzeninfotech.com";
+const TRIAL_EXPIRED_MESSAGE = `Trial expired. Please contact our sales team at ${SALES_CONTACT_PHONE}. For more details, visit ${SALES_WEBSITE}.`;
 
 // Warn during startup when the Meta webhook verification token is not configured.
 if (!VERIFY_TOKEN) {
@@ -611,19 +614,50 @@ function canteenUserFromRequest(req) {
 }
 
 async function canteenCanLogin(canteenId) {
-  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
-  if (!targetCanteenId) return false;
-  if (!mongoReady) return false;
+  return (await canteenAccessStatus(canteenId)).allowed;
+}
 
-  const core = await Canteen.findOne({ canteenId: targetCanteenId }).lean();
-  if (core && core.active === false) return false;
+function isPastDate(dateValue) {
+  if (!dateValue) return false;
+  const end = new Date(`${String(dateValue).slice(0, 10)}T23:59:59.999+05:30`);
+  return Number.isFinite(end.getTime()) && end.getTime() < Date.now();
+}
+
+function addDaysDate(days, startDate = new Date()) {
+  const date = new Date(startDate);
+  date.setDate(date.getDate() + Math.max(0, Number(days || 0)));
+  return date.toISOString().slice(0, 10);
+}
+
+function planExpiryFromPayload(payload, current = {}) {
+  if (payload.planExpiryDate) return String(payload.planExpiryDate);
+  const trialDays = Number(payload.trialDays || payload.trailDays || 0);
+  if (trialDays > 0) return addDaysDate(trialDays, payload.planStartDate || current.planStartDate || new Date());
+  return String(current.planExpiryDate || "");
+}
+
+async function canteenAccessStatus(canteenId) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!targetCanteenId) return { allowed: false, message: "Invalid canteen" };
+  if (!mongoReady) return { allowed: false, message: "Database not connected" };
 
   const marketing = await MarketingCanteen.findOne({ activatedCanteenId: targetCanteenId }).lean();
-  if (!marketing) return Boolean(core) || targetCanteenId === DEFAULT_CANTEEN_ID;
-  if (marketing.blocked || marketing.status === "Blocked" || marketing.status === "Rejected" || marketing.status === "Expired") {
-    return false;
+  if (marketing?.status === "Expired" || isPastDate(marketing?.planExpiryDate)) {
+    if (marketing && marketing.status !== "Expired") {
+      await MarketingCanteen.updateOne({ _id: marketing._id }, { $set: { status: "Expired", online: false, updatedAt: new Date().toISOString() } }).catch(() => {});
+      await Canteen.updateOne({ canteenId: targetCanteenId }, { $set: { active: false } }).catch(() => {});
+    }
+    return { allowed: false, message: TRIAL_EXPIRED_MESSAGE };
   }
-  return ["Active", "Trial"].includes(marketing.status) || Boolean(marketing.canteenLoginId);
+
+  const core = await Canteen.findOne({ canteenId: targetCanteenId }).lean();
+  if (core && core.active === false) return { allowed: false, message: "Canteen access is inactive or blocked" };
+
+  if (!marketing) return { allowed: Boolean(core) || targetCanteenId === DEFAULT_CANTEEN_ID, message: "Canteen access is inactive or blocked" };
+  if (marketing.blocked || marketing.status === "Blocked" || marketing.status === "Rejected" || marketing.status === "Expired") {
+    return { allowed: false, message: marketing.status === "Expired" ? TRIAL_EXPIRED_MESSAGE : "Canteen access is inactive or blocked" };
+  }
+  return { allowed: ["Active", "Trial"].includes(marketing.status) || Boolean(marketing.canteenLoginId), message: "Canteen access is inactive or blocked" };
 }
 
 async function tokenUserIsCurrent(user) {
@@ -633,6 +667,14 @@ async function tokenUserIsCurrent(user) {
   if (!current) return false;
   if (current.role !== user.role) return false;
   return canteenCanLogin(canteenId);
+}
+
+async function tokenUserAccessStatus(user) {
+  if (!user || !mongoReady) return { allowed: false, message: "Invalid or expired login token" };
+  const canteenId = normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID);
+  const current = await User.findOne({ canteenId, mobile: normalizeMobile(user.mobile), active: { $ne: false } }).lean();
+  if (!current || current.role !== user.role) return { allowed: false, message: "Canteen access is inactive or blocked" };
+  return canteenAccessStatus(canteenId);
 }
 
 async function markCanteenSeen(canteenId) {
@@ -671,8 +713,9 @@ async function requireAdmin(req, res, next) {
     if (req.authUser.role !== "admin") {
       return res.status(403).json({ success: false, message: "Admin access required" });
     }
-    if (!await tokenUserIsCurrent(req.authUser)) {
-      return res.status(403).json({ success: false, message: "Canteen access is inactive or blocked" });
+    const access = await tokenUserAccessStatus(req.authUser);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, message: access.message });
     }
     markCanteenSeen(req.authUser.canteenId).catch(() => {});
     return next();
@@ -689,8 +732,9 @@ async function requireStockAccess(req, res, next) {
     if (!["admin", "store_keeper", "inventory", "manager"].includes(req.authUser.role)) {
       return res.status(403).json({ success: false, message: "Stock access required" });
     }
-    if (!await tokenUserIsCurrent(req.authUser)) {
-      return res.status(403).json({ success: false, message: "Canteen access is inactive or blocked" });
+    const access = await tokenUserAccessStatus(req.authUser);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, message: access.message });
     }
     markCanteenSeen(req.authUser.canteenId).catch(() => {});
     return next();
@@ -707,8 +751,9 @@ async function requireCanteenAuth(req, res, next) {
     if (!CANTEEN_ROLES.includes(req.authUser.role)) {
       return res.status(403).json({ success: false, message: "Canteen user access required" });
     }
-    if (!await tokenUserIsCurrent(req.authUser)) {
-      return res.status(403).json({ success: false, message: "Canteen access is inactive or blocked" });
+    const access = await tokenUserAccessStatus(req.authUser);
+    if (!access.allowed) {
+      return res.status(403).json({ success: false, message: access.message });
     }
     markCanteenSeen(req.authUser.canteenId).catch(() => {});
     return next();
@@ -1677,6 +1722,7 @@ async function findPrinterBySerial(serialNumber) {
 }
 
 function normalizeMarketingCanteen(payload, user) {
+  const planStartDate = String(payload.planStartDate || new Date().toISOString().slice(0, 10));
   return {
     id: Number(payload.id || Date.now()),
     canteenName: String(payload.canteenName || "").trim(),
@@ -1692,8 +1738,8 @@ function normalizeMarketingCanteen(payload, user) {
     printerSerialNumber: String(payload.printerSerialNumber || "").trim().toUpperCase(),
     selectedPlan: String(payload.selectedPlan || "Starter"),
     planType: String(payload.planType || "Trial"),
-    planStartDate: String(payload.planStartDate || new Date().toISOString().slice(0, 10)),
-    planExpiryDate: String(payload.planExpiryDate || ""),
+    planStartDate,
+    planExpiryDate: planExpiryFromPayload(payload, { planStartDate }),
     paymentMode: String(payload.paymentMode || "Cash"),
     paidAmount: Number(payload.paidAmount || 0),
     pendingAmount: Number(payload.pendingAmount || 0),
@@ -2225,12 +2271,15 @@ app.post("/login", requireDatabase, async (req, res) => {
   }
 
   const allowedMatches = [];
+  let blockedMessage = "Invalid credentials or inactive canteen";
   for (const item of matches) {
-    if (await canteenCanLogin(item.canteenId || DEFAULT_CANTEEN_ID)) allowedMatches.push(item);
+    const access = await canteenAccessStatus(item.canteenId || DEFAULT_CANTEEN_ID);
+    if (access.allowed) allowedMatches.push(item);
+    else if (access.message) blockedMessage = access.message;
   }
   const user = allowedMatches.find(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === loginAsCanteenId) || allowedMatches[0];
 
-  if (!user) return res.status(401).json({ success: false, message: "Invalid credentials or inactive canteen" });
+  if (!user) return res.status(401).json({ success: false, message: blockedMessage });
   const canteen = await getCoreCanteen(user.canteenId);
   res.json({ success: true, user: { ...publicUser(user), canteen }, token: signToken(user), settings: await getSettings(user.canteenId) });
 });
@@ -2334,23 +2383,35 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   const activities = await allMarketingActivities();
   const payments = await allMarketingPayments();
   const supportTickets = await allMarketingSupportTickets();
+  const printers = await allPrinters();
   const canteens = req.marketingUser.role === "super_admin"
     ? allCanteens
     : allCanteens.filter(item => item.submittedBy === req.marketingUser.employeeId);
   const visibleIds = new Set(canteens.map(item => Number(item.id)));
+  const visibleUsers = req.marketingUser.role === "super_admin"
+    ? users
+    : users.filter(item => item.employeeId === req.marketingUser.employeeId);
+  const visiblePayments = req.marketingUser.role === "super_admin"
+    ? payments
+    : payments.filter(item => visibleIds.has(Number(item.canteenId)));
+  const visibleSupportTickets = req.marketingUser.role === "super_admin"
+    ? supportTickets
+    : supportTickets.filter(item => canteens.some(canteen => canteen.canteenName === item.canteenName));
+  const visiblePrinters = req.marketingUser.role === "super_admin"
+    ? printers
+    : printers.filter(item =>
+        item.allottedTo === req.marketingUser.employeeId ||
+        visibleIds.has(Number(item.marketingCanteenId))
+      );
   res.json({
     success: true,
     canteens,
-    users: users.map(publicMarketingUser),
-    printers: await allPrinters(),
-    payments: req.marketingUser.role === "super_admin"
-      ? payments
-      : payments.filter(item => visibleIds.has(Number(item.canteenId))),
-    supportTickets: req.marketingUser.role === "super_admin"
-      ? supportTickets
-      : supportTickets.filter(item => canteens.some(canteen => canteen.canteenName === item.canteenName)),
+    users: visibleUsers.map(publicMarketingUser),
+    printers: visiblePrinters,
+    payments: visiblePayments,
+    supportTickets: visibleSupportTickets,
     activities: req.marketingUser.role === "super_admin" ? activities : [],
-    summary: marketingSummary(canteens, users, req.marketingUser.role === "super_admin" ? activities : [], payments, supportTickets)
+    summary: marketingSummary(canteens, visibleUsers, req.marketingUser.role === "super_admin" ? activities : [], visiblePayments, visibleSupportTickets)
   });
 });
 
@@ -2467,12 +2528,23 @@ app.post("/marketing-api/canteens/:id/payment", requireDatabase, requireSuperAdm
 
 app.post("/marketing-api/canteens/:id/plan", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
+    const before = (await allMarketingCanteens()).find(item => Number(item.id) === Number(req.params.id)) || {};
+    const status = req.body.status || "Trial";
+    const planExpiryDate = planExpiryFromPayload(req.body, before);
     const canteen = await updateMarketingCanteen(req.params.id, {
-      status: req.body.status || "Trial",
-      planType: req.body.planType || req.body.status || "Trial",
+      status,
+      planType: req.body.planType || status,
       selectedPlan: req.body.selectedPlan || "Professional",
-      planExpiryDate: req.body.planExpiryDate || ""
+      planStartDate: req.body.planStartDate || before.planStartDate || new Date().toISOString().slice(0, 10),
+      planExpiryDate,
+      online: status !== "Expired" && status !== "Blocked"
     }, req.marketingUser);
+    if (canteen.activatedCanteenId) {
+      await Canteen.findOneAndUpdate(
+        { canteenId: normalizeCanteenId(canteen.activatedCanteenId) },
+        { $set: { active: status !== "Expired" && status !== "Blocked" } }
+      );
+    }
     await addMarketingActivity({ type: "plan", text: `${canteen.canteenName} plan updated`, actor: req.marketingUser.name, canteenId: canteen.id });
     res.json({ success: true, canteen });
   } catch (error) {
