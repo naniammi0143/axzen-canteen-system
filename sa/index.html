@@ -1036,6 +1036,70 @@
     .muted { color: var(--muted); font-size: 12px; font-weight: 800; }
 
     .form-grid { display: grid; gap: 10px; }
+    .receipt-preview-wrap {
+      width: min(100%, 330px);
+      margin: 0 auto;
+      padding: 14px 12px;
+      border: 1px solid #d7dee9;
+      background: #fff;
+      color: #111827;
+      font-family: "Courier New", monospace;
+      box-shadow: inset 0 0 0 1px #f1f5f9;
+    }
+    .receipt-preview-brand {
+      display: grid;
+      place-items: center;
+      gap: 7px;
+      text-align: center;
+      padding-bottom: 8px;
+    }
+    .receipt-preview-brand.side {
+      grid-template-columns: auto minmax(0, 1fr);
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .receipt-preview-brand.side > div {
+      min-width: 0;
+    }
+    .receipt-preview-logo {
+      display: block;
+      object-fit: contain;
+    }
+    .receipt-preview-logo.empty {
+      display: grid;
+      place-items: center;
+      width: 72px;
+      height: 42px;
+      border: 1px dashed #94a3b8;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .receipt-preview-title {
+      font: 900 22px/1.05 system-ui, sans-serif;
+      text-transform: uppercase;
+      word-break: break-word;
+    }
+    .receipt-preview-sub {
+      margin-top: 4px;
+      font: 800 14px/1.1 system-ui, sans-serif;
+    }
+    .receipt-preview-wrap pre {
+      margin: 0;
+      white-space: pre-wrap;
+      font: 900 14px/1.28 "Courier New", monospace;
+    }
+    .range-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .range-row strong {
+      min-width: 44px;
+      text-align: right;
+    }
     .option-page {
       display: grid;
       gap: 16px;
@@ -1335,6 +1399,51 @@
       background: linear-gradient(180deg, #eff6ff, #ffffff);
       color: #1d4ed8;
       box-shadow: inset 0 0 0 1px #dbeafe;
+    }
+    .item-suggest-box {
+      display: grid;
+      gap: 8px;
+      margin-top: -4px;
+    }
+    .item-suggest-row {
+      min-height: 58px;
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      border: 1px solid #e1e8f2;
+      border-radius: 12px;
+      padding: 7px;
+      background: #f8fbff;
+      text-align: left;
+    }
+    .item-suggest-row[disabled] {
+      opacity: .62;
+    }
+    .item-suggest-thumb {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: #e8f3ff center/cover no-repeat;
+      display: grid;
+      place-items: center;
+      color: #007aff;
+      font-weight: 950;
+    }
+    .item-suggest-row strong {
+      display: block;
+      font-size: 14px;
+    }
+    .item-suggest-row small {
+      display: block;
+      color: var(--muted);
+      font-weight: 850;
+    }
+    .item-suggest-action {
+      color: #007aff;
+      font-size: 12px;
+      font-weight: 950;
+      white-space: nowrap;
     }
     #saveNewItem {
       background: linear-gradient(180deg, #22c55e, #16a34a);
@@ -3431,6 +3540,11 @@
     const billingPrinterEnabledKey = "AXEN_BILLING_PRINTER_ENABLED";
     const kitchenPrinterKey = "AXEN_KITCHEN_PRINTER";
     const kitchenPrinterEnabledKey = "AXEN_KITCHEN_PRINTER_ENABLED";
+    const receiptLogoDataUrlKey = "AXEN_RECEIPT_LOGO_DATA_URL";
+    const menuLanguageKey = "AXEN_MENU_LANGUAGE";
+    const receiptLanguageKey = "AXEN_RECEIPT_LANGUAGE";
+    const receiptLogoPositionKey = "AXEN_RECEIPT_LOGO_POSITION";
+    const receiptLogoSizeKey = "AXEN_RECEIPT_LOGO_SIZE";
     const userRoles = [
       ["user", "User"],
       ["cashier", "Cashier"],
@@ -3443,7 +3557,16 @@
       ["waiter", "Waiter"],
       ["admin", "Admin"]
     ];
-    let settings = { canteenName: "Main Canteen", brandName: "axzen", tagline: "Infotech", logoUrl: "" };
+    let settings = {
+      canteenName: "Main Canteen",
+      brandName: "axzen",
+      tagline: "Infotech",
+      logoUrl: "",
+      receiptLogoPosition: "above",
+      receiptLogoSize: 100,
+      menuLanguage: "english",
+      receiptLanguage: "english"
+    };
     let user = null;
     let products = [];
     let orders = [];
@@ -3468,6 +3591,7 @@
     let billingPrinterEnabled = localStorage.getItem(billingPrinterEnabledKey) !== "false";
     let kitchenPrinter = localStorage.getItem(kitchenPrinterKey) || "";
     let kitchenPrinterEnabled = localStorage.getItem(kitchenPrinterEnabledKey) === "true";
+    let receiptLogoDataUrl = "";
     let selectedSubItems = {};
     let longPressTimer = null;
     let longPressHandled = false;
@@ -3475,14 +3599,85 @@
     let lastDataSyncAt = "";
     let menuOpening = false;
     let orderSubmitting = false;
+    let itemSuggestionTimer = null;
+    let itemSuggestions = [];
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(2);
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
-    const readJson = (key, fallback) => {
-      try { return JSON.parse(localStorage.getItem(key)) || fallback; } catch { return fallback; }
+    const isTeluguText = value => /[\u0C00-\u0C7F]/.test(String(value || ""));
+    const languageMode = value => ["english", "telugu", "both"].includes(value) ? value : "english";
+    const receiptLogoSizeValue = value => Math.max(60, Math.min(160, Number(value || 100)));
+    const canteenStorageSuffix = () => String(user?.canteenId || settings?.canteenId || "").trim().toUpperCase();
+    const scopedStorageKey = key => {
+      const suffix = canteenStorageSuffix();
+      return suffix ? `${key}::${suffix}` : key;
     };
-    const writeJson = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+    const scopedLocalGet = key => localStorage.getItem(scopedStorageKey(key));
+    const scopedLocalSet = (key, value) => localStorage.setItem(scopedStorageKey(key), value);
+    function migrateScopedLocal(key) {
+      const scopedKey = scopedStorageKey(key);
+      if (scopedKey !== key && localStorage.getItem(scopedKey) === null && localStorage.getItem(key) !== null) {
+        localStorage.setItem(scopedKey, localStorage.getItem(key));
+      }
+    }
+    const foodTeluguWords = {
+      tea: "టీ", coffee: "కాఫీ", milk: "పాలు", water: "వాటర్", bottle: "బాటిల్",
+      meals: "మీల్స్", meal: "మీల్", rice: "రైస్", biryani: "బిర్యానీ", biriyani: "బిర్యానీ",
+      mutton: "మటన్", chicken: "చికెన్", egg: "ఎగ్", veg: "వెజ్", paneer: "పనీర్",
+      dosa: "దోస", idly: "ఇడ్లీ", idli: "ఇడ్లీ", vada: "వడ", poori: "పూరీ",
+      chapati: "చపాతీ", roti: "రోటి", parota: "పరోటా", paratha: "పరాఠా",
+      lemon: "లెమన్", curd: "కర్డ్", tomato: "టమాటా", onion: "ఆనియన్",
+      samosa: "సమోసా", puff: "పఫ్", biscuits: "బిస్కెట్స్", biscuit: "బిస్కెట్",
+      juice: "జ్యూస్", banana: "బనానా", fry: "ఫ్రై", curry: "కర్రీ", soup: "సూప్",
+      full: "ఫుల్", half: "హాఫ్", single: "సింగిల్", plate: "ప్లేట్", special: "స్పెషల్",
+      mughalai: "మొఘలాయ్", mughlai: "మొఘలాయ్", masala: "మసాలా", plain: "ప్లెయిన్"
+    };
+
+    function transliterateWordToTelugu(rawWord) {
+      const original = String(rawWord || "");
+      const clean = original.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (!clean) return original;
+      if (/^\d+$/.test(clean)) return clean;
+      if (foodTeluguWords[clean]) return foodTeluguWords[clean];
+      let word = clean;
+      const chunks = [
+        ["ch", "చ"], ["sh", "ష"], ["th", "త్"], ["dh", "ద్"], ["ph", "ఫ్"], ["bh", "బ్"],
+        ["kh", "క్"], ["gh", "గ్"], ["oo", "ూ"], ["ee", "ీ"], ["ai", "ై"], ["au", "ౌ"]
+      ];
+      chunks.forEach(([from, to]) => { word = word.replaceAll(from, to); });
+      const map = {
+        a: "అ", b: "బ్", c: "క్", d: "డ్", e: "ె", f: "ఫ్", g: "గ్", h: "హ్", i: "ి",
+        j: "జ్", k: "క్", l: "ల్", m: "మ్", n: "న్", o: "ొ", p: "ప్", q: "క్", r: "ర్",
+        s: "స్", t: "ట్", u: "ు", v: "వ్", w: "వ్", x: "క్స్", y: "య్", z: "జ్"
+      };
+      return word.split("").map(char => map[char] || char).join("").replace(/్అ/g, "").replace(/్ి/g, "ి").replace(/్ె/g, "ె").replace(/్ు/g, "ు");
+    }
+
+    function suggestTeluguName(value) {
+      const text = String(value || "").trim();
+      if (!text || isTeluguText(text)) return text;
+      return text.split(/(\s+|-)/).map(part => /[\s-]+/.test(part) ? part : transliterateWordToTelugu(part)).join("");
+    }
+
+    function localizedName(item, mode = settings.menuLanguage) {
+      const english = String(item?.name || "Item");
+      const telugu = String(item?.nameTe || item?.teluguName || suggestTeluguName(english)).trim();
+      const selected = languageMode(mode);
+      if (selected === "telugu") return telugu || english;
+      if (selected === "both") return telugu ? `${english} / ${telugu}` : english;
+      return english;
+    }
+
+    function printItemName(item) {
+      return localizedName(item, settings.receiptLanguage);
+    }
+    const scopedJsonKeys = new Set([productCacheKey, pendingOrdersKey, heldOrdersKey, bulkDraftKey, storePurchasesKey, storeUsageKey, storeTabKey]);
+    const jsonStorageKey = key => scopedJsonKeys.has(key) ? scopedStorageKey(key) : key;
+    const readJson = (key, fallback) => {
+      try { return JSON.parse(localStorage.getItem(jsonStorageKey(key))) || fallback; } catch { return fallback; }
+    };
+    const writeJson = (key, value) => localStorage.setItem(jsonStorageKey(key), JSON.stringify(value));
     const pendingOrders = () => readJson(pendingOrdersKey, []);
     const setPendingOrders = value => { writeJson(pendingOrdersKey, value); updateSyncStatus(); };
     const isItemHidden = item => item?.hidden === true || item?.available === false || item?.isAvailable === false || item?.status === "hidden";
@@ -3616,6 +3811,15 @@
 
     function applySettings(next = {}) {
       settings = { ...settings, ...next };
+      [menuLanguageKey, receiptLanguageKey, receiptLogoPositionKey, receiptLogoSizeKey, receiptLogoDataUrlKey].forEach(migrateScopedLocal);
+      settings.menuLanguage = scopedLocalGet(menuLanguageKey) || settings.menuLanguage;
+      settings.receiptLanguage = scopedLocalGet(receiptLanguageKey) || settings.receiptLanguage;
+      settings.receiptLogoPosition = scopedLocalGet(receiptLogoPositionKey) || settings.receiptLogoPosition;
+      settings.receiptLogoSize = receiptLogoSizeValue(scopedLocalGet(receiptLogoSizeKey) || settings.receiptLogoSize);
+      receiptLogoDataUrl = scopedLocalGet(receiptLogoDataUrlKey) || "";
+      settings.menuLanguage = languageMode(settings.menuLanguage);
+      settings.receiptLanguage = languageMode(settings.receiptLanguage);
+      settings.receiptLogoPosition = ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above";
       $("loginCanteen").textContent = settings.canteenName;
       $("posCanteen").textContent = settings.canteenName;
       $("adminCanteen").textContent = settings.canteenName;
@@ -3873,14 +4077,14 @@
         : isSingleItemsCategory(activeCategory)
         ? baseProducts
           .filter(item => !isSingleItemsCategory(item.category) && singleItemPrice(item) > 0)
-          .map(item => ({ ...item, isSingleItem: true, displayName: `Single ${item.name || "Item"}`, displayPrice: singleItemPrice(item) }))
+          .map(item => ({ ...item, isSingleItem: true, displayName: `Single ${localizedName(item)}`, displayPrice: singleItemPrice(item) }))
         : baseProducts.filter(item => item.category === activeCategory))
-        .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
+        .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.nameTe || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
         .slice()
         .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
       $("menuGrid").innerHTML = visible.map(item => {
         const selectedOption = item.isSingleItem ? null : selectedSubItems[item.id] || null;
-        const displayName = item.displayName || item.name;
+        const displayName = item.displayName || localizedName(item);
         const displayPrice = item.displayPrice || item.price;
         const singleAttrs = item.isSingleItem ? ` data-single-item="1"` : "";
         const cardOption = item.isSingleItem ? { name: "Single Item", price: displayPrice } : selectedOption;
@@ -3907,7 +4111,7 @@
     function productSubItems(item) {
       return Array.isArray(item && item.subItems)
         ? item.subItems
-          .map(row => typeof row === "string" ? { name: row, price: item.price } : row)
+          .map(row => typeof row === "string" ? { name: row, nameTe: suggestTeluguName(row), price: item.price } : { ...row, nameTe: row.nameTe || suggestTeluguName(row.name || "") })
           .filter(row => row && row.name)
         : [];
     }
@@ -3941,6 +4145,7 @@
         parentId: Number(product.id),
         optionName: option && option.name ? option.name : "",
         name: option && option.name ? `${product.name} - ${option.name}` : product.name,
+        nameTe: option && option.name ? `${product.nameTe || suggestTeluguName(product.name)} - ${option.nameTe || suggestTeluguName(option.name)}` : (product.nameTe || suggestTeluguName(product.name)),
         price: option && option.name ? Number(option.price || 0) : Number(product.price || 0),
         qty: 1
       });
@@ -3983,7 +4188,7 @@
       const total = Math.max(0, subtotal - cartDiscount);
       const qty = cart.reduce((sum, item) => sum + item.qty, 0);
       $("cartTitle").textContent = `Cart (${cart.reduce((sum, item) => sum + item.qty, 0)} items)`;
-      $("cartSubtitle").textContent = qty ? cart.map(item => `${item.name} x ${item.qty}`).join(", ") : "Cart empty";
+      $("cartSubtitle").textContent = qty ? cart.map(item => `${localizedName(item)} x ${item.qty}`).join(", ") : "Cart empty";
       if ($("cartSubtotal")) $("cartSubtotal").textContent = money(subtotal);
       const discountNode = document.querySelector(".cart-summary .green strong");
       if (discountNode) discountNode.textContent = `- ${money(cartDiscount)}`;
@@ -3991,7 +4196,7 @@
       $("cartList").innerHTML = cart.map(item => `
         <div class="cart-row">
           <span class="cart-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
-          <div><strong>${esc(item.name)}</strong><small>${item.qty} x ${money(item.price)}</small></div>
+          <div><strong>${esc(localizedName(item))}</strong><small>${item.qty} x ${money(item.price)}</small></div>
           <button class="cart-remove" data-remove-line="${esc(item.lineId)}" type="button">x</button>
           <div class="qty">
             <button data-qty="-1" data-id="${esc(item.lineId)}">-</button>
@@ -4024,7 +4229,7 @@
             <div class="cart-page-list">
               ${cart.map(item => `<div class="cart-page-row">
                 <span class="cart-page-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
-                <div><h3>${esc(item.name)}</h3><p>${esc(item.category || item.optionName || "Item")}</p><span class="price">${money(item.price)}</span></div>
+                <div><h3>${esc(localizedName(item))}</h3><p>${esc(item.category || item.optionName || "Item")}</p><span class="price">${money(item.price)}</span></div>
               <div class="orders-qty"><button data-cart-page-qty="-1" data-id="${esc(item.lineId)}" type="button">-</button><input data-cart-page-input="${esc(item.lineId)}" type="number" min="0" inputmode="numeric" value="${item.qty}"><button data-cart-page-qty="1" data-id="${esc(item.lineId)}" type="button">+</button></div>
                 <strong class="cart-page-total">${money(Number(item.price) * item.qty)}</strong>
                 <button class="cart-page-remove" data-cart-page-remove="${esc(item.lineId)}" type="button" aria-label="Remove item"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M8 7l1 13h6l1-13"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
@@ -4222,8 +4427,8 @@
       ].join("\n");
     }
 
-    function receiptText(order, copy = false) {
-      const width = 42;
+    function receiptText(order, copy = false, includeHeader = true) {
+      const width = 32;
       const line = "-".repeat(width);
       const thick = "=".repeat(width);
       const cleanText = value => String(value || "").replace(/[^\x20-\x7E]/g, "").replace(/\s+/g, " ").trim();
@@ -4256,59 +4461,23 @@
         });
         return lines.length ? lines : ["ITEM"];
       };
-      const wrapItemName = (value, wideSize, finalSize) => {
-        const lines = wrapText(value, wideSize);
-        while (lines.length && lines[lines.length - 1].length > finalSize) {
-          const last = lines.pop();
-          if (last.includes(" ")) {
-            const words = last.split(" ");
-            const finalWords = [];
-            while (words.length) {
-              const candidate = [words[words.length - 1], ...finalWords].join(" ");
-              if (candidate.length > finalSize) break;
-              finalWords.unshift(words.pop());
-            }
-            const carry = words.join(" ");
-            if (carry) {
-              const previous = lines[lines.length - 1] || "";
-              if (previous && `${previous} ${carry}`.length <= wideSize) lines[lines.length - 1] = `${previous} ${carry}`;
-              else lines.push(carry);
-            }
-            lines.push(finalWords.join(" ") || last.slice(0, finalSize));
-          } else {
-            lines.push(...(last.match(new RegExp(`.{1,${finalSize}}`, "g")) || [last]));
-          }
-        }
-        return lines.length ? lines : ["ITEM"];
-      };
-      const boldOn = "\x1B\x45\x01";
-      const boldOff = "\x1B\x45\x00";
+      const escInit = "\x1B\x40";
       const alignCenter = "\x1B\x61\x01";
       const alignLeft = "\x1B\x61\x00";
-      const compactFont = "\x1B\x4D\x01";
       const normalFont = "\x1B\x4D\x00";
-      const titleOn = "\x1D\x21\x01";
-      const totalOn = "\x1D\x21\x01";
-      const bigOff = "\x1D\x21\x00";
+      const normalSize = "\x1D\x21\x00";
+      const boldOn = "\x1B\x45\x01";
+      const boldOff = "\x1B\x45\x00";
       const itemLine = (index, item) => {
         const qty = Number(item.qty || 0);
         const rate = Number(item.price || 0);
         const amount = qty * rate;
-        const idx = pad(index, 3);
-        const qtyText = pad(qty, 3, true);
-        const rateText = pad(rate.toFixed(2), 7, true);
-        const amountValue = amount.toFixed(2);
-        const amountText = pad(amountValue, Math.max(7, amountValue.length), true);
-        const numbers = `${qtyText} ${rateText} ${amountText}`;
-        const nameWidth = width - idx.length - numbers.length - 1;
-        const wideNameWidth = Math.min(width - idx.length, nameWidth + 4);
-        const nameLines = wrapItemName(item.name, Math.max(8, wideNameWidth), Math.max(8, nameWidth));
-        return nameLines.map((name, lineIndex) => {
-          const prefix = lineIndex === 0 ? idx : " ".repeat(idx.length);
-          const suffix = lineIndex === nameLines.length - 1 ? numbers : "";
-          const availableNameWidth = width - prefix.length - suffix.length - (suffix ? 1 : 0);
-          return `${prefix}${pad(name, availableNameWidth)}${suffix ? " " + suffix : ""}`.slice(0, width);
-        }).join("\n");
+        const nameLines = wrapText(printItemName(item), 29);
+        const firstName = `${pad(index, 2, true)} ${nameLines[0] || "ITEM"}`.slice(0, width);
+        const extraNames = nameLines.slice(1).map(name => `   ${name}`.slice(0, width));
+        const numberText = `${qty} x ${rate.toFixed(2)} = ${amount.toFixed(2)}`;
+        const numberLine = pad(numberText, width, true);
+        return [firstName, ...extraNames, numberLine].join("\n");
       };
       const total = Number(order.total || 0);
       const subtotal = Number(order.subtotal || total);
@@ -4318,37 +4487,31 @@
       const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
       const dateText = billDate.toLocaleDateString("en-IN");
       const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-      const headerName = "SHAD KITCHEN";
-      const header = [
-        compactFont + alignCenter + "    ( )",
-        "  /|\\ /\\",
-        "    X",
-        boldOn + titleOn + center(headerName.toUpperCase()) + bigOff + boldOff,
+      const headerName = order.canteen || settings.canteenName || "SHAD KITCHEN";
+      const header = includeHeader ? [
+        escInit + normalFont + normalSize + boldOn + alignCenter + center(headerName.toUpperCase()),
         center("axzen infotech")
-      ];
+      ] : [escInit + normalFont + normalSize + boldOn + alignCenter];
       if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
       return [
         ...header,
+        "",
         alignLeft + line,
         leftRight(`Date : ${dateText}`, `Time : ${timeText}`),
         leftRight(`Cashier : ${order.cashier || user?.name || "-"}`, `Token : ${tokenNo}`),
         `Payment : ${paymentLabel}`.slice(0, width),
         line,
-        `${pad("#", 3)}${pad("ITEM NAME", 19)}${pad("QTY", 3, true)} ${pad("RATE", 7, true)} ${pad("AMT", 7, true)}`,
-        ...(order.items || []).flatMap((item, index, rows) => {
-          const itemRows = [itemLine(index + 1, item)];
-          if (index < rows.length - 1) itemRows.push(line);
-          return itemRows;
-        }),
+        `${pad("#", 3)}${pad("ITEM NAME", 16)}${pad("QTY", 3, true)} ${pad("RATE", 4, true)} ${pad("AMT", 4, true)}`,
+        line,
+        ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
         line,
         leftRight("SUBTOTAL", amountText(subtotal)),
         leftRight("DISCOUNT", amountText(discount)),
         line,
-        boldOn + totalOn + leftRight("TOTAL", `Rs ${Number(total || 0).toFixed(2)}`) + bigOff + boldOff,
+        leftRight("TOTAL", `Rs ${Number(total || 0).toFixed(2)}`),
         thick,
-        center("THANK YOU!"),
-        center("VISIT AGAIN"),
-        normalFont,
+        center("THANK YOU! VISIT AGAIN"),
+        boldOff + normalFont + normalSize,
         "",
         "",
         ""
@@ -4356,10 +4519,12 @@
     }
 
     async function receipt(order) {
-      const text = receiptText(order);
+      const options = receiptPrintOptions(order);
+      const useLogoHeader = canPrintReceiptLogo(options) || canPrintReceiptBitmap(options);
+      const text = receiptText(order, false, !useLogoHeader);
       if (window.AxenPrinter && (typeof window.AxenPrinter.printToPrinterAsync === "function" || typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
         try {
-          const result = printToEnabledPrinters(text);
+          const result = printToEnabledPrinters(text, options);
           $("posMessage").textContent = result === "Print queued" || result === "Print sent" || result === "Print queued to 2 printers" ? "Order saved and print started" : (result || "Order saved. Printer not connected.");
           $("posMessage").className = result === "Print queued" || result === "Print sent" || result === "Print queued to 2 printers" ? "status ok" : "status error";
           return;
@@ -4372,6 +4537,89 @@
       console.log(text);
       $("posMessage").textContent = "Order saved. Printer not connected.";
       $("posMessage").className = "status error";
+    }
+
+    function receiptPrintOptions(order = {}) {
+      const logoDataUrl = receiptLogoDataUrl || (String(settings.logoUrl || "").startsWith("data:image/") ? settings.logoUrl : "");
+      return {
+        logoDataUrl,
+        logoPosition: ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above",
+        logoSize: receiptLogoSizeValue(settings.receiptLogoSize),
+        headerName: order.canteen || settings.canteenName || "SHAD KITCHEN",
+        companyName: "axzen infotech",
+        receiptLanguage: languageMode(settings.receiptLanguage),
+        receiptJson: receiptBitmapPayload(order, logoDataUrl)
+      };
+    }
+
+    function canPrintReceiptLogo(options = {}) {
+      return Boolean(options.logoDataUrl && window.AxenPrinter && typeof window.AxenPrinter.printReceiptToPrinterAsync === "function");
+    }
+
+    function canPrintReceiptBitmap(options = {}) {
+      return Boolean((options.receiptLanguage !== "english" || options.logoDataUrl) && window.AxenPrinter && typeof window.AxenPrinter.printReceiptBitmapToPrinterAsync === "function");
+    }
+
+    function receiptBitmapPayload(order = {}, logoDataUrl = "") {
+      const total = Number(order.total || 0);
+      const subtotal = Number(order.subtotal || total);
+      const discount = Number(order.discount || 0);
+      const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
+      return JSON.stringify({
+        headerName: order.canteen || settings.canteenName || "SHAD KITCHEN",
+        companyName: "axzen infotech",
+        logoDataUrl,
+        logoPosition: ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above",
+        logoSize: receiptLogoSizeValue(settings.receiptLogoSize),
+        date: billDate.toLocaleDateString("en-IN"),
+        time: billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+        cashier: order.cashier || user?.name || "-",
+        token: String(order.id || Date.now()).slice(-4).padStart(4, "0"),
+        payment: order.payment === "Credit" && order.creditName ? `Credit - ${order.creditName}` : order.payment || "Cash",
+        subtotal,
+        discount,
+        total,
+        items: (order.items || []).map(item => ({
+          name: printItemName(item),
+          qty: Number(item.qty || 0),
+          price: Number(item.price || 0)
+        }))
+      });
+    }
+
+    function sampleReceiptOrder() {
+      const item = products.find(row => !isItemHidden(row)) || { id: 6, name: "Samosa", nameTe: "సమోసా", price: 15 };
+      const price = Number(item.price || 15);
+      return {
+        id: "5134",
+        canteen: settings.canteenName || "Main Canteen",
+        cashier: user?.name || "Admin",
+        payment: "Online",
+        subtotal: price,
+        discount: 0,
+        total: price,
+        createdAt: Date.now(),
+        items: [{ ...item, qty: 1, price }]
+      };
+    }
+
+    function receiptPreviewHtml() {
+      const logoSize = receiptLogoSizeValue(settings.receiptLogoSize);
+      const logoPosition = ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above";
+      const order = sampleReceiptOrder();
+      const logo = receiptLogoDataUrl || (String(settings.logoUrl || "").startsWith("data:image/") ? settings.logoUrl : "");
+      const logoHtml = logo ? `<img class="receipt-preview-logo" style="width:${Math.round(72 * logoSize / 100)}px;max-height:${Math.round(72 * logoSize / 100)}px" src="${esc(logo)}" alt="Receipt logo">` : `<span class="receipt-preview-logo empty">LOGO</span>`;
+      const titleHtml = `<div class="receipt-preview-title">${esc(settings.canteenName || "Main Canteen")}</div><div class="receipt-preview-sub">axzen infotech</div>`;
+      const header = logoPosition === "left"
+        ? `<div class="receipt-preview-brand side">${logoHtml}<div>${titleHtml}</div></div>`
+        : logoPosition === "right"
+        ? `<div class="receipt-preview-brand side"><div>${titleHtml}</div>${logoHtml}</div>`
+        : `<div class="receipt-preview-brand top">${logoHtml}${titleHtml}</div>`;
+      const bodyText = receiptText(order, false, false).replace(/\x1B[\s\S]?|\x1D[\s\S]?/g, "").trimStart();
+      return `<div class="receipt-preview-wrap">
+        ${header}
+        <pre>${esc(bodyText)}</pre>
+      </div>`;
     }
 
     function wakePrinter() {
@@ -4603,11 +4851,11 @@
     }
 
     function storeTab() {
-      return localStorage.getItem(storeTabKey) || "purchase";
+      return localStorage.getItem(jsonStorageKey(storeTabKey)) || "purchase";
     }
 
     function setStoreTab(value) {
-      localStorage.setItem(storeTabKey, value);
+      localStorage.setItem(jsonStorageKey(storeTabKey), value);
       renderOptionPage();
     }
 
@@ -4829,9 +5077,22 @@
       return targets;
     }
 
-    function printToAddress(address, text) {
+    function printToAddress(address, text, options = {}) {
       if (window.AxenPrinter && typeof window.AxenPrinter.selectPrinter === "function") {
         try { window.AxenPrinter.selectPrinter(address || ""); } catch {}
+      }
+      if (canPrintReceiptBitmap(options)) {
+        return window.AxenPrinter.printReceiptBitmapToPrinterAsync(address || "", options.receiptJson || "");
+      }
+      if (canPrintReceiptLogo(options)) {
+        return window.AxenPrinter.printReceiptToPrinterAsync(
+          address || "",
+          text,
+          options.logoDataUrl || "",
+          options.logoPosition || "above",
+          options.headerName || settings.canteenName || "SHAD KITCHEN",
+          options.companyName || "axzen infotech"
+        );
       }
       if (window.AxenPrinter && typeof window.AxenPrinter.printToPrinterAsync === "function") {
         return window.AxenPrinter.printToPrinterAsync(address || "", text);
@@ -4841,13 +5102,13 @@
       return "Printer not connected";
     }
 
-    function printToEnabledPrinters(text) {
+    function printToEnabledPrinters(text, options = {}) {
       const targets = enabledPrinterTargets();
       if (!targets.length) return "No printer enabled";
       applySelectedPrinterToBridge();
       const results = [];
       targets.forEach((target, index) => {
-        const send = () => results.push(printToAddress(target.address, text));
+        const send = () => results.push(printToAddress(target.address, text, options));
         if (index === 0) send();
         else setTimeout(send, index * 280);
       });
@@ -5923,12 +6184,13 @@
         return `<div class="work-card item-manager-card">
           <div class="item-manager-top">
             <span class="item-manager-thumb ${imageStyle ? "" : "initials"}" style="${imageStyle}">${imageStyle ? "" : esc(String(item.name || "I").slice(0, 1))}</span>
-            <div><h3>${esc(item.name || "Item")}</h3><span class="muted">${esc(item.category || "-")} | ${subs.length ? `${subs.length} sub items` : "Empty"} | ${hidden ? "Hidden" : "Visible"}</span></div>
+            <div><h3>${esc(localizedName(item, "both"))}</h3><span class="muted">${esc(item.category || "-")} | ${subs.length ? `${subs.length} sub items` : "Empty"} | ${hidden ? "Hidden" : "Visible"}</span></div>
             <button class="ghost-action" data-edit-item="${item.id}" type="button">${editing ? "Done" : "Edit"}</button>
             <button class="ghost-action ${hidden ? "" : "danger-lite"}" data-hide-item="${item.id}" type="button">${hidden ? "Show" : "Hide"}</button>
           </div>
           ${editing ? `<div class="item-edit-grid">
             <input data-edit-name="${item.id}" value="${esc(item.name || "")}" placeholder="Item name">
+            <input data-edit-name-te="${item.id}" value="${esc(item.nameTe || suggestTeluguName(item.name || ""))}" placeholder="Telugu print name">
             <input data-price-item="${item.id}" type="number" min="0" value="${Number(item.price || 0)}" placeholder="Price">
             <input data-half-price-item="${item.id}" type="number" min="0" value="${singleItemPrice(item) || ""}" placeholder="Half item price">
             <input data-edit-image="${item.id}" value="${esc(item.image || "")}" placeholder="Image URL">
@@ -5947,6 +6209,8 @@
         <div class="work-card item-add-card">
           <h3>Add Item</h3>
           <input id="newItemName" placeholder="Item name">
+          <div class="item-suggest-box" id="itemSuggestionBox"></div>
+          <input id="newItemNameTe" placeholder="Telugu print name">
           <select id="newItemCategory">${categoryOrder.filter(item => item !== "All" && !isSingleItemsCategory(item)).map(item => `<option value="${esc(item)}">${esc(categoryLabel(item))}</option>`).join("")}</select>
           <input id="newItemPrice" type="number" min="0" placeholder="Price">
           <input id="newItemHalfPrice" type="number" min="0" placeholder="Half item price">
@@ -6023,6 +6287,8 @@
       if ($("shareReportPdf")) $("shareReportPdf").addEventListener("click", shareReportPdf);
       if ($("shareFinancePdf")) $("shareFinancePdf").addEventListener("click", shareFinancePdf);
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
+      bindTeluguNameSuggestions();
+      bindItemSuggestionSearch();
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
       if ($("saveStorePurchase")) $("saveStorePurchase").addEventListener("click", saveStorePurchaseFromPos);
       if ($("saveStoreUsage")) $("saveStoreUsage").addEventListener("click", saveStoreUsageFromPos);
@@ -6052,6 +6318,80 @@
       document.querySelectorAll("[data-restore-held]").forEach(btn => btn.addEventListener("click", () => restoreHeldOrder(btn.dataset.restoreHeld)));
       document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
       document.querySelectorAll("[data-delete-held]").forEach(btn => btn.addEventListener("click", () => deleteHeldOrder(btn.dataset.deleteHeld)));
+    }
+
+    function bindTeluguNameSuggestions() {
+      const newName = $("newItemName");
+      const newNameTe = $("newItemNameTe");
+      if (newName && newNameTe) {
+        newName.addEventListener("input", () => {
+          if (!newNameTe.dataset.touched) newNameTe.value = suggestTeluguName(newName.value);
+        });
+        newNameTe.addEventListener("input", () => { newNameTe.dataset.touched = "1"; });
+      }
+      document.querySelectorAll("[data-edit-name]").forEach(input => {
+        const id = input.dataset.editName;
+        const teInput = document.querySelector(`[data-edit-name-te="${id}"]`);
+        if (!teInput) return;
+        input.addEventListener("input", () => {
+          if (!teInput.dataset.touched) teInput.value = suggestTeluguName(input.value);
+        });
+        teInput.addEventListener("input", () => { teInput.dataset.touched = "1"; });
+      });
+    }
+
+    function renderItemSuggestions() {
+      const box = $("itemSuggestionBox");
+      if (!box) return;
+      box.innerHTML = itemSuggestions.map((item, index) => {
+        const thumb = item.image ? `style="background-image:url('${String(item.image).replace(/'/g, "%27")}')"` : "";
+        const disabled = item.active ? " disabled" : "";
+        return `<button class="item-suggest-row" data-suggest-index="${index}" type="button"${disabled}>
+          <span class="item-suggest-thumb" ${thumb}>${item.image ? "" : esc(String(item.name || "I").slice(0, 1).toUpperCase())}</span>
+          <span><strong>${esc(item.name || "Item")}</strong><small>${esc(item.category || "Snacks")}${item.image ? " | Image ready" : ""}</small></span>
+          <span class="item-suggest-action">${item.active ? "Already in menu" : "Use"}</span>
+        </button>`;
+      }).join("");
+      box.querySelectorAll("[data-suggest-index]").forEach(btn => btn.addEventListener("click", () => applyItemSuggestion(Number(btn.dataset.suggestIndex))));
+    }
+
+    function bindItemSuggestionSearch() {
+      const input = $("newItemName");
+      if (!input || !$("itemSuggestionBox")) return;
+      input.addEventListener("input", () => {
+        clearTimeout(itemSuggestionTimer);
+        const query = input.value.trim();
+        if (query.length < 2) {
+          itemSuggestions = [];
+          renderItemSuggestions();
+          return;
+        }
+        itemSuggestionTimer = setTimeout(() => loadItemSuggestions(query), 240);
+      });
+    }
+
+    async function loadItemSuggestions(query) {
+      try {
+        itemSuggestions = await adminApi(`/catalog/item-suggestions?q=${encodeURIComponent(query)}`, { timeoutMs: 5000 });
+      } catch {
+        itemSuggestions = [];
+      }
+      renderItemSuggestions();
+    }
+
+    function applyItemSuggestion(index) {
+      const item = itemSuggestions[index];
+      if (!item || item.active) return;
+      if ($("newItemName")) $("newItemName").value = item.name || "";
+      if ($("newItemNameTe")) {
+        $("newItemNameTe").value = item.nameTe || suggestTeluguName(item.name || "");
+        $("newItemNameTe").dataset.touched = "1";
+      }
+      if ($("newItemImage")) $("newItemImage").value = item.image || "";
+      if ($("newItemCategory") && item.category) $("newItemCategory").value = item.category;
+      if ($("newItemPrice")) $("newItemPrice").focus();
+      itemSuggestions = [];
+      renderItemSuggestions();
     }
 
     function bindPrinterSettingsControls() {
@@ -6295,10 +6635,11 @@
       const item = products.find(row => Number(row.id) === Number(id));
       if (!item) return;
       const name = document.querySelector(`[data-edit-name="${id}"]`)?.value.trim() || item.name;
+      const nameTe = document.querySelector(`[data-edit-name-te="${id}"]`)?.value.trim() || suggestTeluguName(name);
       const image = document.querySelector(`[data-edit-image="${id}"]`)?.value.trim() ?? item.image;
       const category = document.querySelector(`[data-edit-category="${id}"]`)?.value || item.category;
       const halfPrice = Number(document.querySelector(`[data-half-price-item="${id}"]`)?.value || 0);
-      await persistProductFromPos({ ...item, name, image, category, price: Number(value || item.price || 0), halfPrice, _editing: false });
+      await persistProductFromPos({ ...item, name, nameTe, image, category, price: Number(value || item.price || 0), halfPrice, _editing: false });
     }
 
     async function toggleItemEdit(id) {
@@ -6306,11 +6647,12 @@
       if (!item) return;
       if (item._editing) {
         const name = document.querySelector(`[data-edit-name="${id}"]`)?.value.trim() || item.name;
+        const nameTe = document.querySelector(`[data-edit-name-te="${id}"]`)?.value.trim() || suggestTeluguName(name);
         const price = Number(document.querySelector(`[data-price-item="${id}"]`)?.value || item.price || 0);
         const image = document.querySelector(`[data-edit-image="${id}"]`)?.value.trim() ?? item.image;
         const category = document.querySelector(`[data-edit-category="${id}"]`)?.value || item.category;
         const halfPrice = Number(document.querySelector(`[data-half-price-item="${id}"]`)?.value || 0);
-        await persistProductFromPos({ ...item, name, price, halfPrice, image, category, _editing: false });
+        await persistProductFromPos({ ...item, name, nameTe, price, halfPrice, image, category, _editing: false });
         return;
       }
       products = products.map(row => Number(row.id) === Number(id) ? { ...row, _editing: true } : row);
@@ -6329,11 +6671,12 @@
       const name = document.querySelector(`[data-sub-name="${id}"]`)?.value.trim();
       const price = Number(document.querySelector(`[data-sub-price="${id}"]`)?.value || item.price || 0);
       if (!name) return;
-      await persistProductFromPos({ ...item, subItems: [...productSubItems(item), { name, price }] });
+      await persistProductFromPos({ ...item, subItems: [...productSubItems(item), { name, nameTe: suggestTeluguName(name), price }] });
     }
 
     async function saveNewItemFromPos() {
       const name = $("newItemName").value.trim();
+      const nameTe = $("newItemNameTe").value.trim() || suggestTeluguName(name);
       const price = Number($("newItemPrice").value || 0);
       if (!name || price <= 0) {
         $("posMessage").textContent = "Item name and price required";
@@ -6347,12 +6690,13 @@
       const product = {
         id: Date.now(),
         name,
+        nameTe,
         price,
         halfPrice,
         category: $("newItemCategory").value,
         image,
         sortOrder: products.length + 1,
-        subItems: subName ? [{ name: subName, price: subPrice }] : []
+        subItems: subName ? [{ name: subName, nameTe: suggestTeluguName(subName), price: subPrice }] : []
       };
       await persistProductFromPos(product);
     }
@@ -6455,7 +6799,7 @@
       const purchase = { id: Date.now(), billNo, date, vendor, address, phone, items, total, createdAt: new Date().toISOString() };
       setStorePurchases([purchase, ...storePurchases()]);
       await upsertDirectSaleProductsFromPurchase(items);
-      localStorage.setItem(storeTabKey, "list");
+      localStorage.setItem(jsonStorageKey(storeTabKey), "list");
       const expensePayload = { title: `Purchase invoice ${billNo}`, amount: total, category: "Store Purchase", note: `${items.length} items from ${vendor}` };
       try {
         const data = await adminApi("/expenses", { method: "POST", body: JSON.stringify(expensePayload) });
@@ -6730,7 +7074,8 @@
         return;
       }
       if (window.AxenPrinter && (typeof window.AxenPrinter.printToPrinterAsync === "function" || typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
-        const result = printToEnabledPrinters(receiptText(order, true));
+        const options = receiptPrintOptions(order);
+        const result = printToEnabledPrinters(receiptText(order, true, !canPrintReceiptLogo(options) && !canPrintReceiptBitmap(options)), options);
         $("posMessage").textContent = result || "Copy receipt sent";
         $("posMessage").className = result === "Print queued" || result === "Print sent" || result === "Print queued to 2 printers" ? "status ok" : "status error";
       } else {
@@ -6907,6 +7252,8 @@
           lineId: item.lineId,
           parentId: item.parentId || item.id,
           name: item.name,
+          nameTe: item.nameTe || suggestTeluguName(item.name),
+          printName: printItemName(item),
           optionName: item.optionName || "",
           price: item.price,
           qty: item.qty
@@ -7089,16 +7436,39 @@
     }
 
     function settingsAdminHtml() {
+      const logoPosition = settings.receiptLogoPosition || "above";
+      const logoSize = receiptLogoSizeValue(settings.receiptLogoSize);
+      const localLogoText = receiptLogoDataUrl ? "Receipt logo saved on this device" : "No receipt logo selected";
+      const menuLanguage = languageMode(settings.menuLanguage);
+      const receiptLanguage = languageMode(settings.receiptLanguage);
       return `
         <div class="panel">
           <h2>Settings</h2>
           <form class="form-grid" id="settingsForm">
             <label>Canteen name <input id="canteenNameInput" value="${esc(settings.canteenName)}"></label>
             <label>Logo URL <input id="logoUrlInput" value="${esc(settings.logoUrl || "")}" placeholder="https://..."></label>
+            <label>Menu language <select id="menuLanguageInput">
+              <option value="english" ${menuLanguage === "english" ? "selected" : ""}>English</option>
+              <option value="telugu" ${menuLanguage === "telugu" ? "selected" : ""}>Telugu</option>
+              <option value="both" ${menuLanguage === "both" ? "selected" : ""}>English + Telugu</option>
+            </select></label>
+            <label>Receipt print language <select id="receiptLanguageInput">
+              <option value="english" ${receiptLanguage === "english" ? "selected" : ""}>English</option>
+              <option value="telugu" ${receiptLanguage === "telugu" ? "selected" : ""}>Telugu</option>
+              <option value="both" ${receiptLanguage === "both" ? "selected" : ""}>English + Telugu</option>
+            </select></label>
+            <label>Receipt logo <input id="receiptLogoFileInput" type="file" accept="image/*"><span class="muted">${localLogoText}</span></label>
+            <label>Receipt logo position <select id="receiptLogoPositionInput">
+              <option value="above" ${logoPosition === "above" ? "selected" : ""}>Top</option>
+              <option value="left" ${logoPosition === "left" ? "selected" : ""}>Left of name</option>
+              <option value="right" ${logoPosition === "right" ? "selected" : ""}>Right of name</option>
+            </select></label>
+            <label>Receipt logo size <span class="range-row"><input id="receiptLogoSizeInput" type="range" min="60" max="160" step="5" value="${logoSize}"><strong id="receiptLogoSizeValue">${logoSize}%</strong></span></label>
             <label>Server URL <input id="apiInput" value="${esc(API)}"></label>
             <button class="primary">Save Settings</button>
           </form>
         </div>
+        <div class="panel"><h2>Bill Print Preview</h2><div id="receiptPreviewBox">${receiptPreviewHtml()}</div></div>
         <div class="panel"><h2>Quick Tools</h2><button class="secondary" id="refreshMenuBtn" type="button">Refresh Menu</button><button class="secondary" id="adminGoBilling" type="button">Open Billing</button></div>`;
     }
 
@@ -7178,7 +7548,10 @@
     function bindAdminPageActions() {
       if ($("adminGoBilling")) $("adminGoBilling").addEventListener("click", openBillingFromAdmin);
       if ($("settingsForm")) $("settingsForm").addEventListener("submit", saveSettings);
+      bindReceiptPreviewControls();
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
+      bindTeluguNameSuggestions();
+      bindItemSuggestionSearch();
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
       if ($("adminSaveStock")) $("adminSaveStock").addEventListener("click", saveAdminStock);
       if ($("adminSaveUsedStock")) $("adminSaveUsedStock").addEventListener("click", saveAdminUsedStock);
@@ -7213,6 +7586,29 @@
         setReportQuickRange(btn.dataset.reportRange);
         renderAdmin();
       }));
+    }
+
+    function bindReceiptPreviewControls() {
+      if (!$("receiptPreviewBox")) return;
+      const update = async event => {
+        if (event?.target?.id === "receiptLogoFileInput" && event.target.files?.[0]) {
+          receiptLogoDataUrl = await fileToDataUrl(event.target.files[0]);
+        }
+        settings.canteenName = $("canteenNameInput")?.value.trim() || settings.canteenName || "Main Canteen";
+        settings.logoUrl = $("logoUrlInput")?.value.trim() || settings.logoUrl || "";
+        settings.menuLanguage = $("menuLanguageInput")?.value || settings.menuLanguage;
+        settings.receiptLanguage = $("receiptLanguageInput")?.value || settings.receiptLanguage;
+        settings.receiptLogoPosition = $("receiptLogoPositionInput")?.value || settings.receiptLogoPosition;
+        settings.receiptLogoSize = receiptLogoSizeValue($("receiptLogoSizeInput")?.value || settings.receiptLogoSize);
+        if ($("receiptLogoSizeValue")) $("receiptLogoSizeValue").textContent = `${settings.receiptLogoSize}%`;
+        $("receiptPreviewBox").innerHTML = receiptPreviewHtml();
+      };
+      ["canteenNameInput", "logoUrlInput", "menuLanguageInput", "receiptLanguageInput", "receiptLogoPositionInput", "receiptLogoSizeInput", "receiptLogoFileInput"].forEach(id => {
+        const input = $(id);
+        if (!input) return;
+        input.addEventListener("input", update);
+        input.addEventListener("change", update);
+      });
     }
 
     function openBillingFromAdmin() {
@@ -7333,28 +7729,57 @@
       }
     }
 
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error || new Error("Logo read failed"));
+        reader.readAsDataURL(file);
+      });
+    }
+
     async function saveSettings(event) {
       event.preventDefault();
       const nextApi = $("apiInput") ? $("apiInput").value.trim().replace(/\/$/, "") : "";
       if (nextApi) localStorage.setItem("AXEN_API_URL", nextApi);
+      const nextSettings = {
+        canteenName: $("canteenNameInput") ? $("canteenNameInput").value.trim() || "Main Canteen" : settings.canteenName,
+        logoUrl: $("logoUrlInput")?.value.trim() || settings.logoUrl || "",
+        menuLanguage: $("menuLanguageInput") ? $("menuLanguageInput").value : settings.menuLanguage,
+        receiptLanguage: $("receiptLanguageInput") ? $("receiptLanguageInput").value : settings.receiptLanguage,
+        receiptLogoPosition: $("receiptLogoPositionInput") ? $("receiptLogoPositionInput").value : settings.receiptLogoPosition,
+        receiptLogoSize: receiptLogoSizeValue($("receiptLogoSizeInput") ? $("receiptLogoSizeInput").value : settings.receiptLogoSize),
+        reportTime: $("reportTimeInput") ? $("reportTimeInput").value.trim() : settings.reportTime,
+        adminWhatsAppNumber: $("adminWhatsAppInput") ? $("adminWhatsAppInput").value.trim() : settings.adminWhatsAppNumber,
+        reportPhone: $("adminWhatsAppInput") ? $("adminWhatsAppInput").value.trim() : settings.reportPhone,
+        reportType: $("reportTypeInput") ? $("reportTypeInput").value : settings.reportType,
+        autoReport: $("autoReportInput") ? $("autoReportInput").value === "true" : settings.autoReport
+      };
+      scopedLocalSet(menuLanguageKey, languageMode(nextSettings.menuLanguage));
+      scopedLocalSet(receiptLanguageKey, languageMode(nextSettings.receiptLanguage));
+      scopedLocalSet(receiptLogoPositionKey, ["above", "left", "right"].includes(nextSettings.receiptLogoPosition) ? nextSettings.receiptLogoPosition : "above");
+      scopedLocalSet(receiptLogoSizeKey, String(receiptLogoSizeValue(nextSettings.receiptLogoSize)));
+      applySettings(nextSettings);
+      renderProducts();
+      renderCart();
       try {
+        const logoFile = $("receiptLogoFileInput")?.files?.[0];
+        if (logoFile) {
+          receiptLogoDataUrl = await fileToDataUrl(logoFile);
+          scopedLocalSet(receiptLogoDataUrlKey, receiptLogoDataUrl);
+        }
         const data = await adminApi("/settings", {
           method: "POST",
-          body: JSON.stringify({
-            canteenName: $("canteenNameInput") ? $("canteenNameInput").value.trim() || "Main Canteen" : settings.canteenName,
-            logoUrl: $("logoUrlInput")?.value.trim() || settings.logoUrl || "",
-            reportTime: $("reportTimeInput") ? $("reportTimeInput").value.trim() : settings.reportTime,
-            adminWhatsAppNumber: $("adminWhatsAppInput") ? $("adminWhatsAppInput").value.trim() : settings.adminWhatsAppNumber,
-            reportPhone: $("adminWhatsAppInput") ? $("adminWhatsAppInput").value.trim() : settings.reportPhone,
-            reportType: $("reportTypeInput") ? $("reportTypeInput").value : settings.reportType,
-            autoReport: $("autoReportInput") ? $("autoReportInput").value === "true" : settings.autoReport
-          })
+          body: JSON.stringify(nextSettings)
         });
         applySettings(data.settings);
         await loadAdminData();
         renderAdmin();
+        renderProducts();
+        renderCart();
       } catch {
-        alert("Settings save failed. Check the admin login.");
+        renderAdmin();
+        alert("Settings saved on this phone. Server save failed, check the admin login.");
       }
     }
 

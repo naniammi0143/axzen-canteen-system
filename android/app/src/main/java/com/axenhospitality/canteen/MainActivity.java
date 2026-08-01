@@ -6,9 +6,13 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.graphics.pdf.PdfDocument;
 import android.net.Uri;
 import android.os.Build;
@@ -28,6 +32,8 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 public class MainActivity extends BridgeActivity {
     private static final int BLUETOOTH_PERMISSION_REQUEST = 58;
@@ -163,6 +169,70 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public synchronized String printReceiptToPrinter(String address, String text, String logoDataUrl, String logoPosition, String headerName, String companyName) {
+            if (!hasBluetoothPermission()) {
+                requestBluetoothPermission();
+                return "Bluetooth permission needed";
+            }
+
+            try {
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (adapter == null || !adapter.isEnabled()) throw new Exception("Bluetooth is off");
+
+                Set<BluetoothDevice> devices = adapter.getBondedDevices();
+                if (devices == null || devices.isEmpty()) throw new Exception("Pair the 58mm printer first");
+
+                BluetoothDevice printer = printerForAddress(devices, address);
+                writeReceiptToPrinter(adapter, printer, text, logoDataUrl, logoPosition, headerName, companyName);
+                return "Print sent";
+            } catch (Exception error) {
+                return "Printer failed: " + error.getMessage();
+            }
+        }
+
+        @JavascriptInterface
+        public String printReceiptToPrinterAsync(String address, String text, String logoDataUrl, String logoPosition, String headerName, String companyName) {
+            new Thread(() -> {
+                try {
+                    printReceiptToPrinter(address, text, logoDataUrl, logoPosition, headerName, companyName);
+                } catch (Exception ignored) {}
+            }).start();
+            return "Print queued";
+        }
+
+        @JavascriptInterface
+        public synchronized String printReceiptBitmapToPrinter(String address, String receiptJson) {
+            if (!hasBluetoothPermission()) {
+                requestBluetoothPermission();
+                return "Bluetooth permission needed";
+            }
+
+            try {
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (adapter == null || !adapter.isEnabled()) throw new Exception("Bluetooth is off");
+
+                Set<BluetoothDevice> devices = adapter.getBondedDevices();
+                if (devices == null || devices.isEmpty()) throw new Exception("Pair the 58mm printer first");
+
+                BluetoothDevice printer = printerForAddress(devices, address);
+                writeBitmapReceiptToPrinter(adapter, printer, receiptJson);
+                return "Print sent";
+            } catch (Exception error) {
+                return "Printer failed: " + error.getMessage();
+            }
+        }
+
+        @JavascriptInterface
+        public String printReceiptBitmapToPrinterAsync(String address, String receiptJson) {
+            new Thread(() -> {
+                try {
+                    printReceiptBitmapToPrinter(address, receiptJson);
+                } catch (Exception ignored) {}
+            }).start();
+            return "Print queued";
+        }
+
+        @JavascriptInterface
         public synchronized String listPrinters() {
             if (!hasBluetoothPermission()) {
                 requestBluetoothPermission();
@@ -261,6 +331,10 @@ public class MainActivity extends BridgeActivity {
         }
 
         private void writeReceiptToPrinter(BluetoothAdapter adapter, BluetoothDevice printer, String text) throws Exception {
+            writeReceiptToPrinter(adapter, printer, text, "", "above", "", "");
+        }
+
+        private void writeReceiptToPrinter(BluetoothAdapter adapter, BluetoothDevice printer, String text, String logoDataUrl, String logoPosition, String headerName, String companyName) throws Exception {
             BluetoothSocket targetSocket = null;
             OutputStream targetOutput = null;
             try {
@@ -271,6 +345,11 @@ public class MainActivity extends BridgeActivity {
                 targetSocket.connect();
                 targetOutput = targetSocket.getOutputStream();
                 targetOutput.write(new byte[]{0x1B, 0x40});
+                Bitmap header = receiptHeaderBitmap(logoDataUrl, logoPosition, headerName, companyName, 100);
+                if (header != null) {
+                    writeRasterImage(targetOutput, header);
+                    writeChunked(targetOutput, new byte[]{0x0A});
+                }
                 writeChunked(targetOutput, text.getBytes(Charset.forName("UTF-8")));
                 writeChunked(targetOutput, new byte[]{0x0A, 0x0A, 0x1D, 0x56, 0x01});
                 targetOutput.flush();
@@ -284,15 +363,273 @@ public class MainActivity extends BridgeActivity {
             }
         }
 
+        private Bitmap receiptHeaderBitmap(String logoDataUrl, String logoPosition, String headerName, String companyName, int logoPercent) {
+            Bitmap logo = decodeLogo(logoDataUrl);
+            if (logo == null) return null;
+
+            int width = 384;
+            int scale = Math.max(60, Math.min(160, logoPercent));
+            String position = logoPosition == null ? "above" : logoPosition.trim().toLowerCase();
+            boolean topLogo = !"left".equals(position) && !"right".equals(position);
+            int topLogoSize = Math.max(68, Math.round(112 * scale / 100f));
+            int sideLogoSize = Math.max(52, Math.round(86 * scale / 100f));
+            int height = topLogo ? Math.max(132, topLogoSize + 56) : Math.max(112, sideLogoSize + 22);
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            canvas.drawColor(Color.WHITE);
+
+            Paint textPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            textPaint.setColor(Color.BLACK);
+            textPaint.setTextAlign(Paint.Align.CENTER);
+            textPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+            textPaint.setTextSize(30);
+
+            Paint subPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            subPaint.setColor(Color.BLACK);
+            subPaint.setTextAlign(Paint.Align.CENTER);
+            subPaint.setTextSize(19);
+
+            String title = cleanHeaderText(headerName, "SHAD KITCHEN").toUpperCase();
+            String subtitle = cleanHeaderText(companyName, "axzen infotech");
+
+            if ("left".equals(position) || "right".equals(position)) {
+                int logoSize = Math.min(sideLogoSize, height - 18);
+                int logoLeft = "right".equals(position) ? width - logoSize - 8 : 8;
+                int logoTop = Math.max(8, (height - logoSize) / 2);
+                drawLogo(canvas, logo, logoLeft, logoTop, logoSize, logoSize);
+                int textLeft = "right".equals(position) ? 0 : logoSize + 18;
+                int textRight = "right".equals(position) ? width - logoSize - 18 : width;
+                int centerX = textLeft + ((textRight - textLeft) / 2);
+                canvas.drawText(title, centerX, Math.max(47, (height / 2) - 8), textPaint);
+                canvas.drawText(subtitle, centerX, Math.max(78, (height / 2) + 23), subPaint);
+            } else {
+                int logoSize = topLogoSize;
+                drawLogo(canvas, logo, (width - logoSize) / 2, 0, logoSize, logoSize);
+                canvas.drawText(title, width / 2, logoSize + 18, textPaint);
+                canvas.drawText(subtitle, width / 2, logoSize + 44, subPaint);
+            }
+            return bitmap;
+        }
+
+        private Bitmap decodeLogo(String logoDataUrl) {
+            if (logoDataUrl == null || logoDataUrl.trim().isEmpty()) return null;
+            try {
+                String base64 = logoDataUrl.contains(",") ? logoDataUrl.substring(logoDataUrl.indexOf(",") + 1) : logoDataUrl;
+                byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                return BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
+
+        private void drawLogo(Canvas canvas, Bitmap logo, int left, int top, int maxWidth, int maxHeight) {
+            int sourceWidth = Math.max(1, logo.getWidth());
+            int sourceHeight = Math.max(1, logo.getHeight());
+            float scale = Math.min((float) maxWidth / sourceWidth, (float) maxHeight / sourceHeight);
+            int drawWidth = Math.max(1, Math.round(sourceWidth * scale));
+            int drawHeight = Math.max(1, Math.round(sourceHeight * scale));
+            int drawLeft = left + ((maxWidth - drawWidth) / 2);
+            int drawTop = top + ((maxHeight - drawHeight) / 2);
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+            canvas.drawBitmap(logo, null, new Rect(drawLeft, drawTop, drawLeft + drawWidth, drawTop + drawHeight), paint);
+        }
+
+        private void writeRasterImage(OutputStream targetOutput, Bitmap bitmap) throws Exception {
+            int width = bitmap.getWidth();
+            int height = bitmap.getHeight();
+            int widthBytes = (width + 7) / 8;
+            byte[] imageBytes = new byte[widthBytes * height];
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
+                    int pixel = bitmap.getPixel(x, y);
+                    int r = Color.red(pixel);
+                    int g = Color.green(pixel);
+                    int b = Color.blue(pixel);
+                    int alpha = Color.alpha(pixel);
+                    int luminance = (r * 299 + g * 587 + b * 114) / 1000;
+                    if (alpha > 32 && luminance < 180) {
+                        imageBytes[(y * widthBytes) + (x / 8)] |= (byte) (0x80 >> (x % 8));
+                    }
+                }
+            }
+            int bandRows = 192;
+            for (int yStart = 0; yStart < height; yStart += bandRows) {
+                int rows = Math.min(bandRows, height - yStart);
+                byte[] command = new byte[]{0x1D, 0x76, 0x30, 0x00, (byte) (widthBytes & 0xFF), (byte) ((widthBytes >> 8) & 0xFF), (byte) (rows & 0xFF), (byte) ((rows >> 8) & 0xFF)};
+                byte[] bandBytes = new byte[widthBytes * rows];
+                System.arraycopy(imageBytes, yStart * widthBytes, bandBytes, 0, bandBytes.length);
+                writeChunked(targetOutput, command);
+                writeChunked(targetOutput, bandBytes);
+                targetOutput.flush();
+                Thread.sleep(18);
+            }
+        }
+
+        private String cleanHeaderText(String value, String fallback) {
+            String text = value == null ? "" : value.replaceAll("\\s+", " ").trim();
+            return text.isEmpty() ? fallback : text;
+        }
+
+        private void writeBitmapReceiptToPrinter(BluetoothAdapter adapter, BluetoothDevice printer, String receiptJson) throws Exception {
+            BluetoothSocket targetSocket = null;
+            OutputStream targetOutput = null;
+            try {
+                if (hasBluetoothScanPermission()) {
+                    adapter.cancelDiscovery();
+                }
+                targetSocket = printer.createRfcommSocketToServiceRecord(SPP_UUID);
+                targetSocket.connect();
+                targetOutput = targetSocket.getOutputStream();
+                targetOutput.write(new byte[]{0x1B, 0x40});
+                writeRasterImage(targetOutput, receiptBitmap(receiptJson));
+                writeChunked(targetOutput, new byte[]{0x0A, 0x0A, 0x1D, 0x56, 0x01});
+                targetOutput.flush();
+            } finally {
+                try {
+                    if (targetOutput != null) targetOutput.close();
+                } catch (Exception ignored) {}
+                try {
+                    if (targetSocket != null) targetSocket.close();
+                } catch (Exception ignored) {}
+            }
+        }
+
+        private Bitmap receiptBitmap(String receiptJson) throws Exception {
+            JSONObject data = new JSONObject(receiptJson == null ? "{}" : receiptJson);
+            JSONArray items = data.optJSONArray("items");
+            int width = 384;
+            int y = 8;
+            int estimatedRows = items == null ? 0 : items.length() * 3;
+            int height = 540 + (estimatedRows * 42);
+            Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            canvas.drawColor(Color.WHITE);
+
+            Paint title = receiptPaint(30, true, Paint.Align.CENTER);
+            Paint sub = receiptPaint(20, false, Paint.Align.CENTER);
+            Paint body = receiptPaint(21, false, Paint.Align.LEFT);
+            Paint bodyRight = receiptPaint(21, false, Paint.Align.RIGHT);
+            Paint itemPaint = receiptPaint(23, true, Paint.Align.LEFT);
+            Paint footer = receiptPaint(22, true, Paint.Align.CENTER);
+            Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            linePaint.setColor(Color.BLACK);
+            linePaint.setStrokeWidth(2);
+
+            Bitmap header = receiptHeaderBitmap(data.optString("logoDataUrl", ""), data.optString("logoPosition", "above"), data.optString("headerName", "SHAD KITCHEN"), data.optString("companyName", "axzen infotech"), data.optInt("logoSize", 100));
+            if (header != null) {
+                canvas.drawBitmap(header, 0, y, null);
+                y += header.getHeight() + 2;
+            } else {
+                canvas.drawText(cleanHeaderText(data.optString("headerName", ""), "SHAD KITCHEN").toUpperCase(), width / 2, y + 30, title);
+                canvas.drawText(cleanHeaderText(data.optString("companyName", ""), "axzen infotech"), width / 2, y + 60, sub);
+                y += 70;
+            }
+
+            y = drawLine(canvas, linePaint, y, width);
+            canvas.drawText("Date : " + data.optString("date", "-"), 8, y + 24, body);
+            canvas.drawText("Time : " + data.optString("time", "-"), width - 8, y + 24, bodyRight);
+            y += 34;
+            canvas.drawText("Cashier : " + data.optString("cashier", "-"), 8, y + 24, body);
+            canvas.drawText("Token : " + data.optString("token", "-"), width - 8, y + 24, bodyRight);
+            y += 34;
+            canvas.drawText("Payment : " + data.optString("payment", "Cash"), 8, y + 24, body);
+            y += 38;
+            y = drawLine(canvas, linePaint, y, width);
+            canvas.drawText("#  ITEM NAME", 8, y + 25, body);
+            canvas.drawText("QTY RATE AMT", width - 8, y + 25, bodyRight);
+            y += 36;
+            y = drawLine(canvas, linePaint, y, width);
+
+            if (items != null) {
+                for (int i = 0; i < items.length(); i++) {
+                    JSONObject item = items.optJSONObject(i);
+                    if (item == null) continue;
+                    String name = (i + 1) + " " + cleanHeaderText(item.optString("name", "Item"), "Item");
+                    for (String line : wrapForPaint(name, itemPaint, width - 16)) {
+                        canvas.drawText(line, 8, y + 26, itemPaint);
+                        y += 32;
+                    }
+                    double qty = item.optDouble("qty", 0);
+                    double price = item.optDouble("price", 0);
+                    String amount = trimNumber(qty) + " x " + moneyNumber(price) + " = " + moneyNumber(qty * price);
+                    canvas.drawText(amount, width - 8, y + 24, bodyRight);
+                    y += 34;
+                }
+            }
+
+            y = drawLine(canvas, linePaint, y, width);
+            y = drawAmountRow(canvas, body, bodyRight, "SUBTOTAL", data.optDouble("subtotal", 0), y, width);
+            y = drawAmountRow(canvas, body, bodyRight, "DISCOUNT", data.optDouble("discount", 0), y, width);
+            y = drawLine(canvas, linePaint, y, width);
+            y = drawAmountRow(canvas, receiptPaint(27, true, Paint.Align.LEFT), receiptPaint(27, true, Paint.Align.RIGHT), "TOTAL", data.optDouble("total", 0), y, width);
+            y = drawLine(canvas, linePaint, y, width);
+            canvas.drawText("THANK YOU! VISIT AGAIN", width / 2, y + 30, footer);
+            y += 82;
+
+            return Bitmap.createBitmap(bitmap, 0, 0, width, Math.min(height, y + 24));
+        }
+
+        private Paint receiptPaint(int size, boolean bold, Paint.Align align) {
+            Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            paint.setColor(Color.BLACK);
+            paint.setTextSize(size);
+            paint.setTextAlign(align);
+            paint.setTypeface(Typeface.create(Typeface.SANS_SERIF, bold ? Typeface.BOLD : Typeface.NORMAL));
+            return paint;
+        }
+
+        private int drawLine(Canvas canvas, Paint paint, int y, int width) {
+            canvas.drawLine(0, y + 5, width, y + 5, paint);
+            return y + 13;
+        }
+
+        private int drawAmountRow(Canvas canvas, Paint left, Paint right, String label, double value, int y, int width) {
+            int baseline = y + Math.max(24, Math.round(left.getTextSize() + 2));
+            canvas.drawText(label, 8, baseline, left);
+            canvas.drawText("Rs " + moneyNumber(value), width - 8, baseline, right);
+            return y + Math.max(32, Math.round(left.getTextSize() + 9));
+        }
+
+        private ArrayList<String> wrapForPaint(String text, Paint paint, int maxWidth) {
+            ArrayList<String> lines = new ArrayList<>();
+            String[] words = text.replaceAll("\\s+", " ").trim().split(" ");
+            String current = "";
+            for (String word : words) {
+                String candidate = current.isEmpty() ? word : current + " " + word;
+                if (paint.measureText(candidate) <= maxWidth) {
+                    current = candidate;
+                } else {
+                    if (!current.isEmpty()) lines.add(current);
+                    current = word;
+                }
+            }
+            if (!current.isEmpty()) lines.add(current);
+            if (lines.isEmpty()) lines.add("Item");
+            return lines;
+        }
+
+        private String moneyNumber(double value) {
+            return String.format(java.util.Locale.US, "%.2f", value);
+        }
+
+        private String trimNumber(double value) {
+            if (Math.abs(value - Math.round(value)) < 0.001) {
+                return String.valueOf((long) Math.round(value));
+            }
+            return String.format(java.util.Locale.US, "%.2f", value);
+        }
+
         private void writeChunked(OutputStream targetOutput, byte[] bytes) throws Exception {
             int offset = 0;
-            int chunkSize = 96;
+            int chunkSize = 256;
             while (offset < bytes.length) {
                 int count = Math.min(chunkSize, bytes.length - offset);
                 targetOutput.write(bytes, offset, count);
-                targetOutput.flush();
                 offset += count;
-                Thread.sleep(24);
+                if (offset % 2048 == 0 || offset >= bytes.length) {
+                    targetOutput.flush();
+                    Thread.sleep(8);
+                }
             }
         }
 

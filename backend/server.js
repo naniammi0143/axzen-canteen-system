@@ -95,6 +95,10 @@ const defaultSettings = {
   brandName: "axzen",
   tagline: "Infotech",
   logoUrl: "",
+  receiptLogoPosition: "above",
+  receiptLogoSize: 100,
+  menuLanguage: "english",
+  receiptLanguage: "english",
   reportTime: "22:00",
   adminWhatsAppNumber: "",
   reportPhone: "",
@@ -244,7 +248,7 @@ const orderSchema = new mongoose.Schema({
   subtotal: Number,
   discount: Number,
   total: Number,
-  items: [{ id: Number, lineId: String, parentId: Number, name: String, optionName: String, price: Number, qty: Number }],
+  items: [{ id: Number, lineId: String, parentId: Number, name: String, nameTe: String, printName: String, optionName: String, price: Number, qty: Number }],
   syncedAt: String
 }, { timestamps: true, collection: "orders" });
 
@@ -263,7 +267,7 @@ const saleSchema = new mongoose.Schema({
   subtotal: Number,
   discount: Number,
   total: Number,
-  items: [{ id: Number, lineId: String, parentId: Number, name: String, optionName: String, price: Number, qty: Number }],
+  items: [{ id: Number, lineId: String, parentId: Number, name: String, nameTe: String, printName: String, optionName: String, price: Number, qty: Number }],
   syncedAt: String
 }, { timestamps: true, collection: "sales" });
 
@@ -295,7 +299,8 @@ const menuItemSchema = new mongoose.Schema({
   halfPrice: Number,
   category: String,
   image: String,
-  subItems: [{ name: String, price: Number }],
+  nameTe: String,
+  subItems: [{ name: String, nameTe: String, price: Number }],
   sortOrder: Number,
   hidden: { type: Boolean, default: false }
 }, { timestamps: true, collection: "menu_items" });
@@ -347,6 +352,10 @@ const reportSettingSchema = new mongoose.Schema({
   brandName: String,
   tagline: String,
   logoUrl: String,
+  receiptLogoPosition: String,
+  receiptLogoSize: Number,
+  menuLanguage: String,
+  receiptLanguage: String,
   reportTime: String,
   adminWhatsAppNumber: String,
   reportPhone: String,
@@ -461,6 +470,7 @@ const marketingSupportTicketSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "marketing_support_tickets" });
 
 const whatsappLogSchema = new mongoose.Schema({
+  canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   time: String,
   success: Boolean,
   reason: String,
@@ -516,6 +526,15 @@ function normalizeMobile(value) {
 
 function normalizeCanteenId(value) {
   return String(value || "").trim().toUpperCase();
+}
+
+function canteenScopedUserQuery(canteenId, mobile) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  const mobileValue = normalizeMobile(mobile);
+  const canteenClause = targetCanteenId === DEFAULT_CANTEEN_ID
+    ? { $or: [{ canteenId: targetCanteenId }, { canteenId: { $exists: false } }, { canteenId: null }, { canteenId: "" }] }
+    : { canteenId: targetCanteenId };
+  return { ...canteenClause, mobile: mobileValue, active: { $ne: false } };
 }
 
 function publicUser(user) {
@@ -663,7 +682,7 @@ async function canteenAccessStatus(canteenId) {
 async function tokenUserIsCurrent(user) {
   if (!user || !mongoReady) return false;
   const canteenId = normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID);
-  const current = await User.findOne({ canteenId, mobile: normalizeMobile(user.mobile), active: { $ne: false } }).lean();
+  const current = await User.findOne(canteenScopedUserQuery(canteenId, user.mobile)).lean();
   if (!current) return false;
   if (current.role !== user.role) return false;
   return canteenCanLogin(canteenId);
@@ -672,7 +691,7 @@ async function tokenUserIsCurrent(user) {
 async function tokenUserAccessStatus(user) {
   if (!user || !mongoReady) return { allowed: false, message: "Invalid or expired login token" };
   const canteenId = normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID);
-  const current = await User.findOne({ canteenId, mobile: normalizeMobile(user.mobile), active: { $ne: false } }).lean();
+  const current = await User.findOne(canteenScopedUserQuery(canteenId, user.mobile)).lean();
   if (!current || current.role !== user.role) return { allowed: false, message: "Canteen access is inactive or blocked" };
   return canteenAccessStatus(canteenId);
 }
@@ -903,11 +922,47 @@ async function allMenuItems(canteenId = DEFAULT_CANTEEN_ID, options = {}) {
   return (await MenuItem.find(query).lean()).sort(byOrder);
 }
 
+async function globalItemSuggestions(search = "", canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  const query = String(search || "").trim().toLowerCase();
+  if (query.length < 2) return [];
+  const currentNames = new Set((await allMenuItems(targetCanteenId, { includeHidden: true })).map(item => String(item.name || "").trim().toLowerCase()));
+  const rows = [];
+  const push = item => {
+    const name = String(item?.name || "").trim();
+    if (!name || !name.toLowerCase().includes(query)) return;
+    rows.push({
+      name,
+      nameTe: String(item.nameTe || item.teluguName || "").trim(),
+      image: String(item.image || "").trim(),
+      category: String(item.category || "Snacks").trim() || "Snacks",
+      active: currentNames.has(name.toLowerCase())
+    });
+  };
+  defaultCatalogItems.forEach(push);
+  if (!mongoReady) {
+    memory.menuItems.forEach(push);
+  } else {
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    (await MenuItem.find({ name: regex }).select("name nameTe image category").limit(80).lean()).forEach(push);
+  }
+  const unique = new Map();
+  rows.forEach(item => {
+    const key = item.name.toLowerCase();
+    const current = unique.get(key);
+    if (!current || (!current.image && item.image) || (current.active && !item.active)) unique.set(key, item);
+  });
+  return [...unique.values()]
+    .sort((a, b) => Number(b.image ? 1 : 0) - Number(a.image ? 1 : 0) || Number(a.active) - Number(b.active) || a.name.localeCompare(b.name))
+    .slice(0, 12);
+}
+
 function normalizeSubItems(value) {
   if (Array.isArray(value)) {
     return value
       .map(item => ({
         name: String(item && item.name || "").trim(),
+        nameTe: String(item && (item.nameTe || item.teluguName) || "").trim(),
         price: Number(item && item.price || 0)
       }))
       .filter(item => item.name && item.price >= 0);
@@ -929,6 +984,7 @@ async function saveMenuItem(payload) {
     id: payload.id ? Number(payload.id) : nextId(current),
     canteenId,
     name: String(payload.name || "").trim(),
+    nameTe: String(payload.nameTe || payload.teluguName || "").trim(),
     price: Number(payload.price || 0),
     halfPrice: Number(payload.halfPrice || payload.singlePrice || payload.halfItemPrice || 0),
     category: payload.category || "Snacks",
@@ -1185,6 +1241,9 @@ async function saveSettings(payload, canteenId = DEFAULT_CANTEEN_ID) {
     next.autoReport = next.autoReport === true || next.autoReport === "true";
   }
   if (next.reportTime) next.reportTime = parseReportTime(next.reportTime);
+  if (Object.prototype.hasOwnProperty.call(next, "receiptLogoSize")) {
+    next.receiptLogoSize = Math.max(60, Math.min(160, Number(next.receiptLogoSize || 100)));
+  }
   if (next.adminWhatsAppNumber) next.reportPhone = next.adminWhatsAppNumber;
   if (next.reportPhone && !next.adminWhatsAppNumber) next.adminWhatsAppNumber = next.reportPhone;
 
@@ -1555,7 +1614,8 @@ async function buildWhatsAppReport(reportType = "daily", canteenId = DEFAULT_CAN
 async function addWhatsAppLog(entry) {
   const log = {
     time: new Date().toISOString(),
-    ...entry
+    ...entry,
+    canteenId: normalizeCanteenId(entry.canteenId || DEFAULT_CANTEEN_ID)
   };
   if (!mongoReady) {
     memory.whatsappLogs.unshift(log);
@@ -1569,8 +1629,15 @@ async function addWhatsAppLog(entry) {
 }
 
 async function allWhatsappLogs() {
-  if (!mongoReady) return memory.whatsappLogs;
-  return WhatsappLog.find({}).sort({ createdAt: -1 }).limit(100).lean();
+  return allWhatsappLogsForCanteen(DEFAULT_CANTEEN_ID);
+}
+
+async function allWhatsappLogsForCanteen(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!mongoReady) {
+    return memory.whatsappLogs.filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId);
+  }
+  return WhatsappLog.find({ canteenId: targetCanteenId }).sort({ createdAt: -1 }).limit(100).lean();
 }
 
 async function allMarketingUsers() {
@@ -1944,7 +2011,7 @@ async function sendReportNow(reason = "manual", canteenId = DEFAULT_CANTEEN_ID) 
 
   const message = await buildWhatsAppReport(appSettings.reportType || "daily", canteenId);
   const meta = await sendWhatsAppText(to, message);
-  await addWhatsAppLog({ success: true, reason, to, message, meta });
+  await addWhatsAppLog({ canteenId, success: true, reason, to, message, meta });
   return { to, message, meta };
 }
 
@@ -1966,6 +2033,7 @@ async function checkScheduledWhatsAppReport() {
   } catch (error) {
     const appSettings = await getSettings();
     await addWhatsAppLog({
+      canteenId: DEFAULT_CANTEEN_ID,
       success: false,
       reason: "scheduled",
       to: appSettings.adminWhatsAppNumber || appSettings.reportPhone || "",
@@ -2170,6 +2238,10 @@ app.get("/products", async (req, res) => {
 app.get("/catalog/default-products", requireAdmin, async (req, res) => {
   const liveIds = new Set((await allMenuItems(req.authUser.canteenId)).map(item => Number(item.id)));
   res.json(defaultCatalogItems.map(item => ({ ...item, active: liveIds.has(Number(item.id)) })));
+});
+
+app.get("/catalog/item-suggestions", requireAdmin, async (req, res) => {
+  res.json(await globalItemSuggestions(req.query.q, req.authUser.canteenId));
 });
 
 app.post("/products", requireDatabase, requireAdmin, async (req, res) => {
@@ -2569,6 +2641,7 @@ app.post("/whatsapp/send-test-report", requireDatabase, requireAdmin, async (req
   } catch (error) {
     const appSettings = await getSettings(req.authUser.canteenId);
     await addWhatsAppLog({
+      canteenId: req.authUser.canteenId,
       success: false,
       reason: "manual",
       to: appSettings.adminWhatsAppNumber || appSettings.reportPhone || "",
@@ -2578,7 +2651,7 @@ app.post("/whatsapp/send-test-report", requireDatabase, requireAdmin, async (req
   }
 });
 
-app.get("/whatsapp/logs", requireAdmin, async (req, res) => res.json(await allWhatsappLogs()));
+app.get("/whatsapp/logs", requireAdmin, async (req, res) => res.json(await allWhatsappLogsForCanteen(req.authUser.canteenId)));
 
 app.get("/whatsapp/status", requireAdmin, async (req, res) => {
   const appSettings = await getSettings(req.authUser.canteenId);
