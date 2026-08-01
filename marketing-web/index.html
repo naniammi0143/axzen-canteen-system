@@ -658,6 +658,7 @@
       if (user.role !== "super_admin") return "";
       return `
         ${item.status === "Pending Approval" ? `<button class="secondary" data-approve="${item.id}" type="button">Approve</button><button class="danger" data-reject="${item.id}" type="button">Reject</button>` : ""}
+        <button class="secondary" data-extend-trial="${item.id}" type="button">Extend Trial</button>
         <button class="ghost" data-plan="${item.id}" type="button">Plan</button>
         <button class="ghost" data-payment="${item.id}" type="button">Payment</button>
         <button class="ghost" data-printer="${item.id}" type="button">Printers</button>
@@ -670,6 +671,19 @@
         if (reason) updateAction(`/marketing-api/canteens/${btn.dataset.reject}/reject`, { reason }, "Canteen rejected");
       }));
       document.querySelectorAll("[data-block]").forEach(btn => btn.addEventListener("click", () => updateAction(`/marketing-api/canteens/${btn.dataset.block}/block`, { blocked: btn.dataset.blocked === "true" }, "Block status updated")));
+      document.querySelectorAll("[data-extend-trial]").forEach(btn => btn.addEventListener("click", () => {
+        const item = state.canteens.find(row => Number(row.id) === Number(btn.dataset.extendTrial));
+        const trialDays = prompt("Trial extend days", "7");
+        if (trialDays === null) return;
+        updateAction(`/marketing-api/canteens/${item.id}/plan`, {
+          status: "Trial",
+          planType: "Trial",
+          selectedPlan: item.selectedPlan || "Starter",
+          planStartDate: today(),
+          planExpiryDate: "",
+          trialDays
+        }, "Trial extended and canteen unblocked");
+      }));
       document.querySelectorAll("[data-payment]").forEach(btn => btn.addEventListener("click", () => {
         const item = state.canteens.find(row => Number(row.id) === Number(btn.dataset.payment));
         const paidAmount = prompt("Paid amount", item.paidAmount || 0);

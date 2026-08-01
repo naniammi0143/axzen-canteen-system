@@ -2792,12 +2792,20 @@ app.post("/marketing-api/canteens/:id/reject", requireDatabase, requireSuperAdmi
 
 app.post("/marketing-api/canteens/:id/block", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
+    const before = (await allMarketingCanteens()).find(item => Number(item.id) === Number(req.params.id)) || {};
     const blocked = req.body.blocked !== false;
-    const canteen = await updateMarketingCanteen(req.params.id, { status: blocked ? "Blocked" : "Active", blocked, online: !blocked }, req.marketingUser);
+    const restoreStatus = isPastDate(before.planExpiryDate)
+      ? "Expired"
+      : (before.planType === "Trial" || before.status === "Trial" ? "Trial" : "Active");
+    const canteen = await updateMarketingCanteen(req.params.id, {
+      status: blocked ? "Blocked" : restoreStatus,
+      blocked,
+      online: !blocked && restoreStatus !== "Expired"
+    }, req.marketingUser);
     if (canteen.activatedCanteenId) {
       await Canteen.findOneAndUpdate(
         { canteenId: normalizeCanteenId(canteen.activatedCanteenId) },
-        { $set: { active: !blocked } }
+        { $set: { active: !blocked && restoreStatus !== "Expired" } }
       );
     }
     await addMarketingActivity({ type: "blocked", text: `${canteen.canteenName} ${blocked ? "blocked" : "unblocked"}`, actor: req.marketingUser.name, canteenId: canteen.id });
@@ -2844,6 +2852,7 @@ app.post("/marketing-api/canteens/:id/plan", requireDatabase, requireSuperAdmin,
       selectedPlan: req.body.selectedPlan || "Professional",
       planStartDate: req.body.planStartDate || before.planStartDate || new Date().toISOString().slice(0, 10),
       planExpiryDate,
+      blocked: status === "Blocked",
       online: status !== "Expired" && status !== "Blocked"
     }, req.marketingUser);
     if (canteen.activatedCanteenId) {
