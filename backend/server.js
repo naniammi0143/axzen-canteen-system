@@ -194,6 +194,65 @@ const defaultMarketingSupportTickets = [
   { id: 2, title: "Plan upgrade request", status: "Open", canteenName: "Sri Lakshmi Foods", priority: "Medium", createdAt: new Date().toISOString() }
 ];
 
+const defaultWebsitePlans = [
+  {
+    id: 1,
+    name: "Starter",
+    description: "For small businesses starting with smart digital billing.",
+    originalPrice: "2000",
+    offerPrice: "599",
+    billingCycle: "month",
+    badge: "Special Offer",
+    cta: "Choose Starter",
+    popular: false,
+    active: true,
+    sortOrder: 1,
+    features: ["Fast POS Billing", "Product Management", "Basic Inventory", "Daily Sales Reports", "Customer Management", "1 Billing User", "Thermal Printer Support", "Cloud Data Backup"]
+  },
+  {
+    id: 2,
+    name: "Growth",
+    description: "For growing businesses that need better control and insights.",
+    originalPrice: "2500",
+    offerPrice: "799",
+    billingCycle: "month",
+    badge: "Most Popular",
+    cta: "Choose Growth",
+    popular: true,
+    active: true,
+    sortOrder: 2,
+    features: ["Everything in Starter", "Advanced Sales Reports", "Expense Management", "Multi-User Access", "Customer Purchase History", "Low Stock Alerts", "Cloud Backup", "Priority Support"]
+  },
+  {
+    id: 3,
+    name: "Professional",
+    description: "For established businesses that want powerful operations.",
+    originalPrice: "3000",
+    offerPrice: "999",
+    billingCycle: "month",
+    badge: "Special Offer",
+    cta: "Choose Professional",
+    popular: false,
+    active: true,
+    sortOrder: 3,
+    features: ["Everything in Growth", "Unlimited Billing Users", "Advanced Analytics", "Profit & Loss Reports", "Multiple Printer Support", "Advanced Inventory", "Data Export", "Premium Support"]
+  },
+  {
+    id: 4,
+    name: "Business",
+    description: "For multi-branch businesses and growing enterprises.",
+    originalPrice: "",
+    offerPrice: "Custom Pricing",
+    billingCycle: "",
+    badge: "Tailored Solution",
+    cta: "Contact Sales Team",
+    popular: false,
+    active: true,
+    sortOrder: 4,
+    features: ["Unlimited Users", "Multi-Branch Management", "Centralized Dashboard", "Advanced Business Analytics", "Dedicated Account Manager", "Custom Integrations", "Priority Support", "Business Solutions"]
+  }
+];
+
 let mongoReady = false;
 let mongoError = "";
 let initialized = false;
@@ -231,7 +290,8 @@ let memory = {
   ],
   marketingPayments: [...defaultMarketingPayments],
   supportTickets: [...defaultMarketingSupportTickets],
-  enquiries: []
+  enquiries: [],
+  websitePlans: [...defaultWebsitePlans]
 };
 
 const orderSchema = new mongoose.Schema({
@@ -483,6 +543,21 @@ const enquirySchema = new mongoose.Schema({
   notes: String
 }, { timestamps: true, collection: "enquiries" });
 
+const websitePlanSchema = new mongoose.Schema({
+  id: { type: Number, unique: true, index: true },
+  name: String,
+  description: String,
+  originalPrice: String,
+  offerPrice: String,
+  billingCycle: String,
+  badge: String,
+  cta: String,
+  features: [String],
+  popular: Boolean,
+  active: { type: Boolean, default: true },
+  sortOrder: Number
+}, { timestamps: true, collection: "website_plans" });
+
 const whatsappLogSchema = new mongoose.Schema({
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   time: String,
@@ -529,6 +604,7 @@ const MarketingActivity = mongoose.models.MarketingActivity || mongoose.model("M
 const MarketingPayment = mongoose.models.MarketingPayment || mongoose.model("MarketingPayment", marketingPaymentSchema);
 const MarketingSupportTicket = mongoose.models.MarketingSupportTicket || mongoose.model("MarketingSupportTicket", marketingSupportTicketSchema);
 const Enquiry = mongoose.models.Enquiry || mongoose.model("Enquiry", enquirySchema);
+const WebsitePlan = mongoose.models.WebsitePlan || mongoose.model("WebsitePlan", websitePlanSchema);
 const WhatsappLog = mongoose.models.WhatsappLog || mongoose.model("WhatsappLog", whatsappLogSchema);
 
 function nextId(items) {
@@ -832,6 +908,7 @@ async function seedDefaults() {
   if (!await MarketingActivity.countDocuments()) await MarketingActivity.insertMany(memory.marketingActivities);
   if (!await MarketingPayment.countDocuments()) await MarketingPayment.insertMany(defaultMarketingPayments);
   if (!await MarketingSupportTicket.countDocuments()) await MarketingSupportTicket.insertMany(defaultMarketingSupportTickets);
+  if (!await WebsitePlan.countDocuments()) await WebsitePlan.insertMany(defaultWebsitePlans);
   await reconcileApprovedCanteens();
 }
 
@@ -1764,6 +1841,57 @@ async function allEnquiries() {
   return Enquiry.find({}).sort({ createdAt: -1 }).limit(500).lean();
 }
 
+async function allWebsitePlans({ activeOnly = false } = {}) {
+  const filter = activeOnly ? { active: { $ne: false } } : {};
+  if (!mongoReady) {
+    return memory.websitePlans
+      .filter(item => !activeOnly || item.active !== false)
+      .sort((a, b) => Number(a.sortOrder || a.id || 0) - Number(b.sortOrder || b.id || 0));
+  }
+  return WebsitePlan.find(filter).sort({ sortOrder: 1, id: 1 }).lean();
+}
+
+function normalizeWebsitePlan(payload, existing = {}) {
+  const features = Array.isArray(payload.features)
+    ? payload.features
+    : String(payload.features || "").split(/\r?\n|,/);
+  return {
+    id: Number(payload.id || existing.id || Date.now()),
+    name: String(payload.name ?? existing.name ?? "").trim(),
+    description: String(payload.description ?? existing.description ?? "").trim(),
+    originalPrice: String(payload.originalPrice ?? existing.originalPrice ?? "").trim(),
+    offerPrice: String(payload.offerPrice ?? existing.offerPrice ?? "").trim(),
+    billingCycle: String(payload.billingCycle ?? existing.billingCycle ?? "month").trim(),
+    badge: String(payload.badge ?? existing.badge ?? "").trim(),
+    cta: String(payload.cta ?? existing.cta ?? "").trim(),
+    popular: payload.popular === true || payload.popular === "true",
+    active: payload.active === false || payload.active === "false" ? false : true,
+    sortOrder: Number(payload.sortOrder ?? existing.sortOrder ?? existing.id ?? 1),
+    features: features.map(item => String(item || "").trim()).filter(Boolean)
+  };
+}
+
+async function saveWebsitePlan(payload, actor) {
+  const existing = (await allWebsitePlans()).find(item => Number(item.id) === Number(payload.id)) || {};
+  const plan = normalizeWebsitePlan(payload, existing);
+  if (!plan.name || !plan.offerPrice) throw new Error("Plan name and price are required");
+  if (!plan.cta) plan.cta = `Choose ${plan.name}`;
+  if (!plan.features.length) plan.features = ["POS Billing", "Reports", "Support"];
+  if (!mongoReady) {
+    const index = memory.websitePlans.findIndex(item => Number(item.id) === Number(plan.id));
+    if (index >= 0) memory.websitePlans[index] = { ...memory.websitePlans[index], ...plan };
+    else memory.websitePlans.push(plan);
+  } else {
+    await WebsitePlan.findOneAndUpdate({ id: plan.id }, { $set: plan }, { upsert: true, new: true });
+  }
+  await addMarketingActivity({
+    type: "pricing",
+    text: `${plan.name} website plan updated`,
+    actor: actor?.name || "Super Admin"
+  });
+  return plan;
+}
+
 async function saveEnquiry(payload) {
   const name = String(payload.name || "").trim();
   const phone = String(payload.phone || "").trim();
@@ -2504,6 +2632,10 @@ app.delete("/orders/:id", requireDatabase, requireAdmin, async (req, res) => {
 
 app.get("/dashboard", requireCanteenAuth, async (req, res) => res.json(await dashboardData(req.authUser.canteenId)));
 
+app.get("/api/website-plans", requireDatabase, async (req, res) => {
+  res.json({ success: true, plans: await allWebsitePlans({ activeOnly: true }) });
+});
+
 app.post("/api/enquiry", requireDatabase, async (req, res) => {
   try {
     const enquiry = await saveEnquiry(req.body || {});
@@ -2536,6 +2668,7 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   const payments = await allMarketingPayments();
   const supportTickets = await allMarketingSupportTickets();
   const enquiries = await allEnquiries();
+  const websitePlans = await allWebsitePlans();
   const printers = await allPrinters();
   const canteens = req.marketingUser.role === "super_admin"
     ? allCanteens
@@ -2565,9 +2698,19 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     payments: visiblePayments,
     supportTickets: visibleSupportTickets,
     enquiries: visibleEnquiries,
+    websitePlans: req.marketingUser.role === "super_admin" ? websitePlans : [],
     activities: req.marketingUser.role === "super_admin" ? activities : [],
     summary: marketingSummary(canteens, visibleUsers, req.marketingUser.role === "super_admin" ? activities : [], visiblePayments, visibleSupportTickets, visibleEnquiries)
   });
+});
+
+app.post("/marketing-api/website-plans", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const plan = await saveWebsitePlan(req.body || {}, req.marketingUser);
+    res.json({ success: true, plan, websitePlans: await allWebsitePlans() });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 });
 
 app.post("/marketing-api/enquiries/:id", requireDatabase, requireSuperAdmin, async (req, res) => {
