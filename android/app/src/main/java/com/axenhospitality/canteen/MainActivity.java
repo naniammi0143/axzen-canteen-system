@@ -38,6 +38,8 @@ import org.json.JSONObject;
 public class MainActivity extends BridgeActivity {
     private static final int BLUETOOTH_PERMISSION_REQUEST = 58;
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    private static final int RECEIPT_WIDTH = 384;
+    private static final int RECEIPT_MARGIN = 2;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -367,13 +369,14 @@ public class MainActivity extends BridgeActivity {
             Bitmap logo = decodeLogo(logoDataUrl);
             if (logo == null) return null;
 
-            int width = 384;
+            int width = RECEIPT_WIDTH;
             int scale = Math.max(60, Math.min(160, logoPercent));
             String position = logoPosition == null ? "above" : logoPosition.trim().toLowerCase();
             boolean topLogo = !"left".equals(position) && !"right".equals(position);
-            int topLogoSize = Math.max(68, Math.round(112 * scale / 100f));
-            int sideLogoSize = Math.max(52, Math.round(86 * scale / 100f));
-            int height = topLogo ? Math.max(132, topLogoSize + 56) : Math.max(112, sideLogoSize + 22);
+            int topLogoWidth = Math.max(84, Math.round(126 * scale / 100f));
+            int topLogoHeight = Math.max(36, Math.round(70 * scale / 100f));
+            int sideLogoSize = Math.max(48, Math.round(78 * scale / 100f));
+            int height = topLogo ? topLogoHeight + 62 : Math.max(96, sideLogoSize + 12);
             Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
             canvas.drawColor(Color.WHITE);
@@ -393,20 +396,19 @@ public class MainActivity extends BridgeActivity {
             String subtitle = cleanHeaderText(companyName, "axzen infotech");
 
             if ("left".equals(position) || "right".equals(position)) {
-                int logoSize = Math.min(sideLogoSize, height - 18);
-                int logoLeft = "right".equals(position) ? width - logoSize - 8 : 8;
-                int logoTop = Math.max(8, (height - logoSize) / 2);
+                int logoSize = Math.min(sideLogoSize, height - 10);
+                int logoLeft = "right".equals(position) ? width - logoSize - RECEIPT_MARGIN : RECEIPT_MARGIN;
+                int logoTop = Math.max(5, (height - logoSize) / 2);
                 drawLogo(canvas, logo, logoLeft, logoTop, logoSize, logoSize);
-                int textLeft = "right".equals(position) ? 0 : logoSize + 18;
-                int textRight = "right".equals(position) ? width - logoSize - 18 : width;
+                int textLeft = "right".equals(position) ? RECEIPT_MARGIN : logoLeft + logoSize + 6;
+                int textRight = "right".equals(position) ? logoLeft - 6 : width - RECEIPT_MARGIN;
                 int centerX = textLeft + ((textRight - textLeft) / 2);
-                canvas.drawText(title, centerX, Math.max(47, (height / 2) - 8), textPaint);
-                canvas.drawText(subtitle, centerX, Math.max(78, (height / 2) + 23), subPaint);
+                canvas.drawText(title, centerX, Math.max(38, (height / 2) - 7), textPaint);
+                canvas.drawText(subtitle, centerX, Math.max(66, (height / 2) + 21), subPaint);
             } else {
-                int logoSize = topLogoSize;
-                drawLogo(canvas, logo, (width - logoSize) / 2, 0, logoSize, logoSize);
-                canvas.drawText(title, width / 2, logoSize + 18, textPaint);
-                canvas.drawText(subtitle, width / 2, logoSize + 44, subPaint);
+                Rect logoRect = drawLogo(canvas, logo, (width - topLogoWidth) / 2, 0, topLogoWidth, topLogoHeight);
+                canvas.drawText(title, width / 2, logoRect.bottom + 25, textPaint);
+                canvas.drawText(subtitle, width / 2, logoRect.bottom + 51, subPaint);
             }
             return bitmap;
         }
@@ -422,16 +424,18 @@ public class MainActivity extends BridgeActivity {
             }
         }
 
-        private void drawLogo(Canvas canvas, Bitmap logo, int left, int top, int maxWidth, int maxHeight) {
+        private Rect drawLogo(Canvas canvas, Bitmap logo, int left, int top, int maxWidth, int maxHeight) {
             int sourceWidth = Math.max(1, logo.getWidth());
             int sourceHeight = Math.max(1, logo.getHeight());
             float scale = Math.min((float) maxWidth / sourceWidth, (float) maxHeight / sourceHeight);
             int drawWidth = Math.max(1, Math.round(sourceWidth * scale));
             int drawHeight = Math.max(1, Math.round(sourceHeight * scale));
             int drawLeft = left + ((maxWidth - drawWidth) / 2);
-            int drawTop = top + ((maxHeight - drawHeight) / 2);
+            int drawTop = top + Math.max(0, (maxHeight - drawHeight) / 4);
             Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-            canvas.drawBitmap(logo, null, new Rect(drawLeft, drawTop, drawLeft + drawWidth, drawTop + drawHeight), paint);
+            Rect rect = new Rect(drawLeft, drawTop, drawLeft + drawWidth, drawTop + drawHeight);
+            canvas.drawBitmap(logo, null, rect, paint);
+            return rect;
         }
 
         private void writeRasterImage(OutputStream targetOutput, Bitmap bitmap) throws Exception {
@@ -482,7 +486,7 @@ public class MainActivity extends BridgeActivity {
                 targetOutput = targetSocket.getOutputStream();
                 targetOutput.write(new byte[]{0x1B, 0x40});
                 writeRasterImage(targetOutput, receiptBitmap(receiptJson));
-                writeChunked(targetOutput, new byte[]{0x0A, 0x0A, 0x1D, 0x56, 0x01});
+                writeChunked(targetOutput, new byte[]{0x0A, 0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x01});
                 targetOutput.flush();
             } finally {
                 try {
@@ -497,10 +501,12 @@ public class MainActivity extends BridgeActivity {
         private Bitmap receiptBitmap(String receiptJson) throws Exception {
             JSONObject data = new JSONObject(receiptJson == null ? "{}" : receiptJson);
             JSONArray items = data.optJSONArray("items");
-            int width = 384;
-            int y = 8;
+            int width = RECEIPT_WIDTH;
+            int left = RECEIPT_MARGIN;
+            int right = width - RECEIPT_MARGIN;
+            int y = 4;
             int estimatedRows = items == null ? 0 : items.length() * 3;
-            int height = 540 + (estimatedRows * 42);
+            int height = 660 + (estimatedRows * 44);
             Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
             canvas.drawColor(Color.WHITE);
@@ -518,7 +524,7 @@ public class MainActivity extends BridgeActivity {
             Bitmap header = receiptHeaderBitmap(data.optString("logoDataUrl", ""), data.optString("logoPosition", "above"), data.optString("headerName", "SHAD KITCHEN"), data.optString("companyName", "axzen infotech"), data.optInt("logoSize", 100));
             if (header != null) {
                 canvas.drawBitmap(header, 0, y, null);
-                y += header.getHeight() + 2;
+                y += header.getHeight();
             } else {
                 canvas.drawText(cleanHeaderText(data.optString("headerName", ""), "SHAD KITCHEN").toUpperCase(), width / 2, y + 30, title);
                 canvas.drawText(cleanHeaderText(data.optString("companyName", ""), "axzen infotech"), width / 2, y + 60, sub);
@@ -526,17 +532,17 @@ public class MainActivity extends BridgeActivity {
             }
 
             y = drawLine(canvas, linePaint, y, width);
-            canvas.drawText("Date : " + data.optString("date", "-"), 8, y + 24, body);
-            canvas.drawText("Time : " + data.optString("time", "-"), width - 8, y + 24, bodyRight);
+            canvas.drawText("Date : " + data.optString("date", "-"), left, y + 24, body);
+            canvas.drawText("Time : " + data.optString("time", "-"), right, y + 24, bodyRight);
             y += 34;
-            canvas.drawText("Cashier : " + data.optString("cashier", "-"), 8, y + 24, body);
-            canvas.drawText("Token : " + data.optString("token", "-"), width - 8, y + 24, bodyRight);
+            canvas.drawText("Cashier : " + data.optString("cashier", "-"), left, y + 24, body);
+            canvas.drawText("Token : " + data.optString("token", "-"), right, y + 24, bodyRight);
             y += 34;
-            canvas.drawText("Payment : " + data.optString("payment", "Cash"), 8, y + 24, body);
+            canvas.drawText("Payment : " + data.optString("payment", "Cash"), left, y + 24, body);
             y += 38;
             y = drawLine(canvas, linePaint, y, width);
-            canvas.drawText("#  ITEM NAME", 8, y + 25, body);
-            canvas.drawText("QTY RATE AMT", width - 8, y + 25, bodyRight);
+            canvas.drawText("#  ITEM NAME", left, y + 25, body);
+            canvas.drawText("QTY RATE AMT", right, y + 25, bodyRight);
             y += 36;
             y = drawLine(canvas, linePaint, y, width);
 
@@ -545,14 +551,14 @@ public class MainActivity extends BridgeActivity {
                     JSONObject item = items.optJSONObject(i);
                     if (item == null) continue;
                     String name = (i + 1) + " " + cleanHeaderText(item.optString("name", "Item"), "Item");
-                    for (String line : wrapForPaint(name, itemPaint, width - 16)) {
-                        canvas.drawText(line, 8, y + 26, itemPaint);
+                    for (String line : wrapForPaint(name, itemPaint, width - (RECEIPT_MARGIN * 2))) {
+                        canvas.drawText(line, left, y + 26, itemPaint);
                         y += 32;
                     }
                     double qty = item.optDouble("qty", 0);
                     double price = item.optDouble("price", 0);
                     String amount = trimNumber(qty) + " x " + moneyNumber(price) + " = " + moneyNumber(qty * price);
-                    canvas.drawText(amount, width - 8, y + 24, bodyRight);
+                    canvas.drawText(amount, right, y + 24, bodyRight);
                     y += 34;
                 }
             }
@@ -563,10 +569,10 @@ public class MainActivity extends BridgeActivity {
             y = drawLine(canvas, linePaint, y, width);
             y = drawAmountRow(canvas, receiptPaint(27, true, Paint.Align.LEFT), receiptPaint(27, true, Paint.Align.RIGHT), "TOTAL", data.optDouble("total", 0), y, width);
             y = drawLine(canvas, linePaint, y, width);
-            canvas.drawText("THANK YOU! VISIT AGAIN", width / 2, y + 30, footer);
-            y += 82;
+            canvas.drawText("THANK YOU! VISIT AGAIN", width / 2, y + 34, footer);
+            y += 118;
 
-            return Bitmap.createBitmap(bitmap, 0, 0, width, Math.min(height, y + 24));
+            return Bitmap.createBitmap(bitmap, 0, 0, width, Math.min(height, y + 64));
         }
 
         private Paint receiptPaint(int size, boolean bold, Paint.Align align) {
@@ -579,14 +585,14 @@ public class MainActivity extends BridgeActivity {
         }
 
         private int drawLine(Canvas canvas, Paint paint, int y, int width) {
-            canvas.drawLine(0, y + 5, width, y + 5, paint);
+            canvas.drawLine(RECEIPT_MARGIN, y + 5, width - RECEIPT_MARGIN, y + 5, paint);
             return y + 13;
         }
 
         private int drawAmountRow(Canvas canvas, Paint left, Paint right, String label, double value, int y, int width) {
             int baseline = y + Math.max(24, Math.round(left.getTextSize() + 2));
-            canvas.drawText(label, 8, baseline, left);
-            canvas.drawText("Rs " + moneyNumber(value), width - 8, baseline, right);
+            canvas.drawText(label, RECEIPT_MARGIN, baseline, left);
+            canvas.drawText("Rs " + moneyNumber(value), width - RECEIPT_MARGIN, baseline, right);
             return y + Math.max(32, Math.round(left.getTextSize() + 9));
         }
 
