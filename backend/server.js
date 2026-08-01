@@ -230,7 +230,8 @@ let memory = {
     { id: 2, type: "created", text: "Sri Lakshmi Foods submitted for approval", actor: "Venkatesh", createdAt: new Date().toISOString() }
   ],
   marketingPayments: [...defaultMarketingPayments],
-  supportTickets: [...defaultMarketingSupportTickets]
+  supportTickets: [...defaultMarketingSupportTickets],
+  enquiries: []
 };
 
 const orderSchema = new mongoose.Schema({
@@ -469,6 +470,19 @@ const marketingSupportTicketSchema = new mongoose.Schema({
   priority: String
 }, { timestamps: true, collection: "marketing_support_tickets" });
 
+const enquirySchema = new mongoose.Schema({
+  id: { type: Number, index: true },
+  name: String,
+  phone: { type: String, index: true },
+  email: String,
+  plan: String,
+  message: String,
+  source: { type: String, default: "pos.axzen.in", index: true },
+  status: { type: String, default: "New", index: true },
+  assignedTo: String,
+  notes: String
+}, { timestamps: true, collection: "enquiries" });
+
 const whatsappLogSchema = new mongoose.Schema({
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   time: String,
@@ -514,6 +528,7 @@ const MarketingCanteen = mongoose.models.MarketingCanteen || mongoose.model("Mar
 const MarketingActivity = mongoose.models.MarketingActivity || mongoose.model("MarketingActivity", marketingActivitySchema);
 const MarketingPayment = mongoose.models.MarketingPayment || mongoose.model("MarketingPayment", marketingPaymentSchema);
 const MarketingSupportTicket = mongoose.models.MarketingSupportTicket || mongoose.model("MarketingSupportTicket", marketingSupportTicketSchema);
+const Enquiry = mongoose.models.Enquiry || mongoose.model("Enquiry", enquirySchema);
 const WhatsappLog = mongoose.models.WhatsappLog || mongoose.model("WhatsappLog", whatsappLogSchema);
 
 function nextId(items) {
@@ -1744,6 +1759,60 @@ async function allMarketingSupportTickets() {
   return MarketingSupportTicket.find({}).sort({ createdAt: -1 }).limit(200).lean();
 }
 
+async function allEnquiries() {
+  if (!mongoReady) return memory.enquiries;
+  return Enquiry.find({}).sort({ createdAt: -1 }).limit(500).lean();
+}
+
+async function saveEnquiry(payload) {
+  const name = String(payload.name || "").trim();
+  const phone = String(payload.phone || "").trim();
+  const plan = String(payload.plan || "").trim();
+  if (!name || !phone || !plan) {
+    throw new Error("Name, phone number and plan are required");
+  }
+  const entry = {
+    id: Number(payload.id || Date.now()),
+    name,
+    phone,
+    email: String(payload.email || "").trim(),
+    plan,
+    message: String(payload.message || "").trim(),
+    source: String(payload.source || "pos.axzen.in").trim(),
+    status: String(payload.status || "New").trim(),
+    assignedTo: String(payload.assignedTo || "").trim(),
+    notes: String(payload.notes || "").trim()
+  };
+  if (!mongoReady) {
+    memory.enquiries.unshift({ ...entry, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    return memory.enquiries[0];
+  }
+  return Enquiry.create(entry);
+}
+
+async function updateEnquiry(id, patch, actor) {
+  const allowed = {};
+  ["status", "assignedTo", "notes"].forEach(key => {
+    if (Object.prototype.hasOwnProperty.call(patch, key)) allowed[key] = String(patch[key] || "").trim();
+  });
+  if (Object.keys(allowed).length === 0) throw new Error("No enquiry update supplied");
+  if (!mongoReady) {
+    const index = memory.enquiries.findIndex(item => String(item._id || item.id) === String(id));
+    if (index === -1) throw new Error("Enquiry not found");
+    memory.enquiries[index] = { ...memory.enquiries[index], ...allowed, updatedAt: new Date().toISOString() };
+    return memory.enquiries[index];
+  }
+  const query = mongoose.Types.ObjectId.isValid(String(id)) ? { _id: id } : { id: Number(id) };
+  const saved = await Enquiry.findOneAndUpdate(query, { $set: allowed }, { new: true }).lean();
+  if (!saved) throw new Error("Enquiry not found");
+  await addMarketingActivity({
+    type: "enquiry",
+    text: `${saved.name || "Website enquiry"} marked ${saved.status || "updated"}`,
+    actor: actor?.name || "Super Admin"
+  });
+  return saved;
+}
+
 async function allPrinters() {
   if (!mongoReady) return memory.printers;
   return Printer.find({}).sort({ createdAt: -1 }).lean();
@@ -1953,7 +2022,7 @@ function isToday(dateValue) {
   return date.toDateString() === today.toDateString();
 }
 
-function marketingSummary(canteens, users, activities, payments = [], supportTickets = []) {
+function marketingSummary(canteens, users, activities, payments = [], supportTickets = [], enquiries = []) {
   const active = canteens.filter(item => item.status === "Active");
   const trial = canteens.filter(item => item.status === "Trial");
   const expired = canteens.filter(item => item.status === "Expired" || (item.planExpiryDate && new Date(item.planExpiryDate) < new Date() && item.status !== "Blocked"));
@@ -1997,6 +2066,8 @@ function marketingSummary(canteens, users, activities, payments = [], supportTic
       printersAssigned,
       printersAvailable: Math.max(0, printersRequired - printersAssigned),
       openSupportTickets: supportTickets.filter(item => item.status === "Open").length,
+      totalEnquiries: enquiries.length,
+      newEnquiries: enquiries.filter(item => ["new", "New"].includes(String(item.status || "New"))).length,
       pendingInstallations: canteens.filter(item => ["Active", "Trial"].includes(item.status) && Number(item.printersAssigned || 0) < Number(item.printersRequired || 0)).length
     },
     marketingPerformance: performance,
@@ -2433,6 +2504,15 @@ app.delete("/orders/:id", requireDatabase, requireAdmin, async (req, res) => {
 
 app.get("/dashboard", requireCanteenAuth, async (req, res) => res.json(await dashboardData(req.authUser.canteenId)));
 
+app.post("/api/enquiry", requireDatabase, async (req, res) => {
+  try {
+    const enquiry = await saveEnquiry(req.body || {});
+    res.status(201).json({ success: true, message: "Your enquiry has been submitted successfully.", enquiryId: enquiry._id || enquiry.id });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 app.post("/marketing-api/login", requireDatabase, async (req, res) => {
   const employeeId = String(req.body.employeeId || "").trim();
   const password = String(req.body.password || "");
@@ -2455,6 +2535,7 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   const activities = await allMarketingActivities();
   const payments = await allMarketingPayments();
   const supportTickets = await allMarketingSupportTickets();
+  const enquiries = await allEnquiries();
   const printers = await allPrinters();
   const canteens = req.marketingUser.role === "super_admin"
     ? allCanteens
@@ -2469,6 +2550,7 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   const visibleSupportTickets = req.marketingUser.role === "super_admin"
     ? supportTickets
     : supportTickets.filter(item => canteens.some(canteen => canteen.canteenName === item.canteenName));
+  const visibleEnquiries = req.marketingUser.role === "super_admin" ? enquiries : [];
   const visiblePrinters = req.marketingUser.role === "super_admin"
     ? printers
     : printers.filter(item =>
@@ -2482,9 +2564,19 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     printers: visiblePrinters,
     payments: visiblePayments,
     supportTickets: visibleSupportTickets,
+    enquiries: visibleEnquiries,
     activities: req.marketingUser.role === "super_admin" ? activities : [],
-    summary: marketingSummary(canteens, visibleUsers, req.marketingUser.role === "super_admin" ? activities : [], visiblePayments, visibleSupportTickets)
+    summary: marketingSummary(canteens, visibleUsers, req.marketingUser.role === "super_admin" ? activities : [], visiblePayments, visibleSupportTickets, visibleEnquiries)
   });
+});
+
+app.post("/marketing-api/enquiries/:id", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const enquiry = await updateEnquiry(req.params.id, req.body || {}, req.marketingUser);
+    res.json({ success: true, enquiry, enquiries: await allEnquiries() });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 });
 
 app.post("/marketing-api/users", requireDatabase, requireSuperAdmin, async (req, res) => {

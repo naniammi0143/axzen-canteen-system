@@ -410,13 +410,14 @@
     let token = localStorage.getItem(tokenKey) || "";
     let user = null;
     let tab = "dashboard";
-    let state = { canteens: [], users: [], printers: [], activities: [], payments: [], supportTickets: [], summary: { cards: {}, marketingPerformance: [], recentActivities: [] } };
+    let state = { canteens: [], users: [], printers: [], activities: [], payments: [], supportTickets: [], enquiries: [], summary: { cards: {}, marketingPerformance: [], recentActivities: [] } };
 
     const superTabs = [
       ["dashboard", "Dashboard"],
       ["approvals", "Approval Queue"],
       ["canteens", "Canteens"],
       ["employees", "Employees"],
+      ["enquiries", "Website Enquiries"],
       ["payments", "Payments"],
       ["printers", "Printer Inventory"],
       ["performance", "Marketing Performance"],
@@ -438,6 +439,7 @@
       approvals: "Queue",
       canteens: "Canteens",
       employees: "Team",
+      enquiries: "Leads",
       printers: "Printers",
       activities: "Log"
     };
@@ -482,6 +484,7 @@
         approvals: '<path d="M9 12l2 2 4-4"/><path d="M5 4h14v16H5z"/><path d="M8 2h8v4H8z"/>',
         canteens: '<path d="M4 10h16l-2-5H6l-2 5Z"/><path d="M6 10v9h12v-9"/><path d="M9 19v-5h6v5"/>',
         employees: '<path d="M16 11a4 4 0 1 0-8 0"/><path d="M4 20a8 8 0 0 1 16 0"/><path d="M18 8a3 3 0 0 1 3 3"/><path d="M3 11a3 3 0 0 1 3-3"/>',
+        enquiries: '<path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8"/><path d="M8 13h5"/>',
         payments: '<path d="M3 7h18v12H3z"/><path d="M3 10h18"/><path d="M7 15h4"/>',
         printers: '<path d="M6 9V3h12v6"/><path d="M6 17H4a2 2 0 0 1-2-2v-4h20v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>',
         performance: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
@@ -499,7 +502,7 @@
         ["totalCanteens", "Total Canteens"], ["activeCanteens", "Active Canteens"], ["trialCanteens", "Trial Canteens"], ["expiredCanteens", "Expired Canteens"],
         ["blockedCanteens", "Blocked Canteens"], ["onlineCanteens", "Online Canteens"], ["offlineCanteens", "Offline Canteens"], ["todaysRegistrations", "Today's Registrations"],
         ["todaysCollections", "Today's Collections"], ["monthlyRevenue", "Monthly Revenue"], ["pendingPayments", "Pending Payments"], ["printersAssigned", "Printers Assigned"],
-        ["printersAvailable", "Printers Available"], ["openSupportTickets", "Open Support Tickets"], ["pendingInstallations", "Pending Installations"]
+        ["printersAvailable", "Printers Available"], ["openSupportTickets", "Open Support Tickets"], ["totalEnquiries", "Website Enquiries"], ["newEnquiries", "New Enquiries"], ["pendingInstallations", "Pending Installations"]
       ];
       return `<div class="kpis">${labels.slice(0, compact ? 6 : labels.length).map(([key, label]) => `<div class="card" ${key === "onlineCanteens" ? 'data-online-canteens="true" role="button" tabindex="0"' : ""}><span>${label}</span><strong>${key.toLowerCase().includes("revenue") || key.toLowerCase().includes("payment") || key.toLowerCase().includes("collection") ? money(cards[key]) : Number(cards[key] || 0)}</strong><small>${key === "onlineCanteens" ? "Click for list" : "Live operations"}</small></div>`).join("")}</div>`;
     }
@@ -527,6 +530,34 @@
     }
     function supportTicketsHtml(rows) {
       return `<div class="list">${rows.slice(0, 8).map(row => `<div class="list-row"><div><strong>${esc(row.title)}</strong><br><span class="muted">${esc(row.canteenName || "-")} | ${esc(row.priority || "Normal")}</span></div><span class="pill ${row.status === "Open" ? "orange" : "green"}">${esc(row.status)}</span></div>`).join("") || `<span class="muted">No support tickets</span>`}</div>`;
+    }
+    function enquiriesHtml(rows, limit = 100) {
+      const visible = rows.slice(0, limit);
+      const cards = visible.map(row => {
+        const id = esc(row._id || row.id);
+        const statusValue = String(row.status || "New");
+        return `<article class="canteen-card">
+          <div class="canteen-card-head">
+            <div><h3>${esc(row.name)}</h3><div class="meta">${esc(row.phone || "-")} | ${esc(row.email || "-")}</div></div>
+            <span class="pill ${statusValue.toLowerCase() === "closed" ? "green" : statusValue.toLowerCase() === "contacted" ? "orange" : "blue"}">${esc(statusValue)}</span>
+          </div>
+          <div class="canteen-facts">
+            <div class="fact"><span>Plan</span><strong>${esc(row.plan || "-")}</strong></div>
+            <div class="fact"><span>Source</span><strong>${esc(row.source || "pos.axzen.in")}</strong></div>
+            <div class="fact"><span>Date</span><strong>${formatDateTime(row.createdAt)}</strong></div>
+          </div>
+          <p class="muted">${esc(row.message || "No message")}</p>
+          <div class="row-actions">
+            <button class="secondary" data-enquiry-status="${id}" data-status="Contacted" type="button">Contacted</button>
+            <button class="ghost" data-enquiry-status="${id}" data-status="Closed" type="button">Closed</button>
+          </div>
+        </article>`;
+      }).join("") || `<div class="muted">No website enquiries yet</div>`;
+      const table = `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Name</th><th>Phone</th><th>Plan</th><th>Message</th><th>Status</th><th>Action</th></tr></thead><tbody>${visible.map(row => {
+        const id = esc(row._id || row.id);
+        return `<tr><td>${formatDateTime(row.createdAt)}</td><td><strong>${esc(row.name)}</strong><br><span class="muted">${esc(row.email || "-")}</span></td><td>${esc(row.phone || "-")}</td><td>${esc(row.plan || "-")}</td><td>${esc(row.message || "-")}</td><td><span class="pill ${String(row.status || "New").toLowerCase() === "closed" ? "green" : "orange"}">${esc(row.status || "New")}</span></td><td><div class="row-actions"><button class="secondary" data-enquiry-status="${id}" data-status="Contacted" type="button">Contacted</button><button class="ghost" data-enquiry-status="${id}" data-status="Closed" type="button">Closed</button></div></td></tr>`;
+      }).join("") || `<tr><td colspan="7">No website enquiries yet</td></tr>`}</tbody></table></div>`;
+      return `<div class="mobile-canteens">${cards}</div>${table}`;
     }
     function printerModelOptions() {
       const models = [...new Set((state.printers || []).map(item => item.model).filter(Boolean))];
@@ -640,6 +671,11 @@
         updateAction(`/marketing-api/canteens/${item.id}/plan`, body, "Plan updated");
       }));
     }
+    function bindEnquiryActions() {
+      document.querySelectorAll("[data-enquiry-status]").forEach(btn => btn.addEventListener("click", async () => {
+        await updateAction(`/marketing-api/enquiries/${encodeURIComponent(btn.dataset.enquiryStatus)}`, { status: btn.dataset.status }, "Enquiry status updated");
+      }));
+    }
     async function updateAction(path, body, message) {
       try {
         status("Updating...");
@@ -653,9 +689,10 @@
     }
     function renderDashboard() {
       if (user.role === "super_admin") {
-        $("page").innerHTML = `${cardsHtml(state.summary.cards)}<div class="grid-2"><section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section><section class="panel"><h2>Open Support Tickets</h2>${supportTicketsHtml(state.supportTickets || [])}</section></div><div class="grid-2"><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section><section class="panel"><h2>Recent Payments</h2>${paymentsTable((state.payments || []).slice(0, 6))}</section></div><section class="panel"><h2>Approval Queue</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
+        $("page").innerHTML = `${cardsHtml(state.summary.cards)}<div class="grid-2"><section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section><section class="panel"><h2>Recent Enquiries</h2>${enquiriesHtml(state.enquiries || [], 4)}</section></div><div class="grid-2"><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section><section class="panel"><h2>Recent Payments</h2>${paymentsTable((state.payments || []).slice(0, 6))}</section></div><div class="grid-2"><section class="panel"><h2>Open Support Tickets</h2>${supportTicketsHtml(state.supportTickets || [])}</section><section class="panel"><h2>Approval Queue</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section></div>`;
         bindOnlinePopup();
         bindTableActions();
+        bindEnquiryActions();
       } else {
         const cards = state.summary.cards;
         $("page").innerHTML = `${cardsHtml(cards, true)}<div class="grid-2"><section class="panel"><h2>My Registrations</h2>${canteensTable(state.canteens, false)}</section><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section></div>`;
@@ -790,6 +827,7 @@
         approvals: ["Approval Queue", "Approve or reject submitted canteens."],
         canteens: ["Canteen Management", "Manage active, trial, blocked and expired canteens."],
         employees: ["Employees", "Add and manage marketing employee records."],
+        enquiries: ["Website Enquiries", "Leads submitted from pos.axzen.in contact form."],
         payments: ["Payment Management", "Track collections and pending payments."],
         printers: ["Printer Inventory", "Assign and track printer installation."],
         performance: ["Marketing Performance", "Employee-wise registration and collection results."],
@@ -804,6 +842,7 @@
       if (tab === "employees") { renderEmployees(); bindEmployeeActions(); return; }
       if (tab === "approvals") $("page").innerHTML = `<section class="panel"><h2>Pending Approval</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
       else if (tab === "canteens" || tab === "my") $("page").innerHTML = `<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Canteens" : "All Canteens"}</h2><div class="toolbar-left"><select id="searchCategory"><option value="all">All</option><option value="canteenName">Canteen</option><option value="ownerName">Owner</option><option value="city">City</option><option value="status">Status</option></select><input id="searchBox" placeholder="Search by category"></div></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
+      else if (tab === "enquiries") { $("page").innerHTML = `<section class="panel"><h2>Website Enquiries</h2>${enquiriesHtml(state.enquiries || [])}</section>`; bindEnquiryActions(); return; }
       else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section><section class="panel"><h2>Payment History</h2>${paymentsTable(state.payments || [])}</section>`;
       else if (tab === "printers") { $("page").innerHTML = printerInventoryHtml(); bindPrinterInventory(); return; }
       else if (tab === "performance") $("page").innerHTML = `<section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section>`;
