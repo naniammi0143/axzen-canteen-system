@@ -3367,7 +3367,7 @@
         </div>
         <button class="primary" type="submit">Login</button>
         <button class="secondary" type="button" id="testServerBtn">Test Server</button>
-        <div class="status" id="loginStatus">Admin default: admin / 1234</div>
+        <div class="status" id="loginStatus">Enter your login details.</div>
       </form>
     </section>
 
@@ -6166,7 +6166,7 @@
           <form class="form-grid" id="posUserForm">
             <input id="posNewName" placeholder="Name" required>
             <input id="posNewMobile" placeholder="Mobile number / user ID" required>
-            <input id="posNewPassword" placeholder="Password" required>
+            <input id="posNewPassword" type="password" placeholder="Password" required>
             <select id="posNewRole">${userRoles.map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select>
             <select id="posNewBranchAddress">${addressOptionsHtml()}</select>
             <button class="page-action">Save User</button>
@@ -7528,7 +7528,7 @@
             <form class="form-grid" id="userForm">
               <input id="newName" placeholder="Name" required>
               <input id="newMobile" placeholder="Mobile number" required>
-              <input id="newPassword" placeholder="Password" required>
+              <input id="newPassword" type="password" placeholder="Password" required>
               <select id="newRole">${userRoles.map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select>
               <select id="newBranchAddress">${addressOptionsHtml()}</select>
               <button class="primary">Save User</button>
@@ -7959,7 +7959,7 @@
     if (user) enterApp();
     else {
       show("loginView");
-      $("loginStatus").textContent = `Admin default: admin / 1234 | API: ${API}`;
+      $("loginStatus").textContent = `Enter your login details. API: ${API}`;
       loadSettings();
     }
   </script>
