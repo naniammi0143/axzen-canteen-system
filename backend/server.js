@@ -291,7 +291,8 @@ let memory = {
   marketingPayments: [...defaultMarketingPayments],
   supportTickets: [...defaultMarketingSupportTickets],
   enquiries: [],
-  websitePlans: [...defaultWebsitePlans]
+  websitePlans: [...defaultWebsitePlans],
+  globalCatalogItems: defaultCatalogItems.map(item => ({ catalogId: item.id, name: item.name, image: item.image || "", sourceCount: 1 }))
 };
 
 const orderSchema = new mongoose.Schema({
@@ -365,6 +366,14 @@ const menuItemSchema = new mongoose.Schema({
   sortOrder: Number,
   hidden: { type: Boolean, default: false }
 }, { timestamps: true, collection: "menu_items" });
+
+const globalCatalogItemSchema = new mongoose.Schema({
+  catalogId: { type: Number, unique: true, index: true },
+  name: { type: String, index: true },
+  image: String,
+  sourceCount: { type: Number, default: 1 },
+  lastSeenCanteenId: String
+}, { timestamps: true, collection: "global_catalog_items" });
 
 const creditorSchema = new mongoose.Schema({
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
@@ -581,6 +590,7 @@ saleSchema.index(
 );
 reportSettingSchema.index({ canteenId: 1, key: 1 }, { unique: true, name: "canteenId_1_key_1" });
 menuItemSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
+globalCatalogItemSchema.index({ name: 1 }, { name: "name_1" });
 creditorSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 stockItemSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
 stockUsageSchema.index({ canteenId: 1, id: 1 }, { unique: true, name: "canteenId_1_id_1" });
@@ -591,6 +601,7 @@ const Sale = mongoose.models.Sale || mongoose.model("Sale", saleSchema);
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 const BranchAddress = mongoose.models.BranchAddress || mongoose.model("BranchAddress", branchAddressSchema);
 const MenuItem = mongoose.models.MenuItem || mongoose.model("MenuItem", menuItemSchema);
+const GlobalCatalogItem = mongoose.models.GlobalCatalogItem || mongoose.model("GlobalCatalogItem", globalCatalogItemSchema);
 const Creditor = mongoose.models.Creditor || mongoose.model("Creditor", creditorSchema);
 const StockItem = mongoose.models.StockItem || mongoose.model("StockItem", stockItemSchema);
 const StockUsage = mongoose.models.StockUsage || mongoose.model("StockUsage", stockUsageSchema);
@@ -909,6 +920,18 @@ async function seedDefaults() {
   if (!await MarketingPayment.countDocuments()) await MarketingPayment.insertMany(defaultMarketingPayments);
   if (!await MarketingSupportTicket.countDocuments()) await MarketingSupportTicket.insertMany(defaultMarketingSupportTickets);
   if (!await WebsitePlan.countDocuments()) await WebsitePlan.insertMany(defaultWebsitePlans);
+  if (!await GlobalCatalogItem.countDocuments()) {
+    await GlobalCatalogItem.insertMany(defaultCatalogItems.map(item => ({
+      catalogId: item.id,
+      name: item.name,
+      image: item.image || "",
+      sourceCount: 1,
+      lastSeenCanteenId: DEFAULT_CANTEEN_ID
+    })));
+  }
+  const catalogCount = await GlobalCatalogItem.countDocuments();
+  const menuCount = await MenuItem.countDocuments();
+  if (catalogCount < Math.min(menuCount, 100)) await syncGlobalCatalogFromMenuItems();
   await reconcileApprovedCanteens();
 }
 
@@ -963,6 +986,7 @@ async function ensureDatabaseIndexes() {
       { unique: true, name: "canteenId_1_id_1" }
     );
   }
+  await GlobalCatalogItem.collection.createIndex({ name: 1 }, { name: "name_1" });
 }
 
 async function connectDatabase() {
@@ -1024,6 +1048,7 @@ async function globalItemSuggestions(search = "", canteenId = DEFAULT_CANTEEN_ID
     const name = String(item?.name || "").trim();
     if (!name || !name.toLowerCase().includes(query)) return;
     rows.push({
+      catalogId: Number(item.catalogId || item.id || 0),
       name,
       nameTe: String(item.nameTe || item.teluguName || "").trim(),
       image: String(item.image || "").trim(),
@@ -1033,9 +1058,11 @@ async function globalItemSuggestions(search = "", canteenId = DEFAULT_CANTEEN_ID
   };
   defaultCatalogItems.forEach(push);
   if (!mongoReady) {
+    memory.globalCatalogItems.forEach(push);
     memory.menuItems.forEach(push);
   } else {
     const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    (await GlobalCatalogItem.find({ name: regex }).select("catalogId name image").limit(80).lean()).forEach(push);
     (await MenuItem.find({ name: regex }).select("name nameTe image category").limit(80).lean()).forEach(push);
   }
   const unique = new Map();
@@ -1047,6 +1074,48 @@ async function globalItemSuggestions(search = "", canteenId = DEFAULT_CANTEEN_ID
   return [...unique.values()]
     .sort((a, b) => Number(b.image ? 1 : 0) - Number(a.image ? 1 : 0) || Number(a.active) - Number(b.active) || a.name.localeCompare(b.name))
     .slice(0, 12);
+}
+
+async function upsertGlobalCatalogItem(item, options = {}) {
+  const name = String(item?.name || "").replace(/\s+/g, " ").trim();
+  if (!name) return null;
+  const image = String(item.image || "").trim();
+  if (!mongoReady) {
+    const existing = memory.globalCatalogItems.find(row => String(row.name || "").toLowerCase() === name.toLowerCase());
+    if (existing) {
+      if (image && !existing.image) existing.image = image;
+      existing.sourceCount = Number(existing.sourceCount || 1) + 1;
+      existing.lastSeenCanteenId = item.canteenId || existing.lastSeenCanteenId || DEFAULT_CANTEEN_ID;
+      return existing;
+    }
+    const entry = { catalogId: nextId(memory.globalCatalogItems), name, image, sourceCount: 1, lastSeenCanteenId: item.canteenId || DEFAULT_CANTEEN_ID };
+    memory.globalCatalogItems.push(entry);
+    return entry;
+  }
+  const existing = await GlobalCatalogItem.findOne({ name: new RegExp(`^${name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }).lean();
+  const next = {
+    catalogId: existing?.catalogId || (Date.now() + Math.floor(Math.random() * 1000)),
+    name,
+    lastSeenCanteenId: item.canteenId || DEFAULT_CANTEEN_ID,
+    updatedAt: new Date()
+  };
+  if (image) next.image = image;
+  const update = existing
+    ? (options.increment === false ? { $set: next } : { $set: next, $inc: { sourceCount: 1 } })
+    : { $set: { ...next, sourceCount: 1 } };
+  return GlobalCatalogItem.findOneAndUpdate(existing ? { _id: existing._id } : { name }, update, { upsert: true, new: true }).lean();
+}
+
+async function syncGlobalCatalogFromMenuItems() {
+  if (!mongoReady) return;
+  const seen = await MenuItem.find({ name: { $type: "string", $ne: "" } })
+    .select("canteenId name image")
+    .sort({ updatedAt: -1 })
+    .limit(3000)
+    .lean();
+  for (const item of seen) {
+    await upsertGlobalCatalogItem(item, { increment: false }).catch(() => {});
+  }
 }
 
 function normalizeSubItems(value) {
@@ -1095,14 +1164,17 @@ async function saveMenuItem(payload) {
     );
     if (existing) Object.assign(existing, item);
     else memory.menuItems.push(item);
+    await upsertGlobalCatalogItem(item);
     return item;
   }
 
-  return modelToPlain(await MenuItem.findOneAndUpdate(
+  const saved = modelToPlain(await MenuItem.findOneAndUpdate(
     { canteenId, id: item.id },
     { $set: item },
     { new: true, upsert: true }
   ));
+  await upsertGlobalCatalogItem(saved).catch(error => console.warn("Global catalog update failed:", error.message));
+  return saved;
 }
 
 async function deleteMenuItem(id, canteenId = DEFAULT_CANTEEN_ID) {

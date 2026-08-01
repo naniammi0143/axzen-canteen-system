@@ -6208,7 +6208,7 @@
         ${sectionHeader(section)}
         <div class="work-card item-add-card">
           <h3>Add Item</h3>
-          <input id="newItemName" placeholder="Item name">
+          <input id="newItemName" placeholder="Search item name">
           <div class="item-suggest-box" id="itemSuggestionBox"></div>
           <input id="newItemNameTe" placeholder="Telugu print name">
           <select id="newItemCategory">${categoryOrder.filter(item => item !== "All" && !isSingleItemsCategory(item)).map(item => `<option value="${esc(item)}">${esc(categoryLabel(item))}</option>`).join("")}</select>
@@ -6348,7 +6348,7 @@
         const disabled = item.active ? " disabled" : "";
         return `<button class="item-suggest-row" data-suggest-index="${index}" type="button"${disabled}>
           <span class="item-suggest-thumb" ${thumb}>${item.image ? "" : esc(String(item.name || "I").slice(0, 1).toUpperCase())}</span>
-          <span><strong>${esc(item.name || "Item")}</strong><small>${esc(item.category || "Snacks")}${item.image ? " | Image ready" : ""}</small></span>
+          <span><strong>${esc(item.name || "Item")}</strong><small>${item.catalogId ? `#${esc(item.catalogId)} | ` : ""}${esc(item.category || "Snacks")}${item.image ? " | Image ready" : ""}</small></span>
           <span class="item-suggest-action">${item.active ? "Already in menu" : "Use"}</span>
         </button>`;
       }).join("");
@@ -7266,7 +7266,7 @@
         return;
       }
       if (selectedPayment === "Cancel") payload.total = 0;
-      setPaymentStatus("Success. Printing...", "status ok");
+      setPaymentStatus("Print started...", "status ok");
       receipt(payload).catch(() => {
         $("posMessage").textContent = "Order saved. Printer not connected.";
         $("posMessage").className = "status error";
@@ -7278,10 +7278,10 @@
       closeOptionsModal();
       if (!$("posView").classList.contains("hidden")) setPosSection("billing");
 
-      (async () => {
+      setTimeout(() => (async () => {
         try {
           if (!navigator.onLine) throw new Error("offline");
-          const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload), timeoutMs: 1800 });
+          const saved = await api("/orders", { method: "POST", body: JSON.stringify(payload), timeoutMs: 700 });
           serverOnline = true;
           orders.push(saved.order || payload);
           updateSyncStatus();
@@ -7295,11 +7295,11 @@
           $("posMessage").className = "status ok";
         } finally {
           renderAdmin();
-          setTimeout(() => loadAdminData(), 80);
+          setTimeout(() => loadAdminData(), 500);
           if (pendingOrders().length) setTimeout(syncPendingOrders, 900);
           orderSubmitting = false;
         }
-      })();
+      })(), 0);
     }
 
     function dashboardStats() {
