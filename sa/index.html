@@ -3417,10 +3417,10 @@
         </div>
         <div class="top-actions-pos">
           <button class="icon-btn home-category-btn" id="homeCategoryBtn" type="button" aria-label="Open categories">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.4"/><rect x="14" y="4" width="6" height="6" rx="1.4"/><rect x="4" y="14" width="6" height="6" rx="1.4"/><rect x="14" y="14" width="6" height="6" rx="1.4"/></svg>
           </button>
           <button class="icon-btn" type="button" aria-label="Notifications">!</button>
-          <button class="admin-chip" id="profileBtn" type="button" aria-label="Profile"><span class="avatar-chip">A</span><span id="posUserLabel">Admin</span> v</button>
+          <button class="admin-chip" id="profileBtn" type="button" aria-label="Profile"><span class="avatar-chip">A</span><span id="posUserLabel">Admin</span></button>
         </div>
       </header>
       <section class="content">
@@ -5259,7 +5259,10 @@
     function dateInputValue(date) {
       const next = new Date(date);
       if (Number.isNaN(next.getTime())) return "";
-      return next.toISOString().slice(0, 10);
+      const year = next.getFullYear();
+      const month = String(next.getMonth() + 1).padStart(2, "0");
+      const day = String(next.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
     }
 
     function reportRange() {
@@ -5510,6 +5513,7 @@
     function reportPageHtml() {
       const range = reportRange();
       const rows = rangedOrders();
+      const todayRows = todayOrders();
       const filteredExpenses = rangedExpenses();
       const expenseTotal = filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
       const totals = rows.reduce((sum, order) => {
@@ -5527,6 +5531,7 @@
         });
         return sum;
       }, { total: 0, cash: 0, online: 0, credit: 0, items: new Map() });
+      const todayTotal = todayRows.reduce((sum, order) => sum + Number(order.total || 0), 0);
       const itemRows = [...totals.items.entries()].sort((a, b) => b[1].amount - a[1].amount).map(([name, item]) => `
         <tr><td>${esc(name)}</td><td>${item.qty}</td><td>${money(item.amount)}</td></tr>`).join("");
       const dateGroups = new Map();
@@ -5609,8 +5614,9 @@
             <div class="status" id="reportShareStatus"></div>
           </div>
           <div class="report-kpi-grid">
-            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><path d="M4 18l5-5 4 3 7-8"/><path d="M14 8h6v6"/></svg></i><span>Total Sale</span></div><strong>${money(totals.total)}</strong><small>Up 12.5% vs yesterday</small></div>
-            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon purple"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg></i><span>Total Bills</span></div><strong>${rows.length}</strong><small>Up 16.7% vs yesterday</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><path d="M4 18l5-5 4 3 7-8"/><path d="M14 8h6v6"/></svg></i><span>Today Sale</span></div><strong>${money(todayTotal)}</strong><small>${todayRows.length} bills today</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon purple"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg></i><span>Range Sale</span></div><strong>${money(totals.total)}</strong><small>${range.from} to ${range.to}</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon purple"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg></i><span>Total Bills</span></div><strong>${rows.length}</strong><small>Selected date bills</small></div>
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon green"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4"/><path d="M18 10v4"/></svg></i><span>Cash</span></div><strong>${money(totals.cash)}</strong><small>Up 8.2% vs yesterday</small></div>
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18"/><path d="M12 3c-3 3-3 15 0 18"/></svg></i><span>Online</span></div><strong>${money(totals.online)}</strong><small>Up 18.9% vs yesterday</small></div>
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon orange"><svg viewBox="0 0 24 24"><path d="M4 8h16v11H4z"/><path d="M8 8V6h8v2"/><path d="M8 13h8"/></svg></i><span>Expenses</span></div><strong>${money(expenseTotal)}</strong><small>- 0% vs yesterday</small></div>
