@@ -269,6 +269,30 @@
     .employee-card:nth-child(3n) { background: #fffaf5; }
     .employee-card h3 { font-size: 17px; line-height: 24px; font-weight: 700; }
     .employee-card .doc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .printer-hero { display: flex; justify-content: space-between; gap: 18px; align-items: center; margin-bottom: 22px; }
+    .printer-title { display: flex; gap: 14px; align-items: center; }
+    .printer-icon { width: 54px; height: 54px; border-radius: 14px; display: grid; place-items: center; background: #eef4ff; color: var(--blue); box-shadow: 0 10px 24px #2563eb18; }
+    .printer-icon svg { width: 26px; height: 26px; stroke: currentColor; }
+    .printer-title h2 { font-size: 28px; color: #07143a; }
+    .printer-title p { margin: 4px 0 0; color: var(--muted); }
+    .printer-search { width: min(360px, 100%); position: relative; }
+    .printer-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+    .printer-kpi { min-height: 118px; border: 1px solid #dbe5f4; border-radius: 14px; background: white; display: flex; gap: 16px; align-items: center; padding: 22px; box-shadow: 0 14px 34px #1118270b; }
+    .printer-kpi .printer-icon { width: 58px; height: 58px; }
+    .printer-kpi span { display: block; color: #42547a; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .printer-kpi strong { display: block; margin-top: 7px; font-size: 28px; line-height: 34px; color: #07143a; }
+    .printer-kpi small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .printer-board { border: 1px solid #dce6f5; border-radius: 16px; background: white; padding: 26px; box-shadow: 0 18px 45px #11182710; }
+    .printer-filters { display: grid; grid-template-columns: 1.6fr .9fr .9fr .9fr auto auto; gap: 14px; align-items: end; margin-bottom: 22px; }
+    .printer-table th { color: #53648d; font-size: 12px; text-transform: uppercase; }
+    .printer-detail { display: flex; align-items: center; gap: 12px; min-width: 230px; }
+    .printer-thumb { width: 42px; height: 42px; border-radius: 10px; background: linear-gradient(145deg, #111827, #2f3b4d); box-shadow: inset 0 -8px 16px #0004; position: relative; }
+    .printer-thumb::after { content: ""; position: absolute; left: 8px; right: 8px; top: 11px; height: 5px; border-radius: 999px; background: #94a3b8; }
+    .printer-size { display: inline-flex; margin-top: 5px; min-height: 22px; align-items: center; border-radius: 7px; padding: 0 10px; background: #eaf2ff; color: #2563eb; font-size: 12px; font-weight: 700; }
+    .printer-size.mm80 { background: #f1eafe; color: #6d28d9; }
+    .connection-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #10b981; margin-right: 8px; }
+    .connection-dot.offline { background: #ef4444; }
+    .action-dots { width: 40px; height: 40px; border-radius: 10px; border: 1px solid #dbe5f4; background: white; color: #07143a; font-size: 20px; }
     .pill { display: inline-flex; min-height: 24px; align-items: center; border-radius: 999px; padding: 0 9px; font-size: 12px; line-height: 18px; font-weight: 600; background: #eef4ff; color: var(--blue); }
     .pill.green { background: #ecfdf5; color: var(--green); }
     .pill.orange { background: #fff7ed; color: #c2410c; }
@@ -356,6 +380,13 @@
       .employee-grid { grid-template-columns: 1fr; }
       .employee-card .doc-row { grid-template-columns: 1fr; }
       .canteen-facts { grid-template-columns: 1fr 1fr; }
+      .printer-hero { display: grid; gap: 12px; }
+      .printer-title h2 { font-size: 22px; }
+      .printer-kpis { grid-template-columns: 1fr; gap: 10px; }
+      .printer-kpi { min-height: 92px; padding: 14px; }
+      .printer-board { padding: 14px; border-radius: 12px; }
+      .printer-filters { grid-template-columns: 1fr; gap: 10px; }
+      .printer-detail { min-width: 190px; }
       .primary, .secondary, .danger, .ghost { min-height: 44px; }
       input, select, textarea { min-height: 44px; }
     }
@@ -428,6 +459,7 @@
       ["dashboard", "My Dashboard"],
       ["add", "Add Canteen"],
       ["my", "My Registrations"],
+      ["printers", "My Printers"],
       ["payments", "Payment Pending"],
       ["performance", "My Performance"]
     ];
@@ -591,6 +623,16 @@
       const models = [...new Set((state.printers || []).map(item => item.model).filter(Boolean))];
       return `<option value="">Select printer</option>${models.map(model => `<option value="${esc(model)}">${esc(model)}</option>`).join("")}`;
     }
+    function availableEmployeePrinters() {
+      return (state.printers || []).filter(item =>
+        item.status === "With Executive" &&
+        String(item.allottedTo || "") === String(user.employeeId || "")
+      );
+    }
+    function assignedPrinterOptions() {
+      const printers = availableEmployeePrinters();
+      return `<option value="">Select allotted printer</option>${printers.map(item => `<option value="${esc(item.serialNumber || "")}" data-model="${esc(item.model || "")}">${esc(item.serialNumber || "")} - ${esc(item.model || "Thermal Printer")}</option>`).join("")}`;
+    }
     function employeeHtml(rows) {
       const cards = rows.map(item => `<article class="employee-card">
         <div><h3>${esc(item.name)}</h3><span class="muted">${esc(item.employeeId)} | ${item.role === "super_admin" ? "Super Admin" : "Marketing"}</span></div>
@@ -606,23 +648,50 @@
     }
     function printerInventoryHtml() {
       const printers = state.printers || [];
-      const stock = printers.filter(item => item.status !== "Allotted").length;
+      const stock = printers.filter(item => item.status === "Stock" || !item.status).length;
+      const withExecutives = printers.filter(item => item.status === "With Executive").length;
       const allotted = printers.filter(item => item.status === "Allotted").length;
       const employeeOptions = (state.users || []).filter(item => item.role === "marketing").map(item => `<option value="${esc(item.employeeId)}">${esc(item.name)} (${esc(item.employeeId)})</option>`).join("");
-      const rows = printers.map(item => `<tr data-printer-row="${esc(`${item.serialNumber} ${item.model} ${item.allottedToName || ""}`.toLowerCase())}">
-        <td><strong>${esc(item.serialNumber || "-")}</strong><br><span class="muted">${esc(item.model || item.provider || "-")}</span></td>
-        <td><span class="pill ${item.status === "Allotted" ? "green" : "gray"}">${esc(item.status || "Stock")}</span></td>
-        <td><select data-allot-printer="${esc(item.serialNumber || "")}"><option value="">Stock</option>${employeeOptions}</select></td>
-        <td>${esc(item.marketingCanteenName || "-")}</td>
-      </tr>`).join("");
-      return `<section class="grid-3"><div class="card green"><span>Stock</span><strong>${stock}</strong></div><div class="card blue"><span>Allotted</span><strong>${allotted}</strong></div><div class="card"><span>Total</span><strong>${printers.length}</strong></div></section>
-      <section class="panel"><h2>Add Printer</h2><form class="form-grid" id="printerForm">
+      const assignedCanteens = new Set(printers.filter(item => item.marketingCanteenName).map(item => item.marketingCanteenName));
+      const rows = printers.map((item, index) => {
+        const status = item.status || "Stock";
+        const mm80 = String(item.model || "").includes("80");
+        const statusClass = status === "Allotted" ? "green" : status === "With Executive" ? "orange" : "gray";
+        const connection = status === "Allotted" ? "Online" : status === "With Executive" ? "With Executive" : "In Stock";
+        return `<tr data-printer-row="${esc(`${item.serialNumber} ${item.model} ${item.allottedToName || ""} ${item.marketingCanteenName || ""} ${status}`.toLowerCase())}">
+        <td>${index + 1}</td>
+        <td><div class="printer-detail"><div class="printer-thumb"></div><div><strong>${esc(item.provider || "Axzen Thermal Printer")}</strong><br><span class="printer-size ${mm80 ? "mm80" : ""}">${mm80 ? "80mm" : "58mm"}</span></div></div></td>
+        <td><strong>${esc(item.serialNumber || "-")}</strong></td>
+        <td>${esc(item.model || "-")}</td>
+        <td><strong>${esc(item.marketingCanteenName || "-")}</strong><br><span class="muted">${esc(item.allottedToName || "Company Stock")}</span></td>
+        <td><span class="pill ${statusClass}">${esc(status)}</span></td>
+        <td><span class="connection-dot ${status === "Stock" ? "offline" : ""}"></span>${esc(connection)}</td>
+        <td>${formatDateTime(item.updatedAt || item.createdAt || item.installedAt)}<br><span class="muted">${status === "Allotted" ? "Canteen allotted" : status === "With Executive" ? "Ready for registration" : "Ready to assign"}</span></td>
+        <td>${user.role === "super_admin" ? `<select data-allot-printer="${esc(item.serialNumber || "")}" ${status === "Allotted" ? "disabled" : ""}><option value="">Stock</option>${(state.users || []).filter(row => row.role === "marketing").map(row => `<option value="${esc(row.employeeId)}" ${row.employeeId === item.allottedTo ? "selected" : ""}>${esc(row.name)} (${esc(row.employeeId)})</option>`).join("")}</select>` : `<button class="action-dots" type="button" title="${esc(status)}">⋮</button>`}</td>
+      </tr>`;
+      }).join("");
+      const addForm = user.role === "super_admin" ? `<section class="panel"><h2>Add Company Printer Purchase</h2><form class="form-grid" id="printerForm">
         <label>Printer model <input id="printerModelInput" required placeholder="Thermal 80mm"></label>
         <label>Serial number <input id="printerSerialInput" required placeholder="PRN001"></label>
         <label>Bluetooth name <input id="printerBluetoothInput"></label>
         <button class="primary" type="submit">Add Printer</button>
-      </form></section>
-      <section class="panel"><div class="toolbar"><h2>Printer List</h2><input id="printerSearch" placeholder="Search serial, model, employee"></div><div class="table-wrap"><table><thead><tr><th>Printer</th><th>Status</th><th>Allotted To</th><th>Canteen</th></tr></thead><tbody>${rows || `<tr><td colspan="4">No printers</td></tr>`}</tbody></table></div></section>`;
+      </form></section>` : "";
+      return `<section class="printer-hero"><div class="printer-title"><div class="printer-icon">${navIcon("printers").replace("nav-ico", "")}</div><div><h2>Printer Inventory</h2><p>Manage and monitor all printers across canteens.</p></div></div><div class="printer-search"><input id="printerSearch" placeholder="Search printers..."></div></section>
+      <section class="printer-kpis">
+        <div class="printer-kpi"><div class="printer-icon">${navIcon("printers").replace("nav-ico", "")}</div><div><span>Total Printers</span><strong>${printers.length}</strong><small>All registered</small></div></div>
+        <div class="printer-kpi"><div class="printer-icon">${navIcon("employees").replace("nav-ico", "")}</div><div><span>With Executives</span><strong>${withExecutives}</strong><small>Ready for canteen</small></div></div>
+        <div class="printer-kpi"><div class="printer-icon">${navIcon("dashboard").replace("nav-ico", "")}</div><div><span>In Stock</span><strong>${stock}</strong><small>Company stock</small></div></div>
+        <div class="printer-kpi"><div class="printer-icon">${navIcon("canteens").replace("nav-ico", "")}</div><div><span>Assigned Canteens</span><strong>${assignedCanteens.size}</strong><small>Total locations</small></div></div>
+      </section>
+      ${addForm}
+      <section class="printer-board"><div class="printer-filters">
+        <input id="printerBoardSearch" placeholder="Search by Serial No, Model or Canteen...">
+        <select id="printerStatusFilter"><option value="">All Status</option><option>Stock</option><option>With Executive</option><option>Allotted</option></select>
+        <select><option>All Connections</option><option>Online</option><option>Offline</option></select>
+        <select><option>All Canteens</option>${[...assignedCanteens].map(name => `<option>${esc(name)}</option>`).join("")}</select>
+        <button class="ghost" type="button">Export</button>
+        ${user.role === "super_admin" ? `<button class="primary" type="button" onclick="document.getElementById('printerModelInput')?.focus()">Add Printer</button>` : ""}
+      </div><div class="table-wrap"><table class="printer-table"><thead><tr><th>#</th><th>Printer Details</th><th>Serial Number</th><th>Model</th><th>Canteen / Executive</th><th>Status</th><th>Connection</th><th>Last Seen</th><th>Actions</th></tr></thead><tbody>${rows || `<tr><td colspan="9">No printers</td></tr>`}</tbody></table></div></section>`;
     }
     function canteensTable(rows, actions = true) {
       const mobileCards = rows.map((item, index) => `<article class="canteen-card tone-${index % 6}">
@@ -763,8 +832,8 @@
         <label>State <input id="state"></label>
         <label>Counters <input id="counters" type="number" min="1" value="1"></label>
         <label>Printers required <input id="printersRequired" type="number" min="0" value="1"></label>
-        <label>Printer <select id="printerModel" required>${printerModelOptions()}</select></label>
-        <label>Printer serial number <input id="printerSerialNumber" placeholder="Enter stock serial number" required></label>
+        <label>Printer serial number <select id="printerSerialNumber" required>${assignedPrinterOptions()}</select></label>
+        <label>Printer model <input id="printerModel" readonly placeholder="Select serial first"></label>
         <label>Selected plan <select id="selectedPlan">${planOptionsHtml("Starter")}</select></label>
         <label>Trial or paid <select id="planType"><option>Trial</option><option>Paid</option></select></label>
         <label>Plan start <input id="planStartDate" type="date" value="${today()}"></label>
@@ -778,7 +847,13 @@
       </form></section>`;
       $("canteenForm").addEventListener("submit", submitCanteen);
       $("printersRequired").addEventListener("input", syncPrinterRequired);
+      $("printerSerialNumber").addEventListener("change", syncSelectedPrinterModel);
       syncPrinterRequired();
+      syncSelectedPrinterModel();
+    }
+    function syncSelectedPrinterModel() {
+      const option = $("printerSerialNumber")?.selectedOptions?.[0];
+      if ($("printerModel")) $("printerModel").value = option?.dataset?.model || "";
     }
     function syncPrinterRequired() {
       const required = Number($("printersRequired")?.value || 0) > 0;
@@ -864,15 +939,21 @@
         const employee = (state.users || []).find(item => item.employeeId === select.value);
         await updateAction("/marketing-api/printers", {
           serialNumber: select.dataset.allotPrinter,
-          status: employee ? "Allotted" : "Stock",
+          status: employee ? "With Executive" : "Stock",
           allottedTo: employee?.employeeId || "",
           allottedToName: employee?.name || ""
         }, "Printer allocation updated");
       }));
-      if ($("printerSearch")) $("printerSearch").addEventListener("input", event => {
-        const q = event.target.value.toLowerCase();
-        document.querySelectorAll("[data-printer-row]").forEach(row => row.classList.toggle("hidden", q && !row.dataset.printerRow.includes(q)));
-      });
+      const applyPrinterFilter = () => {
+        const q = (($("printerSearch")?.value || $("printerBoardSearch")?.value || "")).toLowerCase();
+        const statusValue = $("printerStatusFilter")?.value || "";
+        document.querySelectorAll("[data-printer-row]").forEach(row => {
+          const hay = row.dataset.printerRow || "";
+          row.classList.toggle("hidden", Boolean((q && !hay.includes(q)) || (statusValue && !hay.includes(statusValue.toLowerCase()))));
+        });
+      };
+      ["printerSearch", "printerBoardSearch", "printerStatusFilter"].forEach(id => $(id)?.addEventListener("input", applyPrinterFilter));
+      $("printerStatusFilter")?.addEventListener("change", applyPrinterFilter);
     }
     function render() {
       const titles = {

@@ -549,8 +549,8 @@
       ).slice().sort((a, b) => productSortValue(a) - productSortValue(b));
       const rows = visible.map((item, index) => `<tr>
         <td><div class="name-cell"><img class="item-thumb" src="${esc(item.image || "")}" alt=""><strong>${esc(item.name)}</strong></div></td>
-        <td><span class="pill">${esc(item.category)}</span>${item.hidden ? `<br><span class="pill gray">Hidden</span>` : ""}</td>
-        <td>${money(item.price)}${Array.isArray(item.subItems) && item.subItems.length ? `<br><span class="muted">${item.subItems.length} sub items</span>` : ""}</td>
+        <td><span class="pill">${esc(item.category)}</span>${item.billingType === "weight" ? `<br><span class="pill orange">Weight Billing</span>` : ""}${item.hidden ? `<br><span class="pill gray">Hidden</span>` : ""}</td>
+        <td>${money(item.price)}${item.billingType === "weight" ? `<br><span class="muted">per kg</span>` : ""}${Array.isArray(item.subItems) && item.subItems.length ? `<br><span class="muted">${item.subItems.length} sub items</span>` : ""}</td>
         <td>${productSortValue(item, index)}</td>
         <td><div class="row-actions"><button class="ghost" data-move-product="${item.id}" data-direction="up" type="button">Up</button><button class="ghost" data-move-product="${item.id}" data-direction="down" type="button">Down</button><button class="secondary" data-toggle-hidden="${item.id}" type="button">${item.hidden ? "Show" : "Hide"}</button><button class="secondary" data-edit-product="${item.id}" type="button">Edit</button><button class="danger" data-delete-product="${item.id}" type="button">Delete</button></div></td>
       </tr>`).join("");
@@ -564,6 +564,7 @@
         name: $("productName").value,
         price: $("productPrice").value,
         category: $("productCategory").value || "Snacks",
+        billingType: $("productBillingType").value || "quantity",
         image: $("productImage").value,
         sortOrder: $("productSortOrder").value || undefined,
         hidden: $("productHidden").checked,
@@ -614,7 +615,7 @@
     }
 
     function openProductModal(item = {}) {
-      const categories = [...new Set(["Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner", ...dashboard.products.map(row => row.category).filter(Boolean)])];
+      const categories = [...new Set(["Tiffin", "Meals", "Tea", "Snacks", "Juice", "Drinks", "Lunch", "Dinner", "Chicken Center", ...dashboard.products.map(row => row.category).filter(Boolean)])];
       const mount = $("modalMount");
       mount.innerHTML = `
         <div class="modal-backdrop" data-close-modal>
@@ -627,8 +628,9 @@
               <div class="modal-body">
                 <input id="productId" type="hidden" value="${esc(item.id || "")}">
                 <label>Name <input id="productName" value="${esc(item.name || "")}" required></label>
-                <label>Price <input id="productPrice" type="number" min="0" value="${Number(item.price || 0)}" required></label>
+                <label>Price / Kg Rate <input id="productPrice" type="number" min="0" value="${Number(item.price || 0)}" required></label>
                 <label>Category <input id="productCategory" list="productCategories" value="${esc(item.category || "Snacks")}" required><datalist id="productCategories">${categories.map(category => `<option value="${esc(category)}"></option>`).join("")}</datalist></label>
+                <label>Billing Type <select id="productBillingType"><option value="quantity" ${item.billingType !== "weight" ? "selected" : ""}>Quantity Billing</option><option value="weight" ${item.billingType === "weight" ? "selected" : ""}>Weight Billing</option></select></label>
                 <label>Display Order <input id="productSortOrder" type="number" min="0" value="${Number(item.sortOrder ?? item.id ?? (dashboard.products.length + 1))}"></label>
                 <label><input id="productHidden" type="checkbox" ${item.hidden ? "checked" : ""}> Hide from billing menu</label>
                 <label>Image URL <input id="productImage" value="${esc(item.image || "")}"></label>

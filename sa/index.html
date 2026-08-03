@@ -65,6 +65,13 @@
     }
 
     .brand-lockup { text-align: center; }
+    .brand-lockup img {
+      width: min(210px, 72vw);
+      height: auto;
+      display: block;
+      margin: 0 auto;
+      object-fit: contain;
+    }
     .powered { margin: 0 0 5px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; }
     .brand-name { margin: 0; font-size: 48px; line-height: .95; letter-spacing: 0; color: var(--ink); }
     .tagline { margin: 7px 0 0; color: var(--blue); font-size: 15px; font-weight: 900; text-transform: uppercase; }
@@ -3353,8 +3360,7 @@
     <section class="login" id="loginView">
       <div class="brand-lockup">
         <p class="powered">Powered by</p>
-        <h1 class="brand-name">axzen</h1>
-        <p class="tagline">Infotech</p>
+        <img src="assets/axzenPOS.png" alt="axzenPOS">
       </div>
       <form class="login-card" id="loginForm">
         <h1>Sign in</h1>
@@ -3374,7 +3380,7 @@
     <section class="login hidden" id="setupView">
       <div class="brand-lockup">
         <p class="powered">Canteen Activation</p>
-        <h1 class="brand-name">axzen</h1>
+        <img src="assets/axzenPOS.png" alt="axzenPOS">
         <p class="tagline">Create owner login</p>
       </div>
       <form class="login-card activation-card" id="ownerSetupForm">

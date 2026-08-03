@@ -62,7 +62,9 @@ const defaultMenuItems = [
   { id: 5, name: "Dosa", price: 45, category: "Tiffin", image: "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=500&q=80" },
   { id: 6, name: "Samosa", price: 15, category: "Snacks", image: "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=500&q=80" },
   { id: 7, name: "Veg Puff", price: 25, category: "Snacks", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=500&q=80" },
-  { id: 8, name: "Juice", price: 35, category: "Juice", image: "https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=80" }
+  { id: 8, name: "Juice", price: 35, category: "Juice", image: "https://images.unsplash.com/photo-1622597467836-f3285f2131b8?auto=format&fit=crop&w=500&q=80" },
+  { id: 9, name: "Chicken", price: 340, category: "Chicken Center", billingType: "weight", image: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=500&q=80", subItems: [{ name: "Curry Cut", price: 340 }, { name: "Boneless", price: 420 }, { name: "Leg Piece", price: 360 }] },
+  { id: 10, name: "Mutton", price: 780, category: "Chicken Center", billingType: "weight", image: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=500&q=80", subItems: [{ name: "Curry Cut", price: 780 }, { name: "Keema", price: 820 }, { name: "Bone", price: 650 }] }
 ];
 
 const defaultCatalogItems = [
@@ -310,7 +312,7 @@ const orderSchema = new mongoose.Schema({
   subtotal: Number,
   discount: Number,
   total: Number,
-  items: [{ id: Number, lineId: String, parentId: Number, name: String, nameTe: String, printName: String, optionName: String, price: Number, qty: Number }],
+  items: [{ id: Number, lineId: String, parentId: Number, name: String, nameTe: String, printName: String, optionName: String, price: Number, qty: Number, billingType: String, grams: Number, ratePerKg: Number, lineTotal: Number }],
   syncedAt: String
 }, { timestamps: true, collection: "orders" });
 
@@ -329,7 +331,7 @@ const saleSchema = new mongoose.Schema({
   subtotal: Number,
   discount: Number,
   total: Number,
-  items: [{ id: Number, lineId: String, parentId: Number, name: String, nameTe: String, printName: String, optionName: String, price: Number, qty: Number }],
+  items: [{ id: Number, lineId: String, parentId: Number, name: String, nameTe: String, printName: String, optionName: String, price: Number, qty: Number, billingType: String, grams: Number, ratePerKg: Number, lineTotal: Number }],
   syncedAt: String
 }, { timestamps: true, collection: "sales" });
 
@@ -360,6 +362,7 @@ const menuItemSchema = new mongoose.Schema({
   price: Number,
   halfPrice: Number,
   category: String,
+  billingType: { type: String, enum: ["quantity", "weight"], default: "quantity" },
   image: String,
   nameTe: String,
   subItems: [{ name: String, nameTe: String, price: Number }],
@@ -1149,6 +1152,7 @@ async function saveMenuItem(payload) {
     price: Number(payload.price || 0),
     halfPrice: Number(payload.halfPrice || payload.singlePrice || payload.halfItemPrice || 0),
     category: payload.category || "Snacks",
+    billingType: payload.billingType === "weight" ? "weight" : "quantity",
     image: payload.image || "",
     subItems: normalizeSubItems(payload.subItems),
     sortOrder: payload.sortOrder !== undefined && payload.sortOrder !== "" ? Number(payload.sortOrder) : Number(payload.id || nextId(current)),
@@ -1689,8 +1693,8 @@ function topItemsFromOrders(orders) {
   orders.forEach(order => (order.items || []).forEach(item => {
     const key = item.name || "Item";
     const current = counts.get(key) || { name: key, qty: 0, total: 0 };
-    current.qty += Number(item.qty || 0);
-    current.total += Number(item.qty || 0) * Number(item.price || 0);
+    current.qty += Number(item.qty || item.grams || 0);
+    current.total += Number(item.lineTotal ?? (Number(item.qty || 0) * Number(item.price || 0)));
     counts.set(key, current);
   }));
   return [...counts.values()].sort((a, b) => b.qty - a.qty);
@@ -2018,17 +2022,25 @@ async function allPrinters() {
   return Printer.find({}).sort({ createdAt: -1 }).lean();
 }
 
+function printerStatusLabel(value) {
+  const status = String(value || "Stock").trim();
+  if (["With Executive", "Executive", "Assigned"].includes(status)) return "With Executive";
+  if (["Allotted", "Installed", "Canteen"].includes(status)) return "Allotted";
+  return "Stock";
+}
+
 async function savePrinterInventory(payload, actor) {
   const serialNumber = String(payload.serialNumber || "").trim().toUpperCase();
   if (!serialNumber) throw new Error("Printer serial number is required");
   const existingPrinter = await findPrinterBySerial(serialNumber) || {};
+  const nextStatus = printerStatusLabel(payload.status ?? existingPrinter.status ?? "Stock");
   const printer = {
     provider: String(payload.provider ?? existingPrinter.provider ?? "Thermal Printer").trim(),
     model: String(payload.model ?? existingPrinter.model ?? payload.provider ?? "Thermal Printer").trim(),
     serialNumber,
     bluetoothName: String(payload.bluetoothName ?? existingPrinter.bluetoothName ?? "").trim(),
     macAddress: String(payload.macAddress ?? existingPrinter.macAddress ?? "").trim(),
-    status: String(payload.status ?? existingPrinter.status ?? "Stock"),
+    status: nextStatus,
     allottedTo: String(payload.allottedTo ?? existingPrinter.allottedTo ?? "").trim(),
     allottedToName: String(payload.allottedToName ?? existingPrinter.allottedToName ?? "").trim(),
     marketingCanteenId: Number(payload.marketingCanteenId ?? existingPrinter.marketingCanteenId ?? 0) || undefined,
@@ -2036,11 +2048,20 @@ async function savePrinterInventory(payload, actor) {
     installedBy: existingPrinter.installedBy || actor?.employeeId || actor?.name || "",
     installedAt: existingPrinter.installedAt || new Date().toISOString()
   };
-  if (printer.status !== "Allotted") {
+  if (printer.status === "Stock") {
     printer.allottedTo = "";
     printer.allottedToName = "";
     printer.marketingCanteenId = undefined;
     printer.marketingCanteenName = "";
+  }
+  if (printer.status === "With Executive") {
+    if (!printer.allottedTo) throw new Error("Select sales executive for printer allocation");
+    printer.marketingCanteenId = undefined;
+    printer.marketingCanteenName = "";
+  }
+  if (printer.status === "Allotted") {
+    if (!printer.allottedTo) throw new Error("Printer must be assigned to a sales executive before canteen allotment");
+    if (!printer.marketingCanteenId || !printer.marketingCanteenName) throw new Error("Select canteen for printer allotment");
   }
   if (!mongoReady) {
     const existing = memory.printers.find(item => String(item.serialNumber || "").toUpperCase() === serialNumber);
@@ -2055,6 +2076,21 @@ async function findPrinterBySerial(serialNumber) {
   const serial = String(serialNumber || "").trim().toUpperCase();
   if (!serial) return null;
   return (await allPrinters()).find(item => String(item.serialNumber || "").toUpperCase() === serial) || null;
+}
+
+async function validatePrinterForMarketingCanteen(canteen, user) {
+  if (Number(canteen.printersRequired || 0) <= 0) return null;
+  if (!canteen.printerModel || !canteen.printerSerialNumber) {
+    throw new Error("Select one allotted printer for this canteen");
+  }
+  const printer = await findPrinterBySerial(canteen.printerSerialNumber);
+  if (!printer || String(printer.model || "") !== canteen.printerModel) {
+    throw new Error("Selected printer serial number does not match printer model");
+  }
+  if (printerStatusLabel(printer.status) !== "With Executive" || String(printer.allottedTo || "") !== String(user.employeeId || "")) {
+    throw new Error("This printer is not available in your allotted printer list");
+  }
+  return printer;
 }
 
 function normalizeMarketingCanteen(payload, user) {
@@ -2097,20 +2133,22 @@ async function createMarketingCanteen(payload, user) {
   if (!canteen.canteenName || !canteen.ownerName || !canteen.ownerMobile) {
     throw new Error("Canteen name, owner name, and owner mobile are required");
   }
-  if (Number(canteen.printersRequired || 0) > 0) {
-    if (!canteen.printerModel || !canteen.printerSerialNumber) {
-      throw new Error("Printer model and serial number are required");
-    }
-    const printer = await findPrinterBySerial(canteen.printerSerialNumber);
-    if (!printer || String(printer.model || "") !== canteen.printerModel) {
-      throw new Error("Printer serial number does not match selected printer");
-    }
-    if (printer.status === "Allotted" && Number(printer.marketingCanteenId || 0) !== Number(canteen.id)) {
-      throw new Error("Printer serial number already allotted");
-    }
-  }
+  const selectedPrinter = await validatePrinterForMarketingCanteen(canteen, user);
   if (!mongoReady) memory.marketingCanteens.unshift(canteen);
   else await MarketingCanteen.create(canteen);
+  if (selectedPrinter) {
+    await savePrinterInventory({
+      serialNumber: selectedPrinter.serialNumber,
+      model: selectedPrinter.model,
+      status: "Allotted",
+      allottedTo: user.employeeId,
+      allottedToName: user.name,
+      marketingCanteenId: canteen.id,
+      marketingCanteenName: canteen.canteenName
+    }, user);
+    canteen.printersAssigned = 1;
+    await updateMarketingCanteen(canteen.id, { printersAssigned: 1 }, user);
+  }
   await addMarketingPayment({
     canteenId: canteen.id,
     canteenName: canteen.canteenName,
@@ -2222,7 +2260,7 @@ function isToday(dateValue) {
   return date.toDateString() === today.toDateString();
 }
 
-function marketingSummary(canteens, users, activities, payments = [], supportTickets = [], enquiries = []) {
+function marketingSummary(canteens, users, activities, payments = [], supportTickets = [], enquiries = [], printers = []) {
   const active = canteens.filter(item => item.status === "Active");
   const trial = canteens.filter(item => item.status === "Trial");
   const expired = canteens.filter(item => item.status === "Expired" || (item.planExpiryDate && new Date(item.planExpiryDate) < new Date() && item.status !== "Blocked"));
@@ -2233,8 +2271,8 @@ function marketingSummary(canteens, users, activities, payments = [], supportTic
   const monthlyRevenue = visiblePayments
     .filter(item => new Date(item.createdAt || Date.now()).getMonth() === new Date().getMonth())
     .reduce((sum, item) => sum + Number(item.amount || 0), 0);
-  const printersAssigned = canteens.reduce((sum, item) => sum + Number(item.printersAssigned || 0), 0);
-  const printersRequired = canteens.reduce((sum, item) => sum + Number(item.printersRequired || 0), 0);
+  const printersAssigned = printers.filter(item => printerStatusLabel(item.status) === "Allotted").length;
+  const printersAvailable = printers.filter(item => printerStatusLabel(item.status) !== "Allotted").length;
   const onlineRecentMs = 2 * 60 * 1000;
   const onlineCanteens = canteens.filter(item => item.lastSeenAt && Date.now() - new Date(item.lastSeenAt).getTime() <= onlineRecentMs);
   const performance = users.filter(user => user.role === "marketing").map(user => {
@@ -2264,7 +2302,7 @@ function marketingSummary(canteens, users, activities, payments = [], supportTic
       monthlyRevenue,
       pendingPayments,
       printersAssigned,
-      printersAvailable: Math.max(0, printersRequired - printersAssigned),
+      printersAvailable,
       openSupportTickets: supportTickets.filter(item => item.status === "Open").length,
       totalEnquiries: enquiries.length,
       newEnquiries: enquiries.filter(item => ["new", "New"].includes(String(item.status || "New"))).length,
@@ -2772,7 +2810,7 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     enquiries: visibleEnquiries,
     websitePlans: req.marketingUser.role === "super_admin" ? websitePlans : [],
     activities: req.marketingUser.role === "super_admin" ? activities : [],
-    summary: marketingSummary(canteens, visibleUsers, req.marketingUser.role === "super_admin" ? activities : [], visiblePayments, visibleSupportTickets, visibleEnquiries)
+    summary: marketingSummary(canteens, visibleUsers, req.marketingUser.role === "super_admin" ? activities : [], visiblePayments, visibleSupportTickets, visibleEnquiries, visiblePrinters)
   });
 });
 
@@ -2815,6 +2853,14 @@ app.post("/marketing-api/users/:employeeId/block", requireDatabase, requireSuper
 
 app.post("/marketing-api/printers", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
+    const nextStatus = printerStatusLabel(req.body.status);
+    const existing = await findPrinterBySerial(req.body.serialNumber);
+    const sameExecutive = existing &&
+      printerStatusLabel(existing.status) === "With Executive" &&
+      String(existing.allottedTo || "") === String(req.body.allottedTo || "");
+    if (nextStatus === "With Executive" && existing && printerStatusLabel(existing.status) !== "Stock" && !sameExecutive) {
+      return res.status(400).json({ success: false, message: "Only in-stock printers can be assigned to a sales executive" });
+    }
     const printer = await savePrinterInventory(req.body, req.marketingUser);
     res.json({ success: true, printer, printers: await allPrinters() });
   } catch (error) {

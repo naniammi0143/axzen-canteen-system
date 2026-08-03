@@ -26,6 +26,8 @@ const LINE = "#E8ECF3";
 const MUTED = "#6B7280";
 const GREEN = "#16C784";
 const HALF_ITEMS_CATEGORY = "Half Items";
+const WEIGHT_BILLING_CATEGORY = "Chicken Center";
+const WEIGHT_CATEGORY_KEYWORDS = ["chicken", "meat", "meet", "mutton", "fish", "seafood"];
 
 const defaultItemCategories = [
   "Breakfast",
@@ -38,6 +40,7 @@ const defaultItemCategories = [
   "Coffee",
   "Juices",
   "Desserts",
+  WEIGHT_BILLING_CATEGORY,
   HALF_ITEMS_CATEGORY
 ];
 const registeredCanteen = {
@@ -51,6 +54,11 @@ type PaymentMode = "Online" | "Cash" | "Split" | "Credit";
 type OrderDraft = [string, string, string, string];
 type CartLine = Product & {
   qty: number;
+  lineId: string;
+  grams?: number;
+  lineTotal?: number;
+  ratePerKg?: number;
+  billingNote?: string;
 };
 type DrawerOption =
   | "Dashboard"
@@ -103,6 +111,7 @@ type Product = {
   price: number;
   category: Category;
   image: string;
+  billingType?: "quantity" | "weight";
   hidden?: boolean;
   subItems?: string[];
 };
@@ -214,6 +223,24 @@ const products: Product[] = [
     image: "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=500&q=80"
   },
   {
+    id: "7",
+    name: "Chicken",
+    price: 340,
+    category: WEIGHT_BILLING_CATEGORY,
+    billingType: "weight",
+    subItems: ["Curry Cut", "Boneless", "Leg Piece"],
+    image: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=500&q=80"
+  },
+  {
+    id: "8",
+    name: "Mutton",
+    price: 780,
+    category: WEIGHT_BILLING_CATEGORY,
+    billingType: "weight",
+    subItems: ["Curry Cut", "Keema", "Bone"],
+    image: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=500&q=80"
+  },
+  {
     id: "6",
     name: "Coffee",
     price: 20,
@@ -248,6 +275,7 @@ function HomeScreenContent() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [activeOption, setActiveOption] = useState<DrawerOption>("New Billing");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [weightProduct, setWeightProduct] = useState<Product | null>(null);
   const [catalog, setCatalog] = useState<Product[]>(products);
   const [appCategories, setAppCategories] = useState<string[]>(defaultItemCategories);
   const [superAdminSettings, setSuperAdminSettings] = useState<SuperAdminSettings>({
@@ -271,8 +299,8 @@ function HomeScreenContent() {
   }, [catalog]);
 
   const categoryTabs = useMemo(() => ["All", ...appCategories], [appCategories]);
-  const cartCount = useMemo(() => cartItems.reduce((sum, item) => sum + item.qty, 0), [cartItems]);
-  const total = useMemo(() => cartItems.reduce((sum, item) => sum + item.price * item.qty, 0), [cartItems]);
+  const cartCount = useMemo(() => cartItems.length, [cartItems]);
+  const total = useMemo(() => cartItems.reduce((sum, item) => sum + cartLineAmount(item), 0), [cartItems]);
 
   const visibleProducts = useMemo(() => {
     const activeProducts = catalog.filter(item => !item.hidden);
@@ -291,13 +319,36 @@ function HomeScreenContent() {
   }, [activeCategory, catalog]);
 
   const addProduct = useCallback((product: Product) => {
+    if (isWeightBilledProduct(product)) {
+      setWeightProduct(product);
+      return;
+    }
     setCartItems(current => {
       const existing = current.find(item => item.id === product.id);
       if (existing) {
         return current.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
       }
-      return [...current, { ...product, qty: 1 }];
+      return [...current, { ...product, qty: 1, lineId: `${product.id}-${Date.now()}` }];
     });
+  }, []);
+
+  const addWeightProduct = useCallback((product: Product, amount: number, grams: number, optionName?: string) => {
+    const lineName = optionName ? `${product.name} - ${optionName}` : product.name;
+    setCartItems(current => ([
+      ...current,
+      {
+        ...product,
+        id: `${product.id}-${Date.now()}`,
+        lineId: `${product.id}-${Date.now()}`,
+        name: lineName,
+        qty: 1,
+        grams,
+        lineTotal: amount,
+        ratePerKg: product.price,
+        billingNote: `${Math.round(grams)}g @ Rs ${formatMoney(product.price)}/kg`
+      }
+    ]));
+    setWeightProduct(null);
   }, []);
 
   const clearCart = useCallback(() => {
@@ -309,14 +360,14 @@ function HomeScreenContent() {
 
     const orderId = `#${Date.now().toString().slice(-5)}`;
     const createdAt = new Date();
-    const orderTotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const orderTotal = cartItems.reduce((sum, item) => sum + cartLineAmount(item), 0);
     const receiptRows = cartItems
       .map(item => `
         <tr>
           <td>${item.name}</td>
-          <td>${item.qty}</td>
-          <td>Rs ${formatMoney(item.price)}</td>
-          <td>Rs ${formatMoney(item.price * item.qty)}</td>
+          <td>${cartLineQtyLabel(item)}</td>
+          <td>${isWeightBilledProduct(item) ? `Rs ${formatMoney(item.ratePerKg || item.price)}/kg` : `Rs ${formatMoney(item.price)}`}</td>
+          <td>Rs ${formatMoney(cartLineAmount(item))}</td>
         </tr>
       `)
       .join("");
@@ -488,6 +539,7 @@ function HomeScreenContent() {
         )}
         <BottomNav activeOption={activeOption} onSelect={selectBottomNav} bottomInset={insets.bottom} />
         {selectedProduct && <SubItemsSheet product={selectedProduct} onClose={closeSubItems} />}
+        {weightProduct && <WeightBillingSheet product={weightProduct} onClose={() => setWeightProduct(null)} onAdd={addWeightProduct} />}
         {drawerOpen && (
           <Drawer
             width={Math.min(width * 0.82, 340)}
@@ -839,6 +891,24 @@ function formatDateInput(date: Date) {
 
 function formatMoney(amount: number) {
   return amount.toFixed(2);
+}
+
+function isWeightBilledProduct(product: Product) {
+  const category = String(product.category || "").toLowerCase();
+  return product.billingType === "weight" || WEIGHT_CATEGORY_KEYWORDS.some(keyword => category.includes(keyword));
+}
+
+function cartLineAmount(item: CartLine) {
+  return Number(item.lineTotal ?? item.price * item.qty);
+}
+
+function cartLineQtyLabel(item: CartLine) {
+  if (isWeightBilledProduct(item) && item.grams) return `${Math.round(item.grams)}g`;
+  return String(item.qty);
+}
+
+function productRateLabel(product: Product) {
+  return isWeightBilledProduct(product) ? `Rs ${formatMoney(product.price)}/kg` : `Rs ${product.price}`;
 }
 
 function buildRange(range: ReportRange, fromDate: string, toDate: string): [string, string] {
@@ -1805,6 +1875,9 @@ function ItemManagerScreen({
   const [newPrice, setNewPrice] = useState("");
   const [newImage, setNewImage] = useState("");
   const [newSubItem, setNewSubItem] = useState("");
+  const [newBillingType, setNewBillingType] = useState<"quantity" | "weight">(
+    WEIGHT_CATEGORY_KEYWORDS.some(keyword => String(categories[0] || "").toLowerCase().includes(keyword)) ? "weight" : "quantity"
+  );
   const [subInputs, setSubInputs] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -1842,6 +1915,7 @@ function ItemManagerScreen({
       name,
       price,
       category: newCategory,
+      billingType: newBillingType,
       subItems: newSubItem.trim() ? [newSubItem.trim()] : undefined,
       image: newImage.trim() || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80"
     };
@@ -1851,6 +1925,7 @@ function ItemManagerScreen({
     setNewPrice("");
     setNewImage("");
     setNewSubItem("");
+    setNewBillingType("quantity");
     setError("");
   };
 
@@ -1884,14 +1959,24 @@ function ItemManagerScreen({
             <TouchableOpacity
               key={category}
               activeOpacity={0.85}
-              onPress={() => setNewCategory(category)}
+              onPress={() => {
+                setNewCategory(category);
+                if (WEIGHT_CATEGORY_KEYWORDS.some(keyword => category.toLowerCase().includes(keyword))) setNewBillingType("weight");
+              }}
               style={[styles.smallChip, newCategory === category && styles.smallChipActive]}
             >
               <Text style={[styles.smallChipText, newCategory === category && styles.smallChipTextActive]}>{category}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        <TextInput value={newPrice} onChangeText={setNewPrice} keyboardType="numeric" placeholder="Price" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <View style={styles.categoryPicker}>
+          {(["quantity", "weight"] as const).map(type => (
+            <TouchableOpacity key={type} activeOpacity={0.85} onPress={() => setNewBillingType(type)} style={[styles.smallChip, newBillingType === type && styles.smallChipActive]}>
+              <Text style={[styles.smallChipText, newBillingType === type && styles.smallChipTextActive]}>{type === "weight" ? "Weight Billing" : "Qty Billing"}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <TextInput value={newPrice} onChangeText={setNewPrice} keyboardType="numeric" placeholder={newBillingType === "weight" ? "Kg rate" : "Price"} placeholderTextColor="#8a94a6" style={styles.realInput} />
         <TextInput value={newImage} onChangeText={setNewImage} placeholder="Image URL optional" placeholderTextColor="#8a94a6" style={styles.realInput} />
         <TextInput value={newSubItem} onChangeText={setNewSubItem} placeholder="Sub item optional" placeholderTextColor="#8a94a6" style={styles.realInput} />
         {!!error && <Text style={styles.errorText}>{error}</Text>}
@@ -1917,7 +2002,7 @@ function ItemManagerScreen({
             )}
             <View style={styles.manageInfo}>
               <Text style={styles.listTitle}>{item.name}</Text>
-              <Text style={styles.listSub}>{item.category} - {item.hidden ? "Hidden" : "Visible"}</Text>
+              <Text style={styles.listSub}>{item.category} - {isWeightBilledProduct(item) ? "Weight billing" : "Qty billing"} - {item.hidden ? "Hidden" : "Visible"}</Text>
             </View>
             <TouchableOpacity activeOpacity={0.86} style={styles.miniActionButton} onPress={() => setEditingId(editingId === item.id ? null : item.id)}>
               <Text style={styles.miniActionText}>{editingId === item.id ? "Done" : "Edit"}</Text>
@@ -1941,7 +2026,7 @@ function ItemManagerScreen({
                   value={String(item.price)}
                   onChangeText={value => updateProduct(item.id, { price: Number(value) || 0 })}
                   keyboardType="numeric"
-                  placeholder="Price"
+                  placeholder={isWeightBilledProduct(item) ? "Kg rate" : "Price"}
                   placeholderTextColor="#8a94a6"
                   style={styles.realInput}
                 />
@@ -1954,11 +2039,26 @@ function ItemManagerScreen({
                 />
               </View>
               <View style={styles.categoryPicker}>
+                {(["quantity", "weight"] as const).map(type => (
+                  <TouchableOpacity
+                    key={type}
+                    activeOpacity={0.85}
+                    onPress={() => updateProduct(item.id, { billingType: type })}
+                    style={[styles.smallChip, (item.billingType || (isWeightBilledProduct(item) ? "weight" : "quantity")) === type && styles.smallChipActive]}
+                  >
+                    <Text style={[styles.smallChipText, (item.billingType || (isWeightBilledProduct(item) ? "weight" : "quantity")) === type && styles.smallChipTextActive]}>{type === "weight" ? "Weight Billing" : "Qty Billing"}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.categoryPicker}>
                 {categories.map(category => (
                   <TouchableOpacity
                     key={category}
                     activeOpacity={0.85}
-                    onPress={() => updateProduct(item.id, { category })}
+                    onPress={() => updateProduct(item.id, {
+                      category,
+                      billingType: WEIGHT_CATEGORY_KEYWORDS.some(keyword => category.toLowerCase().includes(keyword)) ? "weight" : item.billingType
+                    })}
                     style={[styles.smallChip, item.category === category && styles.smallChipActive]}
                   >
                     <Text style={[styles.smallChipText, item.category === category && styles.smallChipTextActive]}>{category}</Text>
@@ -2180,6 +2280,7 @@ const ProductCard = memo(function ProductCard({
   onLongPress: (product: Product) => void;
 }) {
   const isHalfItem = product.category === HALF_ITEMS_CATEGORY;
+  const isWeightItem = isWeightBilledProduct(product);
 
   return (
     <TouchableOpacity
@@ -2204,7 +2305,8 @@ const ProductCard = memo(function ProductCard({
       <View style={styles.productInfo}>
         <View style={styles.productTextBlock}>
           <Text numberOfLines={1} style={styles.productName}>{product.name}</Text>
-          <Text style={styles.productPrice}>Rs {product.price}</Text>
+          <Text style={styles.productPrice}>{productRateLabel(product)}</Text>
+          {isWeightItem && <Text style={styles.productMeta}>Weight bill</Text>}
         </View>
         <View style={styles.productAddBadge}>
           <Text style={styles.productAddText}>+</Text>
@@ -2244,6 +2346,111 @@ function SubItemsSheet({ product, onClose }: { product: Product; onClose: () => 
             <Text style={styles.emptySubItemsText}>Empty</Text>
           </View>
         )}
+      </View>
+    </View>
+  );
+}
+
+function WeightBillingSheet({
+  product,
+  onClose,
+  onAdd
+}: {
+  product: Product;
+  onClose: () => void;
+  onAdd: (product: Product, amount: number, grams: number, optionName?: string) => void;
+}) {
+  const options = product.subItems ?? [];
+  const [rate, setRate] = useState(String(product.price || ""));
+  const [amount, setAmount] = useState("");
+  const [grams, setGrams] = useState("");
+  const [optionName, setOptionName] = useState(options[0] || "");
+  const [error, setError] = useState("");
+
+  const rateNumber = Number(rate) || 0;
+  const amountNumber = Number(amount) || 0;
+  const gramsNumber = Number(grams) || 0;
+
+  const updateAmount = (value: string) => {
+    setAmount(value);
+    const nextAmount = Number(value);
+    if (rateNumber > 0 && Number.isFinite(nextAmount)) {
+      setGrams(nextAmount > 0 ? String(Math.round((nextAmount / rateNumber) * 1000)) : "");
+    }
+    setError("");
+  };
+
+  const updateGrams = (value: string) => {
+    setGrams(value);
+    const nextGrams = Number(value);
+    if (rateNumber > 0 && Number.isFinite(nextGrams)) {
+      setAmount(nextGrams > 0 ? String(Math.round((nextGrams / 1000) * rateNumber)) : "");
+    }
+    setError("");
+  };
+
+  const updateRate = (value: string) => {
+    setRate(value);
+    const nextRate = Number(value);
+    if (nextRate > 0 && gramsNumber > 0) {
+      setAmount(String(Math.round((gramsNumber / 1000) * nextRate)));
+    } else if (nextRate > 0 && amountNumber > 0) {
+      setGrams(String(Math.round((amountNumber / nextRate) * 1000)));
+    }
+    setError("");
+  };
+
+  const submit = () => {
+    const finalRate = Number(rate);
+    const finalAmount = Number(amount);
+    const finalGrams = Number(grams);
+    if (!finalRate || finalRate <= 0) {
+      setError("Enter kg rate");
+      return;
+    }
+    if (!finalAmount || finalAmount <= 0 || !finalGrams || finalGrams <= 0) {
+      setError("Enter price or grams");
+      return;
+    }
+    onAdd({ ...product, price: finalRate, billingType: "weight" }, finalAmount, finalGrams, optionName);
+  };
+
+  return (
+    <View style={styles.subSheetLayer} pointerEvents="box-none">
+      <Pressable style={styles.subSheetOverlay} onPress={onClose} />
+      <View style={styles.subSheet}>
+        <View style={styles.subSheetHeader}>
+          <View>
+            <Text style={styles.subSheetTitle}>{product.name}</Text>
+            <Text style={styles.subSheetSub}>Weight billing</Text>
+          </View>
+          <TouchableOpacity activeOpacity={0.8} onPress={onClose} style={styles.subSheetClose}>
+            <Text style={styles.subSheetCloseText}>x</Text>
+          </TouchableOpacity>
+        </View>
+
+        {options.length > 0 && (
+          <View style={styles.categoryPicker}>
+            {options.map(item => (
+              <TouchableOpacity key={item} activeOpacity={0.85} onPress={() => setOptionName(item)} style={[styles.smallChip, optionName === item && styles.smallChipActive]}>
+                <Text style={[styles.smallChipText, optionName === item && styles.smallChipTextActive]}>{item}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        <TextInput value={rate} onChangeText={updateRate} keyboardType="numeric" placeholder="Today kg rate" placeholderTextColor="#8a94a6" style={styles.realInput} />
+        <View style={styles.inputRow}>
+          <TextInput value={amount} onChangeText={updateAmount} keyboardType="numeric" placeholder="Price Rs" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.inputFlex]} />
+          <TextInput value={grams} onChangeText={updateGrams} keyboardType="numeric" placeholder="Grams" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.inputFlex]} />
+        </View>
+        <Text style={styles.listSub}>
+          {rateNumber > 0 ? `Rs ${formatMoney(rateNumber)}/kg` : "Set today rate"}{amountNumber > 0 && gramsNumber > 0 ? ` - Rs ${formatMoney(amountNumber)} = ${Math.round(gramsNumber)}g` : ""}
+        </Text>
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+        <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={submit}>
+          <Text style={styles.primaryActionText}>Add Weight Item</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -3025,6 +3232,13 @@ const styles = StyleSheet.create({
     color: GREEN,
     fontSize: 16,
     lineHeight: 21,
+    fontWeight: "900"
+  },
+  productMeta: {
+    marginTop: 3,
+    color: MUTED,
+    fontSize: 11,
+    lineHeight: 15,
     fontWeight: "900"
   },
   productAddBadge: {
