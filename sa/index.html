@@ -1030,6 +1030,153 @@
     .donut-admin span { width: 82px; height: 82px; display: grid; place-items: center; border-radius: 50%; background: white; text-align: center; font-weight: 950; }
     .admin-sale-row, .admin-stock-row { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 10px; align-items: center; min-height: 62px; border: 1px solid #e8edf4; border-radius: 14px; padding: 9px; margin-bottom: 8px; }
     .row-icon { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: #e8f3ff; color: #007aff; font-weight: 950; }
+    .more-home {
+      display: grid;
+      gap: 16px;
+      padding-bottom: 8px;
+    }
+    .more-identity {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+      padding: 4px 2px 0;
+    }
+    .more-brand strong {
+      display: block;
+      color: #07142f;
+      font-size: 30px;
+      line-height: 1.02;
+      font-weight: 950;
+      letter-spacing: 0;
+    }
+    .more-brand span {
+      display: block;
+      margin-top: 8px;
+      color: #2563eb;
+      font-size: 21px;
+      line-height: 1.1;
+      font-weight: 900;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+    }
+    .more-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .more-summary-card {
+      min-height: 86px;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+      border: 1px solid #e1e8f2;
+      border-radius: 18px;
+      background: #fff;
+      padding: 14px;
+      box-shadow: 0 10px 26px #1118270a;
+    }
+    .more-summary-card svg {
+      width: 24px;
+      height: 24px;
+      stroke: #2563eb;
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .more-summary-card strong {
+      color: #07142f;
+      font-size: 14px;
+      font-weight: 950;
+      line-height: 1.15;
+    }
+    .more-summary-card span {
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+    .more-card {
+      border: 1px solid #e8edf4;
+      border-radius: 20px;
+      background: #fff;
+      padding: 16px;
+      box-shadow: 0 14px 34px #1118270d;
+    }
+    .more-card h2 {
+      margin: 0 0 16px;
+      color: #07142f;
+      font-size: 19px;
+      font-weight: 950;
+    }
+    .more-card h2::after {
+      content: "";
+      display: block;
+      width: 72px;
+      height: 5px;
+      margin-top: 10px;
+      border-radius: 999px;
+      background: #2563eb;
+      box-shadow: 0 8px 18px #2563eb38;
+    }
+    .more-list {
+      display: grid;
+      gap: 10px;
+    }
+    .more-row {
+      width: 100%;
+      min-height: 76px;
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) 24px;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid #edf1f7;
+      border-radius: 16px;
+      background: #fff;
+      padding: 12px;
+      color: #07142f;
+      text-align: left;
+      box-shadow: 0 8px 20px #11182708;
+    }
+    .more-row-icon {
+      width: 46px;
+      height: 46px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #eaf3ff;
+      color: #2563eb;
+    }
+    .more-row-icon svg {
+      width: 23px;
+      height: 23px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .more-row strong {
+      display: block;
+      color: #07142f;
+      font-size: 15px;
+      font-weight: 950;
+      line-height: 1.15;
+    }
+    .more-row small {
+      display: block;
+      margin-top: 5px;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+    .more-row-arrow {
+      color: #07142f;
+      font-size: 24px;
+      font-weight: 900;
+      text-align: right;
+    }
     .payment-pill { border-radius: 999px; padding: 8px 12px; background: #e8fff0; color: #16a34a; font-size: 12px; font-weight: 900; }
     .payment-pill.online { background: #e8f3ff; color: #007aff; }
     .payment-pill.credit { background: #fff6df; color: #b45309; }
@@ -7486,14 +7633,51 @@
 
     function moreAdminHtml() {
       const items = [
-        ["users", "Users", "Create and manage cashiers"],
-        ["reports", "Reports", "Date wise, item wise and payment reports"],
-        ["whatsapp", "WhatsApp Reports", "Auto report and admin number"],
-        ["settings", "Settings", "Canteen name, logo and server"],
-        ["billing", "Open Billing", "Go to POS billing screen"],
-        ["logout", "Logout", "Sign out from this device"]
+        ["users", "Users", "Create and manage cashiers", "users"],
+        ["reports", "Reports", "Date wise, item wise and payment reports", "reports"],
+        ["whatsapp", "WhatsApp Reports", "Auto report and admin number", "whatsapp"],
+        ["settings", "Settings", "Canteen name, logo and server", "settings"],
+        ["billing", "Open Billing", "Go to POS billing screen", "receipt"],
+        ["logout", "Logout", "Sign out from this device", "logout"]
       ];
-      return `<div class="panel"><h2>More</h2>${items.map(([key, title, sub]) => `<button class="admin-sale-row" data-more-action="${key}" type="button"><span class="row-icon">${title.slice(0, 1)}</span><div><strong>${title}</strong><div class="muted">${sub}</div></div><span class="drawer-arrow">&rsaquo;</span></button>`).join("")}</div>`;
+      const iconSvg = {
+        calendar: `<svg viewBox="0 0 24 24"><path d="M7 3v4"/><path d="M17 3v4"/><path d="M4 9h16"/><path d="M5 5h14v15H5z"/></svg>`,
+        store: `<svg viewBox="0 0 24 24"><path d="M4 10h16l-1.4-5H5.4L4 10Z"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>`,
+        users: `<svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-8 0"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>`,
+        reports: `<svg viewBox="0 0 24 24"><path d="M5 19V5"/><path d="M9 19v-6"/><path d="M14 19V9"/><path d="M19 19v-9"/></svg>`,
+        whatsapp: `<svg viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M9 9c.4 2.4 2.6 4.6 5 5"/></svg>`,
+        settings: `<svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-5l-.3 3a7 7 0 0 0-1.7 1L5.1 6l-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.3 3h5l.3-3a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5Z"/></svg>`,
+        receipt: `<svg viewBox="0 0 24 24"><path d="M7 3h10v18l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2V3Z"/><path d="M9 8h6"/><path d="M9 12h6"/></svg>`,
+        logout: `<svg viewBox="0 0 24 24"><path d="M10 5H5v14h5"/><path d="M14 8l4 4-4 4"/><path d="M8 12h10"/></svg>`
+      };
+      const today = new Date();
+      const dateText = today.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+      const weekday = today.toLocaleDateString("en-IN", { weekday: "long" });
+      return `
+        <div class="more-home">
+          <div class="more-identity">
+            <div class="more-brand">
+              <strong>axzen<br>Infotech</strong>
+              <span>${esc(settings.canteenName || "Main Canteen")}</span>
+            </div>
+            <div class="more-summary-grid">
+              <div class="more-summary-card">${iconSvg.calendar}<strong>${esc(dateText)}</strong><span>${esc(weekday)}</span></div>
+              <div class="more-summary-card">${iconSvg.store}<strong>${esc(settings.canteenName || "Main Canteen")}</strong><span>Canteen</span></div>
+            </div>
+          </div>
+          <div class="more-card">
+            <h2>More</h2>
+            <div class="more-list">
+              ${items.map(([key, title, sub, icon]) => `
+                <button class="more-row" data-more-action="${key}" type="button">
+                  <span class="more-row-icon">${iconSvg[icon] || iconSvg.receipt}</span>
+                  <span><strong>${title}</strong><small>${sub}</small></span>
+                  <span class="more-row-arrow">&rsaquo;</span>
+                </button>
+              `).join("")}
+            </div>
+          </div>
+        </div>`;
     }
 
     function renderAdmin() {
