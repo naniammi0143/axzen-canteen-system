@@ -118,6 +118,7 @@ const defaultMarketingCanteens = [
   {
     id: 1001,
     canteenName: "Sri Lakshmi Foods",
+    businessCategory: "Canteen",
     ownerName: "Ramesh Kumar",
     ownerMobile: "9876543210",
     alternateMobile: "9876500001",
@@ -145,6 +146,7 @@ const defaultMarketingCanteens = [
   {
     id: 1002,
     canteenName: "Metro Staff Canteen",
+    businessCategory: "Canteen",
     ownerName: "Kiran",
     ownerMobile: "9000011111",
     alternateMobile: "",
@@ -439,6 +441,7 @@ const reportSettingSchema = new mongoose.Schema({
 const canteenSchema = new mongoose.Schema({
   canteenId: { type: String, unique: true, index: true },
   name: String,
+  businessCategory: String,
   ownerName: String,
   phone: String,
   address: String,
@@ -480,6 +483,7 @@ const marketingUserSchema = new mongoose.Schema({
 const marketingCanteenSchema = new mongoose.Schema({
   id: { type: Number, index: true },
   canteenName: String,
+  businessCategory: String,
   ownerName: String,
   ownerMobile: String,
   alternateMobile: String,
@@ -1237,10 +1241,24 @@ async function saveCreditor(payload) {
   ));
 }
 
-async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen") {
+function defaultMenuForBusinessCategory(category = "Canteen") {
+  const normalized = String(category || "Canteen").toLowerCase();
+  if (normalized.includes("chicken") || normalized.includes("meat") || normalized.includes("mutton")) {
+    return defaultMenuItems.filter(item => item.billingType === "weight" || String(item.category || "").toLowerCase().includes("chicken"));
+  }
+  if (normalized.includes("cool") || normalized.includes("drink") || normalized.includes("juice")) {
+    return defaultMenuItems.filter(item => ["Juice", "Drinks"].includes(item.category) || ["Water Bottle"].includes(item.name));
+  }
+  if (normalized.includes("retail") || normalized.includes("super") || normalized.includes("grocery")) {
+    return defaultMenuItems.filter(item => ["Drinks", "Snacks", "Juice"].includes(item.category));
+  }
+  return defaultMenuItems.filter(item => item.billingType !== "weight");
+}
+
+async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen", businessCategory = "Canteen") {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   if (!(await allMenuItems(targetCanteenId, { includeHidden: true })).length) {
-    for (const item of defaultMenuItems) {
+    for (const item of defaultMenuForBusinessCategory(businessCategory)) {
       await saveMenuItem({ ...item, canteenId: targetCanteenId });
     }
   }
@@ -2095,9 +2113,11 @@ async function validatePrinterForMarketingCanteen(canteen, user) {
 
 function normalizeMarketingCanteen(payload, user) {
   const planStartDate = String(payload.planStartDate || new Date().toISOString().slice(0, 10));
+  const businessCategory = String(payload.businessCategory || payload.category || payload.businessType || "Canteen").trim() || "Canteen";
   return {
     id: Number(payload.id || Date.now()),
     canteenName: String(payload.canteenName || "").trim(),
+    businessCategory,
     ownerName: String(payload.ownerName || "").trim(),
     ownerMobile: String(payload.ownerMobile || "").trim(),
     alternateMobile: String(payload.alternateMobile || "").trim(),
@@ -2194,6 +2214,7 @@ async function activateApprovedCanteen(canteen, actor) {
   const coreCanteen = {
     canteenId: credentials.activatedCanteenId,
     name: canteen.canteenName,
+    businessCategory: canteen.businessCategory || "Canteen",
     ownerName: canteen.ownerName,
     phone: canteen.ownerMobile,
     address: [canteen.address, canteen.city, canteen.state].filter(Boolean).join(", "),
@@ -2225,7 +2246,7 @@ async function activateApprovedCanteen(canteen, actor) {
     active: true,
     mustChangePassword: true
   });
-  await seedCanteenDefaults(credentials.activatedCanteenId, canteen.canteenName);
+  await seedCanteenDefaults(credentials.activatedCanteenId, canteen.canteenName, canteen.businessCategory || "Canteen");
   if (canteen.printerSerialNumber) {
     await savePrinterInventory({
       serialNumber: canteen.printerSerialNumber,

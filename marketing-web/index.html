@@ -477,6 +477,20 @@
       printers: "Printers",
       activities: "Log"
     };
+    const businessCategories = [
+      "Canteen",
+      "Chicken Center",
+      "Meat Shop",
+      "Restaurant",
+      "Cafe",
+      "Retail Shop",
+      "Supermarket",
+      "Cool Drink Shop",
+      "School / College",
+      "Hotel",
+      "Food Truck",
+      "Other"
+    ];
 
     async function api(path, options = {}) {
       const res = await fetch(API + path, {
@@ -696,11 +710,12 @@
     function canteensTable(rows, actions = true) {
       const mobileCards = rows.map((item, index) => `<article class="canteen-card tone-${index % 6}">
         <div class="canteen-card-head">
-          <div><h3>${esc(item.canteenName)}</h3><div class="meta">${esc(item.city || "-")}, ${esc(item.state || "-")} | ${esc(item.ownerName || "-")}</div></div>
+          <div><h3>${esc(item.canteenName)}</h3><div class="meta">${esc(item.businessCategory || "Canteen")} | ${esc(item.city || "-")}, ${esc(item.state || "-")} | ${esc(item.ownerName || "-")}</div></div>
           <span class="pill ${statusClass(item.status)}">${esc(item.status)}</span>
         </div>
         <div class="canteen-facts">
           <div class="fact"><span>Canteen ID</span><strong>${esc(item.activatedCanteenId || "After approval")}</strong></div>
+          <div class="fact"><span>Category</span><strong>${esc(item.businessCategory || "Canteen")}</strong></div>
           <div class="fact"><span>Payment</span><strong>${money(item.paidAmount)} / Pending ${money(item.pendingAmount)}</strong></div>
           <div class="fact"><span>Plan</span><strong>${esc(item.selectedPlan)} - ${esc(item.planType)}${item.planExpiryDate ? `<br>Expiry: ${esc(item.planExpiryDate)}` : ""}</strong></div>
           <div class="fact"><span>Printers</span><strong>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</strong></div>
@@ -711,8 +726,9 @@
         </div>
         ${actions ? `<div class="row-actions">${actionButtons(item)}</div>` : ""}
       </article>`).join("") || `<div class="muted">No canteens found</div>`;
-      return `<div class="canteen-result"><div class="mobile-canteens">${mobileCards}</div><div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map((item, index) => `<tr class="tone-${index % 4}">
+      return `<div class="canteen-result"><div class="mobile-canteens">${mobileCards}</div><div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Category</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map((item, index) => `<tr class="tone-${index % 4}">
         <td><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.city)}, ${esc(item.state)}</span></td>
+        <td><span class="pill blue">${esc(item.businessCategory || "Canteen")}</span></td>
         <td>${esc(item.ownerName)}<br><span class="muted">${esc(item.ownerMobile)}</span></td>
         <td>${esc(item.selectedPlan)}<br><span class="muted">${esc(item.planType)}${item.planExpiryDate ? ` | Expiry: ${esc(item.planExpiryDate)}` : ""}</span></td>
         <td>${money(item.paidAmount)}<br><span class="muted">Pending ${money(item.pendingAmount)}</span></td>
@@ -721,7 +737,7 @@
         <td>${item.canteenLoginId ? `<strong>ID: ${esc(item.activatedCanteenId || "-")}</strong><br><span class="muted">Login: ${esc(item.canteenLoginId)} | Pass: Hidden</span>` : `<span class="muted">After approval</span>`}</td>
         <td>${esc(item.submittedByName || item.submittedBy)}</td>
         ${actions ? `<td><div class="row-actions">${actionButtons(item)}</div></td>` : ""}
-      </tr>`).join("") || `<tr><td colspan="${actions ? 9 : 8}">No canteens found</td></tr>`}</tbody></table></div></div>`;
+      </tr>`).join("") || `<tr><td colspan="${actions ? 10 : 9}">No canteens found</td></tr>`}</tbody></table></div></div>`;
     }
     function actionButtons(item) {
       if (user.role !== "super_admin") return "";
@@ -824,6 +840,7 @@
     function renderAdd() {
       $("page").innerHTML = `<section class="panel"><h2>Add Canteen Registration</h2><form class="form-grid" id="canteenForm">
         <label>Canteen name <input id="canteenName" required></label>
+        <label>Business category <input id="businessCategory" list="businessCategoryOptions" value="Canteen" required><datalist id="businessCategoryOptions">${businessCategories.map(category => `<option value="${esc(category)}"></option>`).join("")}</datalist></label>
         <label>Owner name <input id="ownerName" required></label>
         <label>Owner mobile <input id="ownerMobile" required></label>
         <label>Alternate mobile <input id="alternateMobile"></label>
@@ -863,7 +880,7 @@
     async function submitCanteen(event) {
       event.preventDefault();
       const submitButton = event.submitter;
-      const fields = ["canteenName", "ownerName", "ownerMobile", "alternateMobile", "address", "city", "state", "counters", "printersRequired", "printerModel", "printerSerialNumber", "selectedPlan", "planType", "planStartDate", "planExpiryDate", "paymentMode", "paidAmount", "pendingAmount", "documents", "notes"];
+      const fields = ["canteenName", "businessCategory", "ownerName", "ownerMobile", "alternateMobile", "address", "city", "state", "counters", "printersRequired", "printerModel", "printerSerialNumber", "selectedPlan", "planType", "planStartDate", "planExpiryDate", "paymentMode", "paidAmount", "pendingAmount", "documents", "notes"];
       const body = Object.fromEntries(fields.map(id => [id, $(id).value]));
       try {
         if (submitButton) submitButton.disabled = true;
@@ -976,7 +993,7 @@
       if (tab === "add") return renderAdd();
       if (tab === "employees") { renderEmployees(); bindEmployeeActions(); return; }
       if (tab === "approvals") $("page").innerHTML = `<section class="panel"><h2>Pending Approval</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
-      else if (tab === "canteens" || tab === "my") $("page").innerHTML = `<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Canteens" : "All Canteens"}</h2><div class="toolbar-left"><select id="searchCategory"><option value="all">All</option><option value="canteenName">Canteen</option><option value="ownerName">Owner</option><option value="city">City</option><option value="status">Status</option></select><input id="searchBox" placeholder="Search by category"></div></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
+      else if (tab === "canteens" || tab === "my") $("page").innerHTML = `<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Canteens" : "All Canteens"}</h2><div class="toolbar-left"><select id="searchCategory"><option value="all">All</option><option value="canteenName">Canteen</option><option value="businessCategory">Business Category</option><option value="ownerName">Owner</option><option value="city">City</option><option value="status">Status</option></select><input id="searchBox" placeholder="Search by category"></div></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
       else if (tab === "enquiries") { $("page").innerHTML = `<section class="panel"><h2>Website Enquiries</h2>${enquiriesHtml(state.enquiries || [])}</section>`; bindEnquiryActions(); return; }
       else if (tab === "plans") { $("page").innerHTML = websitePlansHtml(); bindPlanForms(); return; }
       else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section><section class="panel"><h2>Payment History</h2>${paymentsTable(state.payments || [])}</section>`;
@@ -988,7 +1005,7 @@
         const q = event.target.value.toLowerCase();
         const category = $("searchCategory")?.value || "all";
         const filtered = state.canteens.filter(item => {
-          const hay = category === "all" ? `${item.canteenName} ${item.ownerName} ${item.city} ${item.status}` : String(item[category] || "");
+          const hay = category === "all" ? `${item.canteenName} ${item.businessCategory || ""} ${item.ownerName} ${item.city} ${item.status}` : String(item[category] || "");
           return hay.toLowerCase().includes(q);
         });
         $("page").querySelector(".canteen-result").outerHTML = canteensTable(filtered, user.role === "super_admin");
