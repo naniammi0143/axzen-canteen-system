@@ -451,6 +451,7 @@
       ["enquiries", "Website Enquiries"],
       ["plans", "Website Plans"],
       ["payments", "Payments"],
+      ["billing", "Generate Bill"],
       ["printers", "Printer Inventory"],
       ["performance", "Marketing Performance"],
       ["activities", "Recent Activities"]
@@ -468,6 +469,7 @@
       add: "Add",
       my: "Mine",
       payments: "Pay",
+      billing: "Bill",
       performance: "Stats",
       approvals: "Queue",
       canteens: "Canteens",
@@ -535,6 +537,7 @@
         enquiries: '<path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8"/><path d="M8 13h5"/>',
         plans: '<path d="M20 12V8H4v4"/><path d="M4 16h16"/><path d="M6 4h12v16H6z"/><path d="M9 9h2"/><path d="M9 14h6"/>',
         payments: '<path d="M3 7h18v12H3z"/><path d="M3 10h18"/><path d="M7 15h4"/>',
+        billing: '<path d="M7 3h10l4 4v14H7z"/><path d="M17 3v5h5"/><path d="M10 13h8"/><path d="M10 17h5"/><path d="M5 7H3v14h12v-2"/>',
         printers: '<path d="M6 9V3h12v6"/><path d="M6 17H4a2 2 0 0 1-2-2v-4h20v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>',
         performance: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
         activities: '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/><path d="M12 7v5l3 2"/>',
@@ -632,6 +635,123 @@
           <button class="primary" type="submit">Save Plan</button>
         </form>
       </article>`).join("") || `<div class="muted">No website plans found</div>`}</div></section>`;
+    }
+    function invoiceNumber() {
+      const now = new Date();
+      return `AXZ/IT/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${String(now.getDate()).padStart(2, "0")}`;
+    }
+    function formatInvoiceDate(value) {
+      return new Date(value || Date.now()).toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+    }
+    function billRowTemplate(index = 1, row = {}) {
+      return `<div class="form-grid bill-line" data-bill-line>
+        <label class="wide">Service / Description <textarea data-service-desc rows="3" required>${esc(row.description || "")}</textarea></label>
+        <label>Qty <input data-service-qty type="number" min="1" step="1" value="${Number(row.qty || 1)}"></label>
+        <label>Rate <input data-service-rate type="number" min="0" step="0.01" value="${Number(row.rate || 0)}"></label>
+        <button class="ghost" data-remove-bill-line type="button">Remove</button>
+      </div>`;
+    }
+    function billingHtml() {
+      const now = today();
+      return `<section class="panel">
+        <div class="toolbar"><div><h2>Generate Client Bill</h2><p class="muted">Enter client details, service entries and due date. Generate opens a print-ready invoice; choose Save as PDF.</p></div><button class="secondary" id="previewSampleBill" type="button">Fill Sample</button></div>
+        <form id="billingForm">
+          <div class="form-grid">
+            <label>Client name <input id="billClientName" placeholder="SK FOUNDATION" required></label>
+            <label>Client details <input id="billClientSubtitle" placeholder="Calvary Temple Hospital"></label>
+            <label class="wide">Client address <input id="billClientAddress" placeholder="Hyderabad, Telangana, India"></label>
+            <label>Invoice no <input id="billInvoiceNo" value="${invoiceNumber()}" required></label>
+            <label>Invoice date <input id="billInvoiceDate" type="date" value="${now}" required></label>
+            <label>Billing period <input id="billPeriod" placeholder="01-June-2026 to 30-June-2026"></label>
+            <label>Place of supply <input id="billSupply" value="Telangana (36)"></label>
+            <label>Due date <input id="billDueDate" type="date" required></label>
+            <label>GST % <input id="billGst" type="number" min="0" step="0.01" value="0"></label>
+          </div>
+          <section class="panel" style="box-shadow:none;margin-top:16px">
+            <div class="toolbar"><h2>Service Entries</h2><button class="ghost" id="addBillLine" type="button">Add Service</button></div>
+            <div id="billLines">
+              ${billRowTemplate(1, { description: "Monthly IT Support & Maintenance\\nSystem Checkups, Maintenance, Troubleshooting\\nUser Support, Network & Device Monitoring", qty: 1, rate: 12000 })}
+              ${billRowTemplate(2, { description: "Emergency IT Support Visit\\nAdditional On-site Visit\\nSystem Fixes & Technical Assistance", qty: 1, rate: 3000 })}
+            </div>
+          </section>
+          <div class="row-actions">
+            <button class="primary" type="submit">Generate PDF Bill</button>
+            <button class="ghost" id="clearBillForm" type="button">Clear</button>
+          </div>
+        </form>
+      </section>`;
+    }
+    function bindBilling() {
+      $("addBillLine")?.addEventListener("click", () => $("billLines").insertAdjacentHTML("beforeend", billRowTemplate()));
+      $("billLines")?.addEventListener("click", event => {
+        const btn = event.target.closest("[data-remove-bill-line]");
+        if (!btn) return;
+        if (document.querySelectorAll("[data-bill-line]").length > 1) btn.closest("[data-bill-line]").remove();
+      });
+      $("previewSampleBill")?.addEventListener("click", () => {
+        $("billClientName").value = "SK FOUNDATION";
+        $("billClientSubtitle").value = "Calvary Temple Hospital";
+        $("billClientAddress").value = "Hyderabad, Telangana, India";
+        $("billPeriod").value = "01-June-2026 to 30-June-2026";
+        $("billSupply").value = "Telangana (36)";
+        $("billDueDate").value = today();
+      });
+      $("clearBillForm")?.addEventListener("click", () => {
+        $("billingForm").reset();
+        $("billInvoiceNo").value = invoiceNumber();
+        $("billInvoiceDate").value = today();
+        $("billLines").innerHTML = billRowTemplate(1, { qty: 1, rate: 0 });
+      });
+      $("billingForm")?.addEventListener("submit", event => {
+        event.preventDefault();
+        const services = [...document.querySelectorAll("[data-bill-line]")].map(row => ({
+          description: row.querySelector("[data-service-desc]").value.trim(),
+          qty: Number(row.querySelector("[data-service-qty]").value || 1),
+          rate: Number(row.querySelector("[data-service-rate]").value || 0)
+        })).filter(item => item.description);
+        if (!services.length) return status("Add at least one service entry", "error");
+        openInvoicePrint({
+          clientName: $("billClientName").value,
+          clientSubtitle: $("billClientSubtitle").value,
+          clientAddress: $("billClientAddress").value,
+          invoiceNo: $("billInvoiceNo").value,
+          invoiceDate: $("billInvoiceDate").value,
+          billingPeriod: $("billPeriod").value,
+          placeOfSupply: $("billSupply").value,
+          dueDate: $("billDueDate").value,
+          gstPercent: Number($("billGst").value || 0),
+          services
+        });
+        status("Bill generated. In the new tab, choose Print or Save as PDF.");
+      });
+    }
+    function serviceDescriptionHtml(text) {
+      const lines = String(text || "").split(/\r?\n/).map(item => item.trim()).filter(Boolean);
+      if (!lines.length) return "";
+      return `<strong>${esc(lines[0])}</strong>${lines.slice(1).map(line => `<br><span>• ${esc(line)}</span>`).join("")}`;
+    }
+    function openInvoicePrint(data) {
+      const subtotal = data.services.reduce((sum, item) => sum + (Number(item.qty || 0) * Number(item.rate || 0)), 0);
+      const gst = subtotal * Number(data.gstPercent || 0) / 100;
+      const grandTotal = subtotal + gst;
+      const rows = data.services.map((item, index) => {
+        const amount = Number(item.qty || 0) * Number(item.rate || 0);
+        return `<tr><td>${index + 1}</td><td>${serviceDescriptionHtml(item.description)}</td><td>${Number(item.qty || 0)}</td><td>${money(item.rate).replace("Rs ","")}</td><td>${money(amount).replace("Rs ","")}</td></tr>`;
+      }).join("");
+      const invoiceHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${esc(data.invoiceNo)} - AXZEN Invoice</title><style>
+        @page{size:A4;margin:0}*{box-sizing:border-box}body{margin:0;background:#e5e7eb;font-family:Arial,Helvetica,sans-serif;color:#07143a}.sheet{width:210mm;min-height:297mm;margin:auto;background:#fff;padding:10mm 11mm 9mm;position:relative;border:2px solid #07143a}.top{display:grid;grid-template-columns:1.35fr .85fr;gap:18mm;border-bottom:8px solid #082a75;padding-bottom:8mm}.brand h1{font-size:54px;letter-spacing:-3px;margin:0;color:#08235d}.brand h2{font-size:20px;letter-spacing:18px;margin:4px 0 18px;color:#020617}.services{font-size:13px;line-height:2;color:#020617}.services b{color:#0b45c6;padding:0 8px}.contact{border-left:2px solid #103aa0;padding-left:11mm;font-size:15px;line-height:1.45}.contact div{margin:0 0 9px}.title{display:flex;align-items:center;justify-content:center;gap:16px;margin:9mm 0 6mm;color:#071b64;font-size:30px;font-weight:800}.title:before,.title:after{content:"";height:1px;background:#9fb2dc;width:60mm}.billgrid{display:grid;grid-template-columns:1fr 1fr;gap:18mm;margin-bottom:7mm}.tag{display:inline-block;background:#071b64;color:white;font-weight:800;padding:5px 14px;margin-bottom:8px}.billto h3{font-size:22px;margin:0 0 4px;color:#071b64}.billto p{font-size:16px;line-height:1.45;margin:0;white-space:pre-line}.meta{border:1.5px solid #143aa0;border-radius:7px;padding:10px 14px;font-size:15px}.meta-row{display:grid;grid-template-columns:115px 12px 1fr;gap:8px;margin:0 0 9px}.meta-row strong{font-weight:800}table{width:100%;border-collapse:collapse;font-size:15px}.items th{background:#071b64;color:#fff;padding:10px;border:1px solid #c7d1e3}.items td{vertical-align:top;padding:11px;border:1px solid #c7d1e3}.items td:nth-child(1),.items td:nth-child(3),.items td:nth-child(4),.items td:nth-child(5){text-align:center}.items td:nth-child(5){text-align:right}.items strong{display:block;margin-bottom:5px}.items span{font-size:13px;line-height:1.6}.totals{width:48%;margin-left:auto}.totals td{padding:9px 12px;border:1px solid #c7d1e3}.totals td:last-child{text-align:right}.grand td{background:#071b64;color:#fff;font-size:20px;font-weight:800}.bottom{display:grid;grid-template-columns:1fr .92fr 1.05fr;gap:10mm;margin-top:8mm;align-items:start}.box h4{display:inline-block;background:#071b64;color:#fff;margin:0 0 10px;padding:5px 12px}.scope p,.terms p{margin:8px 0;border-bottom:1px dashed #c7d1e3;padding-bottom:6px;font-size:13px}.bank{border:1.5px solid #143aa0;border-radius:7px;padding:10px}.bank div{display:grid;grid-template-columns:90px 1fr;gap:8px;border-bottom:1px solid #c7d1e3;padding:7px 0}.bank div:last-child{border-bottom:0}.thanks{text-align:center;color:#071b64;font-size:26px;font-family:cursive;margin-top:14px}.sign{text-align:center;margin-top:28px;border-top:1px solid #93a5ca;padding-top:8px}.footer{position:absolute;left:0;right:0;bottom:0;background:#071b64;color:#fff;text-align:center;letter-spacing:4px;padding:10px;font-size:13px}@media print{body{background:#fff}.sheet{border:0;width:210mm;margin:0;box-shadow:none}}</style></head><body><main class="sheet">
+        <section class="top"><div class="brand"><h1>axzen</h1><h2>INFOTECH</h2><div class="services">Software Development <b>|</b> IT Services <b>|</b> Networking <b>|</b> Cloud Solutions<br>POS Solutions <b>|</b> Mobile Apps <b>|</b> Web Development <b>|</b> AI Solutions</div></div><div class="contact"><div>☎ +91 84468 46143<br>☎ +91 87905 68446</div><div>✉ info@axzen.co.in</div><div>🌐 www.axzen.co.in</div><div>📍 H No:13-46/1/B,<br>Aadarsh Nagar, Road No 2,<br>Sherilingampally,<br>Hyderabad - 500019,<br>Telangana, India.</div></div></section>
+        <div class="title">TAX INVOICE</div>
+        <section class="billgrid"><div class="billto"><span class="tag">BILL TO</span><h3>${esc(data.clientName)}</h3><p>${esc([data.clientSubtitle, data.clientAddress].filter(Boolean).join("\\n"))}</p></div><div class="meta"><div class="meta-row"><strong>Invoice No.</strong><span>:</span><span>${esc(data.invoiceNo)}</span></div><div class="meta-row"><strong>Invoice Date</strong><span>:</span><span>${formatInvoiceDate(data.invoiceDate)}</span></div><div class="meta-row"><strong>Billing Period</strong><span>:</span><span>${esc(data.billingPeriod || "-")}</span></div><div class="meta-row"><strong>Place of Supply</strong><span>:</span><span>${esc(data.placeOfSupply || "-")}</span></div><div class="meta-row"><strong>Due Date</strong><span>:</span><span>${formatInvoiceDate(data.dueDate)}</span></div></div></section>
+        <table class="items"><thead><tr><th>S.NO.</th><th>DESCRIPTION</th><th>QTY</th><th>RATE (₹)</th><th>AMOUNT (₹)</th></tr></thead><tbody>${rows}</tbody></table>
+        <table class="totals"><tr><td><strong>SUB TOTAL</strong></td><td>₹ ${subtotal.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr><tr><td><strong>GST @ ${Number(data.gstPercent || 0)}%</strong></td><td>₹ ${gst.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr><tr class="grand"><td>GRAND TOTAL</td><td>₹ ${grandTotal.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}</td></tr></table>
+        <section class="bottom"><div class="box scope"><h4>SCOPE OF WORK</h4><p>Desktop & Laptop Maintenance</p><p>Network Troubleshooting</p><p>Printer Configuration</p><p>User Support</p><p>Software Installation & Updates</p><p>Emergency On-site Technical Support</p></div><div class="box terms"><h4>PAYMENT TERMS</h4><p><strong>Payment Due</strong><br>Within 7 Days</p><p><strong>Payment Mode</strong><br>Bank Transfer</p><p><strong>TDS</strong><br>Not Applicable</p><div class="thanks">Thank you!</div></div><div class="box"><h4>BANK DETAILS</h4><div class="bank"><div><strong>Bank Name</strong><span>AXIS BANK</span></div><div><strong>A/C No.</strong><span>9210020758281</span></div><div><strong>IFSC Code</strong><span>UTIB0001454</span></div><div><strong>Branch</strong><span>SANATH NAGAR</span></div><div><strong>Name</strong><span>AXZEN INFOTECH</span></div></div><div class="sign">Authorized Signature</div></div></section><div class="footer">INNOVATION | TECHNOLOGY | RELIABILITY | GROWTH</div>
+      </main><script>window.addEventListener("load",()=>setTimeout(()=>window.print(),300));<\/script></body></html>`;
+      const win = window.open("", "_blank");
+      if (!win) return status("Popup blocked. Please allow popups and try again.", "error");
+      win.document.open();
+      win.document.write(invoiceHtml);
+      win.document.close();
     }
     function printerModelOptions() {
       const models = [...new Set((state.printers || []).map(item => item.model).filter(Boolean))];
@@ -981,6 +1101,7 @@
         enquiries: ["Website Enquiries", "Leads submitted from pos.axzen.in contact form."],
         plans: ["Website Plans", "Set prices and features shown on pos.axzen.in."],
         payments: ["Payment Management", "Track collections and pending payments."],
+        billing: ["Generate Bill", "Create client invoices and save them as PDF."],
         printers: ["Printer Inventory", "Assign and track printer installation."],
         performance: ["Marketing Performance", "Employee-wise registration and collection results."],
         activities: ["Recent Activities", "Audit trail for onboarding actions."],
@@ -997,6 +1118,7 @@
       else if (tab === "enquiries") { $("page").innerHTML = `<section class="panel"><h2>Website Enquiries</h2>${enquiriesHtml(state.enquiries || [])}</section>`; bindEnquiryActions(); return; }
       else if (tab === "plans") { $("page").innerHTML = websitePlansHtml(); bindPlanForms(); return; }
       else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section><section class="panel"><h2>Payment History</h2>${paymentsTable(state.payments || [])}</section>`;
+      else if (tab === "billing") { $("page").innerHTML = billingHtml(); bindBilling(); return; }
       else if (tab === "printers") { $("page").innerHTML = printerInventoryHtml(); bindPrinterInventory(); return; }
       else if (tab === "performance") $("page").innerHTML = `<section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section>`;
       else if (tab === "activities") $("page").innerHTML = `<section class="panel"><h2>Recent Activities</h2>${activitiesHtml(60)}</section>`;
