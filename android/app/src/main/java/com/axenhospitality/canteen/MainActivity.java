@@ -40,6 +40,7 @@ public class MainActivity extends BridgeActivity {
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private static final int RECEIPT_WIDTH = 384;
     private static final int RECEIPT_MARGIN = 2;
+    private static final byte[] FEED_AND_CUT = new byte[]{0x0A, 0x0A, 0x0A, 0x1B, 0x64, 0x03, 0x1D, 0x56, 0x42, 0x00};
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -119,7 +120,7 @@ public class MainActivity extends BridgeActivity {
                 OutputStream output = ensurePrinterOutput();
                 output.write(new byte[]{0x1B, 0x40});
                 writeChunked(output, text.getBytes(Charset.forName("UTF-8")));
-                writeChunked(output, new byte[]{0x0A, 0x1D, 0x56, 0x01});
+                writeChunked(output, FEED_AND_CUT);
                 output.flush();
                 return "Print sent";
             } catch (Exception error) {
@@ -353,7 +354,7 @@ public class MainActivity extends BridgeActivity {
                     writeChunked(targetOutput, new byte[]{0x0A});
                 }
                 writeChunked(targetOutput, text.getBytes(Charset.forName("UTF-8")));
-                writeChunked(targetOutput, new byte[]{0x0A, 0x1D, 0x56, 0x01});
+                writeChunked(targetOutput, FEED_AND_CUT);
                 targetOutput.flush();
             } finally {
                 try {
@@ -486,7 +487,7 @@ public class MainActivity extends BridgeActivity {
                 targetOutput = targetSocket.getOutputStream();
                 targetOutput.write(new byte[]{0x1B, 0x40});
                 writeRasterImage(targetOutput, receiptBitmap(receiptJson));
-                writeChunked(targetOutput, new byte[]{0x0A, 0x1D, 0x56, 0x01});
+                writeChunked(targetOutput, FEED_AND_CUT);
                 targetOutput.flush();
             } finally {
                 try {

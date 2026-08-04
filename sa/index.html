@@ -3676,7 +3676,7 @@
         return defaults;
       }
     })();
-    const appBuild = "3.22";
+    const appBuild = "3.23";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
@@ -4746,7 +4746,10 @@
         line,
         center("KITCHEN COPY"),
         center("PLEASE DO NOT DISCARD"),
-        boldOff + normalSize
+        boldOff + normalSize,
+        "",
+        "",
+        ""
       ].join("\n");
     }
 
@@ -4870,7 +4873,7 @@
         return;
       }
       try {
-        const result = printToEnabledPrinters(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n`, { waitForResult: true });
+        const result = printToEnabledPrinters(`${settings.canteenName}\nPrinter Test\n${new Date().toLocaleString()}\n\n\n`, { waitForResult: true });
         $("posMessage").textContent = result;
         $("posMessage").className = isPrintSuccess(result) ? "status ok" : "status error";
       } catch (error) {
@@ -4900,7 +4903,7 @@
         return;
       }
       try {
-        const result = printToAddress(address, `${settings.canteenName}\n${label} Test\n${new Date().toLocaleString()}\n`, { waitForResult: true });
+        const result = printToAddress(address, `${settings.canteenName}\n${label} Test\n${new Date().toLocaleString()}\n\n\n`, { waitForResult: true });
         $("posMessage").textContent = result;
         $("posMessage").className = isPrintSuccess(result) ? "status ok" : "status error";
       } catch (error) {
@@ -5444,9 +5447,8 @@
       }
       if (kitchenPrinterEnabled) {
         if (!kitchenPrinter) return "Select Kitchen Printer";
-        const logoDataUrl = receiptLogoDataUrl || (String(settings.logoUrl || "").startsWith("data:image/") ? settings.logoUrl : "");
         const kitchenOptions = {
-          logoDataUrl,
+          logoDataUrl: "",
           logoPosition: ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above",
           logoSize: receiptLogoSizeValue(settings.receiptLogoSize),
           headerName: order.canteen || settings.canteenName || "SHAD KITCHEN",
