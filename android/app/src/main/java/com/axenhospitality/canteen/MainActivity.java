@@ -119,7 +119,7 @@ public class MainActivity extends BridgeActivity {
                 OutputStream output = ensurePrinterOutput();
                 output.write(new byte[]{0x1B, 0x40});
                 writeChunked(output, text.getBytes(Charset.forName("UTF-8")));
-                writeChunked(output, new byte[]{0x0A, 0x0A, 0x1D, 0x56, 0x01});
+                writeChunked(output, new byte[]{0x0A, 0x1D, 0x56, 0x01});
                 output.flush();
                 return "Print sent";
             } catch (Exception error) {
@@ -353,7 +353,7 @@ public class MainActivity extends BridgeActivity {
                     writeChunked(targetOutput, new byte[]{0x0A});
                 }
                 writeChunked(targetOutput, text.getBytes(Charset.forName("UTF-8")));
-                writeChunked(targetOutput, new byte[]{0x0A, 0x0A, 0x1D, 0x56, 0x01});
+                writeChunked(targetOutput, new byte[]{0x0A, 0x1D, 0x56, 0x01});
                 targetOutput.flush();
             } finally {
                 try {
@@ -465,7 +465,7 @@ public class MainActivity extends BridgeActivity {
                 writeChunked(targetOutput, command);
                 writeChunked(targetOutput, bandBytes);
                 targetOutput.flush();
-                Thread.sleep(18);
+                Thread.sleep(6);
             }
         }
 
@@ -486,7 +486,7 @@ public class MainActivity extends BridgeActivity {
                 targetOutput = targetSocket.getOutputStream();
                 targetOutput.write(new byte[]{0x1B, 0x40});
                 writeRasterImage(targetOutput, receiptBitmap(receiptJson));
-                writeChunked(targetOutput, new byte[]{0x0A, 0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x01});
+                writeChunked(targetOutput, new byte[]{0x0A, 0x1D, 0x56, 0x01});
                 targetOutput.flush();
             } finally {
                 try {
