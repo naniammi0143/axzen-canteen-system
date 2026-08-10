@@ -258,6 +258,11 @@
     }
     .credential-box strong { overflow-wrap: anywhere; }
     .pos-open { min-height: 36px; padding: 0 12px; border-radius: 8px; }
+    .workflow-strip { display: flex; gap: 8px; overflow-x: auto; margin: 0 0 16px; scrollbar-width: none; }
+    .workflow-strip::-webkit-scrollbar { display: none; }
+    .workflow-step { min-width: 96px; display: grid; justify-items: center; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: white; color: var(--muted); font-size: 12px; font-weight: 700; }
+    .workflow-step span { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: #eef4ff; color: var(--blue); font-weight: 800; }
+    .quick-workflow { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
     .employee-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
     .employee-card {
       display: grid;
@@ -460,16 +465,17 @@
     ];
     const marketingTabs = [
       ["dashboard", "My Dashboard"],
-      ["add", "Add Canteen"],
-      ["my", "My Registrations"],
-      ["printers", "My Printers"],
-      ["payments", "Payment Pending"],
+      ["add", "Add Lead"],
+      ["my", "Leads & Visits"],
+      ["followups", "Follow-ups"],
+      ["payments", "Payments"],
       ["performance", "My Performance"]
     ];
     const shortTabs = {
       dashboard: "Home",
       add: "Add",
       my: "Mine",
+      followups: "Follow",
       payments: "Pay",
       billing: "Bill",
       performance: "Stats",
@@ -551,6 +557,7 @@
         enquiries: '<path d="M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><path d="M8 9h8"/><path d="M8 13h5"/>',
         plans: '<path d="M20 12V8H4v4"/><path d="M4 16h16"/><path d="M6 4h12v16H6z"/><path d="M9 9h2"/><path d="M9 14h6"/>',
         payments: '<path d="M3 7h18v12H3z"/><path d="M3 10h18"/><path d="M7 15h4"/>',
+        followups: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
         billing: '<path d="M7 3h10l4 4v14H7z"/><path d="M17 3v5h5"/><path d="M10 13h8"/><path d="M10 17h5"/><path d="M5 7H3v14h12v-2"/>',
         printers: '<path d="M6 9V3h12v6"/><path d="M6 17H4a2 2 0 0 1-2-2v-4h20v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>',
         performance: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
@@ -572,8 +579,33 @@
       ];
       return `<div class="kpis">${labels.slice(0, compact ? 6 : labels.length).map(([key, label]) => `<div class="card" ${key === "onlineCanteens" ? 'data-online-canteens="true" role="button" tabindex="0"' : ""}><span>${label}</span><strong>${key.toLowerCase().includes("revenue") || key.toLowerCase().includes("payment") || key.toLowerCase().includes("collection") ? money(cards[key]) : Number(cards[key] || 0)}</strong><small>${key === "onlineCanteens" ? "Click for list" : "Live operations"}</small></div>`).join("")}</div>`;
     }
+    function workflowStrip() {
+      const steps = ["Find Lead", "Add Lead", "Visit", "Demo", "Follow-up", "Close Sale", "Payment", "Installation", "Commission"];
+      return `<div class="workflow-strip">${steps.map((step, index) => `<div class="workflow-step"><span>${index + 1}</span>${step}</div>`).join("")}</div>`;
+    }
+    function leadStage(item) {
+      const status = String(item.status || "").toLowerCase();
+      if (status.includes("pending")) return "Follow-up";
+      if (status.includes("trial") || status.includes("active")) return "Payment / Installation";
+      if (status.includes("expired") || status.includes("blocked")) return "Support";
+      return "Lead";
+    }
+    function followupsHtml() {
+      const rows = (state.canteens || [])
+        .filter(item => ["Pending Approval", "Trial"].includes(item.status) || Number(item.pendingAmount || 0) > 0 || Number(item.printersAssigned || 0) < Number(item.printersRequired || 0))
+        .slice(0, 20);
+      return `${workflowStrip()}<section class="panel"><h2>Follow-ups</h2><div class="list">${rows.map(item => `<div class="list-row"><div><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.ownerName || "-")} | ${esc(item.status || "Lead")} | ${esc(item.businessCategory || "Canteen")}</span></div><div class="row-actions">${posOpenAction(item)}<button class="secondary" type="button" data-tab-jump="my">View</button></div></div>`).join("") || `<span class="muted">No follow-ups pending</span>`}</div></section>`;
+    }
     function bindOnlinePopup() {
       document.querySelectorAll("[data-online-canteens]").forEach(card => card.addEventListener("click", openOnlineCanteens));
+    }
+    function bindTabJumps() {
+      document.querySelectorAll("[data-tab-jump]").forEach(btn => btn.addEventListener("click", () => {
+        tab = btn.dataset.tabJump;
+        status("");
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }));
     }
     function openOnlineCanteens() {
       const online = (state.canteens || []).filter(item => item.lastSeenAt && Date.now() - new Date(item.lastSeenAt).getTime() <= 120000);
@@ -850,6 +882,7 @@
         <div class="canteen-facts">
           <div class="fact"><span>Canteen ID</span><strong>${esc(item.activatedCanteenId || "After approval")}</strong></div>
           <div class="fact"><span>Category</span><strong>${esc(item.businessCategory || "Canteen")}</strong></div>
+          <div class="fact"><span>Stage</span><strong>${esc(leadStage(item))}</strong></div>
           <div class="fact"><span>Payment</span><strong>${money(item.paidAmount)} / Pending ${money(item.pendingAmount)}</strong></div>
           <div class="fact"><span>Plan</span><strong>${esc(item.selectedPlan)} - ${esc(item.planType)}${item.planExpiryDate ? `<br>Expiry: ${esc(item.planExpiryDate)}` : ""}</strong></div>
           <div class="fact"><span>Printers</span><strong>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</strong></div>
@@ -859,7 +892,7 @@
           <div><span class="muted">Default password</span><br><strong>${item.defaultPassword ? "Hidden" : "After approval"}</strong></div>
           ${posOpenAction(item)}
         </div>
-        ${actions ? `<div class="row-actions">${actionButtons(item)}</div>` : ""}
+        <div class="row-actions">${actions ? actionButtons(item) : posOpenAction(item)}</div>
       </article>`).join("") || `<div class="muted">No canteens found</div>`;
       return `<div class="canteen-result"><div class="mobile-canteens">${mobileCards}</div><div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Category</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map((item, index) => `<tr class="tone-${index % 4}">
         <td><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.city)}, ${esc(item.state)}</span></td>
@@ -968,13 +1001,14 @@
         bindEnquiryActions();
       } else {
         const cards = state.summary.cards;
-        $("page").innerHTML = `${cardsHtml(cards, true)}<div class="grid-2"><section class="panel"><h2>My Registrations</h2>${canteensTable(state.canteens, false)}</section><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section></div>`;
+        $("page").innerHTML = `${workflowStrip()}<div class="quick-workflow"><button class="primary" data-tab-jump="add" type="button">Add Lead</button><button class="secondary" data-tab-jump="my" type="button">Leads & Visits</button><button class="ghost" data-tab-jump="followups" type="button">Follow-ups</button></div>${cardsHtml(cards, true)}<div class="grid-2"><section class="panel"><h2>My Leads</h2>${canteensTable(state.canteens, false)}</section><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section></div>`;
         bindOnlinePopup();
+        bindTabJumps();
       }
     }
     function renderAdd() {
-      $("page").innerHTML = `<section class="panel"><h2>Add Canteen Registration</h2><form class="form-grid" id="canteenForm">
-        <label>Canteen name <input id="canteenName" required></label>
+      $("page").innerHTML = `${workflowStrip()}<section class="panel"><h2>Add Lead / Canteen Registration</h2><form class="form-grid" id="canteenForm">
+        <label>Business name <input id="canteenName" required></label>
         <label>Business category <input id="businessCategory" list="businessCategoryOptions" value="Canteen" required><datalist id="businessCategoryOptions">${businessCategories.map(category => `<option value="${esc(category)}"></option>`).join("")}</datalist></label>
         <label>Owner name <input id="ownerName" required></label>
         <label>Owner mobile <input id="ownerMobile" required></label>
@@ -995,7 +1029,7 @@
         <label>Pending amount <input id="pendingAmount" type="number" min="0" value="0"></label>
         <label class="wide">Documents/images <input id="documents" placeholder="File names or links"></label>
         <label class="full">Notes <textarea id="notes"></textarea></label>
-        <button class="primary" type="submit">Submit for Approval</button>
+        <button class="primary" type="submit">Save Lead & Submit</button>
       </form></section>`;
       $("canteenForm").addEventListener("submit", submitCanteen);
       $("printersRequired").addEventListener("input", syncPrinterRequired);
@@ -1024,7 +1058,7 @@
         await refresh();
         tab = "my";
         render();
-        status("Submitted for Super Admin approval. It is now visible in Approval Queue.");
+        status("Lead saved and submitted for Super Admin approval.");
       } catch (error) {
         status(error.message || "Canteen submission failed", "error");
       } finally {
@@ -1109,27 +1143,29 @@
     }
     function render() {
       const titles = {
-        dashboard: ["Dashboard", "Live canteen onboarding and revenue overview."],
+        dashboard: [user.role === "super_admin" ? "Dashboard" : "My Dashboard", user.role === "super_admin" ? "Live canteen onboarding and revenue overview." : "Today targets, leads, follow-ups and sales workflow."],
         approvals: ["Approval Queue", "Approve or reject submitted canteens."],
         canteens: ["Canteen Management", "Manage active, trial, blocked and expired canteens."],
         employees: ["Employees", "Add and manage marketing employee records."],
         enquiries: ["Website Enquiries", "Leads submitted from pos.axzen.in contact form."],
         plans: ["Website Plans", "Set prices and features shown on pos.axzen.in."],
-        payments: ["Payment Management", "Track collections and pending payments."],
+        payments: [user.role === "super_admin" ? "Payment Management" : "Payments", "Track collections and pending payments."],
         billing: ["Generate Bill", "Create client invoices and save them as PDF."],
         printers: ["Printer Inventory", "Assign and track printer installation."],
         performance: ["Marketing Performance", "Employee-wise registration and collection results."],
         activities: ["Recent Activities", "Audit trail for onboarding actions."],
-        add: ["Add Canteen", "Submit a new canteen for approval."],
-        my: ["My Registrations", "Your submitted canteens and approval status."]
+        add: ["Add Lead", "Create customer record and submit canteen activation."],
+        my: ["Leads & Visits", "Your leads, visits and activation status."],
+        followups: ["Follow-ups", "Today tasks, pending payments and installation handoffs."]
       };
       const [title, sub] = titles[tab] || titles.dashboard;
       setPage(title, sub);
       if (tab === "dashboard") return renderDashboard();
       if (tab === "add") return renderAdd();
+      if (tab === "followups") { $("page").innerHTML = followupsHtml(); bindTabJumps(); return; }
       if (tab === "employees") { renderEmployees(); bindEmployeeActions(); return; }
       if (tab === "approvals") $("page").innerHTML = `<section class="panel"><h2>Pending Approval</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
-      else if (tab === "canteens" || tab === "my") $("page").innerHTML = `<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Canteens" : "All Canteens"}</h2><div class="toolbar-left"><select id="searchCategory"><option value="all">All</option><option value="canteenName">Canteen</option><option value="businessCategory">Business Category</option><option value="ownerName">Owner</option><option value="city">City</option><option value="status">Status</option></select><input id="searchBox" placeholder="Search by category"></div></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
+      else if (tab === "canteens" || tab === "my") $("page").innerHTML = `${user.role === "super_admin" ? "" : workflowStrip()}<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Leads" : "All Canteens"}</h2><div class="toolbar-left"><select id="searchCategory"><option value="all">All</option><option value="canteenName">Canteen</option><option value="businessCategory">Business Category</option><option value="ownerName">Owner</option><option value="city">City</option><option value="status">Status</option></select><input id="searchBox" placeholder="Search by category"></div></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
       else if (tab === "enquiries") { $("page").innerHTML = `<section class="panel"><h2>Website Enquiries</h2>${enquiriesHtml(state.enquiries || [])}</section>`; bindEnquiryActions(); return; }
       else if (tab === "plans") { $("page").innerHTML = websitePlansHtml(); bindPlanForms(); return; }
       else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section><section class="panel"><h2>Payment History</h2>${paymentsTable(state.payments || [])}</section>`;
