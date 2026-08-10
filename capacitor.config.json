@@ -1,7 +1,7 @@
 {
   "appId": "com.axenhospitality.canteen",
-  "appName": "AXZEN POS Marketing",
-  "webDir": "employee-web",
+  "appName": "Axzen POS",
+  "webDir": "sa",
   "server": {
     "cleartext": true
   }
