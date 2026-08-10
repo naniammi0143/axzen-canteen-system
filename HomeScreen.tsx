@@ -282,6 +282,10 @@ function HomeScreenContent() {
     showProfitToCanteen: false,
     openAdminDashboardFirst: false
   });
+  const [printerPaperSettings, setPrinterPaperSettings] = useState<PrinterPaperSettings>({
+    receiptPaperWidth: "58 mm",
+    kitchenPaperWidth: "58 mm"
+  });
   const [expenses, setExpenses] = useState<Expense[]>(defaultExpenses);
   const [storePurchases, setStorePurchases] = useState<StorePurchase[]>([]);
   const [storeUsage, setStoreUsage] = useState<StoreUsage[]>([]);
@@ -361,6 +365,7 @@ function HomeScreenContent() {
     const orderId = `#${Date.now().toString().slice(-5)}`;
     const createdAt = new Date();
     const orderTotal = cartItems.reduce((sum, item) => sum + cartLineAmount(item), 0);
+    const receiptPaperMm = paperWidthMm(printerPaperSettings.receiptPaperWidth);
     const receiptRows = cartItems
       .map(item => `
         <tr>
@@ -375,7 +380,8 @@ function HomeScreenContent() {
       <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; color: #111827; padding: 18px; }
+            @page { size: ${receiptPaperMm}mm auto; margin: 0; }
+            body { width: ${receiptPaperMm}mm; box-sizing: border-box; font-family: Arial, sans-serif; color: #111827; padding: 10px; }
             h1 { color: #082653; font-size: 22px; margin: 0 0 4px; }
             .sub { color: #667085; font-size: 12px; margin-bottom: 14px; }
             table { width: 100%; border-collapse: collapse; }
@@ -418,7 +424,7 @@ function HomeScreenContent() {
     setOrderDrafts(current => [[orderId, `${cartCount} items`, `Rs ${formatMoney(orderTotal)}`, paymentMode], ...current]);
     setCartItems([]);
     return "Receipt ready";
-  }, [cartCount, cartItems]);
+  }, [cartCount, cartItems, printerPaperSettings.receiptPaperWidth]);
 
   const openSubItems = useCallback((product: Product) => {
     setSelectedProduct(product);
@@ -517,6 +523,8 @@ function HomeScreenContent() {
             onOrderDraftsChange={setOrderDrafts}
             superAdminSettings={superAdminSettings}
             onSuperAdminSettingsChange={setSuperAdminSettings}
+            printerPaperSettings={printerPaperSettings}
+            onPrinterPaperSettingsChange={setPrinterPaperSettings}
             bottomInset={insets.bottom}
           />
         )}
@@ -751,6 +759,8 @@ function OptionContent({
   onOrderDraftsChange,
   superAdminSettings,
   onSuperAdminSettingsChange,
+  printerPaperSettings,
+  onPrinterPaperSettingsChange,
   bottomInset
 }: {
   option: DrawerOption;
@@ -769,6 +779,8 @@ function OptionContent({
   onOrderDraftsChange: (next: OrderDraft[]) => void;
   superAdminSettings: SuperAdminSettings;
   onSuperAdminSettingsChange: (next: SuperAdminSettings) => void;
+  printerPaperSettings: PrinterPaperSettings;
+  onPrinterPaperSettingsChange: (next: PrinterPaperSettings) => void;
   bottomInset: number;
 }) {
   return (
@@ -798,7 +810,7 @@ function OptionContent({
       {option === "Edit Price" && <ItemManagerScreen products={products} onProductsChange={onProductsChange} categories={categories} onCategoriesChange={onCategoriesChange} />}
       {option === "Categories" && <CategoryManagerScreen categories={categories} onCategoriesChange={onCategoriesChange} />}
       {option === "Stock Availability" && <StockAvailabilityScreen products={products} />}
-      {option === "Printer Settings" && <PrinterSettingsScreen />}
+      {option === "Printer Settings" && <PrinterSettingsScreen settings={printerPaperSettings} onSettingsChange={onPrinterPaperSettingsChange} />}
       {option === "User" && <UserScreen />}
       {option === "Settings" && <SettingsScreen settings={superAdminSettings} onSettingsChange={onSuperAdminSettingsChange} />}
       {option === "Sync Data" && <SyncDataScreen />}
@@ -881,6 +893,11 @@ function OrdersScreen({
 }
 
 type ReportRange = "Today" | "Week" | "Month" | "Year" | "Custom";
+type PaperWidth = "58 mm" | "80 mm";
+type PrinterPaperSettings = {
+  receiptPaperWidth: PaperWidth;
+  kitchenPaperWidth: PaperWidth;
+};
 
 function formatDateInput(date: Date) {
   const year = date.getFullYear();
@@ -926,6 +943,15 @@ function buildRange(range: ReportRange, fromDate: string, toDate: string): [stri
 
 function isDateInRange(date: string, fromDate: string, toDate: string) {
   return date >= fromDate && date <= toDate;
+}
+
+function reportRangeLabel(range: ReportRange, activeRange: [string, string]) {
+  if (range === "Custom") return activeRange[0] === activeRange[1] ? activeRange[0] : `${activeRange[0]} to ${activeRange[1]}`;
+  return range;
+}
+
+function paperWidthMm(width: PaperWidth) {
+  return Number(width.replace(/\D/g, ""));
 }
 
 function buildReportSummary(products: Product[], expenses: Expense[] = defaultExpenses, rangeDates?: [string, string]) {
@@ -1001,6 +1027,7 @@ function ReportsScreen({
   const [shareStatus, setShareStatus] = useState("");
 
   const activeRange = buildRange(range, fromDate, toDate);
+  const activeRangeLabel = reportRangeLabel(range, activeRange);
   const summary = useMemo(() => buildReportSummary(products, expenses, activeRange), [activeRange, expenses, products]);
   const { itemReports, totalSales, totalQty, totalCost, expenses: reportExpenses, totalExpenses, profit } = summary;
   const avgBill = Math.round(totalSales / Math.max(itemReports.length, 1));
@@ -1019,10 +1046,12 @@ function ReportsScreen({
     };
   });
 
-  const dailyReports = [
-    [activeRange[0], `Rs ${Math.round(totalSales * 0.78)}`, `${Math.round(totalQty * 0.7)} qty`],
-    [activeRange[1], `Rs ${totalSales}`, `${totalQty} qty`]
-  ];
+  const dailyReports = activeRange[0] === activeRange[1]
+    ? [[activeRange[0], `Rs ${totalSales}`, `${totalQty} qty`]]
+    : [
+      [activeRange[0], `Rs ${Math.round(totalSales * 0.78)}`, `${Math.round(totalQty * 0.7)} qty`],
+      [activeRange[1], `Rs ${totalSales}`, `${totalQty} qty`]
+    ];
 
   const hourlyReports = [
     ["07-09 AM", "Breakfast", `Rs ${Math.round(totalSales * 0.22)}`],
@@ -1200,16 +1229,16 @@ function ReportsScreen({
 
       <View ref={reportCardRef} collapsable={false} style={styles.reportCaptureArea}>
         <View style={styles.reportGrid}>
-          <ReportMetric label="Total Sale" value={`Rs ${totalSales}`} />
-          <ReportMetric label="Total Bills" value={String(Math.max(itemReports.length, 1))} />
+          <ReportMetric label={`${activeRangeLabel} Sale`} value={`Rs ${totalSales}`} />
+          <ReportMetric label={`${activeRangeLabel} Bills`} value={String(Math.max(itemReports.length, 1))} />
           <ReportMetric label="Cash" value={`Rs ${cash}`} />
           <ReportMetric label="Online" value={`Rs ${upi}`} />
           <ReportMetric label="Expenses" value={`Rs ${totalExpenses}`} />
           {showProfit && <ReportMetric label={profit >= 0 ? "Profit" : "Loss"} value={`Rs ${Math.abs(profit)}`} />}
         </View>
 
-        <ReportSection title="Today Report">
-          <ReportRow label="Selected Date" value={activeRange[1]} detail={`${range} report`} />
+        <ReportSection title={`${activeRangeLabel} Report`}>
+          <ReportRow label={activeRange[0] === activeRange[1] ? "Selected Date" : "Selected Dates"} value={activeRange[0] === activeRange[1] ? activeRange[1] : `${activeRange[0]} to ${activeRange[1]}`} detail={`${range} report`} />
           <ReportRow label="Bills / Quantity" value={String(totalQty)} detail="Total sold items" />
           <ReportRow label="Average Bill" value={`Rs ${avgBill}`} detail="Sale average" />
         </ReportSection>
@@ -2113,7 +2142,17 @@ function StockAvailabilityScreen({ products }: { products: Product[] }) {
   );
 }
 
-function PrinterSettingsScreen() {
+function PrinterSettingsScreen({
+  settings,
+  onSettingsChange
+}: {
+  settings: PrinterPaperSettings;
+  onSettingsChange: (next: PrinterPaperSettings) => void;
+}) {
+  const paperWidths: PaperWidth[] = ["58 mm", "80 mm"];
+  const setReceiptPaperWidth = (receiptPaperWidth: PaperWidth) => onSettingsChange({ ...settings, receiptPaperWidth });
+  const setKitchenPaperWidth = (kitchenPaperWidth: PaperWidth) => onSettingsChange({ ...settings, kitchenPaperWidth });
+
   return (
     <View style={styles.optionStack}>
       {[1, 2, 3, 4].map(item => (
@@ -2128,8 +2167,39 @@ function PrinterSettingsScreen() {
       ))}
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Settings</Text>
-        <InfoRow label="Paper Width" value="57mm" />
+        <InfoRow label="Receipt Paper" value={settings.receiptPaperWidth} />
+        <InfoRow label="Kitchen Paper" value={settings.kitchenPaperWidth} />
         <InfoRow label="Default Printer" value="ON" />
+        <View style={styles.paperSettingBlock}>
+          <Text style={styles.dateLabel}>Receipt Paper Size</Text>
+          <View style={styles.quickRangeRow}>
+            {paperWidths.map(width => (
+              <TouchableOpacity
+                key={`receipt-${width}`}
+                activeOpacity={0.85}
+                onPress={() => setReceiptPaperWidth(width)}
+                style={[styles.quickRangeChip, settings.receiptPaperWidth === width && styles.quickRangeChipActive]}
+              >
+                <Text style={[styles.quickRangeText, settings.receiptPaperWidth === width && styles.quickRangeTextActive]}>{width}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+        <View style={styles.paperSettingBlock}>
+          <Text style={styles.dateLabel}>Kitchen Printer Paper Size</Text>
+          <View style={styles.quickRangeRow}>
+            {paperWidths.map(width => (
+              <TouchableOpacity
+                key={`kitchen-${width}`}
+                activeOpacity={0.85}
+                onPress={() => setKitchenPaperWidth(width)}
+                style={[styles.quickRangeChip, settings.kitchenPaperWidth === width && styles.quickRangeChipActive]}
+              >
+                <Text style={[styles.quickRangeText, settings.kitchenPaperWidth === width && styles.quickRangeTextActive]}>{width}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
         <TouchableOpacity style={styles.primaryAction}><Text style={styles.primaryActionText}>Test Print</Text></TouchableOpacity>
       </View>
     </View>
@@ -3414,6 +3484,9 @@ const styles = StyleSheet.create({
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
     elevation: 3
+  },
+  paperSettingBlock: {
+    marginTop: 14
   },
   summaryTitle: {
     color: "#111827",
