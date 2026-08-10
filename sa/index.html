@@ -421,6 +421,16 @@
     .payment-total { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-radius: 12px; background: #f8fafc; font-weight: 950; }
     .payment-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .payment-actions button { position: relative; min-height: 118px; border-radius: 18px; border: 1px solid var(--line); background: white; font-weight: 950; }
+    .chicken-sale-form, .today-price-grid { display: grid; gap: 10px; }
+    .chicken-sale-form label, .today-price-row label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; font-weight: 900; }
+    .chicken-sale-form input, .today-price-row input { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-size: 16px; font-weight: 900; }
+    .kg-picks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .kg-picks button { min-height: 42px; border: 1px solid var(--line); border-radius: 12px; background: #f8fafc; color: var(--blue); font-weight: 950; }
+    .kg-picks button.active { background: var(--blue); border-color: var(--blue); color: white; }
+    .today-price-row { display: grid; grid-template-columns: 1fr 120px; gap: 10px; align-items: end; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcff; }
+    .today-price-row strong { color: var(--ink); }
+    #posView.chicken-mode .cart-sheet { left: 50%; right: auto; bottom: 0; top: auto; width: min(480px, 100%); transform: translateX(-50%); }
+    #posView.chicken-mode .cart-list { max-height: 122px; }
     .payment-actions button.primary-choice { background: var(--green); border-color: var(--green); color: white; }
     .payment-actions button.selected { background: #ecfdf3; border-color: var(--green); color: #166534; box-shadow: 0 10px 22px #2f7d2633; }
     .payment-actions button:disabled { opacity: .62; pointer-events: none; }
@@ -3649,7 +3659,10 @@
   </main>
 
   <script>
-    const apiParam = new URLSearchParams(window.location.search).get("api");
+    const urlParams = new URLSearchParams(window.location.search);
+    const apiParam = urlParams.get("api");
+    const loginIdParam = urlParams.get("loginId") || urlParams.get("restaurantId") || urlParams.get("canteenId") || "";
+    const restaurantIdParam = urlParams.get("restaurantId") || urlParams.get("canteenId") || "";
     const hasApiOverride = Boolean(apiParam);
     if (apiParam) localStorage.setItem("AXEN_API_URL", apiParam);
     const liveApi = "https://canteen.axzen.in";
@@ -3667,8 +3680,9 @@
       : (storedApi || `http://${nativeHost}:5000`);
 
     const singleItemsCategory = "Single Items";
+    const chickenCategory = "Chicken";
     const categoryOrder = (() => {
-      const defaults = ["All", singleItemsCategory, "Breakfast", "Meals", "Biryani", "Starters", "Chinese", "Tiffin", "Tea", "Coffee", "Drinks", "Snacks", "Lunch", "Juice", "Desserts", "Dinner"];
+      const defaults = ["All", chickenCategory, singleItemsCategory, "Breakfast", "Meals", "Biryani", "Starters", "Chinese", "Tiffin", "Tea", "Coffee", "Drinks", "Snacks", "Lunch", "Juice", "Desserts", "Dinner"];
       try {
         const saved = JSON.parse(localStorage.getItem("AXEN_CATEGORIES") || "[]");
         return [...new Set([...defaults, ...saved.map(item => item === "Half Items" ? singleItemsCategory : item)])];
@@ -3685,6 +3699,8 @@
     const storePurchasesKey = "AXEN_STORE_PURCHASES";
     const storeUsageKey = "AXEN_STORE_USAGE";
     const storeTabKey = "AXEN_STORE_TAB";
+    const chickenPricesKey = "AXEN_CHICKEN_TODAY_PRICES";
+    const chickenPriceDateKey = "AXEN_CHICKEN_PRICE_DATE";
     const sessionKey = "AXEN_SESSION";
     const tokenKey = "AXEN_TOKEN";
     const loginCacheKey = "AXEN_LOGIN_CACHE";
@@ -3847,7 +3863,7 @@
       const option = cleanAscii(item?.optionName || item?.variantName || "");
       return option && !name.toUpperCase().includes(option.toUpperCase()) ? `${name} ${option}` : name;
     }
-    const scopedJsonKeys = new Set([productCacheKey, pendingOrdersKey, heldOrdersKey, bulkDraftKey, storePurchasesKey, storeUsageKey, storeTabKey]);
+    const scopedJsonKeys = new Set([productCacheKey, pendingOrdersKey, heldOrdersKey, bulkDraftKey, storePurchasesKey, storeUsageKey, storeTabKey, chickenPricesKey]);
     const jsonStorageKey = key => scopedJsonKeys.has(key) ? scopedStorageKey(key) : key;
     const readJson = (key, fallback) => {
       try { return JSON.parse(localStorage.getItem(jsonStorageKey(key))) || fallback; } catch { return fallback; }
@@ -3883,7 +3899,7 @@
     }
 
     function categoryIcon(category) {
-      return ({ All: "grid", Tiffin: "cloche", Meals: "meal", Tea: "cup", Coffee: "cup", Snacks: "snack", Juice: "juice", Drinks: "juice", Lunch: "meal", Dinner: "meal", "Single Items": "cloche" })[category] || "item";
+      return ({ All: "grid", Chicken: "meal", Tiffin: "cloche", Meals: "meal", Tea: "cup", Coffee: "cup", Snacks: "snack", Juice: "juice", Drinks: "juice", Lunch: "meal", Dinner: "meal", "Single Items": "cloche" })[category] || "item";
     }
 
     function categoryIconSvg(category) {
@@ -3914,12 +3930,101 @@
 
     function itemEmoji(item) {
       const name = String(item.name || "").toLowerCase();
+      if (name.includes("chicken") || String(item.category || "").toLowerCase() === "chicken") return categoryIconSvg("Chicken");
       if (name.includes("tea") || name.includes("coffee")) return categoryIconSvg("Tea");
       if (name.includes("water") || name.includes("juice")) return categoryIconSvg("Juice");
       if (name.includes("meals")) return categoryIconSvg("Meals");
       if (name.includes("idly") || name.includes("idli") || name.includes("dosa") || name.includes("vada") || name.includes("bonda") || name.includes("poori")) return categoryIconSvg("Tiffin");
       if (name.includes("samosa") || name.includes("laddu") || name.includes("halwa")) return categoryIconSvg("Snacks");
       return categoryIconSvg(item.category || "All");
+    }
+
+    const defaultChickenPrices = [
+      { id: -9001, name: "Chicken Curry Cut", price: 240 },
+      { id: -9002, name: "Chicken Fry Pieces", price: 260 },
+      { id: -9003, name: "Boneless Chicken", price: 320 },
+      { id: -9004, name: "Chicken Leg Pieces", price: 280 },
+      { id: -9005, name: "Chicken Wings", price: 220 },
+      { id: -9006, name: "Chicken Liver", price: 180 }
+    ];
+
+    function todayKey() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    }
+
+    function isChickenCategory(category) {
+      return String(category || "").trim().toLowerCase().includes("chicken");
+    }
+
+    function isChickenProduct(item) {
+      const name = String(item?.name || "").toLowerCase();
+      return isChickenCategory(item?.category) || name.includes("chicken");
+    }
+
+    function isChickenShopCanteen() {
+      const text = [
+        settings?.businessCategory,
+        settings?.posMode,
+        user?.canteen?.businessCategory,
+        user?.canteen?.posMode
+      ].join(" ").toLowerCase();
+      return text.includes("chicken") || text.includes("meat") || text.includes("mutton");
+    }
+
+    function shouldShowChickenCategory() {
+      return isChickenShopCanteen() || products.some(isChickenProduct);
+    }
+
+    function defaultBillingCategory() {
+      return shouldShowChickenCategory() ? chickenCategory : "All";
+    }
+
+    function chickenPriceRows() {
+      const saved = readJson(chickenPricesKey, []);
+      const map = new Map(defaultChickenPrices.map(item => [item.name, { ...item }]));
+      saved.forEach(item => {
+        const name = String(item.name || "").trim();
+        if (!name) return;
+        map.set(name, {
+          id: Number(item.id || defaultChickenPrices.find(row => row.name === name)?.id || -(Date.now() + map.size)),
+          name,
+          price: Number(item.price || 0)
+        });
+      });
+      return [...map.values()];
+    }
+
+    function saveChickenPriceRows(rows) {
+      writeJson(chickenPricesKey, rows.map((item, index) => ({
+        id: Number(item.id || -(9001 + index)),
+        name: String(item.name || "").trim(),
+        price: Number(item.price || 0)
+      })).filter(item => item.name));
+      localStorage.setItem(scopedStorageKey(chickenPriceDateKey), todayKey());
+    }
+
+    function chickenProductsForMenu() {
+      const existing = products.filter(isChickenProduct);
+      const existingNames = new Set(existing.map(item => String(item.name || "").trim().toLowerCase()));
+      const virtualRows = chickenPriceRows()
+        .filter(item => !existingNames.has(String(item.name || "").trim().toLowerCase()))
+        .map((item, index) => ({
+          id: item.id,
+          name: item.name,
+          nameTe: suggestTeluguName(item.name),
+          price: Number(item.price || 0),
+          category: chickenCategory,
+          image: "",
+          sortOrder: 9000 + index,
+          chickenVirtual: true
+        }));
+      return [...existing.map(item => ({ ...item, price: chickenPriceFor(item) })), ...virtualRows];
+    }
+
+    function chickenPriceFor(product) {
+      const row = chickenPriceRows().find(item => String(item.name || "").trim().toLowerCase() === String(product?.name || "").trim().toLowerCase());
+      return Number(row?.price || product?.price || 0);
     }
 
     function itemSubtitle(item) {
@@ -4196,6 +4301,7 @@
     function renderCategories() {
       const found = new Set(products.filter(item => !isItemHidden(item)).map(item => item.category || "Other"));
       found.delete("Half Items");
+      if (shouldShowChickenCategory()) found.add(chickenCategory);
       found.add(singleItemsCategory);
       const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
       $("categoryTabs").innerHTML = categories.map(category => `
@@ -4206,12 +4312,15 @@
     function visibleCategories() {
       const found = new Set(products.filter(item => !isItemHidden(item)).map(item => item.category || "Other"));
       found.delete("Half Items");
+      if (shouldShowChickenCategory()) found.add(chickenCategory);
       found.add(singleItemsCategory);
       return [...categoryOrder.filter(item => item !== "All" && found.has(item)), ...[...found].filter(item => item !== "All" && !categoryOrder.includes(item))];
     }
 
     function categoryCardImage(category) {
-      const source = isSingleItemsCategory(category)
+      const source = isChickenCategory(category)
+        ? chickenProductsForMenu().find(item => item.image)
+        : isSingleItemsCategory(category)
         ? products.find(item => !isItemHidden(item) && singleItemPrice(item) > 0 && item.image)
         : products.find(item => !isItemHidden(item) && item.category === category && item.image);
       return source?.image || "";
@@ -4243,12 +4352,15 @@
         return;
       }
       renderCategories();
+      if ($("posView")) $("posView").classList.toggle("chicken-mode", isChickenCategory(activeCategory));
       if ($("billingSectionTitle")) $("billingSectionTitle").textContent = activeCategory === "All" ? "Popular Items" : categoryLabel(activeCategory);
-      if ($("billingSectionMeta")) $("billingSectionMeta").textContent = activeCategory === "All" ? "View All >" : "Category items";
+      if ($("billingSectionMeta")) $("billingSectionMeta").textContent = isChickenCategory(activeCategory) ? "Tap item: kg + amount" : activeCategory === "All" ? "View All >" : "Category items";
       const query = itemSearch.trim().toLowerCase();
       const baseProducts = products.filter(item => !isItemHidden(item));
       const visible = (activeCategory === "All"
         ? baseProducts
+        : isChickenCategory(activeCategory)
+        ? chickenProductsForMenu()
         : isSingleItemsCategory(activeCategory)
         ? baseProducts
           .filter(item => !isSingleItemsCategory(item.category) && singleItemPrice(item) > 0)
@@ -4308,9 +4420,172 @@
         .reduce((sum, item) => sum + Number(item.qty || 0), 0);
     }
 
-    function addToCart(id, option = null) {
-      const product = products.find(item => Number(item.id) === Number(id));
+    function cartLineTotal(item) {
+      return item && item.enteredAmount !== undefined && item.enteredAmount !== null
+        ? Number(item.enteredAmount || 0)
+        : Number(item?.price || 0) * Number(item?.qty || 0);
+    }
+
+    function findBillingProduct(id) {
+      return products.find(item => Number(item.id) === Number(id)) || chickenProductsForMenu().find(item => Number(item.id) === Number(id));
+    }
+
+    function openChickenSaleModal(product) {
       if (!product) return;
+      const todayPrice = chickenPriceFor(product);
+      $("optionsModalMount").innerHTML = `
+        <div class="modal-backdrop center-modal">
+          <div class="payment-modal">
+            <div class="modal-title-row"><h2>${esc(product.name)} Sale</h2><button class="modal-x" id="closeChickenSale" type="button">X</button></div>
+            <div class="payment-total"><span>Today price / kg</span><strong id="chickenRateLabel">${money(todayPrice)}</strong></div>
+            <div class="chicken-sale-form">
+              <label>KGs
+                <input id="chickenKgInput" type="number" min="0.001" step="0.001" inputmode="decimal" value="1">
+              </label>
+              <div class="kg-picks">
+                ${[0.25, 0.5, 1, 1.5, 2].map(value => `<button class="${value === 1 ? "active" : ""}" data-kg-pick="${value}" type="button">${value}kg</button>`).join("")}
+              </div>
+              <label>Amount
+                <input id="chickenAmountInput" type="number" min="0" step="1" inputmode="numeric" value="${Math.round(todayPrice)}">
+              </label>
+            </div>
+            <button class="primary" id="addChickenSale" type="button">Add to Bill</button>
+            <button class="secondary" id="openChickenPricesFromSale" type="button">Today Price List</button>
+            <div class="status" id="chickenSaleStatus">Enter amount manually if customer wants exact value.</div>
+          </div>
+        </div>`;
+      const kgInput = $("chickenKgInput");
+      const amountInput = $("chickenAmountInput");
+      let amountTouched = false;
+      const updateAmount = () => {
+        if (amountTouched) return;
+        amountInput.value = Math.round(Number(kgInput.value || 0) * todayPrice);
+      };
+      amountInput.addEventListener("input", () => { amountTouched = true; });
+      kgInput.addEventListener("input", updateAmount);
+      document.querySelectorAll("[data-kg-pick]").forEach(btn => btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-kg-pick]").forEach(item => item.classList.remove("active"));
+        btn.classList.add("active");
+        kgInput.value = btn.dataset.kgPick;
+        updateAmount();
+      }));
+      $("openChickenPricesFromSale").addEventListener("click", () => openTodayPriceListModal("manual"));
+      $("closeChickenSale").addEventListener("click", closeOptionsModal);
+      $("addChickenSale").addEventListener("click", () => {
+        const kg = Math.max(0, Number(kgInput.value || 0));
+        const amount = Math.max(0, Number(amountInput.value || 0));
+        if (!kg || !amount) {
+          $("chickenSaleStatus").textContent = "KGs and amount required.";
+          $("chickenSaleStatus").className = "status error";
+          return;
+        }
+        const lineId = `${product.id}:kg:${Date.now()}`;
+        cart.push({
+          ...product,
+          lineId,
+          parentId: Number(product.id),
+          optionName: `${kg} Kg`,
+          name: product.name,
+          nameTe: product.nameTe || suggestTeluguName(product.name),
+          price: amount / kg,
+          qty: kg,
+          unitPrice: todayPrice,
+          enteredAmount: amount,
+          weightUnit: "Kg"
+        });
+        renderCart();
+        renderProducts();
+        closeOptionsModal();
+        $("posMessage").textContent = `${product.name} ${kg} Kg added: ${money(amount)}`;
+        $("posMessage").className = "status ok";
+      });
+    }
+
+    function markChickenPricesChecked() {
+      localStorage.setItem(scopedStorageKey(chickenPriceDateKey), todayKey());
+    }
+
+    function saveChickenPricesFromInputs(scope = document) {
+      const rows = [...scope.querySelectorAll("[data-chicken-price-name]")].map(input => {
+        const index = input.dataset.chickenPriceName;
+        return {
+          id: Number(input.dataset.chickenPriceId || -(9001 + Number(index || 0))),
+          name: input.value.trim(),
+          price: Number(scope.querySelector(`[data-chicken-price-value="${index}"]`)?.value || 0)
+        };
+      }).filter(item => item.name);
+      if (!rows.length) return false;
+      saveChickenPriceRows(rows);
+      renderProducts();
+      return true;
+    }
+
+    function chickenPriceRowsHtml() {
+      return chickenPriceRows().map((item, index) => `
+        <div class="today-price-row">
+          <label>Item
+            <input data-chicken-price-name="${index}" data-chicken-price-id="${item.id}" value="${esc(item.name)}" placeholder="Chicken item">
+          </label>
+          <label>Rs / Kg
+            <input data-chicken-price-value="${index}" type="number" min="0" step="1" inputmode="numeric" value="${Number(item.price || 0)}">
+          </label>
+        </div>
+      `).join("");
+    }
+
+    function todayPriceListHtml() {
+      return `
+        ${sectionHeader("todayPrices", `<button class="page-action" data-go-billing type="button">Billing</button>`)}
+        <div class="work-card">
+          <h3>Today Price List</h3>
+          <div class="muted">Update chicken price per kg before billing. These prices are used in Chicken category.</div>
+          <div class="today-price-grid">${chickenPriceRowsHtml()}</div>
+          <button class="page-action full" id="saveTodayPrices" type="button">Save Today Prices</button>
+        </div>`;
+    }
+
+    function openTodayPriceListModal(mode = "manual") {
+      $("optionsModalMount").innerHTML = `
+        <div class="modal-backdrop center-modal">
+          <div class="payment-modal">
+            <div class="modal-title-row"><h2>${mode === "daily" ? "Set Today Chicken Prices" : "Today Price List"}</h2><button class="modal-x" id="closeTodayPrices" type="button">X</button></div>
+            <div class="muted">${mode === "daily" ? "New date first open. Please confirm today's price list." : "Update price per kg and continue billing."}</div>
+            <div class="today-price-grid">${chickenPriceRowsHtml()}</div>
+            <button class="primary" id="saveTodayPricesModal" type="button">Save Prices</button>
+            <button class="secondary" id="skipTodayPricesModal" type="button">${mode === "daily" ? "Use Same Prices Today" : "Close"}</button>
+            <div class="status" id="todayPriceStatus"></div>
+          </div>
+        </div>`;
+      $("closeTodayPrices").addEventListener("click", closeOptionsModal);
+      $("skipTodayPricesModal").addEventListener("click", () => {
+        markChickenPricesChecked();
+        closeOptionsModal();
+      });
+      $("saveTodayPricesModal").addEventListener("click", () => {
+        if (!saveChickenPricesFromInputs($("optionsModalMount"))) {
+          $("todayPriceStatus").textContent = "At least one item is required.";
+          $("todayPriceStatus").className = "status error";
+          return;
+        }
+        $("todayPriceStatus").textContent = "Today prices saved.";
+        $("todayPriceStatus").className = "status ok";
+        setTimeout(closeOptionsModal, 350);
+      });
+    }
+
+    function maybeOpenDailyChickenPrices() {
+      if (!isChickenCategory(activeCategory)) return;
+      if (localStorage.getItem(scopedStorageKey(chickenPriceDateKey)) === todayKey()) return;
+      openTodayPriceListModal("daily");
+    }
+
+    function addToCart(id, option = null) {
+      const product = findBillingProduct(id);
+      if (!product) return;
+      if (!option && isChickenProduct(product)) {
+        openChickenSaleModal(product);
+        return;
+      }
       const lineId = cartLineId(product, option);
       const existing = cart.find(item => item.lineId === lineId);
       if (existing) existing.qty += 1;
@@ -4358,12 +4633,12 @@
     }
 
     function renderCart() {
-      const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const subtotal = cart.reduce((sum, item) => sum + cartLineTotal(item), 0);
       cartDiscount = Math.min(subtotal, Math.max(0, Number(cartDiscount || 0)));
       const total = Math.max(0, subtotal - cartDiscount);
       const qty = cart.reduce((sum, item) => sum + item.qty, 0);
       $("cartTitle").textContent = `Cart (${cart.reduce((sum, item) => sum + item.qty, 0)} items)`;
-      $("cartSubtitle").textContent = qty ? cart.map(item => `${localizedName(item)} x ${item.qty}`).join(", ") : "Cart empty";
+      $("cartSubtitle").textContent = qty ? cart.map(item => item.weightUnit ? `${localizedName(item)} ${Number(item.qty)} ${item.weightUnit}` : `${localizedName(item)} x ${item.qty}`).join(", ") : "Cart empty";
       if ($("cartSubtotal")) $("cartSubtotal").textContent = money(subtotal);
       const discountNode = document.querySelector(".cart-summary .green strong");
       if (discountNode) discountNode.textContent = `- ${money(cartDiscount)}`;
@@ -4371,7 +4646,7 @@
       $("cartList").innerHTML = cart.map(item => `
         <div class="cart-row">
           <span class="cart-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
-          <div><strong>${esc(localizedName(item))}</strong><small>${item.qty} x ${money(item.price)}</small></div>
+          <div><strong>${esc(localizedName(item))}</strong><small>${item.weightUnit ? `${Number(item.qty)} ${esc(item.weightUnit)} | ${money(cartLineTotal(item))}` : `${item.qty} x ${money(item.price)}`}</small></div>
           <button class="cart-remove" data-remove-line="${esc(item.lineId)}" type="button">x</button>
           <div class="qty">
             <button data-qty="-1" data-id="${esc(item.lineId)}">-</button>
@@ -4383,7 +4658,7 @@
     }
 
     function openCartViewModal() {
-      const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const subtotal = cart.reduce((sum, item) => sum + cartLineTotal(item), 0);
       const total = Math.max(0, subtotal - cartDiscount);
       const qty = cart.reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const cartPaymentOptions = [
@@ -4404,9 +4679,9 @@
             <div class="cart-page-list">
               ${cart.map(item => `<div class="cart-page-row">
                 <span class="cart-page-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
-                <div><h3>${esc(localizedName(item))}</h3><p>${esc(item.category || item.optionName || "Item")}</p><span class="price">${money(item.price)}</span></div>
+                <div><h3>${esc(localizedName(item))}</h3><p>${esc(item.weightUnit ? `${Number(item.qty)} ${item.weightUnit}` : item.category || item.optionName || "Item")}</p><span class="price">${item.weightUnit ? money(cartLineTotal(item)) : money(item.price)}</span></div>
               <div class="orders-qty"><button data-cart-page-qty="-1" data-id="${esc(item.lineId)}" type="button">-</button><input data-cart-page-input="${esc(item.lineId)}" type="number" min="0" inputmode="numeric" value="${item.qty}"><button data-cart-page-qty="1" data-id="${esc(item.lineId)}" type="button">+</button></div>
-                <strong class="cart-page-total">${money(Number(item.price) * item.qty)}</strong>
+                <strong class="cart-page-total">${money(cartLineTotal(item))}</strong>
                 <button class="cart-page-remove" data-cart-page-remove="${esc(item.lineId)}" type="button" aria-label="Remove item"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M8 7l1 13h6l1-13"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
               </div>`).join("") || `<div class="work-card">Cart empty</div>`}
             </div>
@@ -4739,41 +5014,41 @@
       const normalSize = "\x1D\x21\x00";
       const doubleHeight = "\x1D\x21\x10";
       const tokenSize = "\x1D\x21\x11";
-      const cutPaper = "\x1D\x56\x42\x00";
       const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
       const dateText = billDate.toLocaleDateString("en-IN");
       const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
       const headerName = order.canteen || settings.canteenName || "SHAD KITCHEN";
       const tokenNo = orderTokenNumber(order);
       const itemRows = (order.items || []).flatMap(item => {
-        const nameLines = wrapText(printableKitchenItemName(item), 24).slice(0, 2);
+        const nameLines = wrapText(printableKitchenItemName(item), 22).slice(0, 2);
         const qty = Number(item.qty || 0);
         const note = cleanText(item.optionName || item.billingNote || item.note || "").toUpperCase();
+        const firstName = nameLines[0] || "ITEM";
+        const qtyText = `QTY:${qty}`;
         return [
-          ...nameLines.map(name => boldOn + doubleHeight + pad(name, width, true) + normalSize),
-          boldOff + pad(`QTY : ${qty}${note ? `  NOTE : ${note.slice(0, 12)}` : ""}`, width, true),
+          boldOn + doubleHeight + leftRight(firstName, qtyText) + normalSize,
+          ...nameLines.slice(1).map(name => boldOn + doubleHeight + pad(name, width) + normalSize),
+          ...(note ? [boldOff + pad(`NOTE : ${note.slice(0, 22)}`, width)] : []),
           line
         ];
       });
       const header = includeHeader ? [
         escInit + normalSize + alignCenter + boldOn + center(headerName.toUpperCase()),
-        center("axzenPOS")
+        center("KITCHEN TOKEN")
       ] : [escInit + alignCenter + boldOn];
       return [
         ...header,
-        boldOn + center("KITCHEN TOKEN") + boldOff,
-        center("TOKEN"),
-        tokenSize + tokenNo + normalSize,
+        tokenSize + center(`TOKEN ${tokenNo}`) + normalSize,
         line,
         alignLeft + leftRight(`DATE: ${dateText}`, `TIME: ${timeText}`),
         `CASHIER  : ${cleanText(order.cashier || user?.name || "-")}`.slice(0, width),
         thick,
         boldOn + center("ITEMS") + boldOff,
         line,
-        ...(itemRows.length ? itemRows : [boldOn + doubleHeight + pad("ITEM", width, true) + normalSize, boldOff + pad("QTY : 1", width, true), line]),
+        ...(itemRows.length ? itemRows : [boldOn + doubleHeight + leftRight("ITEM", "QTY:1") + normalSize, line]),
         alignCenter + boldOn + center("KITCHEN COPY"),
         boldOff,
-        normalSize + cutPaper
+        normalSize
       ].join("\n");
     }
 
@@ -5222,7 +5497,7 @@
         id: Date.now(),
         time: new Date().toLocaleString("en-IN"),
         items: cart,
-        total: cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0)
+        total: cart.reduce((sum, item) => sum + cartLineTotal(item), 0)
       }, ...heldOrders()].slice(0, 20);
       setHeldOrders(next);
       cart = [];
@@ -5280,7 +5555,7 @@
         $("posMessage").className = "status error";
         return;
       }
-      const subtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const subtotal = cart.reduce((sum, item) => sum + cartLineTotal(item), 0);
       const raw = prompt("Enter discount amount", String(cartDiscount || 0));
       if (raw === null) return;
       cartDiscount = Math.min(subtotal, Math.max(0, Number(raw || 0)));
@@ -5476,7 +5751,7 @@
           logoPosition: ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above",
           logoSize: receiptLogoSizeValue(settings.receiptLogoSize),
           headerName: order.canteen || settings.canteenName || "SHAD KITCHEN",
-          companyName: "axzenPOS",
+          companyName: "KITCHEN TOKEN",
           receiptLanguage: "english",
           receiptJson: ""
         };
@@ -5529,6 +5804,7 @@
         expenses: "Expenses",
         cash: "Cash Summary",
         stock: "Stock Availability",
+        todayPrices: "Today Price List",
         printer: "Printer Settings",
         add: "Add Item",
         edit: "Edit Price",
@@ -5548,6 +5824,7 @@
         expenses: "Add and review restaurant expenses.",
         cash: "Cash, online and credit collection split.",
         stock: "Inventory view with low-stock status.",
+        todayPrices: "Chicken price per kg for today's billing.",
         printer: "Bluetooth printer selection and test print.",
         add: "Admin item creation shortcut.",
         edit: "Menu price management shortcut.",
@@ -6633,6 +6910,7 @@
         : activePosSection === "expenses" ? expensesPageHtml()
         : activePosSection === "cash" ? cashPageHtml()
         : activePosSection === "stock" ? stockPageHtml()
+        : activePosSection === "todayPrices" ? todayPriceListHtml()
         : activePosSection === "printer" ? printerPageHtml()
         : activePosSection === "settings" ? settingsPageHtml()
         : activePosSection === "counter" ? userManagementPageHtml()
@@ -6656,11 +6934,12 @@
       $("optionPage").classList.toggle("hidden", billingMode);
       updateUserNavActive(activePosSection);
       if (billingMode) {
-        activeCategory = "All";
+        activeCategory = defaultBillingCategory();
         showingCategoryHome = false;
         itemSearch = "";
         if ($("itemSearch")) $("itemSearch").value = "";
         renderProducts();
+        setTimeout(maybeOpenDailyChickenPrices, 0);
       } else {
         renderOptionPage();
       }
@@ -6699,6 +6978,13 @@
       if ($("bulkProceedPayment")) $("bulkProceedPayment").addEventListener("click", openBulkConfirmModal);
       if ($("bulkClearDraft")) $("bulkClearDraft").addEventListener("click", clearBulkDraft);
       if ($("bulkViewCart")) $("bulkViewCart").addEventListener("click", openBulkCartView);
+      if ($("saveTodayPrices")) $("saveTodayPrices").addEventListener("click", () => {
+        if (saveChickenPricesFromInputs($("optionPage"))) {
+          $("posMessage").textContent = "Today chicken prices saved";
+          $("posMessage").className = "status ok";
+          renderOptionPage();
+        }
+      });
       document.querySelectorAll("[data-bulk-qty]").forEach(btn => btn.addEventListener("click", () => changeBulkDraftQty(btn.dataset.bulkId, Number(btn.dataset.bulkQty))));
       document.querySelectorAll("[data-bulk-input]").forEach(input => input.addEventListener("change", () => setBulkDraftQty(input.dataset.bulkInput, Number(input.value || 0))));
       document.querySelectorAll("[data-bulk-category]").forEach(btn => btn.addEventListener("click", () => {
@@ -7399,6 +7685,7 @@
                 <span class="drawer-section-title">Items</span>
                 ${drawerItem("add", "Add Item", "+", activeSection)}
                 ${drawerItem("edit", "Edit Price", "E", activeSection)}
+                ${drawerItem("todayPrices", "Today Price List", "P", activeSection)}
                 ${drawerItem("categories", "Categories", "C", activeSection)}
                 ${drawerItem("stock", "Stock Availability", "I", activeSection)}
               </section>
@@ -7546,7 +7833,7 @@
     }
 
     function openPaymentModal() {
-      const orderTotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const orderTotal = cart.reduce((sum, item) => sum + cartLineTotal(item), 0);
       const creditNames = (creditors.length ? creditors : users).map(row => row.name).filter(Boolean);
       $("paymentModalMount").innerHTML = `
         <div class="modal-backdrop">
@@ -7624,7 +7911,7 @@
       if (orderSubmitting) return;
       if (!cart.length) return closePaymentModal();
       orderSubmitting = true;
-      const orderSubtotal = cart.reduce((sum, item) => sum + Number(item.price) * item.qty, 0);
+      const orderSubtotal = cart.reduce((sum, item) => sum + cartLineTotal(item), 0);
       cartDiscount = Math.min(orderSubtotal, Math.max(0, Number(cartDiscount || 0)));
       const orderTotal = Math.max(0, orderSubtotal - cartDiscount);
       const creditInput = $("creditNameInput");
@@ -7653,7 +7940,10 @@
           printName: printItemName(item),
           optionName: item.optionName || "",
           price: item.price,
-          qty: item.qty
+          qty: item.qty,
+          unitPrice: item.unitPrice || item.price,
+          enteredAmount: item.enteredAmount || cartLineTotal(item),
+          weightUnit: item.weightUnit || ""
         }))
       };
       if (selectedPayment === "Split" && Math.round((payload.paymentBreakup.cash + payload.paymentBreakup.online) * 100) !== Math.round(payload.total * 100)) {
@@ -8226,7 +8516,7 @@
       try {
         const data = await api("/login", {
           method: "POST",
-          body: JSON.stringify({ loginId, mobile: loginId, password })
+          body: JSON.stringify({ loginId, mobile: loginId, restaurantId: restaurantIdParam, canteenId: restaurantIdParam, password })
         });
         setSession(data.user, data.token);
         cacheLogin(loginId, password, data.user, data.token || "");
@@ -8242,7 +8532,7 @@
           $("loginStatus").className = "status error";
           return;
         }
-        const cachedUser = offlineLogin(loginId, password);
+        const cachedUser = offlineLogin(loginId, password, restaurantIdParam);
         if (cachedUser) {
           setSession(cachedUser);
           $("loginStatus").textContent = "Offline login success. Sync pending when internet returns.";
@@ -8272,6 +8562,10 @@
 
     $("loginForm").addEventListener("submit", login);
     ensureUserNavKeys();
+    if (loginIdParam && $("mobileInput")) {
+      $("mobileInput").value = loginIdParam;
+      $("loginStatus").textContent = restaurantIdParam ? `Open POS for ${restaurantIdParam}. Enter password to continue.` : "Enter password to continue.";
+    }
     $("forgotPasswordBtn").addEventListener("click", () => {
       $("loginStatus").textContent = "Forgot password: contact Super Admin or Marketing team to reset this canteen login.";
       $("loginStatus").className = "status";
@@ -8302,6 +8596,7 @@
         activeCategory = btn.dataset.category;
         showingCategoryHome = false;
         renderProducts();
+        setTimeout(maybeOpenDailyChickenPrices, 0);
       });
       $("menuGrid").addEventListener("click", event => {
       const categoryCard = event.target.closest("[data-category-card]");
@@ -8309,6 +8604,7 @@
         activeCategory = categoryCard.dataset.categoryCard;
         showingCategoryHome = false;
         renderProducts();
+        setTimeout(maybeOpenDailyChickenPrices, 0);
         return;
       }
       const removeBtn = event.target.closest("[data-remove-item]");
@@ -8330,7 +8626,7 @@
       }
       const btn = event.target.closest("[data-item]");
       if (btn) {
-        const product = products.find(item => Number(item.id) === Number(btn.dataset.item));
+        const product = findBillingProduct(btn.dataset.item);
         const singleOption = btn.dataset.singleItem ? { name: "Single Item", price: singleItemPrice(product) } : null;
         addToCart(btn.dataset.item, singleOption || selectedSubItems[btn.dataset.item] || null);
       }
@@ -8339,7 +8635,7 @@
       const btn = event.target.closest("[data-item]");
       if (!btn) return;
       if (btn.dataset.singleItem) return;
-      const product = products.find(item => Number(item.id) === Number(btn.dataset.item));
+      const product = findBillingProduct(btn.dataset.item);
       if (!productSubItems(product).length) return;
       clearTimeout(longPressTimer);
       longPressTimer = setTimeout(() => {

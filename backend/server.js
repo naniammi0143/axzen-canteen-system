@@ -101,6 +101,8 @@ const defaultSettings = {
   receiptLogoSize: 100,
   menuLanguage: "english",
   receiptLanguage: "english",
+  businessCategory: "Canteen",
+  posMode: "canteen",
   reportTime: "22:00",
   adminWhatsAppNumber: "",
   reportPhone: "",
@@ -431,6 +433,8 @@ const reportSettingSchema = new mongoose.Schema({
   receiptLogoSize: Number,
   menuLanguage: String,
   receiptLanguage: String,
+  businessCategory: String,
+  posMode: String,
   reportTime: String,
   adminWhatsAppNumber: String,
   reportPhone: String,
@@ -1244,7 +1248,12 @@ async function saveCreditor(payload) {
 function defaultMenuForBusinessCategory(category = "Canteen") {
   const normalized = String(category || "Canteen").toLowerCase();
   if (normalized.includes("chicken") || normalized.includes("meat") || normalized.includes("mutton")) {
-    return defaultMenuItems.filter(item => item.billingType === "weight" || String(item.category || "").toLowerCase().includes("chicken"));
+    return defaultMenuItems
+      .filter(item => item.billingType === "weight" || String(item.category || "").toLowerCase().includes("chicken"))
+      .map(item => ({
+        ...item,
+        category: String(item.name || "").toLowerCase().includes("mutton") ? "Mutton" : "Chicken"
+      }));
   }
   if (normalized.includes("cool") || normalized.includes("drink") || normalized.includes("juice")) {
     return defaultMenuItems.filter(item => ["Juice", "Drinks"].includes(item.category) || ["Water Bottle"].includes(item.name));
@@ -1267,7 +1276,8 @@ async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen", busi
       await saveStockItem({ ...item, canteenId: targetCanteenId });
     }
   }
-  await saveSettings({ ...defaultSettings, canteenName }, targetCanteenId);
+  const posMode = String(businessCategory || "").toLowerCase().includes("chicken") ? "chicken_shop" : "canteen";
+  await saveSettings({ ...defaultSettings, canteenName, businessCategory, posMode }, targetCanteenId);
 }
 
 async function allStockItems(canteenId = DEFAULT_CANTEEN_ID) {
@@ -1394,14 +1404,22 @@ async function saveExpense(payload) {
 
 async function getSettings(canteenId = DEFAULT_CANTEEN_ID) {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  const core = await getCoreCanteen(targetCanteenId).catch(() => null);
+  const coreCategory = core?.businessCategory || "";
   if (!mongoReady) {
-    return { ...defaultSettings, ...memory.settings, canteenId: targetCanteenId };
+    const merged = { ...defaultSettings, ...memory.settings, canteenId: targetCanteenId };
+    if (coreCategory && (!merged.businessCategory || merged.businessCategory === defaultSettings.businessCategory)) merged.businessCategory = coreCategory;
+    if (String(merged.businessCategory || "").toLowerCase().includes("chicken")) merged.posMode = "chicken_shop";
+    return merged;
   }
   const stored = await ReportSetting.findOne({ key: "app", canteenId: targetCanteenId }).lean();
   const legacy = !stored && targetCanteenId === DEFAULT_CANTEEN_ID
     ? await ReportSetting.findOne({ key: "app", canteenId: { $exists: false } }).lean()
     : null;
-  return { ...defaultSettings, canteenId: targetCanteenId, ...(stored || legacy || {}) };
+  const merged = { ...defaultSettings, canteenId: targetCanteenId, ...(stored || legacy || {}) };
+  if (coreCategory && (!merged.businessCategory || merged.businessCategory === defaultSettings.businessCategory)) merged.businessCategory = coreCategory;
+  if (String(merged.businessCategory || "").toLowerCase().includes("chicken")) merged.posMode = "chicken_shop";
+  return merged;
 }
 
 function parseReportTime(value) {
