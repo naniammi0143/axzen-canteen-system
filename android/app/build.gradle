@@ -7,9 +7,9 @@ android {
         applicationId "com.axenhospitality.canteen"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 323
-        versionName "3.23"
-        setProperty("archivesBaseName", "Axzen-Canteen-v3.23")
+        versionCode 325
+        versionName "3.25"
+        setProperty("archivesBaseName", "Axzen-Canteen-v3.25")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
