@@ -62,13 +62,25 @@ if (!mongoUri) {
 app.use(express.json({ limit: "1mb" }));
 
 mongoose.set("strictQuery", true);
-const dbReady = mongoUri
-  ? mongoose.connect(mongoUri, { dbName, serverSelectionTimeoutMS: 12000 })
-  : Promise.reject(new Error("MONGODB_URI missing"));
+let dbReady = null;
 
-dbReady
-  .then(() => console.log(`Axzen CRM connected to MongoDB database ${dbName}`))
-  .catch((error) => console.error("Axzen CRM MongoDB connection failed:", error.message));
+function connectDb() {
+  if (!mongoUri) return Promise.reject(new Error("MONGODB_URI missing"));
+  if (mongoose.connection.readyState === 1) return Promise.resolve(mongoose.connection);
+  if (dbReady) return dbReady;
+  dbReady = mongoose
+    .connect(mongoUri, { dbName, serverSelectionTimeoutMS: 12000 })
+    .then((connection) => {
+      console.log(`Axzen CRM connected to MongoDB database ${dbName}`);
+      return connection;
+    })
+    .catch((error) => {
+      dbReady = null;
+      console.error("Axzen CRM MongoDB connection failed:", error.message);
+      throw error;
+    });
+  return dbReady;
+}
 
 const tenantSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
@@ -158,7 +170,7 @@ function publicRecord(record) {
 
 async function requireDb(req, res, next) {
   try {
-    await dbReady;
+    await connectDb();
     next();
   } catch (error) {
     res.status(503).json({ success: false, message: "Database not connected", detail: error.message });
