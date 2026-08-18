@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Axzen CRM</title>
+<meta name="description" content="Axzen CRM multi-tenant customer relationship management app.">
+<style>
+:root{
+  --ink:#121826;
+  --muted:#667085;
+  --line:#d9e1ec;
+  --soft:#f5f7fb;
+  --panel:#ffffff;
+  --brand:#1267e8;
+  --brand-dark:#0d4fb3;
+  --teal:#0f9f8f;
+  --amber:#b7791f;
+  --rose:#c2415b;
+  --green:#16845f;
+  --shadow:0 16px 38px rgba(18,24,38,.08);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;
+  color:var(--ink);
+  background:#eef2f7;
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+
+.auth-shell{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:minmax(320px,520px) 1fr;
+  background:
+    linear-gradient(135deg, rgba(18,103,232,.10), rgba(15,159,143,.10)),
+    #f6f8fb;
+}
+.auth-panel{
+  padding:38px;
+  background:#fff;
+  border-right:1px solid var(--line);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:24px;
+}
+.brand-row,.top-brand{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font-weight:800;
+  letter-spacing:0;
+}
+.logo{
+  width:42px;
+  height:42px;
+  display:grid;
+  place-items:center;
+  border-radius:8px;
+  background:#1267e8;
+  color:#fff;
+  font-weight:900;
+}
+.auth-card h1{
+  margin:0 0 8px;
+  font-size:32px;
+  line-height:1.1;
+}
+.auth-card p{margin:0 0 22px;color:var(--muted);line-height:1.55}
+.field{display:grid;gap:7px;margin-bottom:14px}
+.field label{font-size:13px;font-weight:700;color:#334155}
+.field input,.field select,.field textarea{
+  width:100%;
+  border:1px solid var(--line);
+  background:#fff;
+  color:var(--ink);
+  border-radius:8px;
+  padding:11px 12px;
+  outline:none;
+}
+.field textarea{min-height:86px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{
+  border-color:var(--brand);
+  box-shadow:0 0 0 3px rgba(18,103,232,.12);
+}
+.primary,.secondary,.ghost,.danger{
+  border:0;
+  border-radius:8px;
+  min-height:40px;
+  padding:0 14px;
+  font-weight:750;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  white-space:nowrap;
+}
+.primary{background:var(--brand);color:#fff}
+.primary:hover{background:var(--brand-dark)}
+.secondary{background:#eaf1ff;color:#164b96}
+.ghost{background:#fff;border:1px solid var(--line);color:#1f2937}
+.danger{background:#fff1f2;color:#a6203c}
+.auth-art{
+  padding:40px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.preview-board{
+  width:min(740px,92%);
+  display:grid;
+  gap:14px;
+}
+.preview-row{
+  min-height:78px;
+  display:grid;
+  grid-template-columns:1.2fr .8fr .8fr;
+  gap:14px;
+}
+.preview-cell,.preview-large{
+  background:rgba(255,255,255,.78);
+  border:1px solid rgba(217,225,236,.9);
+  border-radius:8px;
+  box-shadow:var(--shadow);
+}
+.preview-large{
+  min-height:250px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  overflow:hidden;
+}
+.preview-chart{
+  background:
+    linear-gradient(180deg, transparent 79%, #dbe5f2 80%),
+    linear-gradient(90deg, transparent 79%, #dbe5f2 80%);
+  background-size:40px 40px;
+  position:relative;
+}
+.preview-chart:after{
+  content:"";
+  position:absolute;
+  inset:42px 34px;
+  border-left:5px solid var(--brand);
+  border-bottom:5px solid var(--teal);
+  transform:skew(-12deg);
+}
+.preview-list{padding:20px;display:grid;gap:12px}
+.preview-line{height:12px;border-radius:99px;background:#dbe5f2}
+.preview-line:nth-child(2){width:78%;background:#cce3df}
+.preview-line:nth-child(3){width:58%;background:#e7d7b5}
+.hint{font-size:13px;color:var(--muted);line-height:1.5}
+.error{color:#b42318;font-size:13px;min-height:18px}
+
+.app{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:248px 1fr;
+}
+.sidebar{
+  background:#111827;
+  color:#f8fafc;
+  padding:22px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:22px;
+}
+.sidebar .logo{background:#fff;color:#1267e8}
+.tenant-chip{
+  display:grid;
+  gap:3px;
+  padding:12px;
+  border-radius:8px;
+  background:rgba(255,255,255,.08);
+}
+.tenant-chip strong{font-size:14px}
+.tenant-chip span{font-size:12px;color:#b8c2d6}
+.nav{display:grid;gap:6px}
+.nav-section{
+  margin:10px 8px 2px;
+  color:#94a3b8;
+  font-size:11px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+.nav button{
+  border:0;
+  width:100%;
+  min-height:40px;
+  padding:0 12px;
+  border-radius:8px;
+  background:transparent;
+  color:#cbd5e1;
+  text-align:left;
+  font-weight:700;
+}
+.nav button.active,.nav button:hover{background:#243044;color:#fff}
+.sidebar-footer{margin-top:auto;display:grid;gap:8px}
+.main{
+  min-width:0;
+  background:#f5f7fb;
+  display:grid;
+  grid-template-rows:auto 1fr;
+}
+.topbar{
+  min-height:72px;
+  background:#fff;
+  border-bottom:1px solid var(--line);
+  padding:14px 22px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+.topbar h2{margin:0;font-size:22px}
+.topbar p{margin:3px 0 0;color:var(--muted);font-size:13px}
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.content{padding:22px;display:grid;gap:18px}
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(150px,1fr));
+  gap:14px;
+}
+.stat,.panel,.record{
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:8px;
+  box-shadow:0 8px 20px rgba(18,24,38,.04);
+}
+.stat{padding:16px}
+.stat span{color:var(--muted);font-size:12px;font-weight:800;text-transform:uppercase}
+.stat strong{display:block;margin-top:8px;font-size:28px}
+.work-grid{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:18px;
+}
+.panel{padding:16px;min-width:0}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.panel-head h3{margin:0;font-size:17px}
+.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px}
+table{width:100%;border-collapse:collapse;background:#fff;min-width:680px}
+th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
+th{font-size:12px;text-transform:uppercase;color:#64748b;background:#f8fafc}
+tr:last-child td{border-bottom:0}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  min-height:24px;
+  padding:0 9px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  background:#eaf1ff;
+  color:#164b96;
+}
+.badge.hot{background:#fff1d6;color:#8a5a12}
+.badge.won{background:#dff7eb;color:#146c4a}
+.badge.lost{background:#ffe4e9;color:#9f203b}
+.records{display:grid;gap:10px}
+.record{padding:13px;display:grid;gap:7px}
+.record strong{font-size:15px}
+.record small{color:var(--muted)}
+.module{display:none}
+.module.active{display:grid;gap:18px}
+.form-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(180px,1fr));
+  gap:12px;
+}
+.form-grid .wide{grid-column:1/-1}
+.feature-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:9px;
+  margin:8px 0 14px;
+}
+.check-row{
+  min-height:36px;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:8px 10px;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  font-size:13px;
+  font-weight:700;
+}
+.check-row input{width:16px;height:16px}
+.muted-text{color:var(--muted);font-size:13px;line-height:1.5}
+.tenant-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.empty{
+  padding:28px;
+  border:1px dashed #c5cfdd;
+  border-radius:8px;
+  text-align:center;
+  color:var(--muted);
+  background:#fff;
+}
+.mobile-menu{display:none}
+
+@media (max-width:900px){
+  .auth-shell{grid-template-columns:1fr}
+  .auth-art{display:none}
+  .app{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .sidebar.open{
+    display:flex;
+    position:fixed;
+    inset:0 auto 0 0;
+    width:min(280px,88vw);
+    z-index:10;
+  }
+  .mobile-menu{display:inline-flex}
+  .stats{grid-template-columns:repeat(2,minmax(130px,1fr))}
+  .work-grid{grid-template-columns:1fr}
+  .topbar{align-items:flex-start}
+}
+@media (max-width:560px){
+  .auth-panel{padding:24px}
+  .auth-card h1{font-size:26px}
+  .content{padding:14px}
+  .stats{grid-template-columns:1fr}
+  .form-grid{grid-template-columns:1fr}
+  .topbar{padding:12px 14px;flex-direction:column}
+  .toolbar{width:100%}
+  .toolbar button{flex:1}
+}
+</style>
+</head>
+<body>
+<section id="authShell" class="auth-shell">
+  <div class="auth-panel">
+    <div class="brand-row"><div class="logo">A</div><span>Axzen CRM</span></div>
+    <div class="auth-card">
+      <h1>Customer workspace login</h1>
+      <p>Create a company CRM account with username and phone number. Every company gets isolated leads, contacts, deals, and tasks.</p>
+      <form id="authForm">
+        <div class="field">
+          <label for="companyName">Company / customer name</label>
+          <input id="companyName" autocomplete="organization" placeholder="Example: Sri Lakshmi Restaurant">
+        </div>
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" autocomplete="username" placeholder="owner or sales1" required>
+        </div>
+        <div class="field">
+          <label for="phone">Phone number</label>
+          <input id="phone" autocomplete="tel" inputmode="tel" placeholder="9876543210" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" autocomplete="current-password" type="password" placeholder="Minimum 6 characters" required>
+        </div>
+        <div class="toolbar">
+          <button class="primary" type="submit">Sign in</button>
+          <button class="secondary" id="demoBtn" type="button">Load demo</button>
+        </div>
+        <div id="authError" class="error"></div>
+      </form>
+      <p class="hint">New company name creates a fresh tenant. Existing users can sign in again with the same username, phone number, and password.</p>
+    </div>
+  </div>
+  <div class="auth-art" aria-hidden="true">
+    <div class="preview-board">
+      <div class="preview-row">
+        <div class="preview-cell"></div>
+        <div class="preview-cell"></div>
+        <div class="preview-cell"></div>
+      </div>
+      <div class="preview-large">
+        <div class="preview-chart"></div>
+        <div class="preview-list">
+          <div class="preview-line"></div>
+          <div class="preview-line"></div>
+          <div class="preview-line"></div>
+          <div class="preview-line"></div>
+          <div class="preview-line"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="appShell" class="app hidden">
+  <aside id="sidebar" class="sidebar">
+    <div class="top-brand"><div class="logo">A</div><span>Axzen CRM</span></div>
+    <div class="tenant-chip">
+      <strong id="tenantName">Workspace</strong>
+      <span id="userName">User</span>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="sidebar-footer">
+      <button class="ghost" id="exportBtn" type="button">Export data</button>
+      <button class="danger" id="logoutBtn" type="button">Logout</button>
+    </div>
+  </aside>
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <button class="ghost mobile-menu" id="menuBtn" type="button">Menu</button>
+        <h2 id="pageTitle">Dashboard</h2>
+        <p id="pageSubtitle">Today sales pipeline and customer follow-ups.</p>
+      </div>
+      <div class="toolbar">
+        <button class="secondary" id="seedBtn" type="button">Add sample</button>
+        <button class="primary" id="quickLeadBtn" type="button">New lead</button>
+      </div>
+    </header>
+    <div class="content">
+      <section id="dashboard" class="module active">
+        <div class="stats">
+          <div class="stat"><span>Leads</span><strong id="statLeads">0</strong></div>
+          <div class="stat"><span>Contacts</span><strong id="statContacts">0</strong></div>
+          <div class="stat"><span>Open deals</span><strong id="statDeals">0</strong></div>
+          <div class="stat"><span>Due tasks</span><strong id="statTasks">0</strong></div>
+        </div>
+        <div class="work-grid">
+          <div class="panel">
+            <div class="panel-head"><h3>Recent leads</h3><button class="ghost" data-go="leads" type="button">View all</button></div>
+            <div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Source</th><th>Status</th></tr></thead><tbody id="recentLeads"></tbody></table></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Follow-ups</h3><button class="ghost" data-go="tasks" type="button">View tasks</button></div>
+            <div id="taskCards" class="records"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="admin" class="module">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h3>Axzen customer control</h3>
+              <p class="muted-text">Create customer CRM accounts and decide which modules they can use.</p>
+            </div>
+          </div>
+          <form id="tenantForm" class="form-grid">
+            <div class="field"><label>Customer company</label><input name="companyName" required></div>
+            <div class="field"><label>Owner username</label><input name="username" value="owner" required></div>
+            <div class="field"><label>Owner phone</label><input name="phone" inputmode="tel" required></div>
+            <div class="field"><label>Temporary password</label><input name="password" value="Welcome@123" required></div>
+            <div class="field"><label>Plan</label><select name="plan"><option>Starter</option><option>Growth</option><option>Business</option><option>Enterprise</option></select></div>
+            <div class="field"><label>Status</label><select name="status"><option>trial</option><option>active</option><option>suspended</option></select></div>
+            <div class="wide">
+              <label class="field-label">Enabled modules</label>
+              <div id="tenantFeatureChoices" class="feature-grid"></div>
+            </div>
+            <button class="primary" type="submit">Create customer</button>
+          </form>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Customer accounts</h3><button class="ghost" id="refreshTenantsBtn" type="button">Refresh</button></div>
+          <div id="tenantRows" class="records"></div>
+        </div>
+      </section>
+
+      <section id="leads" class="module">
+        <div class="panel">
+          <div class="panel-head"><h3>Add lead</h3></div>
+          <form id="leadForm" class="form-grid">
+            <div class="field"><label>Name</label><input name="name" required></div>
+            <div class="field"><label>Phone</label><input name="phone" inputmode="tel" required></div>
+            <div class="field"><label>Source</label><select name="source"><option>Walk-in</option><option>Website</option><option>WhatsApp</option><option>Reference</option><option>Calling</option></select></div>
+            <div class="field"><label>Status</label><select name="status"><option>New</option><option>Hot</option><option>Follow-up</option><option>Converted</option><option>Lost</option></select></div>
+            <div class="field wide"><label>Notes</label><textarea name="notes" placeholder="Requirement, budget, next action"></textarea></div>
+            <button class="primary" type="submit">Save lead</button>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Leads</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Source</th><th>Status</th><th>Notes</th></tr></thead><tbody id="leadRows"></tbody></table></div></div>
+      </section>
+
+      <section id="contacts" class="module">
+        <div class="panel">
+          <div class="panel-head"><h3>Add contact</h3></div>
+          <form id="contactForm" class="form-grid">
+            <div class="field"><label>Name</label><input name="name" required></div>
+            <div class="field"><label>Phone</label><input name="phone" inputmode="tel" required></div>
+            <div class="field"><label>Email</label><input name="email" type="email"></div>
+            <div class="field"><label>Type</label><select name="type"><option>Customer</option><option>Partner</option><option>Vendor</option></select></div>
+            <button class="primary" type="submit">Save contact</button>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Contacts</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Type</th></tr></thead><tbody id="contactRows"></tbody></table></div></div>
+      </section>
+
+      <section id="deals" class="module">
+        <div class="panel">
+          <div class="panel-head"><h3>Add deal</h3></div>
+          <form id="dealForm" class="form-grid">
+            <div class="field"><label>Deal title</label><input name="title" required></div>
+            <div class="field"><label>Amount</label><input name="amount" type="number" min="0" required></div>
+            <div class="field"><label>Stage</label><select name="stage"><option>Open</option><option>Proposal</option><option>Won</option><option>Lost</option></select></div>
+            <div class="field"><label>Owner</label><input name="owner"></div>
+            <button class="primary" type="submit">Save deal</button>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Deals</h3></div><div class="table-wrap"><table><thead><tr><th>Title</th><th>Amount</th><th>Stage</th><th>Owner</th></tr></thead><tbody id="dealRows"></tbody></table></div></div>
+      </section>
+
+      <section id="tasks" class="module">
+        <div class="panel">
+          <div class="panel-head"><h3>Add task</h3></div>
+          <form id="taskForm" class="form-grid">
+            <div class="field"><label>Task</label><input name="title" required></div>
+            <div class="field"><label>Due date</label><input name="dueDate" type="date" required></div>
+            <div class="field"><label>Priority</label><select name="priority"><option>Normal</option><option>High</option><option>Low</option></select></div>
+            <div class="field"><label>Status</label><select name="status"><option>Open</option><option>Done</option></select></div>
+            <button class="primary" type="submit">Save task</button>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Tasks</h3></div><div class="table-wrap"><table><thead><tr><th>Task</th><th>Due date</th><th>Priority</th><th>Status</th></tr></thead><tbody id="taskRows"></tbody></table></div></div>
+      </section>
+
+      <section id="settings" class="module">
+        <div class="panel">
+          <div class="panel-head"><h3>Workspace settings</h3></div>
+          <div class="records">
+            <div class="record"><strong>Tenant ID</strong><small id="tenantIdText"></small></div>
+            <div class="record"><strong>Login rule</strong><small>Username + phone number. Backend version should add OTP or password.</small></div>
+            <div class="record"><strong>Data rule</strong><small>Every record stores tenantId, createdBy, and createdAt for customer-wise isolation.</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="genericModule" class="module">
+        <div class="panel">
+          <div class="panel-head"><h3 id="genericTitle">Module</h3></div>
+          <p id="genericCopy" class="muted-text"></p>
+          <div id="genericRows" class="records"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+</section>
+
+<script>
+const SESSION_KEY = "axzenCrm.session";
+const moduleCatalog = [
+  { id:"dashboard", label:"Dashboard", group:"Main", collection:null, defaultEnabled:true },
+  { id:"leads", label:"Leads", group:"Sales", collection:"leads", defaultEnabled:true },
+  { id:"contacts", label:"Contacts", group:"Sales", collection:"contacts", defaultEnabled:true },
+  { id:"companies", label:"Companies", group:"Sales", collection:"companies", defaultEnabled:true },
+  { id:"pipeline", label:"Pipeline", group:"Sales", collection:"pipeline", defaultEnabled:true },
+  { id:"customers", label:"Customers", group:"Sales", collection:"customers", defaultEnabled:true },
+  { id:"campaigns", label:"Campaigns", group:"Marketing", collection:"campaigns", defaultEnabled:false },
+  { id:"audiences", label:"Audiences", group:"Marketing", collection:"audiences", defaultEnabled:false },
+  { id:"whatsappCampaigns", label:"WhatsApp Campaigns", group:"Marketing", collection:"whatsappCampaigns", defaultEnabled:false },
+  { id:"metaAds", label:"Meta Ads", group:"Marketing", collection:"metaAds", defaultEnabled:false },
+  { id:"creatives", label:"Creatives", group:"Marketing", collection:"creatives", defaultEnabled:false },
+  { id:"analytics", label:"Analytics", group:"Marketing", collection:"analytics", defaultEnabled:false },
+  { id:"conversations", label:"Conversations", group:"Communication", collection:"conversations", defaultEnabled:false },
+  { id:"tasks", label:"Tasks & Follow-ups", group:"Communication", collection:"tasks", defaultEnabled:true },
+  { id:"calendar", label:"Calendar", group:"Communication", collection:"calendar", defaultEnabled:true },
+  { id:"employees", label:"Employees", group:"Team", collection:"employees", defaultEnabled:false },
+  { id:"fieldVisits", label:"Field Visits", group:"Team", collection:"fieldVisits", defaultEnabled:false },
+  { id:"products", label:"Products", group:"Business", collection:"products", defaultEnabled:false },
+  { id:"quotations", label:"Quotations", group:"Business", collection:"quotations", defaultEnabled:false },
+  { id:"deals", label:"Deals", group:"Business", collection:"deals", defaultEnabled:true },
+  { id:"subscriptions", label:"Subscriptions", group:"Business", collection:"subscriptions", defaultEnabled:false },
+  { id:"payments", label:"Payments", group:"Business", collection:"payments", defaultEnabled:false },
+  { id:"supportTickets", label:"Support Tickets", group:"Business", collection:"supportTickets", defaultEnabled:false },
+  { id:"reports", label:"Reports", group:"Intelligence", collection:"reports", defaultEnabled:true },
+  { id:"automations", label:"Automations", group:"Intelligence", collection:"automations", defaultEnabled:false },
+  { id:"aiAssistant", label:"AI Assistant", group:"Intelligence", collection:"aiAssistant", defaultEnabled:false },
+  { id:"integrations", label:"Integrations", group:"System", collection:"integrations", defaultEnabled:false },
+  { id:"usersRoles", label:"Users & Roles", group:"System", collection:"usersRoles", defaultEnabled:true },
+  { id:"settings", label:"Settings", group:"System", collection:null, defaultEnabled:true }
+];
+const initialState = Object.fromEntries(moduleCatalog.map(item => item.collection).filter(Boolean).concat("notes").map(name => [name, []]));
+let state = structuredClone(initialState);
+let session = loadSession();
+let currentTenant = null;
+let currentUser = null;
+let currentView = "dashboard";
+let adminTenants = [];
+
+function loadSession(){
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); }
+  catch { return null; }
+}
+function saveSession(){ localStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
+function cleanPhone(value){ return String(value || "").replace(/\D/g,""); }
+function titleCase(value){ return String(value || "").trim().replace(/\s+/g," "); }
+function money(value){ return "Rs " + Number(value || 0).toLocaleString("en-IN"); }
+function byTenant(collection){ return state[collection] || []; }
+function isPlatformAdmin(){ return currentUser?.role === "Platform Admin"; }
+function enabledFeatures(){ return isPlatformAdmin() ? moduleCatalog.map(item => item.id).concat("admin") : (currentTenant?.features || []); }
+function moduleById(id){ return moduleCatalog.find(item => item.id === id); }
+function escapeHtml(value){
+  return String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[char]));
+}
+
+async function api(path, options = {}){
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if(session?.token) headers.Authorization = `Bearer ${session.token}`;
+  const response = await fetch(path, { ...options, headers });
+  const data = await response.json().catch(() => ({}));
+  if(!response.ok || data.success === false){
+    throw new Error(data.message || "Server request failed");
+  }
+  return data;
+}
+
+async function signIn(companyName, username, phone, password){
+  if(!titleCase(username) || cleanPhone(phone).length < 8 || String(password || "").length < 6){
+    throw new Error("Username, valid phone number, minimum 6 character password kavali.");
+  }
+  const data = await api("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ companyName, username, phone, password })
+  });
+  session = { token: data.token };
+  currentTenant = data.tenant;
+  currentUser = data.user;
+  saveSession();
+  await bootstrap();
+}
+
+async function bootstrap(){
+  if(!session?.token) return;
+  const data = await api("/api/bootstrap");
+  currentTenant = data.tenant;
+  currentUser = data.user;
+  state = { ...structuredClone(initialState), ...data.data };
+  if(isPlatformAdmin()) await loadAdminTenants();
+}
+
+async function addRecord(collection, values){
+  const data = await api(`/api/${collection}`, {
+    method: "POST",
+    body: JSON.stringify(values)
+  });
+  state[collection].unshift(data.record);
+  render();
+}
+
+function badgeClass(value){
+  const v = String(value || "").toLowerCase();
+  if(v.includes("hot") || v.includes("high") || v.includes("proposal")) return "hot";
+  if(v.includes("won") || v.includes("converted") || v.includes("done")) return "won";
+  if(v.includes("lost")) return "lost";
+  return "";
+}
+
+function row(cells){
+  return "<tr>" + cells.map(cell => "<td>" + cell + "</td>").join("") + "</tr>";
+}
+function emptyRow(colspan, text){
+  return `<tr><td colspan="${colspan}"><div class="empty">${escapeHtml(text)}</div></td></tr>`;
+}
+
+function render(){
+  if(!session?.token || !currentTenant || !currentUser){
+    document.getElementById("authShell").classList.remove("hidden");
+    document.getElementById("appShell").classList.add("hidden");
+    return;
+  }
+  document.getElementById("authShell").classList.add("hidden");
+  document.getElementById("appShell").classList.remove("hidden");
+  document.getElementById("tenantName").textContent = currentTenant.name;
+  document.getElementById("userName").textContent = `${currentUser.displayName} - ${currentUser.phone}`;
+  document.getElementById("tenantIdText").textContent = currentTenant.id;
+  renderNav();
+  if(isPlatformAdmin()) renderAdmin();
+
+  const leads = byTenant("leads");
+  const contacts = byTenant("contacts");
+  const deals = byTenant("deals");
+  const tasks = byTenant("tasks");
+  document.getElementById("statLeads").textContent = leads.length;
+  document.getElementById("statContacts").textContent = contacts.length;
+  document.getElementById("statDeals").textContent = deals.filter(d => !["Won","Lost"].includes(d.stage)).length;
+  document.getElementById("statTasks").textContent = tasks.filter(t => t.status !== "Done").length;
+
+  document.getElementById("recentLeads").innerHTML = leads.slice(0,5).map(lead => row([
+    escapeHtml(lead.name),
+    escapeHtml(lead.phone),
+    escapeHtml(lead.source),
+    `<span class="badge ${badgeClass(lead.status)}">${escapeHtml(lead.status)}</span>`
+  ])).join("") || emptyRow(4, "No leads yet.");
+
+  document.getElementById("taskCards").innerHTML = tasks.slice(0,5).map(task => `
+    <div class="record">
+      <strong>${escapeHtml(task.title)}</strong>
+      <small>${escapeHtml(task.dueDate)} - ${escapeHtml(task.priority)} - ${escapeHtml(task.status)}</small>
+    </div>
+  `).join("") || `<div class="empty">No follow-ups yet.</div>`;
+
+  document.getElementById("leadRows").innerHTML = leads.map(lead => row([
+    escapeHtml(lead.name),
+    escapeHtml(lead.phone),
+    escapeHtml(lead.source),
+    `<span class="badge ${badgeClass(lead.status)}">${escapeHtml(lead.status)}</span>`,
+    escapeHtml(lead.notes)
+  ])).join("") || emptyRow(5, "No leads yet.");
+
+  document.getElementById("contactRows").innerHTML = contacts.map(contact => row([
+    escapeHtml(contact.name),
+    escapeHtml(contact.phone),
+    escapeHtml(contact.email),
+    escapeHtml(contact.type)
+  ])).join("") || emptyRow(4, "No contacts yet.");
+
+  document.getElementById("dealRows").innerHTML = deals.map(deal => row([
+    escapeHtml(deal.title),
+    money(deal.amount),
+    `<span class="badge ${badgeClass(deal.stage)}">${escapeHtml(deal.stage)}</span>`,
+    escapeHtml(deal.owner)
+  ])).join("") || emptyRow(4, "No deals yet.");
+
+  document.getElementById("taskRows").innerHTML = tasks.map(task => row([
+    escapeHtml(task.title),
+    escapeHtml(task.dueDate),
+    `<span class="badge ${badgeClass(task.priority)}">${escapeHtml(task.priority)}</span>`,
+    `<span class="badge ${badgeClass(task.status)}">${escapeHtml(task.status)}</span>`
+  ])).join("") || emptyRow(4, "No tasks yet.");
+}
+
+function renderNav(){
+  const allowed = enabledFeatures();
+  const items = [];
+  if(isPlatformAdmin()) items.push({ id:"admin", label:"Axzen Admin", group:"Main" });
+  moduleCatalog.forEach(item => {
+    if(allowed.includes(item.id)) items.push(item);
+  });
+  let lastGroup = "";
+  document.getElementById("nav").innerHTML = items.map(item => {
+    const section = item.group !== lastGroup ? `<div class="nav-section">${escapeHtml(item.group)}</div>` : "";
+    lastGroup = item.group;
+    return `${section}<button data-view="${item.id}" class="${currentView === item.id ? "active" : ""}">${escapeHtml(item.label)}</button>`;
+  }).join("");
+}
+
+function renderFeatureChoices(containerId, selected, prefix){
+  const selectedSet = new Set(selected || moduleCatalog.filter(item => item.defaultEnabled).map(item => item.id));
+  document.getElementById(containerId).innerHTML = moduleCatalog
+    .filter(item => item.id !== "dashboard" && item.id !== "settings")
+    .map(item => `
+      <label class="check-row">
+        <input type="checkbox" name="${prefix}" value="${item.id}" ${selectedSet.has(item.id) ? "checked" : ""}>
+        <span>${escapeHtml(item.label)}</span>
+      </label>
+    `).join("");
+}
+
+async function loadAdminTenants(){
+  const data = await api("/api/admin/tenants");
+  adminTenants = data.tenants || [];
+}
+
+function renderAdmin(){
+  renderFeatureChoices("tenantFeatureChoices", moduleCatalog.filter(item => item.defaultEnabled).map(item => item.id), "features");
+  document.getElementById("tenantRows").innerHTML = adminTenants.map(tenant => {
+    const features = new Set(tenant.features || []);
+    const featureText = moduleCatalog.filter(item => features.has(item.id)).map(item => item.label).join(", ");
+    return `
+      <div class="record" data-tenant-id="${escapeHtml(tenant.id)}">
+        <strong>${escapeHtml(tenant.name)} <span class="badge">${escapeHtml(tenant.plan)}</span> <span class="badge ${tenant.status === "suspended" ? "lost" : "won"}">${escapeHtml(tenant.status)}</span></strong>
+        <small>Users: ${escapeHtml(tenant.users?.length || 0)} - Leads: ${escapeHtml(tenant.usage?.leads || 0)} - Contacts: ${escapeHtml(tenant.usage?.contacts || 0)} - Deals: ${escapeHtml(tenant.usage?.deals || 0)}</small>
+        <small>${escapeHtml(featureText || "No modules enabled")}</small>
+        <div class="feature-grid">
+          ${moduleCatalog.filter(item => item.id !== "dashboard" && item.id !== "settings").map(item => `
+            <label class="check-row">
+              <input type="checkbox" name="tenantFeature" value="${item.id}" ${features.has(item.id) ? "checked" : ""}>
+              <span>${escapeHtml(item.label)}</span>
+            </label>
+          `).join("")}
+        </div>
+        <div class="tenant-actions">
+          <select name="tenantPlan"><option ${tenant.plan === "Starter" ? "selected" : ""}>Starter</option><option ${tenant.plan === "Growth" ? "selected" : ""}>Growth</option><option ${tenant.plan === "Business" ? "selected" : ""}>Business</option><option ${tenant.plan === "Enterprise" ? "selected" : ""}>Enterprise</option></select>
+          <select name="tenantStatus"><option ${tenant.status === "trial" ? "selected" : ""}>trial</option><option ${tenant.status === "active" ? "selected" : ""}>active</option><option ${tenant.status === "suspended" ? "selected" : ""}>suspended</option></select>
+          <button class="primary" data-save-tenant type="button">Save modules</button>
+        </div>
+      </div>
+    `;
+  }).join("") || `<div class="empty">No customer accounts yet.</div>`;
+}
+
+function renderGenericModule(view){
+  const item = moduleById(view);
+  if(!item) return;
+  document.getElementById("genericTitle").textContent = item.label;
+  document.getElementById("genericCopy").textContent = `${item.label} module is enabled for this customer. Detailed screens, workflows and reports can be built here without mixing data with other customers.`;
+  const rows = item.collection ? byTenant(item.collection) : [];
+  document.getElementById("genericRows").innerHTML = rows.slice(0,8).map(record => `
+    <div class="record">
+      <strong>${escapeHtml(record.title || record.name || record.subject || item.label)}</strong>
+      <small>${escapeHtml(record.status || record.type || record.createdAt || "")}</small>
+    </div>
+  `).join("") || `<div class="empty">${escapeHtml(item.label)} records will appear here.</div>`;
+}
+
+function setView(view){
+  const allowed = enabledFeatures();
+  if(!allowed.includes(view) && view !== "admin"){
+    view = "dashboard";
+  }
+  currentView = view;
+  const target = document.getElementById(view) ? view : "genericModule";
+  document.querySelectorAll(".module").forEach(item => item.classList.toggle("active", item.id === target));
+  if(target === "genericModule") renderGenericModule(view);
+  renderNav();
+  const titles = {
+    dashboard:["Dashboard","Today sales pipeline and customer follow-ups."],
+    admin:["Axzen Admin","Create customer accounts and control their CRM modules."],
+    leads:["Leads","Capture enquiries from calls, website, WhatsApp, and walk-ins."],
+    contacts:["Contacts","Manage converted customers, partners, and vendors."],
+    companies:["Companies","Business accounts linked to leads, contacts, deals and support."],
+    pipeline:["Pipeline","Stage-wise sales flow for every customer workspace."],
+    customers:["Customers","Converted customer base with history and segmentation."],
+    deals:["Deals","Track proposal value and sales stage."],
+    tasks:["Tasks","Follow-ups, reminders, and staff work."],
+    campaigns:["Campaigns","Plan and measure outreach across WhatsApp, ads and email."],
+    audiences:["Audiences","Create customer segments for targeted campaigns."],
+    whatsappCampaigns:["WhatsApp Campaigns","Send approved messages and track delivery per customer."],
+    metaAds:["Meta Ads","Connect Meta lead forms and keep ad leads tenant-wise."],
+    creatives:["Creatives","Store campaign media, captions and offer assets."],
+    analytics:["Analytics","Marketing and sales performance by source."],
+    conversations:["Conversations","Customer message history and replies."],
+    calendar:["Calendar","Follow-up calendar, visits and reminders."],
+    employees:["Employees","Team directory, roles and assignment capacity."],
+    fieldVisits:["Field Visits","Sales visits, location updates and visit notes."],
+    products:["Products","Products and services for quotations and deals."],
+    quotations:["Quotations","Create estimates and send them to customers."],
+    subscriptions:["Subscriptions","Customer plans, renewal dates and limits."],
+    payments:["Payments","Payment collection and outstanding reports."],
+    supportTickets:["Support Tickets","Issues, SLA tracking and support ownership."],
+    reports:["Reports","Sales, marketing, team and revenue reports."],
+    automations:["Automations","Rules for lead assignment, reminders and messages."],
+    aiAssistant:["AI Assistant","Draft messages, summarize leads and suggest next actions."],
+    integrations:["Integrations","Connect WhatsApp, Meta, Google, website forms and payment systems."],
+    usersRoles:["Users & Roles","Manage staff access inside a customer workspace."],
+    settings:["Settings","Tenant identity and CRM data rules."]
+  };
+  document.getElementById("pageTitle").textContent = (titles[view] || [moduleById(view)?.label || "Module",""])[0];
+  document.getElementById("pageSubtitle").textContent = (titles[view] || ["",""])[1];
+  document.getElementById("sidebar").classList.remove("open");
+}
+
+function formValues(form){
+  return Object.fromEntries(new FormData(form).entries());
+}
+function resetForm(form){ form.reset(); form.querySelector("input,select,textarea")?.focus(); }
+function seedSample(){
+  addRecord("leads", { name:"Ramesh Kumar", phone:"9848012345", source:"WhatsApp", status:"Hot", notes:"Needs CRM for hotel banquet enquiries." });
+  addRecord("contacts", { name:"Sana Foods", phone:"9700011122", email:"sales@sanafoods.example", type:"Customer" });
+  addRecord("deals", { title:"Annual CRM subscription", amount:36000, stage:"Proposal", owner:"Owner" });
+  addRecord("tasks", { title:"Call Ramesh for demo timing", dueDate:new Date().toISOString().slice(0,10), priority:"High", status:"Open" });
+}
+
+document.getElementById("authForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const error = document.getElementById("authError");
+  error.textContent = "";
+  try {
+    await signIn(companyName.value, username.value, phone.value, password.value);
+    render();
+  } catch (err) {
+    error.textContent = err.message;
+  }
+});
+document.getElementById("demoBtn").addEventListener("click", () => {
+  companyName.value = "Axzen Demo Customer";
+  username.value = "owner";
+  phone.value = "9876543210";
+  password.value = "demo123";
+});
+document.getElementById("nav").addEventListener("click", event => {
+  const button = event.target.closest("button[data-view]");
+  if(button) setView(button.dataset.view);
+});
+document.getElementById("tenantForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const values = formValues(event.currentTarget);
+  values.features = Array.from(event.currentTarget.querySelectorAll("input[name='features']:checked")).map(input => input.value);
+  values.features.push("dashboard", "settings");
+  await api("/api/admin/tenants", { method:"POST", body:JSON.stringify(values) });
+  await loadAdminTenants();
+  renderAdmin();
+  event.currentTarget.reset();
+  event.currentTarget.username.value = "owner";
+  event.currentTarget.password.value = "Welcome@123";
+});
+document.getElementById("refreshTenantsBtn").addEventListener("click", async () => {
+  await loadAdminTenants();
+  renderAdmin();
+});
+document.getElementById("tenantRows").addEventListener("click", async event => {
+  const button = event.target.closest("[data-save-tenant]");
+  if(!button) return;
+  const card = button.closest("[data-tenant-id]");
+  const features = Array.from(card.querySelectorAll("input[name='tenantFeature']:checked")).map(input => input.value);
+  features.push("dashboard", "settings");
+  await api(`/api/admin/tenants/${card.dataset.tenantId}`, {
+    method:"PATCH",
+    body:JSON.stringify({
+      plan: card.querySelector("[name='tenantPlan']").value,
+      status: card.querySelector("[name='tenantStatus']").value,
+      features
+    })
+  });
+  await loadAdminTenants();
+  renderAdmin();
+});
+document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => setView(button.dataset.go)));
+document.getElementById("menuBtn").addEventListener("click", () => document.getElementById("sidebar").classList.add("open"));
+document.getElementById("quickLeadBtn").addEventListener("click", () => setView("leads"));
+document.getElementById("logoutBtn").addEventListener("click", () => {
+  session = null;
+  currentTenant = null;
+  currentUser = null;
+  state = structuredClone(initialState);
+  localStorage.removeItem(SESSION_KEY);
+  render();
+});
+document.getElementById("seedBtn").addEventListener("click", seedSample);
+document.getElementById("exportBtn").addEventListener("click", () => {
+  const tenantData = { tenant: currentTenant, user: currentUser, data: state };
+  const blob = new Blob([JSON.stringify(tenantData, null, 2)], { type:"application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "axzen-crm-export.json";
+  link.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById("leadForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await addRecord("leads", formValues(event.currentTarget));
+  resetForm(event.currentTarget);
+});
+document.getElementById("contactForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await addRecord("contacts", formValues(event.currentTarget));
+  resetForm(event.currentTarget);
+});
+document.getElementById("dealForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await addRecord("deals", formValues(event.currentTarget));
+  resetForm(event.currentTarget);
+});
+document.getElementById("taskForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await addRecord("tasks", formValues(event.currentTarget));
+  resetForm(event.currentTarget);
+});
+
+bootstrap().then(render).catch(() => {
+  session = null;
+  localStorage.removeItem(SESSION_KEY);
+  render();
+});
+</script>
+</body>
+</html>
