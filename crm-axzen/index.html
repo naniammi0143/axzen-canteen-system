@@ -38,6 +38,7 @@ body{
   background:#f3f6fb;
   font-size:14px;
 }
+body.app-active{overflow:hidden}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
@@ -174,9 +175,10 @@ button{cursor:pointer}
 .error{color:#b42318;font-size:13px;min-height:18px}
 
 .app{
-  min-height:100vh;
+  height:100vh;
   display:grid;
   grid-template-columns:276px 1fr;
+  overflow:hidden;
 }
 .sidebar{
   background:var(--sidebar);
@@ -186,6 +188,8 @@ button{cursor:pointer}
   flex-direction:column;
   gap:18px;
   border-right:1px solid rgba(255,255,255,.08);
+  min-height:0;
+  overflow:hidden;
 }
 .sidebar .logo{background:#fff;color:#155eef;box-shadow:none}
 .tenant-chip{
@@ -198,7 +202,7 @@ button{cursor:pointer}
 }
 .tenant-chip strong{font-size:14px}
 .tenant-chip span{font-size:12px;color:#b8c2d6}
-.nav{display:grid;gap:5px;overflow:auto;padding-right:2px}
+.nav{display:grid;gap:5px;overflow-y:auto;overflow-x:hidden;padding-right:2px;min-height:0}
 .nav-section{
   margin:12px 9px 3px;
   color:#94a3b8;
@@ -225,6 +229,8 @@ button{cursor:pointer}
   background:#f3f6fb;
   display:grid;
   grid-template-rows:auto 1fr;
+  min-height:0;
+  overflow:hidden;
 }
 .topbar{
   min-height:76px;
@@ -240,7 +246,7 @@ button{cursor:pointer}
 .topbar h2{margin:0;font-size:23px;font-weight:850;color:#111827}
 .topbar p{margin:3px 0 0;color:var(--muted);font-size:13px}
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.content{padding:24px;display:grid;gap:18px}
+.content{padding:24px;display:grid;gap:18px;overflow:auto;min-height:0}
 .stats{
   display:grid;
   grid-template-columns:repeat(4,minmax(150px,1fr));
@@ -664,6 +670,10 @@ tbody tr:hover{background:#fbfdff}
         <div class="panel">
           <div class="panel-head"><h3 id="genericTitle">Module</h3></div>
           <p id="genericCopy" class="muted-text"></p>
+          <form id="genericForm" class="form-grid"></form>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3 id="genericListTitle">Records</h3></div>
           <div id="genericRows" class="records"></div>
         </div>
       </section>
@@ -705,6 +715,26 @@ const moduleCatalog = [
   { id:"settings", label:"Settings", group:"System", collection:null, defaultEnabled:true }
 ];
 const initialState = Object.fromEntries(moduleCatalog.map(item => item.collection).filter(Boolean).concat("notes").map(name => [name, []]));
+const genericFieldPresets = {
+  companies:[["name","Company name","text"],["industry","Industry","text"],["phone","Phone","tel"],["status","Status","select:Active|Prospect|Inactive"]],
+  pipeline:[["title","Pipeline item","text"],["stage","Stage","select:New|Qualified|Proposal|Won|Lost"],["value","Value","number"],["owner","Owner","text"]],
+  customers:[["name","Customer name","text"],["phone","Phone","tel"],["segment","Segment","text"],["status","Status","select:Active|Inactive|VIP"]],
+  creatives:[["name","Creative name","text"],["type","Type","select:Image|Video|Copy|Poster"],["campaign","Campaign","text"],["status","Status","select:Draft|Approved|Published"]],
+  analytics:[["title","Report name","text"],["metric","Metric","text"],["value","Value","number"],["period","Period","text"]],
+  conversations:[["name","Customer name","text"],["channel","Channel","select:WhatsApp|Instagram|Phone|Email"],["message","Latest message","textarea"],["status","Status","select:Open|Waiting|Closed"]],
+  calendar:[["title","Event title","text"],["date","Date","date"],["time","Time","text"],["status","Status","select:Scheduled|Done|Cancelled"]],
+  employees:[["name","Employee name","text"],["phone","Phone","tel"],["role","Role","text"],["status","Status","select:Active|Inactive"]],
+  fieldVisits:[["customer","Customer","text"],["employee","Employee","text"],["visitDate","Visit date","date"],["outcome","Outcome","textarea"]],
+  products:[["name","Product name","text"],["sku","SKU","text"],["price","Price","number"],["status","Status","select:Active|Inactive"]],
+  quotations:[["title","Quotation title","text"],["customer","Customer","text"],["amount","Amount","number"],["status","Status","select:Draft|Sent|Accepted|Rejected"]],
+  subscriptions:[["customer","Customer","text"],["plan","Plan","select:Starter|Growth|Business|Enterprise"],["renewalDate","Renewal date","date"],["status","Status","select:Trial|Active|Expired|Cancelled"]],
+  payments:[["customer","Customer","text"],["amount","Amount","number"],["method","Method","select:Cash|UPI|Card|Bank Transfer"],["status","Status","select:Pending|Paid|Failed|Refunded"]],
+  supportTickets:[["subject","Subject","text"],["customer","Customer","text"],["priority","Priority","select:Low|Normal|High|Urgent"],["status","Status","select:Open|In Progress|Resolved"]],
+  reports:[["title","Report title","text"],["type","Type","select:Sales|Marketing|Payments|Team"],["period","Period","text"],["status","Status","select:Ready|Draft"]],
+  automations:[["name","Automation name","text"],["trigger","Trigger","text"],["action","Action","textarea"],["status","Status","select:Active|Paused"]],
+  aiAssistant:[["title","Request title","text"],["prompt","Prompt","textarea"],["output","Output","textarea"],["status","Status","select:Draft|Generated|Reviewed"]],
+  usersRoles:[["name","User name","text"],["phone","Phone","tel"],["role","Role","select:Owner|Admin|Sales|Marketing|Support|Viewer"],["status","Status","select:Active|Inactive"]]
+};
 let state = structuredClone(initialState);
 let session = loadSession();
 let currentTenant = null;
@@ -789,10 +819,12 @@ function emptyRow(colspan, text){
 
 function render(){
   if(!session?.token || !currentTenant || !currentUser){
+    document.body.classList.remove("app-active");
     document.getElementById("authShell").classList.remove("hidden");
     document.getElementById("appShell").classList.add("hidden");
     return;
   }
+  document.body.classList.add("app-active");
   document.getElementById("authShell").classList.add("hidden");
   document.getElementById("appShell").classList.remove("hidden");
   document.getElementById("tenantName").textContent = currentTenant.name;
@@ -955,12 +987,24 @@ function renderGenericModule(view){
   const item = moduleById(view);
   if(!item) return;
   document.getElementById("genericTitle").textContent = item.label;
+  document.getElementById("genericListTitle").textContent = `${item.label} records`;
   document.getElementById("genericCopy").textContent = `${item.label} module is enabled for this customer. Detailed screens, workflows and reports can be built here without mixing data with other customers.`;
+  document.getElementById("genericForm").dataset.collection = item.collection || "";
+  const fields = genericFieldPresets[item.collection] || [["name","Name","text"],["status","Status","text"],["notes","Notes","textarea"]];
+  document.getElementById("genericForm").innerHTML = fields.map(([name,label,type]) => {
+    if(type === "textarea") {
+      return `<div class="field wide"><label>${escapeHtml(label)}</label><textarea name="${escapeHtml(name)}" required></textarea></div>`;
+    }
+    if(type.startsWith("select:")) {
+      return `<div class="field"><label>${escapeHtml(label)}</label><select name="${escapeHtml(name)}">${type.slice(7).split("|").map(option => `<option>${escapeHtml(option)}</option>`).join("")}</select></div>`;
+    }
+    return `<div class="field"><label>${escapeHtml(label)}</label><input name="${escapeHtml(name)}" type="${escapeHtml(type)}" required></div>`;
+  }).join("") + `<button class="primary" type="submit">Save ${escapeHtml(item.label)}</button>`;
   const rows = item.collection ? byTenant(item.collection) : [];
   document.getElementById("genericRows").innerHTML = rows.slice(0,8).map(record => `
     <div class="record">
       <strong>${escapeHtml(record.title || record.name || record.subject || item.label)}</strong>
-      <small>${escapeHtml(record.status || record.type || record.createdAt || "")}</small>
+      <small>${escapeHtml(record.status || record.type || record.stage || record.role || record.createdAt || "")}</small>
     </div>
   `).join("") || `<div class="empty">${escapeHtml(item.label)} records will appear here.</div>`;
 }
@@ -1147,6 +1191,14 @@ document.getElementById("whatsappCampaignForm").addEventListener("submit", async
   event.preventDefault();
   await addRecord("whatsappCampaigns", formValues(event.currentTarget));
   resetForm(event.currentTarget);
+});
+document.getElementById("genericForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  const collection = event.currentTarget.dataset.collection;
+  if(!collection) return;
+  await addRecord(collection, formValues(event.currentTarget));
+  resetForm(event.currentTarget);
+  renderGenericModule(currentView);
 });
 document.getElementById("metaIntegrationForm").addEventListener("submit", async event => {
   event.preventDefault();
