@@ -492,6 +492,55 @@ tr:last-child td{border-bottom:0}
         <div class="panel"><div class="panel-head"><h3>Contacts</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Type</th></tr></thead><tbody id="contactRows"></tbody></table></div></div>
       </section>
 
+      <section id="campaigns" class="module">
+        <div class="panel">
+          <div class="panel-head"><h3>Create campaign</h3></div>
+          <form id="campaignForm" class="form-grid">
+            <div class="field"><label>Campaign name</label><input name="name" placeholder="August offers" required></div>
+            <div class="field"><label>Channel</label><select name="channel"><option>WhatsApp</option><option>Meta Ads</option><option>Calling</option><option>Email</option><option>SMS</option></select></div>
+            <div class="field"><label>Audience</label><input name="audience" placeholder="Hot leads, all customers"></div>
+            <div class="field"><label>Budget</label><input name="budget" type="number" min="0" placeholder="0"></div>
+            <div class="field"><label>Start date</label><input name="startDate" type="date"></div>
+            <div class="field"><label>Status</label><select name="status"><option>Draft</option><option>Scheduled</option><option>Running</option><option>Paused</option><option>Completed</option></select></div>
+            <div class="field wide"><label>Goal / offer</label><textarea name="goal" placeholder="Offer details, target, expected leads"></textarea></div>
+            <button class="primary" type="submit">Save campaign</button>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Campaigns</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Channel</th><th>Audience</th><th>Budget</th><th>Status</th></tr></thead><tbody id="campaignRows"></tbody></table></div></div>
+      </section>
+
+      <section id="audiences" class="module">
+        <div class="panel">
+          <div class="panel-head"><h3>Create audience</h3></div>
+          <form id="audienceForm" class="form-grid">
+            <div class="field"><label>Audience name</label><input name="name" placeholder="Interested hotel leads" required></div>
+            <div class="field"><label>Source</label><select name="source"><option>Leads</option><option>Contacts</option><option>Customers</option><option>Manual</option></select></div>
+            <div class="field"><label>Filter</label><input name="filter" placeholder="Status: Hot, City: Hyderabad"></div>
+            <div class="field"><label>Status</label><select name="status"><option>Active</option><option>Draft</option><option>Archived</option></select></div>
+            <div class="field wide"><label>Notes</label><textarea name="notes" placeholder="Who should receive campaigns"></textarea></div>
+            <button class="primary" type="submit">Save audience</button>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>Audiences</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Source</th><th>Filter</th><th>Status</th></tr></thead><tbody id="audienceRows"></tbody></table></div></div>
+      </section>
+
+      <section id="whatsappCampaigns" class="module">
+        <div class="panel">
+          <div class="panel-head"><h3>Create WhatsApp campaign</h3></div>
+          <form id="whatsappCampaignForm" class="form-grid">
+            <div class="field"><label>Campaign name</label><input name="name" placeholder="Festival follow-up" required></div>
+            <div class="field"><label>Audience</label><input name="audience" placeholder="Hot leads"></div>
+            <div class="field"><label>Template name</label><input name="templateName" placeholder="welcome_offer"></div>
+            <div class="field"><label>Schedule</label><input name="scheduleDate" type="datetime-local"></div>
+            <div class="field"><label>Status</label><select name="status"><option>Draft</option><option>Scheduled</option><option>Sent</option><option>Failed</option></select></div>
+            <div class="field"><label>Expected recipients</label><input name="recipients" type="number" min="0"></div>
+            <div class="field wide"><label>Message preview</label><textarea name="message" placeholder="Hi {{name}}, your offer text here"></textarea></div>
+            <button class="primary" type="submit">Save WhatsApp campaign</button>
+          </form>
+        </div>
+        <div class="panel"><div class="panel-head"><h3>WhatsApp campaigns</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Audience</th><th>Template</th><th>Schedule</th><th>Status</th></tr></thead><tbody id="whatsappCampaignRows"></tbody></table></div></div>
+      </section>
+
       <section id="deals" class="module">
         <div class="panel">
           <div class="panel-head"><h3>Add deal</h3></div>
@@ -676,6 +725,9 @@ function render(){
   const contacts = byTenant("contacts");
   const deals = byTenant("deals");
   const tasks = byTenant("tasks");
+  const campaigns = byTenant("campaigns");
+  const audiences = byTenant("audiences");
+  const whatsappCampaigns = byTenant("whatsappCampaigns");
   document.getElementById("statLeads").textContent = leads.length;
   document.getElementById("statContacts").textContent = contacts.length;
   document.getElementById("statDeals").textContent = deals.filter(d => !["Won","Lost"].includes(d.stage)).length;
@@ -709,6 +761,29 @@ function render(){
     escapeHtml(contact.email),
     escapeHtml(contact.type)
   ])).join("") || emptyRow(4, "No contacts yet.");
+
+  document.getElementById("campaignRows").innerHTML = campaigns.map(campaign => row([
+    escapeHtml(campaign.name),
+    escapeHtml(campaign.channel),
+    escapeHtml(campaign.audience),
+    money(campaign.budget),
+    `<span class="badge ${badgeClass(campaign.status)}">${escapeHtml(campaign.status)}</span>`
+  ])).join("") || emptyRow(5, "No campaigns yet.");
+
+  document.getElementById("audienceRows").innerHTML = audiences.map(audience => row([
+    escapeHtml(audience.name),
+    escapeHtml(audience.source),
+    escapeHtml(audience.filter),
+    `<span class="badge ${badgeClass(audience.status)}">${escapeHtml(audience.status)}</span>`
+  ])).join("") || emptyRow(4, "No audiences yet.");
+
+  document.getElementById("whatsappCampaignRows").innerHTML = whatsappCampaigns.map(campaign => row([
+    escapeHtml(campaign.name),
+    escapeHtml(campaign.audience),
+    escapeHtml(campaign.templateName),
+    escapeHtml(campaign.scheduleDate),
+    `<span class="badge ${badgeClass(campaign.status)}">${escapeHtml(campaign.status)}</span>`
+  ])).join("") || emptyRow(5, "No WhatsApp campaigns yet.");
 
   document.getElementById("dealRows").innerHTML = deals.map(deal => row([
     escapeHtml(deal.title),
@@ -942,6 +1017,21 @@ document.getElementById("leadForm").addEventListener("submit", async event => {
 document.getElementById("contactForm").addEventListener("submit", async event => {
   event.preventDefault();
   await addRecord("contacts", formValues(event.currentTarget));
+  resetForm(event.currentTarget);
+});
+document.getElementById("campaignForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await addRecord("campaigns", formValues(event.currentTarget));
+  resetForm(event.currentTarget);
+});
+document.getElementById("audienceForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await addRecord("audiences", formValues(event.currentTarget));
+  resetForm(event.currentTarget);
+});
+document.getElementById("whatsappCampaignForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await addRecord("whatsappCampaigns", formValues(event.currentTarget));
   resetForm(event.currentTarget);
 });
 document.getElementById("dealForm").addEventListener("submit", async event => {

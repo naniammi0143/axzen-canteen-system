@@ -324,6 +324,20 @@ app.post("/api/:collection", requireDb, auth, async (req, res) => {
   res.status(201).json({ success: true, record: publicRecord(record) });
 });
 
+app.delete("/api/:collection/:recordId", requireDb, auth, async (req, res) => {
+  const collection = req.params.collection;
+  if (!crmCollections.includes(collection)) {
+    return res.status(404).json({ success: false, message: "Unknown CRM module" });
+  }
+  const tenant = await Tenant.findById(req.tenantId);
+  const feature = featureCatalog.find((item) => item.collection === collection);
+  if (req.user.role !== "Platform Admin" && feature && !(tenant.features || defaultFeatureIds).includes(feature.id)) {
+    return res.status(403).json({ success: false, message: "This module is not enabled for your plan" });
+  }
+  const deleted = await models[collection].deleteOne({ _id: req.params.recordId, tenantId: req.tenantId });
+  res.json({ success: true, deleted: deleted.deletedCount });
+});
+
 app.get("/api/admin/tenants", requireDb, auth, requirePlatformAdmin, async (req, res) => {
   const tenants = await Tenant.find({}).sort({ createdAt: -1 });
   const tenantIds = tenants.map((tenant) => tenant._id);
