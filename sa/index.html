@@ -1196,46 +1196,70 @@
     .payment-pill.credit { background: #fff6df; color: #b45309; }
     .plan-status-card {
       display: grid;
-      gap: 8px;
-      border: 1px solid #dbeafe;
-      border-radius: 16px;
-      background: #f6fbff;
-      padding: 14px;
+      gap: 10px;
+      border: 1px solid #cfe0ff;
+      border-radius: 18px;
+      background: linear-gradient(145deg, #f7fbff, #eef6ff);
+      padding: 16px;
+      box-shadow: inset 0 1px 0 #ffffff, 0 12px 28px #0b5fe80f;
     }
-    .plan-status-card strong { color: #07142f; font-size: 20px; font-weight: 950; }
+    .plan-status-card strong { color: #07142f; font-size: 22px; font-weight: 950; }
+    .subscription-hero {
+      display: grid;
+      gap: 12px;
+      border-radius: 18px;
+      padding: 18px;
+      background: linear-gradient(135deg, #07142f, #0b5fe8);
+      color: #fff;
+      box-shadow: 0 16px 36px #0b5fe82e;
+    }
+    .subscription-hero h2 { margin: 0; color: #fff; font-size: 22px; line-height: 1.15; }
+    .subscription-hero p { margin: 0; color: #dbeafe; font-size: 13px; font-weight: 750; }
+    .subscription-hero .row-between span, .subscription-hero .row-between strong { color: #fff; }
+    .subscription-hero .payment-pill { width: max-content; background: #ffffff22; color: #fff; border: 1px solid #ffffff44; }
     .plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .plan-card {
-      min-height: 112px;
+      min-height: 126px;
       display: grid;
-      gap: 7px;
+      gap: 8px;
       align-content: center;
-      border: 1px solid #e1e8f2;
-      border-radius: 16px;
-      background: #fff;
-      padding: 13px;
+      border: 1px solid #dce7f5;
+      border-radius: 18px;
+      background: linear-gradient(180deg, #ffffff, #fbfdff);
+      padding: 15px;
       color: #07142f;
       text-align: left;
-      box-shadow: 0 10px 24px #1118270a;
+      box-shadow: 0 12px 28px #1118270d;
     }
     .plan-card strong { font-size: 18px; font-weight: 950; }
-    .plan-card span { color: #2563eb; font-size: 20px; font-weight: 950; }
+    .plan-card span { color: #0b5fe8; font-size: 23px; font-weight: 950; }
     .plan-card small { color: #64748b; font-size: 12px; font-weight: 850; }
-    .plan-card.selected { border-color: #2563eb; background: #eff6ff; box-shadow: 0 14px 30px #2563eb20; }
+    .plan-card.selected { border-color: #0b5fe8; background: #eef6ff; box-shadow: 0 14px 30px #2563eb20; }
+    .plan-save-pill {
+      width: max-content;
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: #ecfdf3;
+      color: #12805c;
+      font-size: 10px;
+      font-weight: 950;
+      text-transform: uppercase;
+    }
     .subscription-strip {
       display: grid;
-      gap: 10px;
+      gap: 12px;
       border: 1px solid #d8e7ff;
-      border-radius: 14px;
+      border-radius: 18px;
       background: linear-gradient(135deg, #f8fbff, #eef7ff);
-      padding: 13px;
+      padding: 15px;
     }
     .payment-method-row {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
     }
     .payment-method-row span {
-      min-height: 44px;
+      min-height: 50px;
       border: 1px solid #dbeafe;
       border-radius: 12px;
       display: grid;
@@ -1245,6 +1269,34 @@
       font-size: 12px;
       font-weight: 950;
       text-align: center;
+    }
+    .payment-flow {
+      display: grid;
+      gap: 8px;
+      counter-reset: paystep;
+    }
+    .payment-flow li {
+      list-style: none;
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 8px;
+      align-items: center;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 850;
+    }
+    .payment-flow li::before {
+      counter-increment: paystep;
+      content: counter(paystep);
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #0b5fe8;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 950;
     }
     .qr-note {
       border: 1px dashed #93c5fd;
@@ -8324,6 +8376,12 @@
       const durations = state.durations || [1, 3, 6, 9, 12].map(months => ({ months, label: `${months} Month${months > 1 ? "s" : ""}`, amount: 999 * months }));
       const monthlyPrice = Number(state.monthlyPrice || durations[0]?.amount || 999);
       return `
+        <div class="subscription-hero">
+          <span class="payment-pill">Secure Subscription Payment</span>
+          <h2>${esc(state.planName || "Professional")} Plan</h2>
+          <p>Renew or upgrade your Axzen POS subscription with UPI, QR, cards, or net banking through Cashfree.</p>
+          <div class="row-between"><span>Monthly Amount</span><strong>${money(monthlyPrice)}</strong></div>
+        </div>
         <div class="panel">
           <div class="panel-head"><h2>Subscription</h2><button class="admin-link" id="refreshSubscriptionStatus" type="button">Refresh</button></div>
           <div class="plan-status-card">
@@ -8341,13 +8399,20 @@
               <button class="plan-card" data-recharge-months="${item.months}" type="button">
                 <strong>${esc(item.label || `${item.months} Months`)}</strong>
                 <span>${money(item.amount)}</span>
+                ${Number(item.months) >= 6 ? `<em class="plan-save-pill">Recommended</em>` : ""}
                 <small>${money(monthlyPrice)} x ${esc(item.months)} month${Number(item.months) > 1 ? "s" : ""}</small>
               </button>
             `).join("")}
           </div>
           <div class="subscription-strip">
-            <div class="payment-method-row"><span>UPI QR</span><span>GPay</span><span>PhonePe / Paytm</span></div>
-            <div class="qr-note">Payment page lo QR scan cheyyachu, leka same phone lo installed UPI app select chesi pay cheyyachu. Success ayyaka app automatic ga verify chesi subscription activate chestundi.</div>
+            <div class="payment-method-row"><span>UPI QR</span><span>Google Pay</span><span>PhonePe</span><span>Paytm UPI</span></div>
+            <ol class="payment-flow">
+              <li>Select a duration above.</li>
+              <li>Cashfree opens with the exact subscription amount.</li>
+              <li>Pay by QR scan or any UPI app on the same phone.</li>
+              <li>After success, Axzen verifies the payment and activates the subscription automatically.</li>
+            </ol>
+            <div class="qr-note">Do not close the app until the confirmation message appears. If the app closes after payment, reopen the Subscription screen and tap Refresh.</div>
           </div>
           <div class="status" id="subscriptionStatus">${subscriptionState ? "Select duration. Exact amount above will be sent to Cashfree." : "Loading plan details..."}</div>
         </div>`;
