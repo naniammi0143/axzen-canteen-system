@@ -503,8 +503,8 @@
           <p id="pageSub">Axzen employee workflow</p>
         </div>
       </div>
-      <button class="icon-btn" id="refreshBtn" type="button" aria-label="Refresh">
-        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-9 9 9.5 9.5 0 0 1-6.7-2.7"/><path d="M3 12a9 9 0 0 1 9-9 9.5 9.5 0 0 1 6.7 2.7"/><path d="M3 5v7h7"/><path d="M21 19v-7h-7"/></svg>
+      <button class="icon-btn" id="notifyBtn" type="button" aria-label="Notifications">
+        <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/><path d="M19 3h.01"/></svg>
       </button>
     </header>
     <main id="page"></main>
@@ -692,6 +692,59 @@
       return (data.canteens || []).find(row => Number(row.id) === Number(selectedCanteenId)) || currentRows()[0] || data.canteens?.[0];
     }
 
+    const stageOrder = ["LEAD_CREATED", "CONTACTED", "FOLLOW_UP", "VISIT_SCHEDULED", "VISITED", "DEMO_SCHEDULED", "DEMO_GIVEN", "INTERESTED", "NEGOTIATION", "PLAN_SELECTED", "PAYMENT_PENDING", "SALE_PENDING_APPROVAL", "WON"];
+    const stageLabel = stage => String(stage || "LEAD_CREATED").replace(/_/g, " ");
+    const statusStage = item => String(item?.currentStage || item?.status || "LEAD_CREATED").toUpperCase().replace(/\s+/g, "_");
+    const formValue = id => $(id)?.value?.trim() || "";
+    const leadPhone = item => mobileDigits(item?.ownerMobile || item?.mobile || "");
+    const timelineRows = item => {
+      const rows = Array.isArray(item?.activityTimeline) && item.activityTimeline.length
+        ? item.activityTimeline
+        : [
+            { type: "Lead Created", employeeId: item?.submittedBy || "-", outcome: "Completed", notes: item?.notes || "", createdAt: item?.createdAt },
+            { type: stageLabel(statusStage(item)), employeeId: item?.submittedBy || "-", outcome: "Current", notes: item?.lastActivity?.notes || "", createdAt: item?.updatedAt || item?.createdAt }
+          ];
+      return rows.filter(Boolean);
+    };
+
+    function openSheet(title, html) {
+      $("sheetCard").innerHTML = `<div class="section-head"><h2>${esc(title)}</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>${html}`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+    }
+
+    async function saveWorkflow(item, payload) {
+      const fallback = { ...item, ...payload, status: payload.status || payload.stage || item.status };
+      fallback.lastActivity = {
+        type: payload.type,
+        employeeId: user?.employeeId || user?.id || "-",
+        outcome: payload.outcome || payload.stage || "",
+        notes: payload.notes || "",
+        followUpDate: payload.followUpDate || "",
+        followUpTime: payload.followUpTime || "",
+        createdAt: new Date().toISOString()
+      };
+      fallback.activityTimeline = [...timelineRows(item), fallback.lastActivity];
+      try {
+        setBusy(true);
+        const body = await api(`/marketing-api/canteens/${item.id}/workflow`, { method: "POST", body: JSON.stringify(payload) });
+        const index = data.canteens.findIndex(row => Number(row.id) === Number(item.id));
+        if (index >= 0) data.canteens[index] = body.canteen;
+        selectedCanteenId = body.canteen.id;
+        await refreshData({ silent: true });
+        closeSheet();
+        renderDetail();
+      } catch (error) {
+        const index = data.canteens.findIndex(row => Number(row.id) === Number(item.id));
+        if (index >= 0) data.canteens[index] = fallback;
+        closeSheet();
+        toast(`${error.message}. Saved on this device until sync is available.`, "error");
+        renderDetail();
+      } finally {
+        setBusy(false);
+      }
+    }
+
     function renderDashboard() {
       const cards = data.summary?.cards || {};
       const rows = currentRows();
@@ -764,35 +817,44 @@
         $("page").innerHTML = `<div class="empty">No customer selected.</div>`;
         return;
       }
-      setPage(item.canteenName, item.ownerName);
+      setPage("Lead Details", item.canteenName);
       const phone = mobileDigits(item.ownerMobile);
-      const waText = encodeURIComponent(`Hi ${item.ownerName || ""}, Axzen POS onboarding update for ${item.canteenName}.`);
+      const last = item.lastActivity || {};
+      const rows = timelineRows(item);
       $("page").innerHTML = `
         <section class="panel">
           <div class="section-head"><div><h2>${esc(item.canteenName)}</h2><p class="muted">${esc(item.businessCategory || "Business")} | ${esc(item.city || "-")}</p></div>${pill(item.status)}</div>
           <div class="kv-grid">
-            ${kv("Owner", item.ownerName)}
-            ${kv("Phone", item.ownerMobile)}
-            ${kv("Plan", item.selectedPlan)}
+            <button class="kv" type="button" data-info="location"><span>Location</span><strong>${esc([item.city, item.state].filter(Boolean).join(", ") || item.address || "-")}</strong></button>
+            <button class="kv" type="button" data-info="business"><span>Business Type</span><strong>${esc(item.businessCategory || "-")}</strong></button>
+            <button class="kv" type="button" data-info="assigned"><span>Assigned</span><strong>${esc(item.submittedBy || "-")}</strong></button>
+            <button class="kv" type="button" data-info="plan"><span>Plan</span><strong>${esc(item.selectedPlan || "Not selected")}</strong></button>
             ${kv("Payment", `${money(item.paidAmount)} paid`)}
             ${kv("Pending", money(item.pendingAmount))}
-            ${kv("Printers", `${item.printersAssigned || 0}/${item.printersRequired || 0}`)}
+            ${kv("Next Follow-up", item.nextFollowUp ? fmtDate(item.nextFollowUp) : "-")}
+            ${kv("Stage", stageLabel(statusStage(item)))}
           </div>
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>Last Activity</h2><button class="btn small soft" type="button" data-action="editActivity">Edit</button></div>
+          <div class="list">
+            <div class="row"><div><h3>${esc(last.type || stageLabel(statusStage(item)))}</h3><p>${esc(last.outcome || item.notes || "No recent notes")}</p><p>${item.nextFollowUp ? `Next follow-up: ${fmtDate(item.nextFollowUp)}` : "No follow-up scheduled"}</p></div>${pill(last.outcome || item.status)}</div>
+          </div>
+        </section>
+        <section class="panel">
           <div class="actions">
-            <a class="btn small green" href="tel:${esc(phone)}">Call</a>
-            <a class="btn small green" href="https://wa.me/91${esc(phone)}?text=${waText}" target="_blank" rel="noopener">WhatsApp</a>
+            <button class="btn small green" type="button" data-action="call">Call</button>
+            <button class="btn small green" type="button" data-action="whatsapp">WhatsApp</button>
+            <button class="btn small amber" type="button" data-action="visit">Visit</button>
+            <button class="btn small soft" type="button" data-action="followup">Follow-up</button>
+            <button class="btn small soft" type="button" data-action="demo">Demo</button>
+            <button class="btn small red" type="button" data-action="closeSale">Close Sale</button>
             ${isManager() ? `<button class="btn small soft" type="button" data-action="payment">Update Payment</button>` : ""}
           </div>
         </section>
         <section class="panel">
-          <h2>Onboarding Workflow</h2>
-          <div class="list">
-            ${workflowRow("Lead submitted", true)}
-            ${workflowRow("Manager approval", ["Active", "Trial"].includes(item.status) || item.activatedCanteenId)}
-            ${workflowRow("Payment collected", Number(item.paidAmount || 0) > 0)}
-            ${workflowRow("Printer assigned", Number(item.printersAssigned || 0) >= Number(item.printersRequired || 0))}
-            ${workflowRow("Customer login ready", item.canteenLoginId)}
-          </div>
+          <div class="section-head"><h2>Activity Timeline</h2><button class="btn small soft" type="button" data-action="advance">Advance</button></div>
+          <div class="list">${rows.map((row, index) => `<button class="row" type="button" data-timeline="${index}"><div><h3>${esc(row.type || "Activity")}</h3><p>${esc(row.outcome || "Updated")} | ${esc(row.employeeId || "-")}</p><p>${esc(row.notes || "")}</p></div><div><strong>${fmtDate(row.createdAt || Date.now())}</strong><p>${row.followUpDate ? `Follow-up ${esc(row.followUpDate)}` : ""}</p></div></button>`).join("")}</div>
         </section>
         <section class="panel">
           <div class="section-head"><h2>Credentials</h2>${item.canteenLoginId ? pill("Ready") : pill("After Approval")}</div>
@@ -803,11 +865,111 @@
             ${kv("Expiry", item.planExpiryDate)}
           </div>
         </section>`;
+      document.querySelectorAll("[data-info]").forEach(btn => btn.addEventListener("click", () => openInfoSheet(item, btn.dataset.info)));
+      document.querySelectorAll("[data-timeline]").forEach(btn => btn.addEventListener("click", () => openTimelineSheet(rows[Number(btn.dataset.timeline)])));
+      document.querySelector("[data-action='editActivity']")?.addEventListener("click", () => openActivitySheet(item));
+      document.querySelector("[data-action='call']")?.addEventListener("click", () => openCallSheet(item));
+      document.querySelector("[data-action='whatsapp']")?.addEventListener("click", () => openWhatsAppSheet(item));
+      document.querySelector("[data-action='visit']")?.addEventListener("click", () => openVisitSheet(item));
+      document.querySelector("[data-action='followup']")?.addEventListener("click", () => openFollowupSheet(item));
+      document.querySelector("[data-action='demo']")?.addEventListener("click", () => openDemoSheet(item));
+      document.querySelector("[data-action='closeSale']")?.addEventListener("click", () => openCloseSaleSheet(item));
+      document.querySelector("[data-action='advance']")?.addEventListener("click", () => openAdvanceSheet(item));
       document.querySelector("[data-action='payment']")?.addEventListener("click", () => openPaymentSheet(item));
     }
 
     function workflowRow(label, done) {
       return `<div class="row"><div><h3>${esc(label)}</h3><p>${done ? "Completed" : "Waiting"}</p></div>${pill(done ? "Done" : "Pending")}</div>`;
+    }
+
+    function openInfoSheet(item, type) {
+      const assigned = (data.users || []).find(row => String(row.employeeId) === String(item.submittedBy)) || {};
+      const mapsQuery = encodeURIComponent([item.address, item.city, item.state].filter(Boolean).join(", ") || item.canteenName);
+      const content = {
+        location: `<div class="list"><a class="btn green" href="https://www.google.com/maps/search/?api=1&query=${mapsQuery}" target="_blank" rel="noopener">Open Google Maps</a><a class="btn soft" href="https://www.google.com/maps/dir/?api=1&destination=${mapsQuery}" target="_blank" rel="noopener">Get Directions</a><div class="subtle-panel"><h3>Saved Location</h3><p class="muted">${esc([item.address, item.city, item.state].filter(Boolean).join(", ") || "No saved address")}</p></div></div>`,
+        business: `<div class="kv-grid">${kv("Business", item.canteenName)}${kv("Type", item.businessCategory)}${kv("Owner", item.ownerName)}${kv("Counters", item.counters || 1)}</div><p class="muted">Business details are view-only for marketing employees.</p>`,
+        assigned: `<div class="kv-grid">${kv("Employee", assigned.name || item.submittedByName)}${kv("Employee ID", item.submittedBy)}${kv("Phone", assigned.mobile)}${kv("Manager", "Super Admin")}</div>${isManager() ? `<button class="btn" id="reassignLeadBtn" type="button">Reassign Lead</button>` : `<p class="muted">Only a manager can reassign this lead.</p>`}`,
+        plan: `<div class="kv-grid">${kv("Plan", item.selectedPlan)}${kv("Billing", item.planType || "Monthly")}${kv("Paid", money(item.paidAmount))}${kv("Pending", money(item.pendingAmount))}</div><div class="subtle-panel"><h3>Features</h3><p class="muted">POS billing, inventory, users, reports, WhatsApp reports and subscription management.</p></div>`
+      };
+      openSheet(type === "location" ? "Location" : type === "business" ? "Business Details" : type === "assigned" ? "Assigned Employee" : "Plan Details", content[type] || "");
+      $("reassignLeadBtn")?.addEventListener("click", () => toast("Reassign control will be handled from Manager Team.", "ok"));
+    }
+
+    function openTimelineSheet(row = {}) {
+      openSheet("Activity Details", `<div class="kv-grid">${kv("Type", row.type)}${kv("Employee", row.employeeId)}${kv("Outcome", row.outcome)}${kv("Date", fmtDate(row.createdAt || Date.now()))}</div><div class="subtle-panel"><h3>Notes</h3><p class="muted">${esc(row.notes || "No notes")}</p></div>${row.followUpDate ? `<div class="subtle-panel"><h3>Follow-up</h3><p class="muted">${esc(row.followUpDate)} ${esc(row.followUpTime || "")}</p></div>` : ""}`);
+    }
+
+    function activityForm(extra = "") {
+      return `<label class="field">Notes <textarea id="activityNotes" placeholder="Enter notes"></textarea></label><label class="field">Next Follow-up Date <input id="activityDate" type="date"></label><label class="field">Next Follow-up Time <input id="activityTime" type="time" value="10:00"></label>${extra}`;
+    }
+
+    function openActivitySheet(item) {
+      openSheet("Update Activity", `<label class="field">Activity Type <select id="activityType"><option>Call</option><option>WhatsApp</option><option>Visit</option><option>Demo</option><option>Meeting</option><option>Payment</option></select></label><label class="field">Customer Response <input id="activityOutcome" placeholder="Customer response"></label>${activityForm(`<label class="field">Lead Status <select id="activityStage">${stageOrder.map(stage => `<option value="${stage}" ${stage === statusStage(item) ? "selected" : ""}>${stageLabel(stage)}</option>`).join("")}</select></label><button class="btn" id="saveActivityBtn" type="button">Update Activity</button>`)}`);
+      $("saveActivityBtn").addEventListener("click", () => saveWorkflow(item, { type: formValue("activityType"), outcome: formValue("activityOutcome"), notes: formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: formValue("activityStage") }));
+    }
+
+    function openCallSheet(item) {
+      const phone = leadPhone(item);
+      if (phone) window.location.href = `tel:${phone}`;
+      openSheet("Call Result", `<div class="subtle-panel"><h3>${esc(item.ownerName)}</h3><p class="muted">${esc(item.ownerMobile)}</p></div><label class="field">Result <select id="callOutcome"><option>Connected</option><option>No Answer</option><option>Busy</option><option>Switched Off</option><option>Call Later</option><option>Interested</option><option>Not Interested</option></select></label>${activityForm(`<button class="btn" id="saveCallBtn" type="button">Save Call Activity</button>`)}`);
+      $("saveCallBtn").addEventListener("click", () => {
+        const outcome = formValue("callOutcome");
+        const stage = outcome === "Interested" ? "INTERESTED" : outcome === "Not Interested" ? "NEGOTIATION" : outcome === "Call Later" ? "FOLLOW_UP" : "CONTACTED";
+        saveWorkflow(item, { type: "Call Completed", outcome, notes: formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage });
+      });
+    }
+
+    function openWhatsAppSheet(item) {
+      const phone = leadPhone(item);
+      const messages = {
+        Introduction: `Hi ${item.ownerName || ""}, this is ${user?.name || "Axzen"} from Axzen Infotech.`,
+        "POS Details": "Axzen POS helps with billing, inventory, reports, users and WhatsApp reports.",
+        Pricing: `Your selected plan is ${item.selectedPlan || "Professional"}.`,
+        "Demo Details": "We can schedule a quick POS demo for your business.",
+        Brochure: "Please review the Axzen POS brochure and let us know your preferred plan.",
+        "Follow-up Message": "Following up on your Axzen POS enquiry.",
+        "Custom Message": ""
+      };
+      openSheet("WhatsApp Message", `<label class="field">Template <select id="waTemplate">${Object.keys(messages).map(key => `<option>${esc(key)}</option>`).join("")}</select></label><label class="field">Message <textarea id="waMessage">${esc(messages.Introduction)}</textarea></label><a class="btn green" id="openWaBtn" href="#" target="_blank" rel="noopener">Open WhatsApp</a><label class="field">Result <select id="waOutcome"><option>Message Sent</option><option>Customer Replied</option><option>Interested</option><option>Follow-up Required</option></select></label>${activityForm(`<button class="btn" id="saveWaBtn" type="button">Save WhatsApp Activity</button>`)}`);
+      $("waTemplate").addEventListener("change", () => { $("waMessage").value = messages[$("waTemplate").value] || ""; updateWaLink(); });
+      $("waMessage").addEventListener("input", updateWaLink);
+      function updateWaLink() { $("openWaBtn").href = `https://wa.me/91${phone}?text=${encodeURIComponent($("waMessage").value)}`; }
+      updateWaLink();
+      $("saveWaBtn").addEventListener("click", () => {
+        const outcome = formValue("waOutcome");
+        saveWorkflow(item, { type: "WhatsApp", outcome, notes: formValue("activityNotes") || formValue("waMessage"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: outcome === "Interested" ? "INTERESTED" : "FOLLOW_UP" });
+      });
+    }
+
+    function openVisitSheet(item) {
+      openSheet("Visit Workflow", `<div class="subtle-panel"><h3>${esc(item.canteenName)}</h3><p class="muted">${esc([item.address, item.city, item.state].filter(Boolean).join(", "))}</p></div><button class="btn green" id="startVisitBtn" type="button">Start Visit</button><label class="field">Customer Response <select id="visitOutcome"><option>Interested</option><option>Demo Requested</option><option>Need Time</option><option>Price Issue</option><option>Not Interested</option></select></label>${activityForm(`<button class="btn" id="completeVisitBtn" type="button">Complete Visit</button>`)}`);
+      $("startVisitBtn").addEventListener("click", () => saveWorkflow(item, { type: "Visit Started", outcome: "IN_PROGRESS", notes: "Visit started", stage: "VISIT_SCHEDULED" }));
+      $("completeVisitBtn").addEventListener("click", () => saveWorkflow(item, { type: "Visit Completed", outcome: formValue("visitOutcome"), notes: formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: "VISITED" }));
+    }
+
+    function openFollowupSheet(item) {
+      openSheet("Schedule Follow-up", `<label class="field">Follow-up Type <select id="followType"><option>Call</option><option>WhatsApp</option><option>Visit</option><option>Demo</option><option>Meeting</option><option>Payment</option></select></label><label class="field">Reason <input id="followReason" placeholder="Reason"></label>${activityForm(`<label class="field">Reminder <select id="followReminder"><option>15 minutes before</option><option>1 hour before</option><option>1 day before</option></select></label><button class="btn" id="saveFollowBtn" type="button">Schedule</button>`)}`);
+      $("saveFollowBtn").addEventListener("click", () => saveWorkflow(item, { type: "Follow-up Scheduled", outcome: formValue("followType"), notes: formValue("followReason") || formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: "FOLLOW_UP" }));
+    }
+
+    function openDemoSheet(item) {
+      const alreadyDone = timelineRows(item).some(row => String(row.type || "").toUpperCase().includes("DEMO GIVEN"));
+      openSheet("Demo", `<button class="btn green" id="startDemoBtn" type="button">Start Demo</button><label class="field">Demo Result <select id="demoOutcome"><option>Very Interested</option><option>Interested</option><option>Need Time</option><option>Price Issue</option><option>Manager Discussion Required</option><option>Not Interested</option></select></label><label class="field">Plan Interested <select id="demoPlan"><option>Starter</option><option>Professional</option><option>Premium</option><option>Enterprise</option></select></label><label class="field">Expected Purchase Date <input id="demoPurchaseDate" type="date"></label>${activityForm(`<button class="btn" id="completeDemoBtn" type="button">Complete Demo</button>`)}`);
+      $("startDemoBtn").addEventListener("click", () => saveWorkflow(item, { type: "Demo Started", outcome: "Started", notes: "Demo started", stage: "DEMO_SCHEDULED" }));
+      $("completeDemoBtn").addEventListener("click", () => saveWorkflow(item, { type: alreadyDone ? "Demo Updated" : "Demo Given", outcome: formValue("demoOutcome"), notes: formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: "DEMO_GIVEN", status: "DEMO GIVEN" }));
+    }
+
+    function openCloseSaleSheet(item) {
+      openSheet("Close Sale", `<label class="field">Selected Plan <select id="salePlan"><option>${esc(item.selectedPlan || "Professional")}</option><option>Starter</option><option>Premium</option><option>Enterprise</option></select></label><label class="field">Plan Amount <input id="saleAmount" type="number" value="${Number(item.paidAmount || 999)}"></label><label class="field">Discount <input id="saleDiscount" type="number" value="0"></label><label class="field">Payment Status <select id="salePaymentStatus"><option>Paid</option><option>Partially Paid</option><option>Pending</option></select></label><label class="field">Payment Mode <select id="salePaymentMode"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Payment Link</option></select></label><label class="field">Printer Required <select id="salePrinter"><option>Yes</option><option>No</option></select></label><label class="field">Installation Date <input id="saleInstallDate" type="date" value="${today()}"></label>${activityForm(`<button class="btn red" id="submitSaleBtn" type="button">Submit Sale</button>`)}`);
+      $("submitSaleBtn").addEventListener("click", () => saveWorkflow(item, { type: "Sale Submitted", outcome: formValue("salePaymentStatus"), notes: formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: "SALE_PENDING_APPROVAL", status: "SALE PENDING APPROVAL" }));
+    }
+
+    function openAdvanceSheet(item) {
+      const current = statusStage(item);
+      const next = stageOrder[Math.min(stageOrder.indexOf(current) + 1, stageOrder.length - 1)] || "CONTACTED";
+      openSheet("Advance Stage", `<div class="kv-grid">${kv("Current Stage", stageLabel(current))}${kv("Next Stage", stageLabel(next))}</div>${activityForm(`<div class="actions"><button class="btn ghost" id="cancelAdvanceBtn" type="button">Cancel</button><button class="btn" id="confirmAdvanceBtn" type="button">Move to ${esc(stageLabel(next))}</button></div>`)}`);
+      $("cancelAdvanceBtn").addEventListener("click", closeSheet);
+      $("confirmAdvanceBtn").addEventListener("click", () => saveWorkflow(item, { type: stageLabel(next), outcome: "Stage moved", notes: formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: next, status: stageLabel(next) }));
     }
 
     function renderAdd() {
@@ -1092,6 +1254,18 @@
       return renderDashboard();
     }
 
+    function openNotifications() {
+      const rows = [
+        ["Follow-up Reminder", "Call customers scheduled for today."],
+        ["Overdue Follow-ups", "Review leads whose follow-up time has passed."],
+        ["New Lead Assignments", "Newly assigned leads appear in My Customers."],
+        ["Manager Messages", "Approval and pricing messages from manager."],
+        ["Approval Updates", "Sale approvals and rejected requests."],
+        ["Sale Notifications", "Closed sales waiting for manager approval."]
+      ];
+      openSheet("Notifications", `<div class="list">${rows.map(row => `<div class="row"><div><h3>${esc(row[0])}</h3><p>${esc(row[1])}</p></div>${pill("Open")}</div>`).join("")}</div>`);
+    }
+
     async function login(event) {
       event.preventDefault();
       $("loginStatus").className = "status";
@@ -1141,13 +1315,10 @@
 
     $("loginForm").addEventListener("submit", login);
     $("backBtn").addEventListener("click", () => {
-      route = stack.pop() || "dashboard";
+      route = route === "canteenDetail" ? "canteens" : (stack.pop() || "dashboard");
       render();
     });
-    $("refreshBtn").addEventListener("click", async () => {
-      await refreshData();
-      render();
-    });
+    $("notifyBtn").addEventListener("click", openNotifications);
     $("sheet").addEventListener("click", event => {
       if (event.target.id === "sheet") closeSheet();
     });

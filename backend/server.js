@@ -526,6 +526,13 @@ const marketingCanteenSchema = new mongoose.Schema({
   lastSeenAt: String,
   blocked: Boolean,
   printersAssigned: Number,
+  currentStage: String,
+  nextFollowUp: String,
+  lastActivity: mongoose.Schema.Types.Mixed,
+  activityTimeline: [mongoose.Schema.Types.Mixed],
+  followUps: [mongoose.Schema.Types.Mixed],
+  latitude: Number,
+  longitude: Number,
   submittedBy: { type: String, index: true },
   submittedByName: String,
   approvedBy: String,
@@ -3339,6 +3346,46 @@ app.post("/marketing-api/canteens/:id/reject", requireDatabase, requireSuperAdmi
     if (!reason) return res.status(400).json({ success: false, message: "Rejection reason is required" });
     const canteen = await updateMarketingCanteen(req.params.id, { status: "Rejected", rejectionReason: reason, online: false }, req.marketingUser);
     await addMarketingActivity({ type: "rejected", text: `${canteen.canteenName} rejected: ${reason}`, actor: req.marketingUser.name, canteenId: canteen.id });
+    res.json({ success: true, canteen });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/canteens/:id/workflow", requireDatabase, requireMarketingAuth, async (req, res) => {
+  try {
+    const rows = await allMarketingCanteens();
+    const current = rows.find(item => Number(item.id) === Number(req.params.id));
+    if (!current) return res.status(404).json({ success: false, message: "Lead not found" });
+    if (req.marketingUser.role !== "super_admin" && String(current.submittedBy || "") !== String(req.marketingUser.employeeId || "")) {
+      return res.status(403).json({ success: false, message: "You can update only your assigned leads" });
+    }
+    const activity = {
+      id: Date.now(),
+      type: String(req.body.type || "Activity").trim(),
+      employeeId: req.marketingUser.employeeId,
+      employeeName: req.marketingUser.name,
+      outcome: String(req.body.outcome || req.body.stage || "").trim(),
+      notes: String(req.body.notes || "").trim(),
+      followUpDate: String(req.body.followUpDate || "").trim(),
+      followUpTime: String(req.body.followUpTime || "").trim(),
+      createdAt: new Date().toISOString()
+    };
+    const nextFollowUp = req.body.nextFollowUp
+      || (activity.followUpDate ? `${activity.followUpDate}T${activity.followUpTime || "10:00"}:00+05:30` : current.nextFollowUp || "");
+    const timeline = Array.isArray(current.activityTimeline) ? current.activityTimeline : [];
+    const followUps = Array.isArray(current.followUps) ? current.followUps : [];
+    const nextStage = String(req.body.stage || current.currentStage || current.status || "").trim();
+    const patch = {
+      currentStage: nextStage || current.currentStage || current.status,
+      status: String(req.body.status || nextStage || current.status || "Pending Approval").replace(/_/g, " "),
+      nextFollowUp,
+      lastActivity: activity,
+      activityTimeline: [...timeline, activity]
+    };
+    if (activity.followUpDate) patch.followUps = [...followUps, { ...activity, status: "Scheduled" }];
+    const canteen = await updateMarketingCanteen(req.params.id, patch, req.marketingUser);
+    await addMarketingActivity({ type: "lead_workflow", text: `${activity.type} saved for ${current.canteenName}`, actor: req.marketingUser.name, canteenId: current.id });
     res.json({ success: true, canteen });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
