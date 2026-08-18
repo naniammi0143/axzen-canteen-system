@@ -541,6 +541,63 @@ tr:last-child td{border-bottom:0}
         <div class="panel"><div class="panel-head"><h3>WhatsApp campaigns</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Audience</th><th>Template</th><th>Schedule</th><th>Status</th></tr></thead><tbody id="whatsappCampaignRows"></tbody></table></div></div>
       </section>
 
+      <section id="metaAds" class="module">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h3>Meta Ads setup</h3>
+              <p class="muted-text">Connect Facebook/Instagram ad account and lead form for tenant-wise lead import.</p>
+            </div>
+          </div>
+          <form id="metaIntegrationForm" class="form-grid">
+            <div class="field"><label>Business ID</label><input name="businessId" placeholder="Meta business ID"></div>
+            <div class="field"><label>Ad Account ID</label><input name="adAccountId" placeholder="act_123456789"></div>
+            <div class="field"><label>Page ID</label><input name="pageId" placeholder="Facebook page ID"></div>
+            <div class="field"><label>Instagram Account ID</label><input name="instagramAccountId" placeholder="Instagram business account ID"></div>
+            <div class="field"><label>Lead Form ID</label><input name="leadFormId" placeholder="Meta lead form ID"></div>
+            <div class="field"><label>Access Token</label><input name="accessToken" type="password" placeholder="Meta long-lived token"></div>
+            <button class="primary" type="submit">Save Meta setup</button>
+            <button class="secondary" id="testMetaBtn" type="button">Test Meta</button>
+            <button class="ghost" id="importMetaLeadsBtn" type="button">Import leads</button>
+          </form>
+          <p id="metaStatus" class="muted-text"></p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Meta events</h3></div>
+          <div id="metaEventRows" class="records"></div>
+        </div>
+      </section>
+
+      <section id="integrations" class="module">
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h3>WhatsApp Business setup</h3>
+              <p class="muted-text">Save customer-specific WhatsApp credentials. Messages and webhooks stay inside this workspace.</p>
+            </div>
+          </div>
+          <form id="whatsappIntegrationForm" class="form-grid">
+            <div class="field"><label>WABA ID</label><input name="wabaId" placeholder="WhatsApp Business Account ID"></div>
+            <div class="field"><label>Phone Number ID</label><input name="phoneNumberId" placeholder="Meta phone number ID"></div>
+            <div class="field"><label>Display phone</label><input name="displayPhone" placeholder="919876543210"></div>
+            <div class="field"><label>Default template</label><input name="defaultTemplate" placeholder="welcome_offer"></div>
+            <div class="field wide"><label>Access Token</label><input name="accessToken" type="password" placeholder="Permanent access token"></div>
+            <button class="primary" type="submit">Save WhatsApp setup</button>
+            <button class="secondary" id="testWhatsappBtn" type="button">Test WhatsApp</button>
+          </form>
+          <p id="whatsappStatus" class="muted-text"></p>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Send test WhatsApp</h3></div>
+          <form id="sendWhatsappForm" class="form-grid">
+            <div class="field"><label>Recipient phone</label><input name="to" inputmode="tel" placeholder="919876543210" required></div>
+            <div class="field wide"><label>Message</label><textarea name="message" placeholder="Test message from Axzen CRM" required></textarea></div>
+            <button class="primary" type="submit">Send test message</button>
+          </form>
+          <p id="sendWhatsappStatus" class="muted-text"></p>
+        </div>
+      </section>
+
       <section id="deals" class="module">
         <div class="panel">
           <div class="panel-head"><h3>Add deal</h3></div>
@@ -728,6 +785,7 @@ function render(){
   const campaigns = byTenant("campaigns");
   const audiences = byTenant("audiences");
   const whatsappCampaigns = byTenant("whatsappCampaigns");
+  const integrationEvents = byTenant("integrationEvents");
   document.getElementById("statLeads").textContent = leads.length;
   document.getElementById("statContacts").textContent = contacts.length;
   document.getElementById("statDeals").textContent = deals.filter(d => !["Won","Lost"].includes(d.stage)).length;
@@ -784,6 +842,16 @@ function render(){
     escapeHtml(campaign.scheduleDate),
     `<span class="badge ${badgeClass(campaign.status)}">${escapeHtml(campaign.status)}</span>`
   ])).join("") || emptyRow(5, "No WhatsApp campaigns yet.");
+
+  document.getElementById("metaEventRows").innerHTML = integrationEvents
+    .filter(event => event.provider === "meta" || event.provider === "whatsapp")
+    .slice(0,12)
+    .map(event => `
+      <div class="record">
+        <strong>${escapeHtml(event.provider)} - ${escapeHtml(event.type)}</strong>
+        <small>${escapeHtml(new Date(event.createdAt).toLocaleString())}</small>
+      </div>
+    `).join("") || `<div class="empty">Integration activity will appear here.</div>`;
 
   document.getElementById("dealRows").innerHTML = deals.map(deal => row([
     escapeHtml(deal.title),
@@ -925,6 +993,29 @@ function formValues(form){
   return Object.fromEntries(new FormData(form).entries());
 }
 function resetForm(form){ form.reset(); form.querySelector("input,select,textarea")?.focus(); }
+function setStatus(id, message){ document.getElementById(id).textContent = message; }
+async function saveIntegration(provider, form, statusId){
+  const values = formValues(form);
+  try {
+    await api(`/api/integrations/${provider}`, { method:"PUT", body:JSON.stringify(values) });
+    setStatus(statusId, `${provider} setup saved.`);
+    form.querySelectorAll("input[type='password']").forEach(input => input.value = "");
+    await bootstrap();
+    render();
+  } catch (err) {
+    setStatus(statusId, err.message);
+  }
+}
+async function postIntegrationAction(path, statusId, body = {}){
+  try {
+    const data = await api(path, { method:"POST", body:JSON.stringify(body) });
+    setStatus(statusId, data.imported ? `Success. Imported ${data.imported.length} leads.` : `Success. Status ${data.status || 200}.`);
+    await bootstrap();
+    render();
+  } catch (err) {
+    setStatus(statusId, err.message);
+  }
+}
 function seedSample(){
   addRecord("leads", { name:"Ramesh Kumar", phone:"9848012345", source:"WhatsApp", status:"Hot", notes:"Needs CRM for hotel banquet enquiries." });
   addRecord("contacts", { name:"Sana Foods", phone:"9700011122", email:"sales@sanafoods.example", type:"Customer" });
@@ -1033,6 +1124,22 @@ document.getElementById("whatsappCampaignForm").addEventListener("submit", async
   event.preventDefault();
   await addRecord("whatsappCampaigns", formValues(event.currentTarget));
   resetForm(event.currentTarget);
+});
+document.getElementById("metaIntegrationForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await saveIntegration("meta", event.currentTarget, "metaStatus");
+});
+document.getElementById("testMetaBtn").addEventListener("click", () => postIntegrationAction("/api/integrations/meta/test", "metaStatus"));
+document.getElementById("importMetaLeadsBtn").addEventListener("click", () => postIntegrationAction("/api/integrations/meta/import-leads", "metaStatus"));
+document.getElementById("whatsappIntegrationForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await saveIntegration("whatsapp", event.currentTarget, "whatsappStatus");
+});
+document.getElementById("testWhatsappBtn").addEventListener("click", () => postIntegrationAction("/api/integrations/whatsapp/test", "whatsappStatus"));
+document.getElementById("sendWhatsappForm").addEventListener("submit", async event => {
+  event.preventDefault();
+  await postIntegrationAction("/api/integrations/whatsapp/send", "sendWhatsappStatus", formValues(event.currentTarget));
+  event.currentTarget.reset();
 });
 document.getElementById("dealForm").addEventListener("submit", async event => {
   event.preventDefault();

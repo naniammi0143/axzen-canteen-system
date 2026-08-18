@@ -14,6 +14,7 @@ const port = Number(process.env.PORT || 5174);
 const dbName = process.env.CRM_MONGODB_DB_NAME || "axzen_crm";
 const jwtSecret = process.env.JWT_SECRET || "axzen-crm-local-secret";
 const mongoUri = process.env.MONGODB_URI;
+const metaWebhookVerifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN || process.env.VERIFY_TOKEN || "axzen-crm-webhook";
 const axzenAdmin = {
   company: process.env.AXZEN_ADMIN_COMPANY || "Axzen Infotech",
   username: process.env.AXZEN_ADMIN_USERNAME || "axzenadmin",
@@ -53,7 +54,7 @@ const featureCatalog = [
 ];
 const allFeatureIds = featureCatalog.map((feature) => feature.id);
 const defaultFeatureIds = featureCatalog.filter((feature) => feature.defaultEnabled).map((feature) => feature.id);
-const crmCollections = [...new Set(featureCatalog.map((feature) => feature.collection).filter(Boolean).concat("notes"))];
+const crmCollections = [...new Set(featureCatalog.map((feature) => feature.collection).filter(Boolean).concat("notes", "integrationEvents"))];
 
 if (!mongoUri) {
   console.warn("MONGODB_URI missing. Add it in crm-axzen/.env or backend/.env.");
@@ -164,6 +165,9 @@ function publicRecord(record) {
   item.id = String(item._id);
   item.tenantId = String(item.tenantId);
   item.createdBy = String(item.createdBy);
+  ["accessToken", "permanentToken", "appSecret", "verifyToken", "apiKey"].forEach((key) => {
+    if (item[key]) item[key] = "••••••••";
+  });
   delete item._id;
   return item;
 }
@@ -203,6 +207,38 @@ function requirePlatformAdmin(req, res, next) {
 function normalizeFeatures(features) {
   const requested = Array.isArray(features) ? features : defaultFeatureIds;
   return [...new Set(requested.filter((feature) => allFeatureIds.includes(feature)))];
+}
+
+async function ensureModuleEnabled(req, res, collection) {
+  const tenant = await Tenant.findById(req.tenantId);
+  const feature = featureCatalog.find((item) => item.collection === collection);
+  if (req.user.role !== "Platform Admin" && feature && !(tenant.features || defaultFeatureIds).includes(feature.id)) {
+    res.status(403).json({ success: false, message: "This module is not enabled for your plan" });
+    return null;
+  }
+  return tenant;
+}
+
+async function getIntegration(tenantId, provider) {
+  return models.integrations.findOne({ tenantId, provider });
+}
+
+function integrationStatus(record) {
+  if (!record) return { configured: false, provider: null };
+  const data = publicRecord(record);
+  data.configured = true;
+  return data;
+}
+
+async function createIntegrationEvent(tenantId, createdBy, provider, type, payload) {
+  return models.integrationEvents.create({
+    tenantId,
+    createdBy,
+    provider,
+    type,
+    payload,
+    createdAt: new Date()
+  });
 }
 
 async function ensurePlatformAdmin() {
@@ -301,16 +337,171 @@ app.get("/api/bootstrap", requireDb, auth, async (req, res) => {
   res.json({ success: true, tenant: publicTenant(tenant), user: publicUser(req.user), data, features: featureCatalog });
 });
 
+app.get("/api/integrations/:provider", requireDb, auth, async (req, res) => {
+  const provider = req.params.provider;
+  if (!["whatsapp", "meta"].includes(provider)) {
+    return res.status(404).json({ success: false, message: "Unknown integration" });
+  }
+  const tenant = await ensureModuleEnabled(req, res, "integrations");
+  if (!tenant) return;
+  const record = await getIntegration(req.tenantId, provider);
+  res.json({ success: true, integration: integrationStatus(record) });
+});
+
+app.put("/api/integrations/:provider", requireDb, auth, async (req, res) => {
+  const provider = req.params.provider;
+  if (!["whatsapp", "meta"].includes(provider)) {
+    return res.status(404).json({ success: false, message: "Unknown integration" });
+  }
+  const tenant = await ensureModuleEnabled(req, res, "integrations");
+  if (!tenant) return;
+  const payload = { ...req.body };
+  delete payload.id;
+  delete payload._id;
+  delete payload.tenantId;
+  delete payload.createdBy;
+  const existing = await getIntegration(req.tenantId, provider);
+  const record = existing
+    ? await models.integrations.findByIdAndUpdate(existing._id, { ...payload, provider, updatedAt: new Date() }, { new: true })
+    : await models.integrations.create({ ...payload, provider, tenantId: req.tenantId, createdBy: req.user._id, createdAt: new Date() });
+  res.json({ success: true, integration: integrationStatus(record) });
+});
+
+app.post("/api/integrations/whatsapp/test", requireDb, auth, async (req, res) => {
+  const tenant = await ensureModuleEnabled(req, res, "integrations");
+  if (!tenant) return;
+  const integration = await getIntegration(req.tenantId, "whatsapp");
+  if (!integration?.phoneNumberId || !integration?.accessToken) {
+    return res.status(400).json({ success: false, message: "WhatsApp Phone Number ID and access token are required" });
+  }
+  const response = await fetch(`https://graph.facebook.com/v20.0/${integration.phoneNumberId}`, {
+    headers: { Authorization: `Bearer ${integration.accessToken}` }
+  });
+  const data = await response.json().catch(() => ({}));
+  await createIntegrationEvent(req.tenantId, req.user._id, "whatsapp", "test_connection", { ok: response.ok, status: response.status, data });
+  res.status(response.ok ? 200 : 400).json({ success: response.ok, status: response.status, data });
+});
+
+app.post("/api/integrations/whatsapp/send", requireDb, auth, async (req, res) => {
+  const tenant = await ensureModuleEnabled(req, res, "whatsappCampaigns");
+  if (!tenant) return;
+  const integration = await getIntegration(req.tenantId, "whatsapp");
+  if (!integration?.phoneNumberId || !integration?.accessToken) {
+    return res.status(400).json({ success: false, message: "WhatsApp integration is not configured" });
+  }
+  const to = cleanPhone(req.body.to);
+  const message = String(req.body.message || "");
+  if (!to || !message) return res.status(400).json({ success: false, message: "Recipient phone and message are required" });
+  const response = await fetch(`https://graph.facebook.com/v20.0/${integration.phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${integration.accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to,
+      type: "text",
+      text: { preview_url: false, body: message }
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  await createIntegrationEvent(req.tenantId, req.user._id, "whatsapp", "send_message", { ok: response.ok, status: response.status, to, data });
+  res.status(response.ok ? 200 : 400).json({ success: response.ok, status: response.status, data });
+});
+
+app.post("/api/integrations/meta/test", requireDb, auth, async (req, res) => {
+  const tenant = await ensureModuleEnabled(req, res, "integrations");
+  if (!tenant) return;
+  const integration = await getIntegration(req.tenantId, "meta");
+  if (!integration?.adAccountId || !integration?.accessToken) {
+    return res.status(400).json({ success: false, message: "Meta Ad Account ID and access token are required" });
+  }
+  const adAccount = String(integration.adAccountId).startsWith("act_") ? integration.adAccountId : `act_${integration.adAccountId}`;
+  const response = await fetch(`https://graph.facebook.com/v20.0/${adAccount}?fields=name,account_status,currency`, {
+    headers: { Authorization: `Bearer ${integration.accessToken}` }
+  });
+  const data = await response.json().catch(() => ({}));
+  await createIntegrationEvent(req.tenantId, req.user._id, "meta", "test_connection", { ok: response.ok, status: response.status, data });
+  res.status(response.ok ? 200 : 400).json({ success: response.ok, status: response.status, data });
+});
+
+app.post("/api/integrations/meta/import-leads", requireDb, auth, async (req, res) => {
+  const tenant = await ensureModuleEnabled(req, res, "metaAds");
+  if (!tenant) return;
+  const integration = await getIntegration(req.tenantId, "meta");
+  if (!integration?.leadFormId || !integration?.accessToken) {
+    return res.status(400).json({ success: false, message: "Meta Lead Form ID and access token are required" });
+  }
+  const response = await fetch(`https://graph.facebook.com/v20.0/${integration.leadFormId}/leads?fields=created_time,field_data,ad_name,campaign_name`, {
+    headers: { Authorization: `Bearer ${integration.accessToken}` }
+  });
+  const data = await response.json().catch(() => ({}));
+  const imported = [];
+  if (response.ok && Array.isArray(data.data)) {
+    for (const lead of data.data) {
+      const fields = Object.fromEntries((lead.field_data || []).map((field) => [field.name, Array.isArray(field.values) ? field.values[0] : field.values]));
+      const record = await models.leads.create({
+        tenantId: req.tenantId,
+        createdBy: req.user._id,
+        name: fields.full_name || fields.name || fields.first_name || "Meta Lead",
+        phone: cleanPhone(fields.phone_number || fields.phone || ""),
+        email: fields.email || "",
+        source: "Meta Ads",
+        status: "New",
+        notes: `Campaign: ${lead.campaign_name || ""} Ad: ${lead.ad_name || ""}`,
+        metaLeadId: lead.id,
+        createdAt: new Date()
+      });
+      imported.push(publicRecord(record));
+    }
+  }
+  await createIntegrationEvent(req.tenantId, req.user._id, "meta", "import_leads", { ok: response.ok, status: response.status, count: imported.length, data });
+  res.status(response.ok ? 200 : 400).json({ success: response.ok, imported, data });
+});
+
+app.get("/api/webhooks/meta", (req, res) => {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+  if (mode === "subscribe" && token === metaWebhookVerifyToken) return res.status(200).send(challenge);
+  return res.sendStatus(403);
+});
+
+app.post("/api/webhooks/meta", requireDb, async (req, res) => {
+  const body = req.body || {};
+  const entries = body.entry || [];
+  for (const entry of entries) {
+    const changes = entry.changes || [];
+    for (const change of changes) {
+      const phoneNumberId = change.value?.metadata?.phone_number_id;
+      const leadgenId = change.value?.leadgen_id;
+      const integration = phoneNumberId
+        ? await models.integrations.findOne({ provider: "whatsapp", phoneNumberId })
+        : await models.integrations.findOne({ provider: "meta", leadFormId: change.value?.form_id });
+      if (integration) {
+        await createIntegrationEvent(integration.tenantId, integration.createdBy, phoneNumberId ? "whatsapp" : "meta", "webhook", { entry, change });
+        if (leadgenId) {
+          await models.leads.create({
+            tenantId: integration.tenantId,
+            createdBy: integration.createdBy,
+            name: "Meta Lead",
+            source: "Meta Ads",
+            status: "New",
+            metaLeadId: leadgenId,
+            notes: "Imported from Meta leadgen webhook"
+          });
+        }
+      }
+    }
+  }
+  res.json({ success: true });
+});
+
 app.post("/api/:collection", requireDb, auth, async (req, res) => {
   const collection = req.params.collection;
   if (!crmCollections.includes(collection)) {
     return res.status(404).json({ success: false, message: "Unknown CRM module" });
   }
-  const tenant = await Tenant.findById(req.tenantId);
-  const feature = featureCatalog.find((item) => item.collection === collection);
-  if (req.user.role !== "Platform Admin" && feature && !(tenant.features || defaultFeatureIds).includes(feature.id)) {
-    return res.status(403).json({ success: false, message: "This module is not enabled for your plan" });
-  }
+  const tenant = await ensureModuleEnabled(req, res, collection);
+  if (!tenant) return;
   const payload = { ...req.body };
   delete payload.id;
   delete payload._id;
@@ -329,11 +520,8 @@ app.delete("/api/:collection/:recordId", requireDb, auth, async (req, res) => {
   if (!crmCollections.includes(collection)) {
     return res.status(404).json({ success: false, message: "Unknown CRM module" });
   }
-  const tenant = await Tenant.findById(req.tenantId);
-  const feature = featureCatalog.find((item) => item.collection === collection);
-  if (req.user.role !== "Platform Admin" && feature && !(tenant.features || defaultFeatureIds).includes(feature.id)) {
-    return res.status(403).json({ success: false, message: "This module is not enabled for your plan" });
-  }
+  const tenant = await ensureModuleEnabled(req, res, collection);
+  if (!tenant) return;
   const deleted = await models[collection].deleteOne({ _id: req.params.recordId, tenantId: req.tenantId });
   res.json({ success: true, deleted: deleted.deletedCount });
 });
