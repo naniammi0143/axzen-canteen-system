@@ -3,26 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>AXZEN POS Marketing</title>
+  <title>Axzen Employee</title>
   <style>
     :root {
-      --ink: #0f172a;
+      --page: #f4f6f8;
+      --surface: #ffffff;
+      --surface-2: #eef4ff;
+      --ink: #17202a;
       --muted: #667085;
-      --soft: #f6f8fb;
-      --card: #ffffff;
-      --line: #e4e7ec;
-      --blue: #0b63ce;
-      --blue-dark: #084ca0;
-      --blue-soft: #eaf3ff;
-      --green: #16a34a;
-      --green-soft: #dcfce7;
-      --orange: #f97316;
-      --orange-soft: #fff3e8;
-      --red: #dc2626;
-      --red-soft: #fee2e2;
-      --purple: #7c3aed;
-      --purple-soft: #f1e9ff;
-      --shadow: 0 16px 34px rgba(15, 23, 42, .10);
+      --line: #dde3ea;
+      --brand: #0a66c2;
+      --brand-2: #09509a;
+      --green: #12805c;
+      --green-soft: #e7f7ef;
+      --amber: #b45309;
+      --amber-soft: #fff4df;
+      --red: #b42318;
+      --red-soft: #fee8e5;
+      --violet: #6d3bc2;
+      --violet-soft: #f0eafd;
+      --cyan: #087f8c;
+      --cyan-soft: #e4f7fa;
+      --shadow: 0 16px 40px rgba(15, 23, 42, .08);
+      --radius: 8px;
     }
 
     * { box-sizing: border-box; }
@@ -31,391 +34,388 @@
       margin: 0;
       min-height: 100vh;
       min-height: 100dvh;
-      background: var(--soft);
+      background: #dfe7ef;
       color: var(--ink);
-      font-family: Inter, "Segoe UI", Roboto, system-ui, sans-serif;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
       font-size: 14px;
-      line-height: 1.42;
+      line-height: 1.45;
       letter-spacing: 0;
     }
 
     button, input, select, textarea { font: inherit; }
     button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
     h1, h2, h3, p { margin: 0; }
+    svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2.2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
     .hidden { display: none !important; }
 
     .screen {
+      width: min(100%, 480px);
       min-height: 100dvh;
-      width: min(100%, 460px);
       margin: 0 auto;
-      background: #fff;
-      box-shadow: 0 0 0 1px rgba(15, 23, 42, .04);
+      background: var(--page);
       position: relative;
+      overflow-x: hidden;
     }
 
     .login {
-      min-height: 100dvh;
       display: grid;
       align-content: center;
-      gap: 20px;
-      padding: 26px 18px;
+      gap: 18px;
+      padding: 22px;
       background:
-        radial-gradient(circle at 88% 10%, rgba(11, 99, 206, .18), transparent 34%),
-        linear-gradient(180deg, #ffffff 0%, #f5f9ff 100%);
+        linear-gradient(180deg, rgba(10, 102, 194, .08), rgba(18, 128, 92, .08)),
+        var(--page);
     }
 
     .brand {
       display: grid;
-      justify-items: start;
       gap: 10px;
     }
-
-    .wordmark {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 34px;
-      line-height: 38px;
-      font-weight: 900;
-      color: var(--blue);
-    }
-
-    .wordmark span {
-      display: inline-grid;
-      place-items: center;
-      min-width: 52px;
-      height: 35px;
-      padding: 0 8px;
+    .brand-mark {
+      width: 52px;
+      height: 52px;
       border-radius: 8px;
-      background: var(--blue);
+      display: grid;
+      place-items: center;
       color: #fff;
+      background: var(--brand);
       font-size: 20px;
-      box-shadow: 0 10px 24px rgba(11, 99, 206, .28);
+      font-weight: 900;
+      box-shadow: 0 14px 28px rgba(10, 102, 194, .24);
     }
-
-    .brand h1 { font-size: 24px; line-height: 30px; font-weight: 900; }
-    .brand p { color: var(--muted); font-weight: 700; max-width: 320px; }
-
-    .card {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      background: var(--card);
-      box-shadow: var(--shadow);
+    .brand h1 {
+      font-size: 30px;
+      line-height: 36px;
+      font-weight: 900;
+    }
+    .brand p {
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 650;
     }
 
     .panel {
-      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      padding: 16px;
       display: grid;
-      gap: 12px;
+      gap: 14px;
     }
 
-    .login-card { padding: 16px; display: grid; gap: 14px; }
-    .field { display: grid; gap: 7px; color: #344054; font-size: 12px; font-weight: 800; }
-    .field span { display: flex; justify-content: space-between; gap: 8px; }
+    .subtle-panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfe;
+      padding: 13px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      color: #344054;
+      font-size: 12px;
+      font-weight: 800;
+    }
     input, select, textarea {
       width: 100%;
-      min-height: 46px;
-      border: 1px solid #d0d5dd;
-      border-radius: 10px;
-      padding: 11px 12px;
-      background: #fbfcff;
+      min-height: 44px;
+      border: 1px solid #cbd5e1;
+      border-radius: var(--radius);
+      padding: 10px 11px;
+      background: #fff;
       color: var(--ink);
       outline: none;
     }
-    textarea { min-height: 92px; resize: vertical; }
-    input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(11, 99, 206, .13); }
-
-    .checkline {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 13px;
-      font-weight: 800;
+    textarea { min-height: 84px; resize: vertical; }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(10, 102, 194, .14);
     }
 
-    .checkline input { width: 18px; min-height: 18px; accent-color: var(--blue); }
+    .role-toggle, .chips, .actions {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .role-toggle::-webkit-scrollbar, .chips::-webkit-scrollbar, .actions::-webkit-scrollbar { display: none; }
+
+    .chip {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 0 14px;
+      background: #fff;
+      color: #475467;
+      font-size: 12px;
+      font-weight: 850;
+      white-space: nowrap;
+    }
+    .chip.active {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
 
     .btn {
-      min-height: 46px;
+      min-height: 44px;
       border: 0;
-      border-radius: 10px;
-      padding: 0 14px;
+      border-radius: var(--radius);
+      padding: 0 13px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
-      background: var(--blue);
+      background: var(--brand);
       color: #fff;
-      font-weight: 900;
       text-decoration: none;
+      font-weight: 850;
+      white-space: nowrap;
     }
-
     .btn.small { min-height: 34px; padding: 0 10px; font-size: 12px; }
+    .btn.soft { background: var(--surface-2); color: var(--brand); border: 1px solid #c9dcfb; }
     .btn.ghost { background: #fff; color: var(--ink); border: 1px solid var(--line); }
-    .btn.soft { background: var(--blue-soft); color: var(--blue); border: 1px solid #cfe2ff; }
     .btn.green { background: var(--green); }
-    .btn.orange { background: var(--orange); }
-    .btn.purple { background: var(--purple); }
-    .btn.danger { background: var(--red); }
-    .status { min-height: 20px; color: var(--muted); font-size: 13px; font-weight: 700; }
+    .btn.amber { background: #d97706; }
+    .btn.red { background: var(--red); }
+    .btn:disabled { opacity: .58; cursor: not-allowed; }
+
+    .status {
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
     .status.error { color: var(--red); }
+    .status.ok { color: var(--green); }
 
     .app {
       min-height: 100dvh;
-      padding-bottom: calc(76px + env(safe-area-inset-bottom));
-      background: #fff;
+      padding-bottom: calc(84px + env(safe-area-inset-bottom));
     }
 
     .topbar {
       position: sticky;
       top: 0;
-      z-index: 8;
+      z-index: 12;
+      min-height: 72px;
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      justify-content: space-between;
       gap: 10px;
       padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
-      border-bottom: 1px solid rgba(228, 231, 236, .75);
-      background: rgba(255, 255, 255, .94);
+      border-bottom: 1px solid rgba(221, 227, 234, .9);
+      background: rgba(255, 255, 255, .96);
       backdrop-filter: blur(14px);
     }
 
-    .top-left {
+    .title-area {
       min-width: 0;
       display: flex;
       align-items: center;
       gap: 10px;
     }
-
-    .back {
+    .title-mark {
       width: 38px;
       height: 38px;
-      border: 0;
-      border-radius: 10px;
-      background: var(--blue-soft);
-      color: var(--blue);
-      font-size: 22px;
-      font-weight: 900;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 950;
     }
-
-    .titleblock { min-width: 0; }
-    .titleblock h1 { font-size: 19px; line-height: 24px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .titleblock p { color: var(--muted); font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-    .top-actions { display: flex; gap: 8px; align-items: center; }
+    .title-text { min-width: 0; }
+    .title-text h1 {
+      font-size: 19px;
+      line-height: 24px;
+      font-weight: 900;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .title-text p {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .icon-btn {
-      width: 40px;
-      height: 40px;
+      width: 42px;
+      height: 42px;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: var(--radius);
       display: grid;
       place-items: center;
       background: #fff;
-      color: var(--blue);
-      font-weight: 900;
-      box-shadow: 0 6px 18px rgba(15, 23, 42, .06);
+      color: var(--brand);
     }
 
-    main { padding: 14px; display: grid; gap: 14px; }
+    main {
+      display: grid;
+      gap: 14px;
+      padding: 14px;
+    }
 
     .hero {
       display: grid;
-      gap: 12px;
-      padding: 14px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #0b63ce, #114aa0);
+      gap: 14px;
+      border-radius: var(--radius);
+      padding: 18px;
+      background: linear-gradient(135deg, #0a66c2, #12805c);
       color: #fff;
-      box-shadow: 0 18px 36px rgba(11, 99, 206, .28);
+      box-shadow: 0 18px 36px rgba(10, 102, 194, .22);
     }
-
-    .hero-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-    .hero h2 { font-size: 16px; line-height: 22px; font-weight: 900; }
-    .hero p { color: #dbeafe; font-size: 12px; font-weight: 700; }
-    .hero-date { font-size: 11px; font-weight: 900; color: #dbeafe; }
-    .progress { height: 9px; border-radius: 999px; overflow: hidden; background: rgba(255, 255, 255, .24); }
-    .progress span { display: block; height: 100%; border-radius: inherit; background: #55d987; }
-
-    .metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-    .metric {
-      min-height: 82px;
-      padding: 11px 8px;
-      border-radius: 10px;
-      background: #fff;
-      color: var(--ink);
-      box-shadow: 0 10px 24px rgba(15, 23, 42, .12);
+    .hero h2 {
+      font-size: 19px;
+      line-height: 25px;
+      font-weight: 900;
     }
-    .metric strong { display: block; font-size: 20px; line-height: 26px; font-weight: 900; color: var(--blue); }
-    .metric span { display: block; color: var(--muted); font-size: 11px; line-height: 15px; font-weight: 800; }
+    .hero p { color: rgba(255,255,255,.84); font-weight: 700; }
 
-    .section-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-    .section-head h2 { font-size: 16px; line-height: 22px; font-weight: 900; }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .section-head h2 {
+      font-size: 16px;
+      line-height: 22px;
+      font-weight: 900;
+    }
     .muted { color: var(--muted); font-size: 12px; font-weight: 700; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .metrics.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .metric {
+      min-height: 78px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 12px;
+    }
+    .metric strong {
+      display: block;
+      color: var(--brand);
+      font-size: 20px;
+      line-height: 25px;
+      font-weight: 950;
+      overflow-wrap: anywhere;
+    }
+    .metric span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 15px;
+      font-weight: 800;
+    }
 
     .list { display: grid; gap: 10px; }
     .row {
       min-width: 0;
       display: grid;
       grid-template-columns: 1fr auto;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
-      padding: 12px;
       border: 1px solid var(--line);
-      border-radius: 12px;
-      background: #fbfcff;
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 13px;
     }
+    .row.stack { grid-template-columns: 1fr; }
     .row.clickable { cursor: pointer; }
-    .row h3 { min-width: 0; font-size: 14px; line-height: 20px; font-weight: 900; overflow-wrap: anywhere; }
-    .row p { margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 17px; font-weight: 700; overflow-wrap: anywhere; }
-    .amount { text-align: right; font-weight: 900; }
+    .row h3 {
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 900;
+      overflow-wrap: anywhere;
+    }
+    .row p {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 700;
+      overflow-wrap: anywhere;
+    }
 
     .pill {
+      min-height: 25px;
+      border-radius: 999px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      min-height: 25px;
-      border-radius: 999px;
       padding: 0 9px;
-      background: var(--blue-soft);
-      color: var(--blue);
+      background: var(--surface-2);
+      color: var(--brand);
       font-size: 11px;
       line-height: 13px;
       font-weight: 900;
       white-space: nowrap;
     }
     .pill.green { background: var(--green-soft); color: var(--green); }
-    .pill.orange { background: var(--orange-soft); color: var(--orange); }
+    .pill.amber { background: var(--amber-soft); color: var(--amber); }
     .pill.red { background: var(--red-soft); color: var(--red); }
-    .pill.purple { background: var(--purple-soft); color: var(--purple); }
+    .pill.violet { background: var(--violet-soft); color: var(--violet); }
+    .pill.cyan { background: var(--cyan-soft); color: var(--cyan); }
 
-    .chips, .actions, .quick-grid { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
-    .chips::-webkit-scrollbar, .actions::-webkit-scrollbar, .quick-grid::-webkit-scrollbar { display: none; }
-    .chip {
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      min-height: 34px;
-      padding: 0 12px;
-      background: #fff;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 900;
-      white-space: nowrap;
-    }
-    .chip.active { border-color: var(--blue); background: var(--blue); color: #fff; }
-
-    .searchbar {
+    .form {
       display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
-      align-items: center;
+      gap: 11px;
     }
-
-    .form { display: grid; gap: 12px; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
     .full { grid-column: 1 / -1; }
-    .radio-list { display: grid; gap: 8px; }
-    .radio {
-      min-height: 38px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #344054;
-      font-weight: 800;
-      font-size: 13px;
-    }
-    .radio input { width: 17px; min-height: 17px; accent-color: var(--blue); }
 
-    .avatar-row { display: flex; align-items: center; gap: 12px; }
-    .avatar-img {
-      width: 58px;
-      height: 58px;
-      border-radius: 50%;
+    .kv-grid {
       display: grid;
-      place-items: center;
-      color: #fff;
-      font-size: 20px;
-      font-weight: 900;
-      background:
-        linear-gradient(135deg, rgba(11, 99, 206, .92), rgba(22, 163, 74, .82)),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80'%3E%3Crect width='80' height='80' fill='%230b63ce'/%3E%3Ccircle cx='40' cy='30' r='16' fill='%23fff' fill-opacity='.92'/%3E%3Cpath d='M16 74c4-18 44-18 48 0' fill='%23fff' fill-opacity='.92'/%3E%3C/svg%3E");
-      background-size: cover;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
     }
-
-    .detail-kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .kv {
-      min-height: 62px;
-      padding: 10px;
+      min-height: 60px;
       border: 1px solid var(--line);
-      border-radius: 10px;
-      background: #fbfcff;
+      border-radius: var(--radius);
+      background: #fbfcfe;
+      padding: 10px;
     }
     .kv span { display: block; color: var(--muted); font-size: 11px; font-weight: 800; }
-    .kv strong { display: block; margin-top: 5px; font-size: 14px; font-weight: 900; overflow-wrap: anywhere; }
-
-    .timeline { position: relative; display: grid; gap: 8px; }
-    .step {
-      display: grid;
-      grid-template-columns: 24px 1fr;
-      gap: 8px;
-      align-items: start;
-    }
-    .dot {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: var(--blue-soft);
-      color: var(--blue);
-      font-size: 11px;
-      font-weight: 900;
-    }
-    .step h3 { font-size: 13px; line-height: 18px; font-weight: 900; }
-    .step p { color: var(--muted); font-size: 12px; font-weight: 700; }
-
-    .success {
-      min-height: calc(100dvh - 150px);
-      align-content: center;
-      justify-items: center;
-      text-align: center;
-      gap: 14px;
-    }
-    .checkmark {
-      width: 92px;
-      height: 92px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      background: var(--green);
-      color: #fff;
-      font-size: 52px;
-      font-weight: 900;
-      box-shadow: 0 18px 36px rgba(22, 163, 74, .25);
-    }
-    .success h2 { font-size: 26px; line-height: 32px; font-weight: 900; }
-    .success .price { font-size: 38px; line-height: 44px; font-weight: 900; }
+    .kv strong { display: block; margin-top: 5px; font-weight: 900; overflow-wrap: anywhere; }
 
     .bottom-nav {
       position: fixed;
       left: 50%;
       bottom: 0;
+      z-index: 18;
       transform: translateX(-50%);
-      z-index: 12;
-      width: min(100%, 460px);
+      width: min(100%, 480px);
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 4px;
-      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+      padding: 8px 9px calc(8px + env(safe-area-inset-bottom));
       border-top: 1px solid var(--line);
-      background: rgba(255, 255, 255, .96);
-      backdrop-filter: blur(16px);
-      box-shadow: 0 -12px 30px rgba(15, 23, 42, .10);
+      background: rgba(255,255,255,.98);
+      backdrop-filter: blur(14px);
     }
     .nav-btn {
-      min-height: 54px;
+      min-height: 58px;
       border: 0;
-      border-radius: 12px;
+      border-radius: var(--radius);
       display: grid;
       place-items: center;
       gap: 2px;
@@ -423,717 +423,740 @@
       color: #475467;
       font-size: 10px;
       line-height: 12px;
-      font-weight: 900;
+      font-weight: 850;
     }
-    .nav-btn .nav-ico {
-      width: 22px;
-      height: 22px;
-      border-radius: 8px;
-      display: grid;
-      place-items: center;
-      color: inherit;
-      font-size: 13px;
-      font-weight: 900;
+    .nav-btn.active {
+      background: var(--surface-2);
+      color: var(--brand);
     }
-    .nav-btn.active { color: var(--blue); background: var(--blue-soft); }
-    .nav-btn.add {
-      color: #fff;
-      background: var(--blue);
-      min-height: 60px;
-      margin-top: -12px;
-      box-shadow: 0 12px 24px rgba(11, 99, 206, .26);
-    }
-    .nav-btn.add .nav-ico { font-size: 22px; }
 
     .sheet {
       position: fixed;
       inset: 0;
-      z-index: 20;
+      z-index: 35;
       display: grid;
       align-items: end;
-      background: rgba(15, 23, 42, .32);
+      background: rgba(15, 23, 42, .38);
       padding: 12px;
     }
     .sheet-card {
-      width: min(100%, 436px);
+      width: min(100%, 456px);
+      max-height: calc(100dvh - 40px);
+      overflow-y: auto;
       margin: 0 auto;
-      border-radius: 16px 16px 12px 12px;
+      border-radius: var(--radius);
       background: #fff;
-      padding: 14px;
+      box-shadow: 0 22px 54px rgba(15, 23, 42, .28);
+      padding: 16px;
       display: grid;
-      gap: 10px;
-      box-shadow: 0 18px 46px rgba(15, 23, 42, .22);
+      gap: 12px;
     }
 
-    @media (max-width: 360px) {
-      main { padding: 12px; gap: 12px; }
-      .metrics { gap: 7px; }
-      .metric { padding: 9px 7px; }
-      .metric strong { font-size: 18px; }
-      .form-grid, .detail-kv { grid-template-columns: 1fr; }
+    .empty {
+      min-height: 130px;
+      border: 1px dashed #cbd5e1;
+      border-radius: var(--radius);
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 18px;
+      color: var(--muted);
+      font-weight: 750;
+    }
+
+    @media (max-width: 380px) {
+      main { padding: 12px 10px; }
+      .metrics.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .form-grid, .kv-grid { grid-template-columns: 1fr; }
+      .btn { white-space: normal; text-align: center; }
     }
   </style>
 </head>
 <body>
-  <section class="screen login" id="login">
+  <section class="screen login" id="loginScreen">
     <div class="brand">
-      <div class="wordmark">AXZEN <span>POS</span></div>
-      <h1>Marketing Employee App</h1>
-      <p>Smart sales, stronger connections, clean field workflow.</p>
+      <div class="brand-mark">AX</div>
+      <h1>Axzen Employee</h1>
+      <p>Customer onboarding, approvals, payments, printers and team tracking in one clean workflow.</p>
     </div>
-    <form class="card login-card" id="loginForm">
-      <label class="field">Employee ID / Mobile Number <input id="employeeId" value="MKT001" autocomplete="username" required></label>
+    <form class="panel" id="loginForm">
+      <div class="role-toggle">
+        <button class="chip active" type="button" data-login-role="employee">Employee</button>
+        <button class="chip" type="button" data-login-role="manager">Manager</button>
+      </div>
+      <label class="field">Employee ID <input id="loginId" value="MKT001" autocomplete="username" required></label>
       <label class="field">Password <input id="password" value="1234" type="password" autocomplete="current-password" required></label>
-      <div class="checkline"><label><input id="remember" type="checkbox" checked> Remember me</label><button class="chip" type="button" id="forgotBtn">Forgot Password</button></div>
-      <button class="btn" type="submit">Login</button>
-      <div class="status" id="loginStatus">Demo login: MKT001 / 1234</div>
+      <button class="btn" id="loginBtn" type="submit">Login</button>
+      <div class="status" id="loginStatus">Employee: MKT001 / 1234. Manager: SUPER / admin123.</div>
     </form>
   </section>
 
-  <section class="screen app hidden" id="app">
+  <section class="screen app hidden" id="appScreen">
     <header class="topbar">
-      <div class="top-left">
-        <button class="back hidden" id="backBtn" type="button" title="Back">&lt;</button>
-        <div class="titleblock">
-          <h1 id="pageTitle">Home</h1>
-          <p id="pageSub">AXZEN POS Marketing</p>
+      <div class="title-area">
+        <button class="icon-btn hidden" id="backBtn" type="button" aria-label="Back">
+          <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <div class="title-mark" id="titleMark">AX</div>
+        <div class="title-text">
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSub">Axzen employee workflow</p>
         </div>
       </div>
-      <div class="top-actions">
-        <button class="icon-btn" type="button" id="notifyBtn" title="Notifications">N</button>
-      </div>
+      <button class="icon-btn" id="refreshBtn" type="button" aria-label="Refresh">
+        <svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-9 9 9.5 9.5 0 0 1-6.7-2.7"/><path d="M3 12a9 9 0 0 1 9-9 9.5 9.5 0 0 1 6.7 2.7"/><path d="M3 5v7h7"/><path d="M21 19v-7h-7"/></svg>
+      </button>
     </header>
     <main id="page"></main>
     <nav class="bottom-nav" id="tabs"></nav>
   </section>
 
-  <div class="sheet hidden" id="quickSheet">
-    <div class="sheet-card">
-      <div class="section-head"><h2>Create</h2><button class="icon-btn" type="button" id="closeSheet">X</button></div>
-      <button class="btn" type="button" data-route="addLead">Add Lead</button>
-      <button class="btn soft" type="button" data-route="visit">Add Visit</button>
-      <button class="btn ghost" type="button" data-route="followups">Add Follow-up</button>
-    </div>
+  <div class="sheet hidden" id="sheet">
+    <div class="sheet-card" id="sheetCard"></div>
   </div>
 
   <script>
-    const liveApi = "https://canteen.axzen.in";
-    const API = window.Capacitor || location.protocol === "capacitor:" ? liveApi : "";
     const $ = id => document.getElementById(id);
-    const tokenKey = "AXZEN_MARKETING_TOKEN";
-    const routeStack = [];
-    const rupee = value => "Rs " + Number(value || 0).toLocaleString("en-IN");
+    const liveApi = "https://canteen.axzen.in";
+    const API = (window.Capacitor || location.protocol === "capacitor:") ? liveApi : "";
+    const TOKEN_KEY = "axzen_employee_token";
+    const USER_KEY = "axzen_employee_user";
+
+    const icons = {
+      home: '<svg viewBox="0 0 24 24"><path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
+      leads: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>',
+      plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+      rupee: '<svg viewBox="0 0 24 24"><path d="M6 3h12"/><path d="M6 8h12"/><path d="M6 13h5a5 5 0 0 0 0-10"/><path d="m6 13 8 8"/></svg>',
+      users: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      chart: '<svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><rect x="7" y="11" width="3" height="5"/><rect x="12" y="7" width="3" height="9"/><rect x="17" y="4" width="3" height="12"/></svg>',
+      user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>'
+    };
+
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
-    const todayIso = () => new Date().toISOString().slice(0, 10);
-    const fmtDate = value => new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-    const fmtTime = value => new Date(value).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-    let token = localStorage.getItem(tokenKey) || "";
-    let user = null;
-    let route = "home";
-    let selectedLeadId = 1;
-    let leadFilter = "All";
-    let followFilter = "Today";
-    let visitLeadId = 1;
-    let checkin = null;
-    let state = seedState();
+    const money = value => "Rs " + Number(value || 0).toLocaleString("en-IN");
+    const fmtDate = value => value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+    const mobileDigits = value => String(value || "").replace(/\D/g, "");
+    const today = () => new Date().toISOString().slice(0, 10);
 
-    const nav = [
-      ["home", "H", "Home"],
-      ["leads", "L", "Leads"],
-      ["quick", "+", ""],
-      ["followups", "F", "Follow-ups"],
-      ["profile", "P", "Profile"]
-    ];
+    let selectedLoginRole = "employee";
+    let token = localStorage.getItem(TOKEN_KEY) || "";
+    let user = readJson(USER_KEY);
+    let route = "dashboard";
+    let stack = [];
+    let data = demoData();
+    let selectedCanteenId = null;
+    let busy = false;
+    let filterStatus = "All";
 
-    const plans = [
-      { name: "Basic", price: 599, desc: "Small shops and basic billing" },
-      { name: "Standard", price: 799, desc: "Growing businesses" },
-      { name: "Premium", price: 999, desc: "Restaurants and retail", tag: "Popular" },
-      { name: "Business", price: 0, desc: "Large businesses and chains" }
-    ];
-
-    const pipeline = ["NEW", "CONTACTED", "VISIT PLANNED", "VISITED", "DEMO GIVEN", "INTERESTED", "NEGOTIATION", "PAYMENT PENDING", "WON", "INSTALLATION PENDING", "ACTIVATED"];
-    const exits = ["NOT INTERESTED", "LOST"];
-
-    function seedState() {
-      const now = new Date();
-      return {
-        leads: [
-          lead(1, "Sri Sai Restaurant", "Ramesh", "98xxxxxx12", "Khammam, Telangana", "Restaurant", "INTERESTED", "Premium", 999, "Demo completed", 1),
-          lead(2, "Asian Kitchen", "Salman", "99xxxxxx23", "Hyderabad, Telangana", "Hotel", "DEMO GIVEN", "Standard", 799, "Payment follow-up", 0),
-          lead(3, "RK Canteen", "Rajesh", "97xxxxxx45", "Vijayawada, AP", "Canteen", "NEW", "Basic", 599, "Decision pending", 1),
-          lead(4, "Hotel Grand", "Kumar", "91xxxxxx78", "Warangal, Telangana", "Hotel", "VISIT PLANNED", "Premium", 999, "Callback requested", 0),
-          lead(5, "Food Point", "Vijay", "90xxxxxx67", "Guntur, AP", "Cafe", "NOT INTERESTED", "Basic", 599, "Using another POS", 2)
-        ],
-        followups: [
-          follow(1, "10:00 AM", "Sri Sai Restaurant", "Demo", 1, 0),
-          follow(2, "11:30 AM", "Asian Kitchen", "Payment", 2, 0),
-          follow(3, "02:00 PM", "RK Canteen", "Decision", 3, 0),
-          follow(4, "04:30 PM", "Hotel Grand", "Callback", 4, 1),
-          follow(5, "06:00 PM", "Food Point", "Follow-up", 5, 2)
-        ],
-        visits: [],
-        commissions: [
-          { customer: "Sri Sai Restaurant", plan: "Premium", saleAmount: 999, commission: 420, status: "Approved", date: now.toISOString() },
-          { customer: "Asian Kitchen", plan: "Standard", saleAmount: 799, commission: 320, status: "Pending", date: now.toISOString() }
-        ],
-        payments: [],
-        installTickets: [
-          { id: "AXI2045", leadId: 1, status: "Pending", created: now.toISOString() }
-        ],
-        activities: []
-      };
+    function readJson(key) {
+      try { return JSON.parse(localStorage.getItem(key) || "null"); }
+      catch { return null; }
     }
 
-    function lead(id, business, owner, mobile, area, type, status, plan, price, note, offsetDays) {
-      const d = new Date(Date.now() + offsetDays * 86400000);
+    function demoData() {
+      const now = new Date().toISOString();
       return {
-        id, business, owner, mobile, altMobile: "", area, type, status, plan, price,
-        currentBilling: "Manual / Book", notes: note, assignedTo: "MKT001",
-        lastActivity: note, nextFollowUp: d.toISOString(),
-        history: ["Lead Created", "Called Customer", status === "NEW" ? "New lead assigned" : "Visited Shop", status]
+        canteens: [
+          { id: 1001, canteenName: "Sri Lakshmi Foods", businessCategory: "Canteen", ownerName: "Ramesh Kumar", ownerMobile: "9876543210", city: "Hyderabad", state: "Telangana", counters: 2, printersRequired: 2, printersAssigned: 0, selectedPlan: "Professional", planType: "Paid", paidAmount: 12000, pendingAmount: 3000, paymentMode: "UPI", status: "Pending Approval", submittedBy: "MKT001", submittedByName: "Venkatesh", notes: "Needs printer and menu setup.", createdAt: now },
+          { id: 1002, canteenName: "Metro Staff Canteen", businessCategory: "Restaurant", ownerName: "Saleem", ownerMobile: "9848012345", city: "Khammam", state: "Telangana", counters: 1, printersRequired: 1, printersAssigned: 1, selectedPlan: "Starter", planType: "Trial", paidAmount: 0, pendingAmount: 0, paymentMode: "Trial", status: "Trial", submittedBy: "MKT002", submittedByName: "Sravani", activatedCanteenId: "AXC-1002", canteenLoginId: "AXC1002", defaultPassword: "AXZEN1002", createdAt: now }
+        ],
+        users: [
+          { employeeId: "MKT001", name: "Venkatesh", role: "marketing", active: true, target: 20 },
+          { employeeId: "MKT002", name: "Sravani", role: "marketing", active: true, target: 18 }
+        ],
+        payments: [{ id: 1, canteenId: 1001, canteenName: "Sri Lakshmi Foods", amount: 12000, pendingAmount: 3000, paymentMode: "UPI", collectedByName: "Venkatesh", createdAt: now }],
+        printers: [{ serialNumber: "AXP1001", model: "58mm Bluetooth", status: "Stock" }],
+        enquiries: [],
+        activities: [],
+        summary: {
+          cards: {
+            totalCanteens: 2, activeCanteens: 0, trialCanteens: 1, expiredCanteens: 0, blockedCanteens: 0,
+            todaysRegistrations: 1, todaysCollections: 12000, monthlyRevenue: 12000, pendingPayments: 3000,
+            printersAssigned: 1, printersAvailable: 1, pendingInstallations: 1, totalEnquiries: 0, newEnquiries: 0
+          },
+          marketingPerformance: [
+            { employeeId: "MKT001", name: "Venkatesh", registrations: 1, approved: 0, rejected: 0, collection: 12000, pending: 3000, target: 20 },
+            { employeeId: "MKT002", name: "Sravani", registrations: 1, approved: 1, rejected: 0, collection: 0, pending: 0, target: 18 }
+          ],
+          recentActivities: []
+        }
       };
-    }
-
-    function follow(id, time, customer, purpose, leadId, offsetDays) {
-      const d = new Date(Date.now() + offsetDays * 86400000);
-      return { id, time, customer, purpose, leadId, date: d.toISOString(), done: false };
     }
 
     async function api(path, options = {}) {
-      const res = await fetch(API + path, {
-        ...options,
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) }
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.success === false) throw new Error(data.message || "Request failed");
-      return data;
+      const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const response = await fetch(`${API}${path}`, { ...options, headers });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || body.success === false) throw new Error(body.message || "Server request failed");
+      return body;
     }
 
-    function visibleLeads() {
-      const own = state.leads.filter(item => !user || item.assignedTo === user.employeeId || item.createdBy === user.employeeId);
-      if (leadFilter === "All") return own;
-      if (leadFilter === "New") return own.filter(item => item.status === "NEW");
-      if (leadFilter === "Follow-up") return own.filter(item => ["CONTACTED", "VISIT PLANNED", "VISITED", "DEMO GIVEN", "NEGOTIATION", "PAYMENT PENDING"].includes(item.status));
-      if (leadFilter === "Interested") return own.filter(item => item.status === "INTERESTED");
-      if (leadFilter === "Won") return own.filter(item => ["WON", "INSTALLATION PENDING", "ACTIVATED"].includes(item.status));
-      return own.filter(item => exits.includes(item.status));
-    }
-
-    function totals() {
-      const leads = visibleLeads();
-      const visits = 6 + state.visits.length;
-      const demos = leads.filter(item => ["DEMO GIVEN", "INTERESTED", "NEGOTIATION", "PAYMENT PENDING", "WON", "INSTALLATION PENDING", "ACTIVATED"].includes(item.status)).length + 2;
-      const sales = leads.filter(item => ["WON", "INSTALLATION PENDING", "ACTIVATED"].includes(item.status)).length + state.payments.length + 2;
-      const collection = state.payments.reduce((sum, item) => sum + Number(item.amount || 0), 1998);
-      const commission = state.commissions.reduce((sum, item) => sum + Number(item.commission || 0), 420);
-      return { targetVisits: 10, visits, demos, sales, collection, commission, progress: Math.min(100, Math.round(visits / 10 * 100)) };
-    }
-
-    function renderShell() {
-      $("tabs").innerHTML = nav.map(([id, ico, label]) => {
-        const cls = id === "quick" ? "nav-btn add" : `nav-btn ${route === id ? "active" : ""}`;
-        return `<button class="${cls}" type="button" data-nav="${id}"><span class="nav-ico">${ico}</span>${label}</button>`;
-      }).join("");
-      document.querySelectorAll("[data-nav]").forEach(btn => btn.addEventListener("click", () => {
-        if (btn.dataset.nav === "quick") return openSheet();
-        go(btn.dataset.nav);
-      }));
-      $("backBtn").classList.toggle("hidden", routeStack.length === 0);
-    }
-
-    function setPage(title, sub) {
-      $("pageTitle").textContent = title;
-      $("pageSub").textContent = sub || "AXZEN POS Marketing";
-      renderShell();
-    }
-
-    function go(next, push = true) {
-      if (push && route !== next) routeStack.push(route);
-      route = next;
-      render();
-      window.scrollTo({ top: 0, behavior: "instant" });
-    }
-
-    function openSheet() { $("quickSheet").classList.remove("hidden"); }
-    function closeSheet() { $("quickSheet").classList.add("hidden"); }
-
-    function renderHome() {
-      const t = totals();
-      setPage(`Hi, ${user?.name || "Nagarjuna"}`, "Good morning. Let's hit your targets.");
-      $("page").innerHTML = `
-        <section class="hero">
-          <div class="hero-head"><div><h2>Today's Progress</h2><p>10 Aug 2026</p></div><span class="hero-date">${t.progress}%</span></div>
-          <div class="progress"><span style="width:${t.progress}%"></span></div>
-          <div class="metrics">
-            ${metric("Target Visits", t.targetVisits)}
-            ${metric("Visits Done", t.visits)}
-            ${metric("Demos", t.demos)}
-            ${metric("Sales", t.sales)}
-            ${metric("Collection", rupee(t.collection))}
-            ${metric("Est. Commission", rupee(t.commission))}
-          </div>
-        </section>
-        <section class="card panel">
-          <div class="section-head"><h2>Today's Follow-ups</h2><button class="chip" type="button" data-route="followups">View All</button></div>
-          <div class="list">${state.followups.slice(0, 4).map(followRow).join("")}</div>
-        </section>
-        <section class="card panel">
-          <div class="section-head"><h2>Quick Workflow</h2><span class="pill">End to end</span></div>
-          <div class="quick-grid">
-            ${quick("addLead", "Add Lead", "soft")}
-            ${quick("visit", "Start Visit", "green")}
-            ${quick("demo", "POS Demo", "purple")}
-            ${quick("pricing", "Pricing", "soft")}
-            ${quick("closeSale", "Close Sale", "orange")}
-          </div>
-        </section>`;
-      bindRoutes();
+    function isManager() {
+      return user?.role === "super_admin" || user?.role === "manager";
     }
 
     function metric(label, value) {
       return `<div class="metric"><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`;
     }
 
-    function quick(routeName, label, tone) {
-      return `<button class="btn small ${tone || ""}" type="button" data-route="${routeName}">${label}</button>`;
-    }
-
-    function followRow(item) {
-      const leadItem = state.leads.find(row => row.id === item.leadId);
-      return `<div class="row">
-        <div><h3>${esc(item.time)} &nbsp; ${esc(item.customer)}</h3><p>${esc(item.purpose)}${item.done ? " completed" : ""}</p></div>
-        <button class="btn small soft" type="button" data-call="${esc(leadItem?.mobile || "")}">Call</button>
-      </div>`;
-    }
-
-    function renderLeads() {
-      setPage("My Leads", `${visibleLeads().length} assigned leads`);
-      $("page").innerHTML = `
-        <section class="searchbar">
-          <input id="leadSearch" placeholder="Search leads...">
-          <button class="icon-btn" type="button" id="sortBtn" title="Sort">S</button>
-        </section>
-        <section class="chips">${["All", "New", "Follow-up", "Interested", "Won", "Lost"].map(name => `<button class="chip ${leadFilter === name ? "active" : ""}" type="button" data-filter="${name}">${name}</button>`).join("")}</section>
-        <section class="list" id="leadList">${leadCards(visibleLeads())}</section>`;
-      document.querySelectorAll("[data-filter]").forEach(btn => btn.addEventListener("click", () => { leadFilter = btn.dataset.filter; renderLeads(); }));
-      $("leadSearch").addEventListener("input", event => {
-        const q = event.target.value.trim().toLowerCase();
-        const rows = visibleLeads().filter(item => [item.business, item.owner, item.mobile, item.area, item.type, item.status].join(" ").toLowerCase().includes(q));
-        $("leadList").innerHTML = leadCards(rows);
-        bindLeadCards();
-      });
-      $("sortBtn").addEventListener("click", () => {
-        state.leads.sort((a, b) => new Date(a.nextFollowUp) - new Date(b.nextFollowUp));
-        renderLeads();
-      });
-      bindLeadCards();
-    }
-
-    function leadCards(rows) {
-      return rows.map(item => `<article class="card panel row clickable" data-lead="${item.id}">
-        <div>
-          <h3>${esc(item.business)}</h3>
-          <p>${esc(item.owner)} | ${esc(item.mobile)}</p>
-          <p>${esc(item.area)} | ${esc(item.type)}</p>
-          <p>Next: ${fmtDate(item.nextFollowUp)} | ${esc(item.lastActivity)}</p>
-        </div>
-        <div class="amount">${statusPill(item.status)}</div>
-      </article>`).join("") || `<div class="card panel"><h2>No leads found</h2><p class="muted">Use the center plus button to create a new lead.</p></div>`;
-    }
-
-    function bindLeadCards() {
-      document.querySelectorAll("[data-lead]").forEach(card => card.addEventListener("click", () => {
-        selectedLeadId = Number(card.dataset.lead);
-        go("leadDetails");
-      }));
-    }
-
-    function statusPill(status) {
-      const cls = ["WON", "ACTIVATED"].includes(status) ? "green" : exits.includes(status) ? "red" : ["DEMO GIVEN", "INTERESTED"].includes(status) ? "purple" : ["PAYMENT PENDING", "INSTALLATION PENDING", "VISIT PLANNED"].includes(status) ? "orange" : "";
-      return `<span class="pill ${cls}">${esc(status)}</span>`;
-    }
-
-    function renderAddLead() {
-      setPage("Add New Lead", "Create activity history automatically");
-      $("page").innerHTML = `<section class="card panel">
-        <form class="form" id="leadForm">
-          <div class="avatar-row"><div class="avatar-img">SHOP</div><button class="btn soft" type="button" id="photoBtn">Optional Shop Photo</button></div>
-          <div class="form-grid">
-            <label class="field full">Business Name <input id="business" required value=""></label>
-            <label class="field">Owner Name <input id="owner" required value=""></label>
-            <label class="field">Mobile Number <input id="mobile" inputmode="tel" required value=""></label>
-            <label class="field">Alternate Number <input id="altMobile" inputmode="tel"></label>
-            <label class="field">Business Type <select id="type">${["Restaurant", "Hotel", "Canteen", "Cafe", "Bakery", "Retail Store", "Supermarket", "Medical/Pharmacy", "Chicken Shop", "Other"].map(x => `<option>${x}</option>`).join("")}</select></label>
-            <label class="field full">Location <input id="area" value="Khammam, Telangana" required></label>
-            <label class="field">Interested Plan <select id="plan">${plans.map(p => `<option>${p.name}</option>`).join("")}</select></label>
-            <label class="field">Current Billing Method <select id="billing"><option>Manual / Book</option><option>Old POS</option><option>Excel</option><option>None</option></select></label>
-            <label class="field full">Notes <textarea id="notes" placeholder="Requirement, timing, decision maker"></textarea></label>
-          </div>
-          <button class="btn" type="submit">Save Lead</button>
-          <div class="status" id="formStatus"></div>
-        </form>
-      </section>`;
-      $("photoBtn").addEventListener("click", () => $("formStatus").textContent = "Photo placeholder saved for demo.");
-      $("leadForm").addEventListener("submit", saveLead);
-    }
-
-    function saveLead(event) {
-      event.preventDefault();
-      const mobile = $("mobile").value.trim();
-      if (state.leads.some(item => item.mobile === mobile)) {
-        $("formStatus").textContent = "Duplicate mobile number found.";
-        $("formStatus").classList.add("error");
-        return;
-      }
-      const selectedPlan = plans.find(p => p.name === $("plan").value) || plans[0];
-      const item = {
-        id: Date.now(), business: $("business").value, owner: $("owner").value, mobile,
-        altMobile: $("altMobile").value, type: $("type").value, area: $("area").value,
-        plan: selectedPlan.name, price: selectedPlan.price, currentBilling: $("billing").value,
-        notes: $("notes").value, status: "NEW", lastActivity: "Lead Created",
-        nextFollowUp: new Date(Date.now() + 86400000).toISOString(),
-        assignedTo: user.employeeId, createdBy: user.employeeId,
-        history: ["Lead Created", "Assigned to " + user.employeeId]
-      };
-      state.leads.unshift(item);
-      selectedLeadId = item.id;
-      addAudit("Lead created", item.business);
-      go("leadDetails");
-    }
-
-    function renderLeadDetails() {
-      const item = activeLead();
-      setPage("Lead Details", item.business);
-      $("page").innerHTML = `
-        <section class="card panel">
-          <div class="avatar-row"><div class="avatar-img">${esc(item.business.slice(0, 2).toUpperCase())}</div><div><h2>${esc(item.business)}</h2><p class="muted">${esc(item.owner)} | ${esc(item.mobile)}</p>${statusPill(item.status)}</div></div>
-          <div class="detail-kv">
-            ${kv("Location", item.area)}
-            ${kv("Business Type", item.type)}
-            ${kv("Interested Plan", item.plan + (item.price ? " - " + rupee(item.price) : ""))}
-            ${kv("Billing", item.currentBilling)}
-          </div>
-        </section>
-        <section class="card panel">
-          <div class="section-head"><h2>Activity</h2><button class="btn small soft" type="button" id="editFollow">Edit</button></div>
-          <p class="muted">Last: ${esc(item.lastActivity)}</p>
-          <p class="muted">Next: ${fmtDate(item.nextFollowUp)}, ${fmtTime(item.nextFollowUp)}</p>
-          <p>${esc(item.notes)}</p>
-        </section>
-        <section class="actions">
-          ${quick("call", "Call", "green")}
-          ${quick("whatsapp", "WhatsApp", "green")}
-          ${quick("visit", "Visit", "orange")}
-          ${quick("followups", "Follow-up", "soft")}
-          ${quick("demo", "Demo", "purple")}
-          ${quick("pricing", "More", "ghost")}
-        </section>
-        <section class="card panel">
-          <div class="section-head"><h2>Status Pipeline</h2><button class="btn small" type="button" id="advanceBtn">Advance</button></div>
-          <div class="timeline">${item.history.map((h, i) => `<div class="step"><span class="dot">${i + 1}</span><div><h3>${esc(h)}</h3><p>${i === item.history.length - 1 ? "Current activity" : "Completed"}</p></div></div>`).join("")}</div>
-        </section>`;
-      bindRoutes();
-      $("advanceBtn").addEventListener("click", () => advanceLead(item));
-    }
-
-    function activeLead() {
-      return state.leads.find(item => item.id === selectedLeadId) || state.leads[0];
-    }
-
-    function advanceLead(item) {
-      const idx = pipeline.indexOf(item.status);
-      const next = idx >= 0 && idx < pipeline.length - 1 ? pipeline[idx + 1] : item.status;
-      item.status = next;
-      item.lastActivity = next;
-      item.history.push(next);
-      addAudit("Status advanced", `${item.business}: ${next}`);
-      renderLeadDetails();
-    }
-
-    function renderVisit() {
-      const item = activeLead();
-      visitLeadId = item.id;
-      setPage("Visit Check-in", item.business);
-      $("page").innerHTML = `<section class="card panel">
-        ${checkin ? `<div class="card panel" style="background:var(--green-soft);box-shadow:none"><h2>Checked In Successfully</h2><p class="muted">${fmtDate(checkin.time)}, ${fmtTime(checkin.time)}</p><p>${esc(checkin.location)}</p></div>` : ""}
-        <label class="field">Lead / Customer <select id="visitLead">${state.leads.map(x => `<option value="${x.id}" ${x.id === visitLeadId ? "selected" : ""}>${esc(x.business)}</option>`).join("")}</select></label>
-        <button class="btn ${checkin ? "ghost" : "orange"}" type="button" id="checkinBtn">${checkin ? "GPS Captured" : "Start Visit"}</button>
-        <h2>Visit Outcome</h2>
-        <div class="radio-list">${["Owner unavailable", "Demo requested", "Demo completed", "Interested", "Call later", "Price issue", "Already using another POS", "Not interested"].map((x, i) => `<label class="radio"><input type="radio" name="outcome" value="${x}" ${i === 2 ? "checked" : ""}> ${x}</label>`).join("")}</div>
-        <label class="field">Notes <textarea id="visitNotes">Demo given. Customer is interested. Will follow up on Friday.</textarea></label>
-        <button class="btn" type="button" id="checkoutBtn">Check-out Visit</button>
-        <div class="status" id="visitStatus"></div>
-      </section>`;
-      $("visitLead").addEventListener("change", e => { selectedLeadId = Number(e.target.value); visitLeadId = selectedLeadId; });
-      $("checkinBtn").addEventListener("click", () => {
-        checkin = { time: new Date().toISOString(), location: activeLead().area };
-        const item = activeLead();
-        if (!["VISITED", "DEMO GIVEN", "INTERESTED"].includes(item.status)) advanceLeadTo(item, "VISITED");
-        renderVisit();
-      });
-      $("checkoutBtn").addEventListener("click", () => {
-        if (!checkin) checkin = { time: new Date().toISOString(), location: activeLead().area };
-        const outcome = document.querySelector("input[name=outcome]:checked").value;
-        const item = activeLead();
-        item.lastActivity = outcome;
-        item.notes = $("visitNotes").value;
-        item.history.push("Visit checkout: " + outcome);
-        if (outcome === "Demo completed") advanceLeadTo(item, "DEMO GIVEN");
-        if (outcome === "Interested") advanceLeadTo(item, "INTERESTED");
-        state.visits.push({ leadId: item.id, checkin: checkin.time, checkout: new Date().toISOString(), location: checkin.location, outcome, notes: item.notes });
-        checkin = null;
-        addAudit("Visit completed", item.business);
-        $("visitStatus").textContent = "Visit saved with GPS, duration and outcome.";
-      });
-    }
-
-    function advanceLeadTo(item, target) {
-      if (item.status !== target) {
-        item.status = target;
-        item.history.push(target);
-      }
-    }
-
-    function renderDemo() {
-      setPage("Axzen POS Demo", "Safe demo environment");
-      $("page").innerHTML = `<section class="hero"><h2>Welcome to Axzen POS Demo</h2><p>Demo data never affects real customer sales.</p></section>
-      <section class="card panel list">
-        ${["Add Item", "Create Bill", "Payment", "Bluetooth Print", "Daily Sales Report"].map((x, i) => `<div class="row"><div><h3>${x}</h3><p>${i === 3 ? "Pair and test thermal printer" : "Demo mode action"}</p></div><button class="btn small soft">Open</button></div>`).join("")}
-        <button class="btn" type="button" id="resetDemo">Reset Demo</button>
-      </section>`;
-      $("resetDemo").addEventListener("click", () => alert("Demo reset completed."));
-    }
-
-    function renderPricing() {
-      setPage("Pricing Plans", "Company controlled GST inclusive plans");
-      $("page").innerHTML = `<section class="list">${plans.map(plan => `<article class="card panel">
-        <div class="section-head"><div><h2>${esc(plan.name)}</h2><p class="muted">${esc(plan.desc)}</p></div>${plan.tag ? `<span class="pill green">${plan.tag}</span>` : ""}</div>
-        <h2>${plan.price ? rupee(plan.price) + " / Month" : "Contact Office"}</h2>
-        <div class="actions">
-          <button class="btn small soft" type="button">View Features</button>
-          <button class="btn small soft" type="button">Share</button>
-          <button class="btn small" type="button" data-select-plan="${plan.name}">Select Plan</button>
-        </div>
-      </article>`).join("")}</section>
-      <section class="card panel"><button class="btn ghost" type="button" id="discountBtn">Request Discount</button><div class="status" id="discountStatus"></div></section>`;
-      document.querySelectorAll("[data-select-plan]").forEach(btn => btn.addEventListener("click", () => {
-        activeLead().plan = btn.dataset.selectPlan;
-        activeLead().price = (plans.find(p => p.name === btn.dataset.selectPlan) || plans[0]).price;
-        go("closeSale");
-      }));
-      $("discountBtn").addEventListener("click", () => $("discountStatus").textContent = "Discount request sent for admin approval.");
-    }
-
-    function renderFollowups() {
-      setPage("Follow-ups", `${followFilter} tasks`);
-      const now = new Date();
-      const rows = state.followups.filter(item => {
-        const d = new Date(item.date);
-        if (followFilter === "Today") return d.toDateString() === now.toDateString();
-        if (followFilter === "Overdue") return d < now && d.toDateString() !== now.toDateString();
-        return d > now;
-      });
-      $("page").innerHTML = `<section class="chips">${["Today", "Overdue", "Upcoming"].map(x => `<button class="chip ${followFilter === x ? "active" : ""}" type="button" data-follow-filter="${x}">${x}</button>`).join("")}</section>
-        <section class="list">${rows.map(item => `<article class="card panel row"><div><h3>${esc(item.customer)}</h3><p>${esc(item.time)} | ${fmtDate(item.date)} | ${esc(item.purpose)}</p></div><button class="btn small ${item.done ? "ghost" : "soft"}" type="button" data-complete-follow="${item.id}">${item.done ? "Done" : "Complete"}</button></article>`).join("") || `<div class="card panel"><h2>No ${esc(followFilter.toLowerCase())} follow-ups</h2><p class="muted">New follow-ups appear here with notification reminders.</p></div>`}</section>`;
-      document.querySelectorAll("[data-follow-filter]").forEach(btn => btn.addEventListener("click", () => { followFilter = btn.dataset.followFilter; renderFollowups(); }));
-      document.querySelectorAll("[data-complete-follow]").forEach(btn => btn.addEventListener("click", () => {
-        const item = state.followups.find(f => f.id === Number(btn.dataset.completeFollow));
-        item.done = true;
-        addAudit("Follow-up completed", item.customer);
-        renderFollowups();
-      }));
-    }
-
-    function renderCloseSale() {
-      const item = activeLead();
-      setPage("Close Sale", item.business);
-      $("page").innerHTML = `<section class="card panel">
-        <form class="form" id="saleForm">
-          <label class="field">Customer <select id="saleLead">${state.leads.map(x => `<option value="${x.id}" ${x.id === item.id ? "selected" : ""}>${esc(x.business)}</option>`).join("")}</select></label>
-          <label class="field">Selected Plan <select id="salePlan">${plans.filter(p => p.price).map(p => `<option ${p.name === item.plan ? "selected" : ""}>${p.name} - ${rupee(p.price)} / Month</option>`).join("")}</select></label>
-          <label class="field">Printer Required <select id="printerRequired"><option>Yes</option><option>No</option></select></label>
-          <label class="field">Payment Method <select id="paymentMethod"><option>UPI / QR</option><option>Payment Link</option><option>Card</option><option>Bank Transfer</option><option>Cash - Admin Enabled</option></select></label>
-          <label class="field">GST Number (Optional) <input id="gst" value="36ABCDE1234F1Z5"></label>
-          <label class="field">Installation Preferred Date <input id="installDate" type="date" value="${todayIso()}"></label>
-          <label class="field">Notes <textarea id="saleNotes">Please install in counter billing system.</textarea></label>
-          <button class="btn" type="submit">Generate Payment Link</button>
-        </form>
-      </section>`;
-      $("saleLead").addEventListener("change", e => selectedLeadId = Number(e.target.value));
-      $("saleForm").addEventListener("submit", event => {
-        event.preventDefault();
-        const target = activeLead();
-        const plan = plans.find(p => $("salePlan").value.startsWith(p.name)) || plans[2];
-        state.payments.unshift({ leadId: target.id, amount: plan.price, tx: "UPI" + Date.now().toString().slice(-9), date: new Date().toISOString() });
-        target.status = "WON";
-        target.lastActivity = "Payment successful";
-        target.history.push("Payment request generated", "WON", "INSTALLATION PENDING");
-        state.installTickets.unshift({ id: "AXI" + Date.now().toString().slice(-4), leadId: target.id, status: "Pending", created: new Date().toISOString() });
-        addAudit("Sale closed", target.business);
-        go("paymentSuccess");
-      });
-    }
-
-    function renderPaymentSuccess() {
-      const payment = state.payments[0] || { amount: 999, tx: "UPI1234567890", date: new Date().toISOString() };
-      setPage("Payment Success", "Lead moved to Won");
-      $("page").innerHTML = `<section class="success panel">
-        <div class="checkmark">OK</div>
-        <h2>Payment Successful</h2>
-        <div class="price">${rupee(payment.amount)}</div>
-        <div class="detail-kv" style="width:100%">
-          ${kv("Customer ID", "AXZ10254")}
-          ${kv("Transaction ID", payment.tx)}
-          ${kv("Date & Time", `${fmtDate(payment.date)}, ${fmtTime(payment.date)}`)}
-          ${kv("Receipt", "Sent on WhatsApp")}
-        </div>
-        <div class="actions"><button class="btn ghost" type="button">View Receipt</button><button class="btn" type="button" data-route="leadDetails">Go to Lead</button></div>
-      </section>`;
-      bindRoutes();
-    }
-
-    function renderInstallation() {
-      setPage("Installation Status", "Handover tickets");
-      const stages = ["Pending", "Assigned", "Installation Scheduled", "Installation In Progress", "Installed", "Activated"];
-      $("page").innerHTML = `<section class="list">${state.installTickets.map(ticket => {
-        const item = state.leads.find(x => x.id === ticket.leadId) || activeLead();
-        return `<article class="card panel">
-          <div class="section-head"><div><h2>Installation Ticket ${esc(ticket.id)}</h2><p class="muted">Created on ${fmtDate(ticket.created)}</p></div><span class="pill orange">${esc(ticket.status)}</span></div>
-          <div class="row"><div><h3>${esc(item.business)}</h3><p>${esc(item.owner)} | ${esc(item.mobile)}</p></div></div>
-          <div class="timeline">${stages.map((stage, i) => `<div class="step"><span class="dot">${i + 1}</span><div><h3>${stage}</h3><p>${stage === ticket.status ? "Current" : i === 0 ? "Ticket created" : "Waiting"}</p></div></div>`).join("")}</div>
-        </article>`;
-      }).join("")}</section>`;
-    }
-
-    function renderPerformance() {
-      setPage("My Performance", "August 2026");
-      $("page").innerHTML = `<section class="metrics">
-        ${metric("Visits", 126)}
-        ${metric("Demos", 73)}
-        ${metric("Interested", 46)}
-        ${metric("Sales", 31)}
-        ${metric("Conversion", "24.6%")}
-        ${metric("Revenue", rupee(30969))}
-      </section>
-      <section class="hero"><h2>${rupee(6200)} Commission Earned</h2><p>Monthly target: 31 / 50 sales</p><div class="progress"><span style="width:62%"></span></div></section>
-      <section class="card panel"><div class="section-head"><h2>Leaderboard</h2><span class="pill">Top 3</span></div><div class="list">${["Employee A - 52 Sales", "Nagarjuna - 31 Sales", "Employee C - 27 Sales"].map((x, i) => `<div class="row"><div><h3>${i + 1}. ${x}</h3><p>Current month</p></div></div>`).join("")}</div></section>`;
-    }
-
-    function renderCommission() {
-      setPage("Commission", "Payment based approvals");
-      const pending = state.commissions.filter(x => x.status === "Pending").reduce((s, x) => s + x.commission, 0);
-      const approved = state.commissions.filter(x => x.status === "Approved").reduce((s, x) => s + x.commission, 0);
-      $("page").innerHTML = `<section class="metrics">${metric("Pending", rupee(pending))}${metric("Approved", rupee(approved))}${metric("Paid", rupee(0))}</section>
-      <section class="list">${state.commissions.map(item => `<article class="card panel row"><div><h3>${esc(item.customer)}</h3><p>${esc(item.plan)} | Sale ${rupee(item.saleAmount)} | ${fmtDate(item.date)}</p></div><div class="amount">${rupee(item.commission)}<p>${esc(item.status)}</p></div></article>`).join("")}</section>`;
-    }
-
-    function renderProfile() {
-      setPage("Profile", "Marketing Executive");
-      $("page").innerHTML = `<section class="card panel">
-        <div class="avatar-row"><div class="avatar-img">N</div><div><h2>${esc(user?.name || "Nagarjuna")}</h2><p class="muted">Marketing Executive</p><p class="muted">${esc(user?.employeeId || "MKT001")} | 91xxxxxx90</p></div></div>
-      </section>
-      <section class="card panel list">
-        ${profileRow("My Targets", "performance")}
-        ${profileRow("My Commission", "commission")}
-        ${profileRow("Documents", "profile")}
-        ${profileRow("Attendance / Visits", "visit")}
-        ${profileRow("Settings", "profile")}
-        ${profileRow("Help & Support", "profile")}
-        <button class="btn danger" type="button" id="logoutBtn">Logout</button>
-      </section>`;
-      bindRoutes();
-      $("logoutBtn").addEventListener("click", logout);
-    }
-
-    function profileRow(label, target) {
-      return `<div class="row clickable" data-route="${target}"><div><h3>${label}</h3><p>Open ${label.toLowerCase()}</p></div><span class="pill">View</span></div>`;
-    }
-
     function kv(label, value) {
       return `<div class="kv"><span>${esc(label)}</span><strong>${esc(value || "-")}</strong></div>`;
     }
 
-    function bindRoutes() {
-      document.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => { closeSheet(); go(el.dataset.route); }));
-      document.querySelectorAll("[data-call]").forEach(el => el.addEventListener("click", () => alert("Calling " + el.dataset.call)));
+    function pill(status) {
+      const text = String(status || "New");
+      const lower = text.toLowerCase();
+      const tone = lower.includes("active") || lower.includes("paid") || lower.includes("approved") || lower.includes("trial") ? "green"
+        : lower.includes("pending") || lower.includes("progress") ? "amber"
+        : lower.includes("reject") || lower.includes("block") || lower.includes("expired") ? "red"
+        : lower.includes("stock") || lower.includes("executive") ? "cyan"
+        : "violet";
+      return `<span class="pill ${tone}">${esc(text)}</span>`;
     }
 
-    function addAudit(action, detail) {
-      state.activities.unshift({ action, detail, at: new Date().toISOString(), employee: user?.employeeId || "MKT001" });
+    function setPage(title, sub) {
+      $("pageTitle").textContent = title;
+      $("pageSub").textContent = sub || (isManager() ? "Manager control center" : "Employee sales workflow");
+      $("titleMark").textContent = isManager() ? "SA" : "AX";
+      $("backBtn").classList.toggle("hidden", stack.length === 0);
+      renderTabs();
+    }
+
+    function navItems() {
+      return isManager()
+        ? [["dashboard", icons.home, "Home"], ["canteens", icons.leads, "Leads"], ["approvals", icons.plus, "Approve"], ["team", icons.users, "Team"], ["profile", icons.user, "Profile"]]
+        : [["dashboard", icons.home, "Home"], ["canteens", icons.leads, "Leads"], ["add", icons.plus, "Add"], ["payments", icons.rupee, "Money"], ["profile", icons.user, "Profile"]];
+    }
+
+    function renderTabs() {
+      $("tabs").innerHTML = navItems().map(([id, icon, label]) =>
+        `<button class="nav-btn ${route === id ? "active" : ""}" type="button" data-nav="${id}">${icon}<span>${label}</span></button>`
+      ).join("");
+      document.querySelectorAll("[data-nav]").forEach(btn => btn.addEventListener("click", () => go(btn.dataset.nav)));
+    }
+
+    function go(next, push = true) {
+      if (push && route !== next) stack.push(route);
+      route = next;
+      render();
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+
+    function bindRoutes(root = document) {
+      root.querySelectorAll("[data-route]").forEach(el => el.addEventListener("click", () => {
+        closeSheet();
+        go(el.dataset.route);
+      }));
+      root.querySelectorAll("[data-canteen]").forEach(el => el.addEventListener("click", () => {
+        selectedCanteenId = Number(el.dataset.canteen);
+        go("canteenDetail");
+      }));
+    }
+
+    async function refreshData({ silent = false } = {}) {
+      if (!token) return;
+      try {
+        if (!silent) setBusy(true);
+        const body = await api("/marketing-api/dashboard");
+        data = { ...demoData(), ...body };
+      } catch (error) {
+        toast(error.message + ". Showing cached demo data.", "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function setBusy(next) {
+      busy = next;
+      document.querySelectorAll("button").forEach(btn => {
+        if (btn.id !== "backBtn") btn.disabled = next;
+      });
+    }
+
+    function toast(message, type = "ok") {
+      const card = $("sheetCard");
+      card.innerHTML = `<div class="section-head"><h2>${type === "error" ? "Problem" : "Done"}</h2><button class="icon-btn" id="closeToast" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div><p class="status ${type === "error" ? "error" : "ok"}">${esc(message)}</p>`;
+      $("sheet").classList.remove("hidden");
+      $("closeToast").addEventListener("click", closeSheet);
+    }
+
+    function currentRows() {
+      let rows = Array.isArray(data.canteens) ? data.canteens : [];
+      if (!isManager() && user?.employeeId) rows = rows.filter(row => String(row.submittedBy || "") === String(user.employeeId));
+      if (filterStatus !== "All") rows = rows.filter(row => String(row.status || "").toLowerCase().includes(filterStatus.toLowerCase()));
+      return rows;
+    }
+
+    function selectedCanteen() {
+      return (data.canteens || []).find(row => Number(row.id) === Number(selectedCanteenId)) || currentRows()[0] || data.canteens?.[0];
+    }
+
+    function renderDashboard() {
+      const cards = data.summary?.cards || {};
+      const rows = currentRows();
+      setPage(isManager() ? "Control Center" : `Hi, ${user?.name || "Employee"}`, isManager() ? "Approvals, collections and team" : "Add customers and complete onboarding");
+      $("page").innerHTML = `
+        <section class="hero">
+          <div class="section-head">
+            <div><h2>${isManager() ? "Business Snapshot" : "Today's Sales Route"}</h2><p>${fmtDate(new Date())}</p></div>
+            ${pill(token ? "Live" : "Demo")}
+          </div>
+          <div class="metrics three">
+            ${metric("Customers", cards.totalCanteens ?? rows.length)}
+            ${metric("Pending", rows.filter(x => String(x.status).includes("Pending")).length)}
+            ${metric("Collection", money(cards.todaysCollections || cards.monthlyRevenue || 0))}
+          </div>
+        </section>
+        <section class="metrics three">
+          ${metric("Active", cards.activeCanteens || 0)}
+          ${metric("Trial", cards.trialCanteens || 0)}
+          ${metric("Pending Pay", money(cards.pendingPayments || 0))}
+          ${metric("Printers", cards.printersAssigned || 0)}
+          ${metric("Installations", cards.pendingInstallations || 0)}
+          ${metric("Today New", cards.todaysRegistrations || 0)}
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>${isManager() ? "Needs Action" : "My Recent Customers"}</h2><button class="btn small soft" type="button" data-route="${isManager() ? "approvals" : "add"}">${isManager() ? "Open" : "Add New"}</button></div>
+          <div class="list">${customerList(rows.slice(0, 5))}</div>
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>Fast Actions</h2>${pill(user?.employeeId || "User")}</div>
+          <div class="actions">
+            <button class="btn small" type="button" data-route="${isManager() ? "approvals" : "add"}">${isManager() ? "Review Approvals" : "Add Customer"}</button>
+            <button class="btn small soft" type="button" data-route="payments">Payments</button>
+            <button class="btn small soft" type="button" data-route="${isManager() ? "team" : "reports"}">Reports</button>
+          </div>
+        </section>`;
+      bindRoutes();
+    }
+
+    function customerList(rows) {
+      if (!rows.length) return `<div class="empty">No customers found.</div>`;
+      return rows.map(row => `
+        <article class="row clickable" data-canteen="${esc(row.id)}">
+          <div>
+            <h3>${esc(row.canteenName)}</h3>
+            <p>${esc(row.ownerName)} | ${esc(row.ownerMobile)}</p>
+            <p>${esc([row.city, row.state].filter(Boolean).join(", "))} | ${esc(row.selectedPlan || "Plan not set")}</p>
+          </div>
+          <div>${pill(row.status)}</div>
+        </article>`).join("");
+    }
+
+    function renderCanteens() {
+      setPage(isManager() ? "All Customers" : "My Customers", `${currentRows().length} records`);
+      const tabs = ["All", "Pending", "Active", "Trial", "Rejected", "Blocked"];
+      $("page").innerHTML = `
+        <section class="chips">${tabs.map(tab => `<button class="chip ${filterStatus === tab ? "active" : ""}" type="button" data-filter="${tab}">${tab}</button>`).join("")}</section>
+        <section class="list">${customerList(currentRows())}</section>`;
+      document.querySelectorAll("[data-filter]").forEach(btn => btn.addEventListener("click", () => {
+        filterStatus = btn.dataset.filter;
+        renderCanteens();
+      }));
+      bindRoutes();
+    }
+
+    function renderDetail() {
+      const item = selectedCanteen();
+      if (!item) {
+        setPage("Customer", "No record");
+        $("page").innerHTML = `<div class="empty">No customer selected.</div>`;
+        return;
+      }
+      setPage(item.canteenName, item.ownerName);
+      const phone = mobileDigits(item.ownerMobile);
+      const waText = encodeURIComponent(`Hi ${item.ownerName || ""}, Axzen POS onboarding update for ${item.canteenName}.`);
+      $("page").innerHTML = `
+        <section class="panel">
+          <div class="section-head"><div><h2>${esc(item.canteenName)}</h2><p class="muted">${esc(item.businessCategory || "Business")} | ${esc(item.city || "-")}</p></div>${pill(item.status)}</div>
+          <div class="kv-grid">
+            ${kv("Owner", item.ownerName)}
+            ${kv("Phone", item.ownerMobile)}
+            ${kv("Plan", item.selectedPlan)}
+            ${kv("Payment", `${money(item.paidAmount)} paid`)}
+            ${kv("Pending", money(item.pendingAmount))}
+            ${kv("Printers", `${item.printersAssigned || 0}/${item.printersRequired || 0}`)}
+          </div>
+          <div class="actions">
+            <a class="btn small green" href="tel:${esc(phone)}">Call</a>
+            <a class="btn small green" href="https://wa.me/91${esc(phone)}?text=${waText}" target="_blank" rel="noopener">WhatsApp</a>
+            ${isManager() ? `<button class="btn small soft" type="button" data-action="payment">Update Payment</button>` : ""}
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Onboarding Workflow</h2>
+          <div class="list">
+            ${workflowRow("Lead submitted", true)}
+            ${workflowRow("Manager approval", ["Active", "Trial"].includes(item.status) || item.activatedCanteenId)}
+            ${workflowRow("Payment collected", Number(item.paidAmount || 0) > 0)}
+            ${workflowRow("Printer assigned", Number(item.printersAssigned || 0) >= Number(item.printersRequired || 0))}
+            ${workflowRow("Customer login ready", item.canteenLoginId)}
+          </div>
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>Credentials</h2>${item.canteenLoginId ? pill("Ready") : pill("After Approval")}</div>
+          <div class="kv-grid">
+            ${kv("Canteen ID", item.activatedCanteenId)}
+            ${kv("Login ID", item.canteenLoginId)}
+            ${kv("Password", item.defaultPassword)}
+            ${kv("Expiry", item.planExpiryDate)}
+          </div>
+        </section>`;
+      document.querySelector("[data-action='payment']")?.addEventListener("click", () => openPaymentSheet(item));
+    }
+
+    function workflowRow(label, done) {
+      return `<div class="row"><div><h3>${esc(label)}</h3><p>${done ? "Completed" : "Waiting"}</p></div>${pill(done ? "Done" : "Pending")}</div>`;
+    }
+
+    function renderAdd() {
+      if (isManager()) {
+        setPage("Add Customer", "Employee role submits customers");
+        $("page").innerHTML = `
+          <section class="panel">
+            <h2>Employee workflow required</h2>
+            <p class="muted">New customer registrations must be submitted from a marketing employee login. Manager login is for approval, payment, plan, printer and team control.</p>
+            <div class="actions">
+              <button class="btn small" type="button" data-route="approvals">Review Approvals</button>
+              <button class="btn small soft" type="button" data-route="team">Manage Team</button>
+            </div>
+          </section>`;
+        bindRoutes();
+        return;
+      } else {
+        setPage("Add Customer", "Submit for manager approval");
+      }
+      $("page").innerHTML = `
+        <section class="panel">
+          <form class="form" id="customerForm">
+            <div class="form-grid">
+              <label class="field full">Business Name <input id="canteenName" placeholder="Sri Sai Restaurant" required></label>
+              <label class="field">Owner Name <input id="ownerName" placeholder="Owner name" required></label>
+              <label class="field">Owner Mobile <input id="ownerMobile" inputmode="tel" placeholder="9876543210" required></label>
+              <label class="field">Business Type <select id="businessCategory"><option>Canteen</option><option>Restaurant</option><option>Hotel</option><option>Cafe</option><option>Bakery</option><option>Chicken Shop</option><option>Retail</option></select></label>
+              <label class="field">City <input id="city" placeholder="Hyderabad"></label>
+              <label class="field">State <input id="state" value="Telangana"></label>
+              <label class="field">Counters <input id="counters" type="number" min="1" value="1"></label>
+              <label class="field">Printers Required <input id="printersRequired" type="number" min="0" value="1"></label>
+              <label class="field">Plan <select id="selectedPlan"><option>Starter</option><option>Professional</option><option>Premium</option><option>Enterprise</option></select></label>
+              <label class="field">Plan Type <select id="planType"><option>Trial</option><option>Paid</option></select></label>
+              <label class="field">Paid Amount <input id="paidAmount" type="number" min="0" value="0"></label>
+              <label class="field">Pending Amount <input id="pendingAmount" type="number" min="0" value="0"></label>
+              <label class="field">Payment Mode <select id="paymentMode"><option>UPI</option><option>Cash</option><option>Bank Transfer</option><option>Payment Link</option><option>Trial</option></select></label>
+              <label class="field">Start Date <input id="planStartDate" type="date" value="${today()}"></label>
+              <label class="field full">Address <textarea id="address" placeholder="Full shop address"></textarea></label>
+              <label class="field full">Notes <textarea id="notes" placeholder="Menu setup, printer, follow-up notes"></textarea></label>
+            </div>
+            <button class="btn" type="submit">${isManager() ? "Submit Anyway" : "Submit For Approval"}</button>
+          </form>
+        </section>`;
+      $("customerForm").addEventListener("submit", submitCustomer);
+    }
+
+    async function submitCustomer(event) {
+      event.preventDefault();
+      const payload = {
+        canteenName: $("canteenName").value.trim(),
+        ownerName: $("ownerName").value.trim(),
+        ownerMobile: $("ownerMobile").value.trim(),
+        businessCategory: $("businessCategory").value,
+        city: $("city").value.trim(),
+        state: $("state").value.trim(),
+        counters: Number($("counters").value || 1),
+        printersRequired: Number($("printersRequired").value || 0),
+        selectedPlan: $("selectedPlan").value,
+        planType: $("planType").value,
+        paidAmount: Number($("paidAmount").value || 0),
+        pendingAmount: Number($("pendingAmount").value || 0),
+        paymentMode: $("paymentMode").value,
+        planStartDate: $("planStartDate").value,
+        address: $("address").value.trim(),
+        notes: $("notes").value.trim()
+      };
+      try {
+        setBusy(true);
+        const body = await api("/marketing-api/canteens", { method: "POST", body: JSON.stringify(payload) });
+        selectedCanteenId = body.canteen.id;
+        await refreshData({ silent: true });
+        toast("Customer submitted for manager approval.");
+        go("canteenDetail");
+      } catch (error) {
+        toast(error.message, "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function renderApprovals() {
+      const pending = (data.canteens || []).filter(row => String(row.status || "").toLowerCase().includes("pending"));
+      setPage("Approvals", `${pending.length} pending customers`);
+      $("page").innerHTML = `<section class="list">${pending.length ? pending.map(row => `
+        <article class="panel">
+          <div class="section-head"><div><h2>${esc(row.canteenName)}</h2><p class="muted">${esc(row.ownerName)} | ${esc(row.ownerMobile)}</p></div>${pill(row.status)}</div>
+          <div class="kv-grid">${kv("Plan", row.selectedPlan)}${kv("Paid", money(row.paidAmount))}${kv("Pending", money(row.pendingAmount))}${kv("Printers", row.printersRequired)}</div>
+          <div class="actions">
+            <button class="btn small green" type="button" data-approve="${row.id}">Approve</button>
+            <button class="btn small red" type="button" data-reject="${row.id}">Reject</button>
+            <button class="btn small soft" type="button" data-canteen="${row.id}">Details</button>
+          </div>
+        </article>`).join("") : `<div class="empty">No pending approvals.</div>`}</section>`;
+      document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => approveCanteen(btn.dataset.approve)));
+      document.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", () => openRejectSheet(btn.dataset.reject)));
+      bindRoutes();
+    }
+
+    async function approveCanteen(id) {
+      try {
+        setBusy(true);
+        await api(`/marketing-api/canteens/${id}/approve`, { method: "POST", body: JSON.stringify({ status: "Trial" }) });
+        await refreshData({ silent: true });
+        toast("Customer approved and login credentials generated.");
+        renderApprovals();
+      } catch (error) {
+        toast(error.message, "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function openRejectSheet(id) {
+      $("sheetCard").innerHTML = `
+        <div class="section-head"><h2>Reject Customer</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+        <label class="field">Reason <textarea id="rejectReason">Documents or payment pending.</textarea></label>
+        <button class="btn red" id="confirmReject" type="button">Reject</button>`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+      $("confirmReject").addEventListener("click", async () => {
+        try {
+          setBusy(true);
+          await api(`/marketing-api/canteens/${id}/reject`, { method: "POST", body: JSON.stringify({ reason: $("rejectReason").value.trim() }) });
+          closeSheet();
+          await refreshData({ silent: true });
+          renderApprovals();
+        } catch (error) {
+          toast(error.message, "error");
+        } finally {
+          setBusy(false);
+        }
+      });
+    }
+
+    function renderPayments() {
+      setPage("Payments", isManager() ? "Collections and dues" : "My collected payments");
+      const rows = data.payments || [];
+      $("page").innerHTML = `
+        <section class="metrics three">
+          ${metric("Collected", money(rows.reduce((sum, row) => sum + Number(row.amount || 0), 0)))}
+          ${metric("Pending", money((data.summary?.cards?.pendingPayments) || 0))}
+          ${metric("Records", rows.length)}
+        </section>
+        <section class="list">${rows.length ? rows.map(row => `
+          <article class="row">
+            <div><h3>${esc(row.canteenName)}</h3><p>${esc(row.collectedByName || row.collectedBy || "-")} | ${esc(row.paymentMode)} | ${fmtDate(row.createdAt)}</p></div>
+            <div><strong>${money(row.amount)}</strong><p>${pill(Number(row.pendingAmount || 0) > 0 ? "Pending" : "Paid")}</p></div>
+          </article>`).join("") : `<div class="empty">No payment records.</div>`}</section>`;
+    }
+
+    function openPaymentSheet(item) {
+      $("sheetCard").innerHTML = `
+        <div class="section-head"><h2>Update Payment</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+        <label class="field">Paid Amount <input id="payPaid" type="number" value="${Number(item.paidAmount || 0)}"></label>
+        <label class="field">Pending Amount <input id="payPending" type="number" value="${Number(item.pendingAmount || 0)}"></label>
+        <label class="field">Payment Mode <select id="payMode"><option>UPI</option><option>Cash</option><option>Bank Transfer</option><option>Payment Link</option></select></label>
+        <button class="btn" id="savePayment" type="button">Save Payment</button>`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+      $("savePayment").addEventListener("click", async () => {
+        try {
+          setBusy(true);
+          await api(`/marketing-api/canteens/${item.id}/payment`, { method: "POST", body: JSON.stringify({ paidAmount: Number($("payPaid").value || 0), pendingAmount: Number($("payPending").value || 0), paymentMode: $("payMode").value }) });
+          closeSheet();
+          await refreshData({ silent: true });
+          renderDetail();
+        } catch (error) {
+          toast(error.message, "error");
+        } finally {
+          setBusy(false);
+        }
+      });
+    }
+
+    function renderTeam() {
+      setPage("Team", "Employees and targets");
+      $("page").innerHTML = `
+        <section class="panel">
+          <div class="section-head"><h2>Sales Team</h2><button class="btn small" type="button" id="addEmployeeBtn">Add Employee</button></div>
+          <div class="list">${(data.users || []).map(row => `
+            <article class="row">
+              <div><h3>${esc(row.name)}</h3><p>${esc(row.employeeId)} | Target ${esc(row.target || 0)} | ${esc(row.role)}</p></div>
+              <button class="btn small ${row.active !== false ? "red" : "green"}" type="button" data-block="${esc(row.employeeId)}">${row.active !== false ? "Block" : "Activate"}</button>
+            </article>`).join("")}</div>
+        </section>
+        <section class="panel">
+          <h2>Performance</h2>
+          <div class="list">${(data.summary?.marketingPerformance || []).map(row => `
+            <article class="row">
+              <div><h3>${esc(row.name)}</h3><p>${esc(row.registrations)} customers | ${esc(row.approved)} approved | Target ${esc(row.target)}</p></div>
+              <strong>${money(row.collection)}</strong>
+            </article>`).join("")}</div>
+        </section>`;
+      $("addEmployeeBtn").addEventListener("click", openEmployeeSheet);
+      document.querySelectorAll("[data-block]").forEach(btn => btn.addEventListener("click", () => toggleEmployee(btn.dataset.block)));
+    }
+
+    function openEmployeeSheet() {
+      $("sheetCard").innerHTML = `
+        <div class="section-head"><h2>Add Employee</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+        <label class="field">Employee ID <input id="empId" value="MKT003"></label>
+        <label class="field">Name <input id="empName" placeholder="Employee name"></label>
+        <label class="field">Mobile <input id="empMobile" inputmode="tel"></label>
+        <label class="field">Password <input id="empPass" value="1234"></label>
+        <label class="field">Monthly Target <input id="empTarget" type="number" value="20"></label>
+        <button class="btn" id="saveEmployee" type="button">Save Employee</button>`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+      $("saveEmployee").addEventListener("click", async () => {
+        try {
+          setBusy(true);
+          await api("/marketing-api/users", { method: "POST", body: JSON.stringify({ employeeId: $("empId").value.trim(), name: $("empName").value.trim(), mobile: $("empMobile").value.trim(), password: $("empPass").value, target: Number($("empTarget").value || 0), role: "marketing", active: true }) });
+          closeSheet();
+          await refreshData({ silent: true });
+          renderTeam();
+        } catch (error) {
+          toast(error.message, "error");
+        } finally {
+          setBusy(false);
+        }
+      });
+    }
+
+    async function toggleEmployee(employeeId) {
+      const row = (data.users || []).find(item => String(item.employeeId) === String(employeeId));
+      try {
+        setBusy(true);
+        await api(`/marketing-api/users/${encodeURIComponent(employeeId)}/block`, { method: "POST", body: JSON.stringify({ blocked: row?.active !== false }) });
+        await refreshData({ silent: true });
+        renderTeam();
+      } catch (error) {
+        toast(error.message, "error");
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function renderReports() {
+      const rows = data.summary?.marketingPerformance || [];
+      setPage("Reports", "Sales, approvals and collection");
+      $("page").innerHTML = `
+        <section class="metrics three">
+          ${metric("Revenue", money(data.summary?.cards?.monthlyRevenue || 0))}
+          ${metric("Pending", money(data.summary?.cards?.pendingPayments || 0))}
+          ${metric("Customers", data.summary?.cards?.totalCanteens || 0)}
+        </section>
+        <section class="panel">
+          <h2>Employee Report</h2>
+          <div class="list">${rows.length ? rows.map(row => `
+            <article class="row">
+              <div><h3>${esc(row.name)}</h3><p>${esc(row.employeeId)} | ${row.registrations} registrations | ${row.rejected} rejected</p></div>
+              <strong>${money(row.collection)}</strong>
+            </article>`).join("") : `<div class="empty">Report data not available.</div>`}</div>
+        </section>`;
+    }
+
+    function renderProfile() {
+      setPage("Profile", user?.role || "employee");
+      $("page").innerHTML = `
+        <section class="panel">
+          <div class="section-head"><div><h2>${esc(user?.name || "User")}</h2><p class="muted">${esc(user?.employeeId || "")} | ${esc(user?.role || "")}</p></div>${pill(user?.active !== false ? "Active" : "Blocked")}</div>
+          <div class="kv-grid">${kv("Mobile", user?.mobile)}${kv("Target", user?.target)}${kv("Mode", token ? "Live API" : "Demo fallback")}${kv("API", API || "Same domain")}</div>
+          <button class="btn red" id="logoutBtn" type="button">Logout</button>
+        </section>`;
+      $("logoutBtn").addEventListener("click", logout);
+    }
+
+    function closeSheet() {
+      $("sheet").classList.add("hidden");
     }
 
     function render() {
-      if (route === "home") return renderHome();
-      if (route === "leads") return renderLeads();
-      if (route === "addLead") return renderAddLead();
-      if (route === "leadDetails") return renderLeadDetails();
-      if (route === "visit") return renderVisit();
-      if (route === "demo") return renderDemo();
-      if (route === "pricing") return renderPricing();
-      if (route === "followups") return renderFollowups();
-      if (route === "closeSale") return renderCloseSale();
-      if (route === "paymentSuccess") return renderPaymentSuccess();
-      if (route === "installation") return renderInstallation();
-      if (route === "performance") return renderPerformance();
-      if (route === "commission") return renderCommission();
-      return renderProfile();
+      if (route === "dashboard") return renderDashboard();
+      if (route === "canteens") return renderCanteens();
+      if (route === "canteenDetail") return renderDetail();
+      if (route === "add") return renderAdd();
+      if (route === "approvals") return renderApprovals();
+      if (route === "payments") return renderPayments();
+      if (route === "team") return renderTeam();
+      if (route === "reports") return renderReports();
+      if (route === "profile") return renderProfile();
+      return renderDashboard();
     }
 
-    async function refresh() {
+    async function login(event) {
+      event.preventDefault();
+      $("loginStatus").className = "status";
+      $("loginStatus").textContent = "Checking login...";
       try {
-        const data = await api("/marketing-api/dashboard");
-        if (Array.isArray(data.leads)) state.leads = data.leads;
-      } catch {}
-    }
-
-    async function enter(nextUser) {
-      user = nextUser;
-      $("login").classList.add("hidden");
-      $("app").classList.remove("hidden");
-      await refresh();
-      render();
+        setBusy(true);
+        const body = await api("/marketing-api/login", {
+          method: "POST",
+          body: JSON.stringify({ employeeId: $("loginId").value.trim(), password: $("password").value })
+        });
+        token = body.token;
+        user = body.user;
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        await refreshData({ silent: true });
+        route = "dashboard";
+        stack = [];
+        $("loginScreen").classList.add("hidden");
+        $("appScreen").classList.remove("hidden");
+        render();
+      } catch (error) {
+        $("loginStatus").className = "status error";
+        $("loginStatus").textContent = error.message;
+      } finally {
+        setBusy(false);
+      }
     }
 
     function logout() {
       token = "";
       user = null;
-      localStorage.removeItem(tokenKey);
-      routeStack.length = 0;
-      $("app").classList.add("hidden");
-      $("login").classList.remove("hidden");
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      $("appScreen").classList.add("hidden");
+      $("loginScreen").classList.remove("hidden");
+      stack = [];
     }
 
-    $("loginForm").addEventListener("submit", async event => {
-      event.preventDefault();
-      $("loginStatus").textContent = "Checking account...";
-      try {
-        const data = await api("/marketing-api/login", { method: "POST", body: JSON.stringify({ employeeId: $("employeeId").value, password: $("password").value }) });
-        if (data.user?.blocked || data.user?.active === false) throw new Error("Employee account blocked by admin.");
-        token = data.token || "";
-        if ($("remember").checked) localStorage.setItem(tokenKey, token);
-        await enter(data.user);
-      } catch (error) {
-        token = "demo";
-        if ($("remember").checked) localStorage.setItem(tokenKey, token);
-        $("loginStatus").textContent = error.message.includes("blocked") ? error.message : "Live server unavailable. Demo mode opened.";
-        await enter({ employeeId: $("employeeId").value || "MKT001", name: "Nagarjuna", role: "marketing", target: 50 });
-      }
-    });
+    document.querySelectorAll("[data-login-role]").forEach(btn => btn.addEventListener("click", () => {
+      selectedLoginRole = btn.dataset.loginRole;
+      document.querySelectorAll("[data-login-role]").forEach(item => item.classList.toggle("active", item === btn));
+      $("loginId").value = selectedLoginRole === "manager" ? "SUPER" : "MKT001";
+      $("password").value = selectedLoginRole === "manager" ? "admin123" : "1234";
+      $("loginStatus").className = "status";
+      $("loginStatus").textContent = selectedLoginRole === "manager" ? "Manager login: SUPER / admin123." : "Employee login: MKT001 / 1234.";
+    }));
 
-    $("forgotBtn").addEventListener("click", () => $("loginStatus").textContent = "Password reset request will be handled by admin.");
-    $("notifyBtn").addEventListener("click", () => alert("Follow-up reminders are enabled."));
+    $("loginForm").addEventListener("submit", login);
     $("backBtn").addEventListener("click", () => {
-      route = routeStack.pop() || "home";
+      route = stack.pop() || "dashboard";
       render();
     });
-    $("closeSheet").addEventListener("click", closeSheet);
-    $("quickSheet").addEventListener("click", event => { if (event.target.id === "quickSheet") closeSheet(); });
+    $("refreshBtn").addEventListener("click", async () => {
+      await refreshData();
+      render();
+    });
+    $("sheet").addEventListener("click", event => {
+      if (event.target.id === "sheet") closeSheet();
+    });
 
-    (async function boot() {
-      if (!token) return;
-      await enter({ employeeId: "MKT001", name: "Nagarjuna", role: "marketing", target: 50 });
-    })();
+    if (token && user) {
+      $("loginScreen").classList.add("hidden");
+      $("appScreen").classList.remove("hidden");
+      refreshData({ silent: true }).finally(render);
+    }
   </script>
 </body>
 </html>

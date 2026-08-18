@@ -507,7 +507,7 @@ public class MainActivity extends BridgeActivity {
             int right = width - RECEIPT_MARGIN;
             int y = 4;
             int estimatedRows = items == null ? 0 : items.length() * 3;
-            int height = 660 + (estimatedRows * 44);
+            int height = 700 + (estimatedRows * 44);
             Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
             canvas.drawColor(Color.WHITE);
@@ -538,6 +538,8 @@ public class MainActivity extends BridgeActivity {
             y += 34;
             canvas.drawText("Cashier : " + data.optString("cashier", "-"), left, y + 24, body);
             canvas.drawText("Token : " + data.optString("token", "-"), right, y + 24, bodyRight);
+            y += 34;
+            canvas.drawText("Customer : " + cleanHeaderText(data.optString("customer", "Walk-in"), "Walk-in"), left, y + 24, body);
             y += 34;
             canvas.drawText("Payment : " + data.optString("payment", "Cash"), left, y + 24, body);
             y += 38;

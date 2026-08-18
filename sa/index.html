@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>axzen Infotech POS</title>
+  <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     :root {
@@ -429,6 +430,9 @@
     .kg-picks button.active { background: var(--blue); border-color: var(--blue); color: white; }
     .today-price-row { display: grid; grid-template-columns: 1fr 120px; gap: 10px; align-items: end; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcff; }
     .today-price-row strong { color: var(--ink); }
+    .today-price-status { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 10px; align-items: center; color: var(--muted); font-size: 11px; font-weight: 900; }
+    .today-price-badge { border-radius: 999px; padding: 5px 9px; background: #fff7ed; color: #b45309; white-space: nowrap; }
+    .today-price-badge.updated { background: #ecfdf3; color: #166534; }
     #posView.chicken-mode .cart-sheet { left: 50%; right: auto; bottom: 0; top: auto; width: min(480px, 100%); transform: translateX(-50%); }
     #posView.chicken-mode .cart-list { max-height: 122px; }
     .payment-actions button.primary-choice { background: var(--green); border-color: var(--green); color: white; }
@@ -1190,6 +1194,67 @@
     .payment-pill { border-radius: 999px; padding: 8px 12px; background: #e8fff0; color: #16a34a; font-size: 12px; font-weight: 900; }
     .payment-pill.online { background: #e8f3ff; color: #007aff; }
     .payment-pill.credit { background: #fff6df; color: #b45309; }
+    .plan-status-card {
+      display: grid;
+      gap: 8px;
+      border: 1px solid #dbeafe;
+      border-radius: 16px;
+      background: #f6fbff;
+      padding: 14px;
+    }
+    .plan-status-card strong { color: #07142f; font-size: 20px; font-weight: 950; }
+    .plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .plan-card {
+      min-height: 112px;
+      display: grid;
+      gap: 7px;
+      align-content: center;
+      border: 1px solid #e1e8f2;
+      border-radius: 16px;
+      background: #fff;
+      padding: 13px;
+      color: #07142f;
+      text-align: left;
+      box-shadow: 0 10px 24px #1118270a;
+    }
+    .plan-card strong { font-size: 18px; font-weight: 950; }
+    .plan-card span { color: #2563eb; font-size: 20px; font-weight: 950; }
+    .plan-card small { color: #64748b; font-size: 12px; font-weight: 850; }
+    .plan-card.selected { border-color: #2563eb; background: #eff6ff; box-shadow: 0 14px 30px #2563eb20; }
+    .subscription-strip {
+      display: grid;
+      gap: 10px;
+      border: 1px solid #d8e7ff;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #f8fbff, #eef7ff);
+      padding: 13px;
+    }
+    .payment-method-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .payment-method-row span {
+      min-height: 44px;
+      border: 1px solid #dbeafe;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      color: #0f4f9c;
+      font-size: 12px;
+      font-weight: 950;
+      text-align: center;
+    }
+    .qr-note {
+      border: 1px dashed #93c5fd;
+      border-radius: 12px;
+      background: #f8fbff;
+      padding: 11px;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 800;
+    }
     .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
     .panel-head h2 { margin: 0; }
     .stack { display: grid; gap: 10px; }
@@ -3663,6 +3728,7 @@
     const apiParam = urlParams.get("api");
     const loginIdParam = urlParams.get("loginId") || urlParams.get("restaurantId") || urlParams.get("canteenId") || "";
     const restaurantIdParam = urlParams.get("restaurantId") || urlParams.get("canteenId") || "";
+    const cashfreeReturnOrderId = urlParams.get("cf_order_id") || "";
     const hasApiOverride = Boolean(apiParam);
     if (apiParam) localStorage.setItem("AXEN_API_URL", apiParam);
     const liveApi = "https://canteen.axzen.in";
@@ -3770,6 +3836,7 @@
     let orderSubmitting = false;
     let itemSuggestionTimer = null;
     let itemSuggestions = [];
+    let subscriptionState = null;
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(2);
@@ -3945,7 +4012,9 @@
       { id: -9003, name: "Boneless Chicken", price: 320 },
       { id: -9004, name: "Chicken Leg Pieces", price: 280 },
       { id: -9005, name: "Chicken Wings", price: 220 },
-      { id: -9006, name: "Chicken Liver", price: 180 }
+      { id: -9006, name: "Chicken Liver", price: 180 },
+      { id: -9007, name: "Mutton Curry Cut", price: 780 },
+      { id: -9008, name: "Mutton Keema", price: 820 }
     ];
 
     function todayKey() {
@@ -3954,12 +4023,13 @@
     }
 
     function isChickenCategory(category) {
-      return String(category || "").trim().toLowerCase().includes("chicken");
+      const text = String(category || "").trim().toLowerCase();
+      return ["chicken", "meat", "meet", "mutton", "fish", "seafood"].some(keyword => text.includes(keyword));
     }
 
     function isChickenProduct(item) {
       const name = String(item?.name || "").toLowerCase();
-      return isChickenCategory(item?.category) || name.includes("chicken");
+      return isChickenCategory(item?.category) || ["chicken", "meat", "meet", "mutton", "fish", "seafood"].some(keyword => name.includes(keyword));
     }
 
     function isChickenShopCanteen() {
@@ -3969,7 +4039,7 @@
         user?.canteen?.businessCategory,
         user?.canteen?.posMode
       ].join(" ").toLowerCase();
-      return text.includes("chicken") || text.includes("meat") || text.includes("mutton");
+      return ["chicken", "meat", "meet", "mutton", "fish", "seafood"].some(keyword => text.includes(keyword));
     }
 
     function shouldShowChickenCategory() {
@@ -3982,24 +4052,45 @@
 
     function chickenPriceRows() {
       const saved = readJson(chickenPricesKey, []);
-      const map = new Map(defaultChickenPrices.map(item => [item.name, { ...item }]));
+      const today = todayKey();
+      const map = new Map(defaultChickenPrices.map(item => [String(item.name).trim().toLowerCase(), { ...item, updatedDate: "" }]));
+      products.filter(isChickenProduct).forEach(item => {
+        const name = String(item.name || "").trim();
+        if (!name) return;
+        const key = name.toLowerCase();
+        const existing = map.get(key) || {};
+        map.set(key, {
+          ...existing,
+          id: Number(item.id || existing.id || -(Date.now() + map.size)),
+          name,
+          price: Number(existing.price || item.price || 0),
+          sourceProduct: true,
+          updatedDate: existing.updatedDate || ""
+        });
+      });
       saved.forEach(item => {
         const name = String(item.name || "").trim();
         if (!name) return;
-        map.set(name, {
+        const key = name.toLowerCase();
+        map.set(key, {
+          ...(map.get(key) || {}),
           id: Number(item.id || defaultChickenPrices.find(row => row.name === name)?.id || -(Date.now() + map.size)),
           name,
-          price: Number(item.price || 0)
+          price: Number(item.price || 0),
+          updatedDate: item.updatedDate || "",
+          todayUpdated: item.updatedDate === today
         });
       });
-      return [...map.values()];
+      return [...map.values()].map(item => ({ ...item, todayUpdated: item.updatedDate === today }));
     }
 
     function saveChickenPriceRows(rows) {
+      const today = todayKey();
       writeJson(chickenPricesKey, rows.map((item, index) => ({
         id: Number(item.id || -(9001 + index)),
         name: String(item.name || "").trim(),
-        price: Number(item.price || 0)
+        price: Number(item.price || 0),
+        updatedDate: today
       })).filter(item => item.name));
       localStorage.setItem(scopedStorageKey(chickenPriceDateKey), todayKey());
     }
@@ -4439,35 +4530,75 @@
             <div class="modal-title-row"><h2>${esc(product.name)} Sale</h2><button class="modal-x" id="closeChickenSale" type="button">X</button></div>
             <div class="payment-total"><span>Today price / kg</span><strong id="chickenRateLabel">${money(todayPrice)}</strong></div>
             <div class="chicken-sale-form">
+              <label>Amount
+                <input id="chickenAmountInput" type="number" min="0" step="1" inputmode="numeric" placeholder="Amount Rs" value="">
+              </label>
               <label>KGs
-                <input id="chickenKgInput" type="number" min="0.001" step="0.001" inputmode="decimal" value="1">
+                <input id="chickenKgInput" type="number" min="0.001" step="0.001" inputmode="decimal" placeholder="Kgs" value="">
+              </label>
+              <label>Grams
+                <input id="chickenGramInput" type="number" min="1" step="1" inputmode="numeric" placeholder="Grams" value="">
               </label>
               <div class="kg-picks">
-                ${[0.25, 0.5, 1, 1.5, 2].map(value => `<button class="${value === 1 ? "active" : ""}" data-kg-pick="${value}" type="button">${value}kg</button>`).join("")}
+                ${[0.25, 0.5, 1, 1.5, 2].map(value => `<button data-kg-pick="${value}" type="button">${value}kg</button>`).join("")}
               </div>
-              <label>Amount
-                <input id="chickenAmountInput" type="number" min="0" step="1" inputmode="numeric" value="${Math.round(todayPrice)}">
-              </label>
             </div>
             <button class="primary" id="addChickenSale" type="button">Add to Bill</button>
             <button class="secondary" id="openChickenPricesFromSale" type="button">Today Price List</button>
-            <div class="status" id="chickenSaleStatus">Enter amount manually if customer wants exact value.</div>
+            <div class="status" id="chickenSaleStatus">Enter amount, kg, or grams. Other values auto calculate.</div>
           </div>
         </div>`;
       const kgInput = $("chickenKgInput");
+      const gramInput = $("chickenGramInput");
       const amountInput = $("chickenAmountInput");
-      let amountTouched = false;
-      const updateAmount = () => {
-        if (amountTouched) return;
-        amountInput.value = Math.round(Number(kgInput.value || 0) * todayPrice);
+      const clearActiveKgPick = () => document.querySelectorAll("[data-kg-pick]").forEach(item => item.classList.remove("active"));
+      const kgText = value => {
+        const number = Number(value || 0);
+        return Number.isInteger(number) ? String(number) : number.toFixed(3).replace(/\.?0+$/, "");
       };
-      amountInput.addEventListener("input", () => { amountTouched = true; });
-      kgInput.addEventListener("input", updateAmount);
+      const updateFromAmount = () => {
+        clearActiveKgPick();
+        const amount = Math.max(0, Number(amountInput.value || 0));
+        if (!todayPrice || !amount) {
+          kgInput.value = "";
+          gramInput.value = "";
+          return;
+        }
+        const grams = Math.round((amount / todayPrice) * 1000);
+        kgInput.value = kgText(grams / 1000);
+        gramInput.value = String(grams);
+      };
+      const updateFromKg = () => {
+        clearActiveKgPick();
+        const kg = Math.max(0, Number(kgInput.value || 0));
+        if (!todayPrice || !kg) {
+          amountInput.value = "";
+          gramInput.value = "";
+          return;
+        }
+        gramInput.value = String(Math.round(kg * 1000));
+        amountInput.value = String(Math.round(kg * todayPrice));
+      };
+      const updateFromGrams = () => {
+        clearActiveKgPick();
+        const grams = Math.max(0, Number(gramInput.value || 0));
+        if (!todayPrice || !grams) {
+          amountInput.value = "";
+          kgInput.value = "";
+          return;
+        }
+        kgInput.value = kgText(grams / 1000);
+        amountInput.value = String(Math.round((grams / 1000) * todayPrice));
+      };
+      amountInput.addEventListener("input", updateFromAmount);
+      kgInput.addEventListener("input", updateFromKg);
+      gramInput.addEventListener("input", updateFromGrams);
       document.querySelectorAll("[data-kg-pick]").forEach(btn => btn.addEventListener("click", () => {
-        document.querySelectorAll("[data-kg-pick]").forEach(item => item.classList.remove("active"));
+        clearActiveKgPick();
         btn.classList.add("active");
         kgInput.value = btn.dataset.kgPick;
-        updateAmount();
+        updateFromKg();
+        btn.classList.add("active");
       }));
       $("openChickenPricesFromSale").addEventListener("click", () => openTodayPriceListModal("manual"));
       $("closeChickenSale").addEventListener("click", closeOptionsModal);
@@ -4496,6 +4627,7 @@
         renderCart();
         renderProducts();
         closeOptionsModal();
+        setTimeout(openPaymentModal, 80);
         $("posMessage").textContent = `${product.name} ${kg} Kg added: ${money(amount)}`;
         $("posMessage").className = "status ok";
       });
@@ -4529,6 +4661,10 @@
           <label>Rs / Kg
             <input data-chicken-price-value="${index}" type="number" min="0" step="1" inputmode="numeric" value="${Number(item.price || 0)}">
           </label>
+          <div class="today-price-status">
+            <span>Today's price: ${item.todayUpdated ? "updated" : "not updated yet"}</span>
+            <strong class="today-price-badge ${item.todayUpdated ? "updated" : ""}">${item.todayUpdated ? "Today Updated" : "Update Today"}</strong>
+          </div>
         </div>
       `).join("");
     }
@@ -4538,7 +4674,7 @@
         ${sectionHeader("todayPrices", `<button class="page-action" data-go-billing type="button">Billing</button>`)}
         <div class="work-card">
           <h3>Today Price List</h3>
-          <div class="muted">Update chicken price per kg before billing. These prices are used in Chicken category.</div>
+          <div class="muted">Update today's price per kg before billing. Chicken, mutton and meat shop items are shown here.</div>
           <div class="today-price-grid">${chickenPriceRowsHtml()}</div>
           <button class="page-action full" id="saveTodayPrices" type="button">Save Today Prices</button>
         </div>`;
@@ -4548,8 +4684,8 @@
       $("optionsModalMount").innerHTML = `
         <div class="modal-backdrop center-modal">
           <div class="payment-modal">
-            <div class="modal-title-row"><h2>${mode === "daily" ? "Set Today Chicken Prices" : "Today Price List"}</h2><button class="modal-x" id="closeTodayPrices" type="button">X</button></div>
-            <div class="muted">${mode === "daily" ? "New date first open. Please confirm today's price list." : "Update price per kg and continue billing."}</div>
+            <div class="modal-title-row"><h2>${mode === "daily" ? "Set Today Prices" : "Today Price List"}</h2><button class="modal-x" id="closeTodayPrices" type="button">X</button></div>
+            <div class="muted">${mode === "daily" ? "New date first open. Please confirm today's chicken, mutton or meat prices." : "Update price per kg and continue billing."}</div>
             <div class="today-price-grid">${chickenPriceRowsHtml()}</div>
             <button class="primary" id="saveTodayPricesModal" type="button">Save Prices</button>
             <button class="secondary" id="skipTodayPricesModal" type="button">${mode === "daily" ? "Use Same Prices Today" : "Close"}</button>
@@ -4919,6 +5055,22 @@
       const boldOn = "\x1B\x45\x01";
       const boldOff = "\x1B\x45\x00";
       const doubleHeight = "\x1D\x21\x10";
+      const hasWeightItems = (order.items || []).some(item => item.weightUnit || Number(item.qty || 0) % 1 !== 0);
+      const weightText = item => {
+        const kg = Number(item.qty || 0);
+        const text = Number.isInteger(kg) ? String(kg) : kg.toFixed(3).replace(/\.?0+$/, "");
+        return `${text || "0"} KG`;
+      };
+      const meatNameLines = item => wrapText(printItemName(item), 15).slice(0, 2);
+      const meatItemLine = item => {
+        const names = meatNameLines(item);
+        const itemAmount = cartLineTotal(item);
+        return [
+          boldOn + doubleHeight + leftRight(names[0] || "ITEM", weightText(item)) + normalSize,
+          ...(names.slice(1).map(name => boldOn + pad(name, width) + boldOff)),
+          boldOff + leftRight(`Rs ${Number(item.unitPrice || item.price || 0).toFixed(2)}/kg`, amountText(itemAmount))
+        ].join("\n");
+      };
       const itemLine = (index, item) => {
         const qty = Number(item.qty || 0);
         const rate = Number(item.price || 0);
@@ -4935,15 +5087,35 @@
       const discount = Number(order.discount || 0);
       const tokenNo = orderTokenNumber(order);
       const paymentLabel = order.payment === "Credit" && order.creditName ? `Credit - ${order.creditName}` : order.payment || "Cash";
+      const customerLabel = cleanText(order.creditName || order.customerName || "Walk-in");
       const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
       const dateText = billDate.toLocaleDateString("en-IN");
       const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
       const headerName = order.canteen || settings.canteenName || "SHAD KITCHEN";
       const header = includeHeader ? [
         escInit + normalFont + normalSize + boldOn + alignCenter + center(headerName.toUpperCase()),
-        center("axzen infotech")
+        center(order.cashier || user?.name || "Admin")
       ] : [escInit + normalFont + normalSize + boldOn + alignCenter];
       if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
+      if (hasWeightItems) {
+        return [
+          ...header,
+          "",
+          alignLeft + line,
+          leftRight(`Date : ${dateText}`, `Time : ${timeText}`),
+          `Bill No : ${tokenNo}`.slice(0, width),
+          `Cashier : ${cleanText(order.cashier || user?.name || "-")}`.slice(0, width),
+          `Customer: ${customerLabel}`.slice(0, width),
+          `Payment : ${cleanText(paymentLabel)}`.slice(0, width),
+          line,
+          ...(order.items || []).map(meatItemLine),
+          line,
+          boldOn + leftRight("TOTAL", `Rs ${Number(total || 0).toFixed(2)}`),
+          boldOff + thick,
+          alignCenter + center("THANK YOU! VISIT AGAIN"),
+          boldOff + normalFont + normalSize
+        ].join("\n");
+      }
       return [
         ...header,
         "",
@@ -5054,7 +5226,9 @@
 
     async function receipt(order) {
       const options = receiptPrintOptions(order);
-      const useLogoHeader = canPrintReceiptLogo(options) || canPrintReceiptBitmap(options);
+      const hasWeightItems = (order.items || []).some(item => item.weightUnit || Number(item.qty || 0) % 1 !== 0);
+      if (hasWeightItems) options.receiptJson = "";
+      const useLogoHeader = hasWeightItems ? false : (canPrintReceiptLogo(options) || canPrintReceiptBitmap(options));
       const text = receiptText(order, false, !useLogoHeader);
       if (window.AxenPrinter && (typeof window.AxenPrinter.printToPrinterAsync === "function" || typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
         try {
@@ -5063,13 +5237,13 @@
           $("posMessage").className = isPrintSuccess(result) ? "status ok" : "status error";
           return;
         } catch (error) {
-          $("posMessage").textContent = "Order saved. Printer not connected.";
+          $("posMessage").textContent = `Order saved. Print failed: ${error.message || "Printer not connected."}`;
           $("posMessage").className = "status error";
           return;
         }
       }
       console.log(text);
-      $("posMessage").textContent = "Order saved. Printer not connected.";
+      $("posMessage").textContent = "Order saved. Direct print works only inside APK with printer permission.";
       $("posMessage").className = "status error";
     }
 
@@ -5109,6 +5283,7 @@
         time: billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
         cashier: order.cashier || user?.name || "-",
         token: orderTokenNumber(order),
+        customer: order.creditName || order.customerName || "Walk-in",
         payment: order.payment === "Credit" && order.creditName ? `Credit - ${order.creditName}` : order.payment || "Cash",
         subtotal,
         discount,
@@ -5122,11 +5297,28 @@
     }
 
     function sampleReceiptOrder() {
+      if (isChickenShopCanteen()) {
+        const item = chickenProductsForMenu()[0] || { id: -9001, name: "Chicken Curry Cut", price: 300, category: chickenCategory };
+        const price = Number(chickenPriceFor(item) || item.price || 300);
+        const kg = 0.89;
+        const amount = Math.round(kg * price);
+        return {
+          id: "5134",
+          canteen: settings.canteenName || "Registered Business Name",
+          cashier: user?.name || "Admin",
+          payment: "Cash",
+          subtotal: amount,
+          discount: 0,
+          total: amount,
+          createdAt: Date.now(),
+          items: [{ ...item, qty: kg, price, unitPrice: price, enteredAmount: amount, weightUnit: "Kg" }]
+        };
+      }
       const item = products.find(row => !isItemHidden(row)) || { id: 6, name: "Samosa", nameTe: "సమోసా", price: 15 };
       const price = Number(item.price || 15);
       return {
         id: "5134",
-        canteen: settings.canteenName || "Main Canteen",
+        canteen: settings.canteenName || "Registered Business Name",
         cashier: user?.name || "Admin",
         payment: "Online",
         subtotal: price,
@@ -5143,7 +5335,7 @@
       const order = sampleReceiptOrder();
       const logo = receiptLogoDataUrl || (String(settings.logoUrl || "").startsWith("data:image/") ? settings.logoUrl : "");
       const logoHtml = logo ? `<img class="receipt-preview-logo" style="width:${Math.round(72 * logoSize / 100)}px;max-height:${Math.round(72 * logoSize / 100)}px" src="${esc(logo)}" alt="Receipt logo">` : `<span class="receipt-preview-logo empty">LOGO</span>`;
-      const titleHtml = `<div class="receipt-preview-title">${esc(settings.canteenName || "Main Canteen")}</div><div class="receipt-preview-sub">axzen infotech</div>`;
+      const titleHtml = `<div class="receipt-preview-title">${esc(settings.canteenName || "Registered Business Name")}</div><div class="receipt-preview-sub">axzen infotech</div>`;
       const header = logoPosition === "left"
         ? `<div class="receipt-preview-brand side">${logoHtml}<div>${titleHtml}</div></div>`
         : logoPosition === "right"
@@ -5745,23 +5937,24 @@
         });
       }
       if (kitchenPrinterEnabled) {
-        if (!kitchenPrinter) return "Select Kitchen Printer";
-        const kitchenOptions = {
-          logoDataUrl: "",
-          logoPosition: ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above",
-          logoSize: receiptLogoSizeValue(settings.receiptLogoSize),
-          headerName: order.canteen || settings.canteenName || "SHAD KITCHEN",
-          companyName: "KITCHEN TOKEN",
-          receiptLanguage: "english",
-          receiptJson: ""
-        };
-        const useLogoHeader = canPrintReceiptLogo(kitchenOptions);
-        jobs.push({
-          label: "kitchen",
-          address: kitchenPrinter,
-          text: kitchenTokenText(order, !useLogoHeader),
-          options: kitchenOptions
-        });
+        if (kitchenPrinter) {
+          const kitchenOptions = {
+            logoDataUrl: "",
+            logoPosition: ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above",
+            logoSize: receiptLogoSizeValue(settings.receiptLogoSize),
+            headerName: order.canteen || settings.canteenName || "SHAD KITCHEN",
+            companyName: "KITCHEN TOKEN",
+            receiptLanguage: "english",
+            receiptJson: ""
+          };
+          const useLogoHeader = canPrintReceiptLogo(kitchenOptions);
+          jobs.push({
+            label: "kitchen",
+            address: kitchenPrinter,
+            text: kitchenTokenText(order, !useLogoHeader),
+            options: kitchenOptions
+          });
+        }
       }
       if (!jobs.length) return "No printer enabled";
       applySelectedPrinterToBridge();
@@ -6954,6 +7147,7 @@
       if ($("refreshMenuBtn")) $("refreshMenuBtn").addEventListener("click", async () => { await loadProducts(); renderOptionPage(); });
       if ($("clearSearchBtn")) $("clearSearchBtn").addEventListener("click", () => { itemSearch = ""; if ($("itemSearch")) $("itemSearch").value = ""; });
       if ($("clearCartSettingsBtn")) $("clearCartSettingsBtn").addEventListener("click", clearActiveCartState);
+      if ($("profileRechargeBtn")) $("profileRechargeBtn").addEventListener("click", openSubscriptionFromBilling);
       if ($("adminUnlockForm")) $("adminUnlockForm").addEventListener("submit", unlockAdminBills);
       if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_FROM", event.target.value); renderOptionPage(); });
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { localStorage.setItem("AXEN_REPORT_TO", event.target.value); renderOptionPage(); });
@@ -7619,7 +7813,8 @@
 
     function drawerDetailHtml(section, pairedPrinters) {
       if (section === "profile") {
-        return `<div class="option-card"><h3>${esc(user?.name || "User")}</h3><div class="option-row"><span>Role</span><strong>${esc(user?.role || "user")}</strong></div><div class="option-row"><span>Canteen</span><strong>${esc(settings.canteenName)}</strong></div></div>`;
+        const state = subscriptionState || {};
+        return `<div class="option-card"><h3>${esc(user?.name || "User")}</h3><div class="option-row"><span>Role</span><strong>${esc(user?.role || "user")}</strong></div><div class="option-row"><span>Canteen</span><strong>${esc(settings.canteenName)}</strong></div><div class="option-row"><span>Subscription</span><strong>${esc(state.planName || "Professional")}</strong></div><div class="option-row"><span>Expiry</span><strong>${esc(state.expiryDate || "-")}</strong></div><button class="secondary" id="profileRechargeBtn" type="button">Upgrade / Recharge</button></div>`;
       }
       if (section === "held") {
         return `<div class="option-card"><h3>Hold Orders</h3><button class="secondary" id="holdCurrentOrder" type="button">Hold Current Cart</button>${heldOrdersHtml()}</div>`;
@@ -7691,6 +7886,7 @@
               </section>
               <section class="drawer-section">
                 <span class="drawer-section-title">Settings</span>
+                <button class="drawer-item" id="subscriptionDrawerBtn" type="button"><span>₹</span><strong>Subscription</strong><span class="drawer-arrow">â€º</span></button>
                 ${drawerItem("printer", "Printer Settings", "P", activeSection)}
                 ${drawerItem("counter", "User", "U", activeSection)}
                 ${drawerItem("settings", "Settings", "G", activeSection)}
@@ -7706,6 +7902,7 @@
       $("closeOptionsModal").addEventListener("click", closeOptionsModal);
       document.querySelectorAll("[data-menu-section]").forEach(btn => btn.addEventListener("click", () => setPosSection(btn.dataset.menuSection)));
       if ($("adminPanelBtn")) $("adminPanelBtn").addEventListener("click", openAdminPanelFromBilling);
+      if ($("subscriptionDrawerBtn")) $("subscriptionDrawerBtn").addEventListener("click", openSubscriptionFromBilling);
       if ($("syncNowBtn")) $("syncNowBtn").addEventListener("click", async () => {
         const before = pendingOrders().length;
         $("syncNowBtn").disabled = true;
@@ -8025,7 +8222,7 @@
     function setupAdminTabs() {
       const tabs = document.querySelector(".admin-tabs");
       if (!tabs) return;
-      if ($("adminTitle")) $("adminTitle").textContent = adminModules.find(([key]) => key === adminTab)?.[2] || ({ users: "Users", reports: "Reports", whatsapp: "WhatsApp", settings: "Settings" }[adminTab] || "Dashboard");
+      if ($("adminTitle")) $("adminTitle").textContent = adminModules.find(([key]) => key === adminTab)?.[2] || ({ users: "Users", reports: "Reports", whatsapp: "WhatsApp", settings: "Settings", plan: "Plan Recharge" }[adminTab] || "Dashboard");
       if ($("adminAvatar")) $("adminAvatar").textContent = String(user?.name || "A").slice(0, 1).toUpperCase();
       if ($("adminDateChip")) $("adminDateChip").textContent = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
       if ($("adminBranchChip")) $("adminBranchChip").textContent = settings.canteenName || "Main Canteen";
@@ -8122,6 +8319,123 @@
         </form></div>`;
     }
 
+    function planRechargeHtml() {
+      const state = subscriptionState || {};
+      const durations = state.durations || [1, 3, 6, 9, 12].map(months => ({ months, label: `${months} Month${months > 1 ? "s" : ""}`, amount: 999 * months }));
+      const monthlyPrice = Number(state.monthlyPrice || durations[0]?.amount || 999);
+      return `
+        <div class="panel">
+          <div class="panel-head"><h2>Subscription</h2><button class="admin-link" id="refreshSubscriptionStatus" type="button">Refresh</button></div>
+          <div class="plan-status-card">
+            <span class="muted">${esc(state.canteenName || settings.canteenName || "Store")}</span>
+            <strong>${esc(state.planName || "Professional")}</strong>
+            <div class="row-between"><span>Monthly price</span><strong>${money(monthlyPrice)}</strong></div>
+            <div class="row-between"><span>Expiry date</span><strong>${esc(state.expiryDate || "-")}</strong></div>
+            <div class="row-between"><span>Status</span><strong>${state.expired ? "Expired" : esc(state.status || "Active")}</strong></div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>Upgrade / Recharge</h2><span class="payment-pill online">Cashfree</span></div>
+          <div class="plan-grid">
+            ${durations.map(item => `
+              <button class="plan-card" data-recharge-months="${item.months}" type="button">
+                <strong>${esc(item.label || `${item.months} Months`)}</strong>
+                <span>${money(item.amount)}</span>
+                <small>${money(monthlyPrice)} x ${esc(item.months)} month${Number(item.months) > 1 ? "s" : ""}</small>
+              </button>
+            `).join("")}
+          </div>
+          <div class="subscription-strip">
+            <div class="payment-method-row"><span>UPI QR</span><span>GPay</span><span>PhonePe / Paytm</span></div>
+            <div class="qr-note">Payment page lo QR scan cheyyachu, leka same phone lo installed UPI app select chesi pay cheyyachu. Success ayyaka app automatic ga verify chesi subscription activate chestundi.</div>
+          </div>
+          <div class="status" id="subscriptionStatus">${subscriptionState ? "Select duration. Exact amount above will be sent to Cashfree." : "Loading plan details..."}</div>
+        </div>`;
+    }
+
+    async function loadSubscriptionStatus({ silent = false } = {}) {
+      try {
+        if (!silent && $("subscriptionStatus")) $("subscriptionStatus").textContent = "Loading plan details...";
+        const data = await api("/subscription/status", { timeoutMs: 9000 });
+        subscriptionState = data;
+        return data;
+      } catch (error) {
+        if ($("subscriptionStatus")) {
+          $("subscriptionStatus").textContent = error.message || "Plan details load failed";
+          $("subscriptionStatus").className = "status error";
+        }
+        throw error;
+      }
+    }
+
+    async function openPlanRecharge() {
+      adminTab = "plan";
+      renderAdmin();
+      try {
+        await loadSubscriptionStatus();
+        if (adminTab === "plan") renderAdmin();
+      } catch {}
+    }
+
+    async function startPlanRecharge(months) {
+      const statusNode = $("subscriptionStatus");
+      const buttons = document.querySelectorAll("[data-recharge-months]");
+      const selected = (subscriptionState?.durations || []).find(item => Number(item.months) === Number(months));
+      buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.toggle("selected", Number(btn.dataset.rechargeMonths) === Number(months));
+      });
+      if (statusNode) {
+        statusNode.textContent = `Creating Cashfree order${selected ? ` for ${money(selected.amount)}` : ""}...`;
+        statusNode.className = "status";
+      }
+      try {
+        const order = await api("/subscription/recharge/create-order", {
+          method: "POST",
+          timeoutMs: 15000,
+          body: JSON.stringify({ months: Number(months) })
+        });
+        if (!order.paymentSessionId) throw new Error("Payment session missing from Cashfree");
+        if (typeof Cashfree !== "function") throw new Error("Cashfree SDK not loaded. Check internet connection.");
+        const cashfree = Cashfree({ mode: order.environment || "sandbox" });
+        if (statusNode) {
+          statusNode.textContent = `Opening Cashfree payment for ${money(order.amount)}. Choose UPI QR, GPay, PhonePe, Paytm or any UPI app.`;
+          statusNode.className = "status ok";
+        }
+        await cashfree.checkout({
+          paymentSessionId: order.paymentSessionId,
+          redirectTarget: "_modal"
+        });
+        await verifyPlanRecharge(order.orderId);
+      } catch (error) {
+        if (statusNode) {
+          statusNode.textContent = error.message || "Recharge failed";
+          statusNode.className = "status error";
+        }
+      } finally {
+        buttons.forEach(btn => btn.disabled = false);
+      }
+    }
+
+    async function verifyPlanRecharge(orderId) {
+      const statusNode = $("subscriptionStatus");
+      if (statusNode) {
+        statusNode.textContent = "Verifying payment...";
+        statusNode.className = "status";
+      }
+      const result = await api("/subscription/recharge/verify", {
+        method: "POST",
+        timeoutMs: 15000,
+        body: JSON.stringify({ orderId })
+      });
+      subscriptionState = result.subscription || subscriptionState;
+      if (statusNode) {
+        statusNode.textContent = `Payment confirmed. Subscription activated. New expiry: ${subscriptionState?.expiryDate || result.order?.newExpiryDate || "-"}`;
+        statusNode.className = "status ok";
+      }
+      renderAdmin();
+    }
+
     function settingsAdminHtml() {
       const logoPosition = settings.receiptLogoPosition || "above";
       const logoSize = receiptLogoSizeValue(settings.receiptLogoSize);
@@ -8161,6 +8475,7 @@
 
     function moreAdminHtml() {
       const items = [
+        ["plan", "Plan Recharge", "Renew 1, 3, 6, 9 or 12 months", "wallet"],
         ["users", "Users", "Create and manage cashiers", "users"],
         ["reports", "Reports", "Date wise, item wise and payment reports", "reports"],
         ["whatsapp", "WhatsApp Reports", "Auto report and admin number", "whatsapp"],
@@ -8174,6 +8489,7 @@
         users: `<svg viewBox="0 0 24 24"><path d="M16 11a4 4 0 1 0-8 0"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>`,
         reports: `<svg viewBox="0 0 24 24"><path d="M5 19V5"/><path d="M9 19v-6"/><path d="M14 19V9"/><path d="M19 19v-9"/></svg>`,
         whatsapp: `<svg viewBox="0 0 24 24"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5Z"/><path d="M9 9c.4 2.4 2.6 4.6 5 5"/></svg>`,
+        wallet: `<svg viewBox="0 0 24 24"><path d="M4 7h16v12H4z"/><path d="M4 10h16"/><path d="M16 14h2"/></svg>`,
         settings: `<svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.5-2.4 1a7 7 0 0 0-1.7-1L14.5 3h-5l-.3 3a7 7 0 0 0-1.7 1L5.1 6l-2 3.5 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 1.7 1l.3 3h5l.3-3a7 7 0 0 0 1.7-1l2.4 1 2-3.5-2-1.5Z"/></svg>`,
         receipt: `<svg viewBox="0 0 24 24"><path d="M7 3h10v18l-2-1.2-2 1.2-2-1.2-2 1.2-2-1.2V3Z"/><path d="M9 8h6"/><path d="M9 12h6"/></svg>`,
         logout: `<svg viewBox="0 0 24 24"><path d="M10 5H5v14h5"/><path d="M14 8l4 4-4 4"/><path d="M8 12h10"/></svg>`
@@ -8261,6 +8577,8 @@
         page.innerHTML = reportPageHtml();
       } else if (adminTab === "whatsapp") {
         page.innerHTML = whatsappAdminHtml();
+      } else if (adminTab === "plan") {
+        page.innerHTML = planRechargeHtml();
       } else if (adminTab === "more") {
         page.innerHTML = moreAdminHtml();
       } else {
@@ -8289,6 +8607,8 @@
       if ($("shareReportImage")) $("shareReportImage").addEventListener("click", shareReportImage);
       if ($("downloadReportImage")) $("downloadReportImage").addEventListener("click", downloadReportImage);
       if ($("shareReportPdf")) $("shareReportPdf").addEventListener("click", shareReportPdf);
+      if ($("refreshSubscriptionStatus")) $("refreshSubscriptionStatus").addEventListener("click", openPlanRecharge);
+      document.querySelectorAll("[data-recharge-months]").forEach(btn => btn.addEventListener("click", () => startPlanRecharge(btn.dataset.rechargeMonths)));
       document.querySelectorAll("[data-admin-jump]").forEach(btn => btn.addEventListener("click", () => {
         adminTab = btn.dataset.adminJump;
         if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
@@ -8302,6 +8622,7 @@
         const action = btn.dataset.moreAction;
         if (action === "billing") return openBillingFromAdmin();
         if (action === "logout") return logout();
+        if (action === "plan") return openPlanRecharge();
         adminTab = action;
         if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
         renderAdmin();
@@ -8349,6 +8670,17 @@
       if ($("adminRole")) $("adminRole").textContent = `${user?.name || "Admin"} | Admin Panel`;
       show("adminView");
       renderAdmin();
+    }
+
+    function openSubscriptionFromBilling() {
+      closeOptionsModal();
+      adminTab = "plan";
+      if ($("adminRole")) $("adminRole").textContent = `${user?.name || "Admin"} | Subscription`;
+      show("adminView");
+      renderAdmin();
+      loadSubscriptionStatus({ silent: true }).then(() => {
+        if (!$("adminView").classList.contains("hidden") && adminTab === "plan") renderAdmin();
+      }).catch(() => {});
     }
 
     async function deleteBill(orderId) {
@@ -8428,27 +8760,21 @@
       $("setupStatus").textContent = "Activating...";
       $("setupStatus").className = "status";
       try {
-        await api("/users", {
+        const data = await api("/activate-owner", {
           method: "POST",
           body: JSON.stringify({
             name: $("ownerSetupName").value.trim(),
             mobile: $("ownerSetupMobile").value.trim(),
             password,
-            role: "admin",
-            canteenId: user?.canteenId,
-            mustChangePassword: false
+            canteenId: user?.canteenId
           })
-        });
-        const data = await api("/login", {
-          method: "POST",
-          body: JSON.stringify({ mobile: $("ownerSetupMobile").value.trim(), password })
         });
         setSession(data.user, data.token);
         cacheLogin($("ownerSetupMobile").value.trim(), password, data.user, data.token || "");
         applySettings(data.settings);
         await enterApp();
       } catch (error) {
-        $("setupStatus").textContent = "Activation failed. Check server and try again.";
+        $("setupStatus").textContent = error.message || "Activation failed. Check server and try again.";
         $("setupStatus").className = "status error";
       }
     }
@@ -8546,6 +8872,61 @@
       }
     }
 
+    function openForgotPasswordModal() {
+      $("optionsModalMount").innerHTML = `
+        <div class="modal-backdrop center-modal">
+          <form class="payment-modal" id="forgotPasswordForm">
+            <div class="modal-title-row"><h2>Reset Password</h2><button class="modal-x" id="closeForgotPassword" type="button">X</button></div>
+            <div class="muted">Enter registered mobile number. Restaurant ID is needed only if same mobile has multiple stores.</div>
+            <label>Registered mobile number
+              <input id="forgotMobileInput" autocomplete="username" inputmode="tel" required value="${esc($("mobileInput")?.value || "")}">
+            </label>
+            <label>Restaurant ID / Canteen ID
+              <input id="forgotCanteenInput" autocomplete="off" value="${esc(restaurantIdParam || "")}" placeholder="Optional">
+            </label>
+            <label>New password
+              <input id="forgotNewPasswordInput" type="password" autocomplete="new-password" minlength="4" required>
+            </label>
+            <label>Confirm password
+              <input id="forgotConfirmPasswordInput" type="password" autocomplete="new-password" minlength="4" required>
+            </label>
+            <button class="primary" type="submit">Set New Password</button>
+            <div class="status" id="forgotPasswordStatus"></div>
+          </form>
+        </div>`;
+      $("closeForgotPassword").addEventListener("click", closeOptionsModal);
+      $("forgotPasswordForm").addEventListener("submit", resetForgotPassword);
+    }
+
+    async function resetForgotPassword(event) {
+      event.preventDefault();
+      const mobile = $("forgotMobileInput").value.trim();
+      const canteenId = $("forgotCanteenInput").value.trim();
+      const password = $("forgotNewPasswordInput").value;
+      const confirm = $("forgotConfirmPasswordInput").value;
+      if (password !== confirm) {
+        $("forgotPasswordStatus").textContent = "Passwords do not match";
+        $("forgotPasswordStatus").className = "status error";
+        return;
+      }
+      $("forgotPasswordStatus").textContent = "Checking mobile number...";
+      $("forgotPasswordStatus").className = "status";
+      try {
+        await api("/forgot-password", {
+          method: "POST",
+          body: JSON.stringify({ mobile, password, canteenId, restaurantId: canteenId })
+        });
+        $("forgotPasswordStatus").textContent = "Password updated. Login with new password.";
+        $("forgotPasswordStatus").className = "status ok";
+        $("mobileInput").value = mobile;
+        $("passwordInput").value = password;
+        setTimeout(closeOptionsModal, 700);
+      } catch (error) {
+        $("forgotPasswordStatus").textContent = error.message || "Mobile number not found";
+        $("forgotPasswordStatus").className = "status error";
+      }
+    }
+
     async function enterApp() {
       if (!user) return show("loginView");
       if (user.mustChangePassword) return showOwnerSetup();
@@ -8558,6 +8939,17 @@
       loadSettings().catch(() => applySettings(settings));
       loadAdminData().catch(() => updateSyncStatus("Data load failed", "offline"));
       syncPendingOrders().catch(() => updateSyncStatus());
+      if (cashfreeReturnOrderId) {
+        adminTab = "plan";
+        show("adminView");
+        renderAdmin();
+        verifyPlanRecharge(cashfreeReturnOrderId).catch(error => {
+          if ($("subscriptionStatus")) {
+            $("subscriptionStatus").textContent = error.message || "Payment verification failed";
+            $("subscriptionStatus").className = "status error";
+          }
+        });
+      }
     }
 
     $("loginForm").addEventListener("submit", login);
@@ -8566,10 +8958,7 @@
       $("mobileInput").value = loginIdParam;
       $("loginStatus").textContent = restaurantIdParam ? `Open POS for ${restaurantIdParam}. Enter password to continue.` : "Enter password to continue.";
     }
-    $("forgotPasswordBtn").addEventListener("click", () => {
-      $("loginStatus").textContent = "Forgot password: contact Super Admin or Marketing team to reset this canteen login.";
-      $("loginStatus").className = "status";
-    });
+    $("forgotPasswordBtn").addEventListener("click", openForgotPasswordModal);
     $("signupBtn").addEventListener("click", () => {
       $("loginStatus").textContent = "Sign up: ask Marketing team to register and approve your canteen. Approval creates your Restaurant ID.";
       $("loginStatus").className = "status ok";

@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const path = require("path");
+const crypto = require("crypto");
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
@@ -24,6 +25,9 @@ const CANTEEN_ROLES = ["admin", "user", "cashier", "store_keeper", "manager", "a
 const SALES_CONTACT_PHONE = "8790568446";
 const SALES_WEBSITE = "www.axzeninfotech.com";
 const TRIAL_EXPIRED_MESSAGE = `Trial expired. Please contact our sales team at ${SALES_CONTACT_PHONE}. For more details, visit ${SALES_WEBSITE}.`;
+const CASHFREE_ENV = String(process.env.CASHFREE_ENV || "sandbox").toLowerCase() === "production" ? "production" : "sandbox";
+const CASHFREE_API_VERSION = process.env.CASHFREE_API_VERSION || "2025-01-01";
+const CASHFREE_API_BASE = CASHFREE_ENV === "production" ? "https://api.cashfree.com/pg" : "https://sandbox.cashfree.com/pg";
 
 // Warn during startup when the Meta webhook verification token is not configured.
 if (!VERIFY_TOKEN) {
@@ -31,7 +35,12 @@ if (!VERIFY_TOKEN) {
 }
 
 app.use(cors());
-app.use(express.json({ limit: "1mb" }));
+app.use(express.json({
+  limit: "1mb",
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString("utf8");
+  }
+}));
 
 // Safely handle malformed JSON bodies without crashing existing API routes.
 app.use((error, req, res, next) => {
@@ -298,6 +307,7 @@ let memory = {
   supportTickets: [...defaultMarketingSupportTickets],
   enquiries: [],
   websitePlans: [...defaultWebsitePlans],
+  subscriptionOrders: [],
   globalCatalogItems: defaultCatalogItems.map(item => ({ catalogId: item.id, name: item.name, image: item.image || "", sourceCount: 1 }))
 };
 
@@ -542,6 +552,27 @@ const marketingPaymentSchema = new mongoose.Schema({
   collectedByName: String
 }, { timestamps: true, collection: "marketing_payments" });
 
+const subscriptionOrderSchema = new mongoose.Schema({
+  orderId: { type: String, unique: true, index: true },
+  canteenId: { type: String, index: true },
+  marketingCanteenId: Number,
+  canteenName: String,
+  planName: String,
+  months: Number,
+  amount: Number,
+  currency: { type: String, default: "INR" },
+  status: { type: String, index: true, default: "created" },
+  paymentSessionId: String,
+  cfOrderId: String,
+  cfPaymentId: String,
+  paymentStatus: String,
+  paymentMode: String,
+  oldExpiryDate: String,
+  newExpiryDate: String,
+  rawPayment: mongoose.Schema.Types.Mixed,
+  createdByMobile: String
+}, { timestamps: true, collection: "subscription_orders" });
+
 const marketingSupportTicketSchema = new mongoose.Schema({
   id: Number,
   title: String,
@@ -624,6 +655,7 @@ const MarketingUser = mongoose.models.MarketingUser || mongoose.model("Marketing
 const MarketingCanteen = mongoose.models.MarketingCanteen || mongoose.model("MarketingCanteen", marketingCanteenSchema);
 const MarketingActivity = mongoose.models.MarketingActivity || mongoose.model("MarketingActivity", marketingActivitySchema);
 const MarketingPayment = mongoose.models.MarketingPayment || mongoose.model("MarketingPayment", marketingPaymentSchema);
+const SubscriptionOrder = mongoose.models.SubscriptionOrder || mongoose.model("SubscriptionOrder", subscriptionOrderSchema);
 const MarketingSupportTicket = mongoose.models.MarketingSupportTicket || mongoose.model("MarketingSupportTicket", marketingSupportTicketSchema);
 const Enquiry = mongoose.models.Enquiry || mongoose.model("Enquiry", enquirySchema);
 const WebsitePlan = mongoose.models.WebsitePlan || mongoose.model("WebsitePlan", websitePlanSchema);
@@ -761,6 +793,12 @@ function addDaysDate(days, startDate = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
+function addMonthsDate(months, startDate = new Date()) {
+  const date = new Date(startDate);
+  date.setMonth(date.getMonth() + Math.max(0, Number(months || 0)));
+  return date.toISOString().slice(0, 10);
+}
+
 function planExpiryFromPayload(payload, current = {}) {
   if (payload.planExpiryDate) return String(payload.planExpiryDate);
   const trialDays = Number(payload.trialDays || payload.trailDays || 0);
@@ -892,6 +930,16 @@ async function requireCanteenAuth(req, res, next) {
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
   }
+}
+
+function requireCanteenTokenOnly(req, res, next) {
+  const decoded = decodeCanteenAuthToken(req);
+  if (decoded.error) return res.status(401).json({ success: false, message: decoded.error });
+  if (!decoded.user || !CANTEEN_ROLES.includes(decoded.user.role)) {
+    return res.status(403).json({ success: false, message: "Canteen user access required" });
+  }
+  req.authUser = decoded.user;
+  return next();
 }
 
 function requireDatabase(req, res, next) {
@@ -1922,6 +1970,32 @@ async function allMarketingPayments() {
   return MarketingPayment.find({}).sort({ createdAt: -1 }).limit(500).lean();
 }
 
+async function allSubscriptionOrders() {
+  if (!mongoReady) return memory.subscriptionOrders;
+  return SubscriptionOrder.find({}).sort({ createdAt: -1 }).limit(500).lean();
+}
+
+async function saveSubscriptionOrder(entry) {
+  const payload = { ...entry, updatedAt: new Date().toISOString() };
+  if (!mongoReady) {
+    const index = memory.subscriptionOrders.findIndex(item => item.orderId === payload.orderId);
+    if (index >= 0) memory.subscriptionOrders[index] = { ...memory.subscriptionOrders[index], ...payload };
+    else memory.subscriptionOrders.unshift({ ...payload, createdAt: new Date().toISOString() });
+    return memory.subscriptionOrders.find(item => item.orderId === payload.orderId);
+  }
+  return SubscriptionOrder.findOneAndUpdate(
+    { orderId: payload.orderId },
+    { $set: payload, $setOnInsert: { createdAt: new Date().toISOString() } },
+    { new: true, upsert: true }
+  ).lean();
+}
+
+async function findSubscriptionOrder(orderId) {
+  if (!orderId) return null;
+  if (!mongoReady) return memory.subscriptionOrders.find(item => item.orderId === orderId) || null;
+  return SubscriptionOrder.findOne({ orderId }).lean();
+}
+
 async function addMarketingPayment(payment) {
   const entry = {
     id: Date.now(),
@@ -1961,6 +2035,206 @@ async function allWebsitePlans({ activeOnly = false } = {}) {
       .sort((a, b) => Number(a.sortOrder || a.id || 0) - Number(b.sortOrder || b.id || 0));
   }
   return WebsitePlan.find(filter).sort({ sortOrder: 1, id: 1 }).lean();
+}
+
+function numericPrice(value) {
+  const text = String(value || "").replace(/[^0-9.]/g, "");
+  return Number(text || 0);
+}
+
+async function subscriptionStatusForCanteen(canteenId) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  const marketing = (await allMarketingCanteens()).find(item => normalizeCanteenId(item.activatedCanteenId) === targetCanteenId) || null;
+  const core = await getCoreCanteen(targetCanteenId);
+  const plans = await allWebsitePlans({ activeOnly: true });
+  const selectedPlanName = marketing?.selectedPlan || core?.plan || "Professional";
+  const selectedPlan = plans.find(plan => String(plan.name || "").toLowerCase() === String(selectedPlanName || "").toLowerCase())
+    || plans.find(plan => String(plan.name || "").toLowerCase() === "professional")
+    || plans[0]
+    || { name: "Professional", offerPrice: "999" };
+  const monthlyPrice = numericPrice(selectedPlan.offerPrice) || 999;
+  const durations = [1, 3, 6, 9, 12].map(months => ({
+    months,
+    label: `${months} Month${months > 1 ? "s" : ""}`,
+    amount: monthlyPrice * months
+  }));
+  const expiryDate = marketing?.planExpiryDate || "";
+  return {
+    canteenId: targetCanteenId,
+    canteenName: marketing?.canteenName || core?.name || "",
+    marketingCanteenId: marketing?.id || 0,
+    planName: selectedPlan.name || selectedPlanName || "Professional",
+    monthlyPrice,
+    expiryDate,
+    status: marketing?.status || (core?.active === false ? "Blocked" : "Active"),
+    expired: isPastDate(expiryDate),
+    durations
+  };
+}
+
+function cashfreeConfigured() {
+  return Boolean(process.env.CASHFREE_CLIENT_ID && process.env.CASHFREE_CLIENT_SECRET);
+}
+
+function verifyCashfreeWebhookSignature(req) {
+  const signature = String(req.headers["x-webhook-signature"] || "");
+  const timestamp = String(req.headers["x-webhook-timestamp"] || "");
+  const secret = process.env.CASHFREE_CLIENT_SECRET;
+  if (!secret) throw new Error("Cashfree webhook secret missing");
+  if (!signature || !timestamp || !req.rawBody) throw new Error("Cashfree webhook signature headers missing");
+  const expected = crypto.createHmac("sha256", secret).update(timestamp + req.rawBody).digest("base64");
+  const receivedBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (receivedBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(receivedBuffer, expectedBuffer)) {
+    throw new Error("Cashfree webhook signature mismatch");
+  }
+}
+
+function cashfreeWebhookOrderId(payload) {
+  const data = payload?.data || payload || {};
+  return String(
+    data?.order?.order_id ||
+    data?.order_id ||
+    data?.payment?.order_id ||
+    payload?.order_id ||
+    ""
+  ).trim();
+}
+
+function cashfreeWebhookPaymentStatus(payload) {
+  const data = payload?.data || payload || {};
+  return String(
+    data?.payment?.payment_status ||
+    data?.payment?.status ||
+    data?.order?.order_status ||
+    data?.order_status ||
+    payload?.payment_status ||
+    payload?.type ||
+    ""
+  ).toUpperCase();
+}
+
+async function cashfreeRequest(pathname, options = {}) {
+  if (!cashfreeConfigured()) throw new Error("Cashfree keys missing on server");
+  if (typeof fetch !== "function") throw new Error("Server fetch API unavailable");
+  const response = await fetch(`${CASHFREE_API_BASE}${pathname}`, {
+    method: options.method || "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "X-Client-Id": process.env.CASHFREE_CLIENT_ID,
+      "X-Client-Secret": process.env.CASHFREE_CLIENT_SECRET,
+      "x-api-version": CASHFREE_API_VERSION,
+      ...(options.headers || {})
+    },
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  const text = await response.text();
+  let body = {};
+  try { body = text ? JSON.parse(text) : {}; } catch { body = { message: text }; }
+  if (!response.ok) {
+    throw new Error(body.message || body.error_description || body.error || `Cashfree request failed ${response.status}`);
+  }
+  return body;
+}
+
+async function createSubscriptionCashfreeOrder(canteenId, months, user, req) {
+  const status = await subscriptionStatusForCanteen(canteenId);
+  const selected = status.durations.find(item => Number(item.months) === Number(months));
+  if (!selected) throw new Error("Select 1, 3, 6, 9, or 12 months");
+  const amount = Number(selected.amount || 0);
+  if (amount <= 0) throw new Error("Recharge amount is invalid");
+  const orderId = `AXZEN_${status.canteenId}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`.replace(/[^A-Z0-9_]/g, "_");
+  const returnBase = process.env.CASHFREE_RETURN_URL || process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}/mobile`;
+  const order = await cashfreeRequest("/orders", {
+    method: "POST",
+    body: {
+      order_id: orderId,
+      order_amount: amount,
+      order_currency: "INR",
+      customer_details: {
+        customer_id: status.canteenId,
+        customer_name: status.canteenName || user?.name || "Axzen Customer",
+        customer_email: process.env.CASHFREE_DEFAULT_EMAIL || "support@axzeninfotech.com",
+        customer_phone: String(user?.mobile || "").replace(/\D/g, "").slice(-10) || "9999999999"
+      },
+      order_meta: {
+        return_url: `${returnBase}${String(returnBase).includes("?") ? "&" : "?"}cf_order_id={order_id}`
+      },
+      order_note: `${status.planName} ${selected.label} recharge`
+    }
+  });
+  await saveSubscriptionOrder({
+    orderId,
+    canteenId: status.canteenId,
+    marketingCanteenId: status.marketingCanteenId,
+    canteenName: status.canteenName,
+    planName: status.planName,
+    months: selected.months,
+    amount,
+    status: "created",
+    paymentSessionId: order.payment_session_id || "",
+    cfOrderId: order.cf_order_id || "",
+    oldExpiryDate: status.expiryDate,
+    createdByMobile: user?.mobile || ""
+  });
+  return { ...status, orderId, amount, months: selected.months, paymentSessionId: order.payment_session_id || "", environment: CASHFREE_ENV };
+}
+
+async function verifySubscriptionCashfreeOrder(orderId, actor = {}) {
+  const order = await findSubscriptionOrder(orderId);
+  if (!order) throw new Error("Recharge order not found");
+  if (order.status === "paid" && order.newExpiryDate) return order;
+  const payments = await cashfreeRequest(`/orders/${encodeURIComponent(orderId)}/payments`);
+  const rows = Array.isArray(payments) ? payments : (payments.payments || payments.data || []);
+  const successPayment = rows.find(item => String(item.payment_status || item.status || "").toUpperCase() === "SUCCESS");
+  if (!successPayment) {
+    await saveSubscriptionOrder({ ...order, status: "pending", rawPayment: rows });
+    throw new Error("Payment not completed yet");
+  }
+  const oldExpiry = order.oldExpiryDate || (await subscriptionStatusForCanteen(order.canteenId)).expiryDate;
+  const startFrom = oldExpiry && !isPastDate(oldExpiry) ? `${oldExpiry}T00:00:00+05:30` : new Date();
+  const newExpiryDate = addMonthsDate(order.months, startFrom);
+  await saveSubscriptionOrder({
+    ...order,
+    status: "paid",
+    paymentStatus: "SUCCESS",
+    cfPaymentId: successPayment.cf_payment_id || successPayment.payment_id || "",
+    paymentMode: successPayment.payment_group || successPayment.payment_method || "Cashfree",
+    newExpiryDate,
+    rawPayment: successPayment
+  });
+  const marketing = (await allMarketingCanteens()).find(item => normalizeCanteenId(item.activatedCanteenId) === normalizeCanteenId(order.canteenId));
+  if (marketing) {
+    const paidAmount = Number(marketing.paidAmount || 0) + Number(order.amount || 0);
+    await updateMarketingCanteen(marketing.id, {
+      status: "Active",
+      planType: "Paid",
+      selectedPlan: order.planName || marketing.selectedPlan || "Professional",
+      planStartDate: new Date().toISOString().slice(0, 10),
+      planExpiryDate: newExpiryDate,
+      paidAmount,
+      pendingAmount: 0,
+      paymentMode: "Cashfree",
+      blocked: false,
+      online: true
+    }, actor);
+    await addMarketingPayment({
+      canteenId: marketing.id,
+      canteenName: marketing.canteenName,
+      amount: order.amount,
+      pendingAmount: 0,
+      paymentMode: "Cashfree",
+      collectedBy: "SELF_RECHARGE",
+      collectedByName: "App Recharge"
+    });
+    await addMarketingActivity({ type: "payment", text: `${marketing.canteenName} recharged ${order.months} months`, actor: "Cashfree", canteenId: marketing.id });
+  }
+  await Canteen.updateOne(
+    { canteenId: normalizeCanteenId(order.canteenId) },
+    { $set: { active: true, paymentStatus: "paid", paymentReference: orderId, plan: order.planName || "Professional" } }
+  ).catch(() => {});
+  return findSubscriptionOrder(orderId);
 }
 
 function normalizeWebsitePlan(payload, existing = {}) {
@@ -2704,6 +2978,77 @@ app.post("/login", requireDatabase, async (req, res) => {
   res.json({ success: true, user: { ...publicUser(user), canteen }, token: signToken(user), settings: await getSettings(user.canteenId) });
 });
 
+app.post("/activate-owner", requireDatabase, requireAdmin, async (req, res) => {
+  try {
+    const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
+    const canteen = await getCoreCanteen(canteenId);
+    const mobile = normalizeMobile(req.body.mobile);
+    const password = String(req.body.password || "");
+    const name = String(req.body.name || canteen?.ownerName || "Owner").trim() || "Owner";
+    const registeredPhone = normalizeMobile(canteen?.phone || "");
+    if (!mobile || !password || password.length < 4) {
+      return res.status(400).json({ success: false, message: "Mobile and new password are required" });
+    }
+    if (registeredPhone && mobile !== registeredPhone) {
+      return res.status(400).json({ success: false, message: "Registered mobile number does not match" });
+    }
+    const owner = await saveUser({
+      canteenId,
+      name,
+      mobile,
+      password,
+      role: "admin",
+      active: true,
+      mustChangePassword: false
+    });
+    const tempMobile = normalizeMobile(req.authUser.mobile);
+    if (tempMobile && tempMobile !== mobile) {
+      if (!mongoReady) {
+        const temp = memory.users.find(user =>
+          normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === canteenId &&
+          normalizeMobile(user.mobile) === tempMobile
+        );
+        if (temp) temp.active = false;
+      } else {
+        await User.updateOne({ canteenId, mobile: tempMobile }, { $set: { active: false } });
+      }
+    }
+    const savedUser = publicUser(owner);
+    res.json({ success: true, user: { ...savedUser, canteen }, token: signToken(owner), settings: await getSettings(canteenId) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || "Owner activation failed" });
+  }
+});
+
+app.post("/forgot-password", requireDatabase, async (req, res) => {
+  try {
+    const mobile = normalizeMobile(req.body.mobile);
+    const password = String(req.body.password || req.body.newPassword || "");
+    const canteenHint = normalizeCanteenId(req.body.canteenId || req.body.restaurantId || "");
+    if (!mobile || password.length < 4) {
+      return res.status(400).json({ success: false, message: "Mobile and new password are required" });
+    }
+    const users = (await allUsers()).filter(user => {
+      const sameMobile = normalizeMobile(user.mobile) === mobile;
+      const sameCanteen = !canteenHint || normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === canteenHint;
+      return user.active !== false && sameMobile && sameCanteen;
+    });
+    const uniqueCanteens = new Set(users.map(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID)));
+    if (!users.length) {
+      return res.status(404).json({ success: false, message: "Mobile number not found" });
+    }
+    if (!canteenHint && uniqueCanteens.size > 1) {
+      return res.status(409).json({ success: false, message: "Restaurant ID required for this mobile number" });
+    }
+    const target = users.find(user => user.role === "admin") || users[0];
+    const updated = await saveUser({ ...target, password, mustChangePassword: false, active: true });
+    const canteen = await getCoreCanteen(updated.canteenId);
+    res.json({ success: true, message: "Password updated", user: publicUser(updated), canteenId: updated.canteenId, canteen });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || "Password reset failed" });
+  }
+});
+
 app.get("/users", requireCanteenAuth, async (req, res) => {
   const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
   res.json((await allUsers()).filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === canteenId).map(publicUser));
@@ -2780,6 +3125,59 @@ app.delete("/orders/:id", requireDatabase, requireAdmin, async (req, res) => {
 });
 
 app.get("/dashboard", requireCanteenAuth, async (req, res) => res.json(await dashboardData(req.authUser.canteenId)));
+
+app.get("/subscription/status", requireDatabase, requireCanteenTokenOnly, async (req, res) => {
+  try {
+    res.json({ success: true, ...(await subscriptionStatusForCanteen(req.authUser.canteenId)) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message || "Subscription status failed" });
+  }
+});
+
+app.post("/subscription/recharge/create-order", requireDatabase, requireCanteenTokenOnly, async (req, res) => {
+  try {
+    const result = await createSubscriptionCashfreeOrder(req.authUser.canteenId, req.body.months, req.authUser, req);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || "Recharge order failed" });
+  }
+});
+
+app.post("/subscription/recharge/verify", requireDatabase, requireCanteenTokenOnly, async (req, res) => {
+  try {
+    const order = await verifySubscriptionCashfreeOrder(String(req.body.orderId || ""), req.authUser);
+    res.json({ success: true, order, subscription: await subscriptionStatusForCanteen(req.authUser.canteenId) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || "Payment verification failed" });
+  }
+});
+
+async function handleCashfreeSubscriptionWebhook(req, res) {
+  try {
+    const orderId = cashfreeWebhookOrderId(req.body);
+    const signature = String(req.headers["x-webhook-signature"] || "");
+    const timestamp = String(req.headers["x-webhook-timestamp"] || "");
+    if (!orderId && (!signature || !timestamp)) {
+      return res.json({ success: true, message: "Cashfree webhook endpoint ready" });
+    }
+    verifyCashfreeWebhookSignature(req);
+    if (!orderId) return res.json({ success: true, ignored: true, message: "Cashfree test event received" });
+    const paymentStatus = cashfreeWebhookPaymentStatus(req.body);
+    if (!paymentStatus.includes("SUCCESS") && !paymentStatus.includes("PAID")) {
+      const order = await findSubscriptionOrder(orderId);
+      if (order) await saveSubscriptionOrder({ ...order, status: "pending", rawPayment: req.body });
+      return res.json({ success: true, ignored: true, orderId, paymentStatus });
+    }
+    const order = await verifySubscriptionCashfreeOrder(orderId, { name: "Cashfree Webhook", mobile: "WEBHOOK" });
+    return res.json({ success: true, orderId, status: order?.status || "paid" });
+  } catch (error) {
+    console.warn("Cashfree webhook failed:", error.message);
+    return res.status(400).json({ success: false, message: error.message });
+  }
+}
+
+app.post("/cashfree/webhook", requireDatabase, handleCashfreeSubscriptionWebhook);
+app.post("/subscription/recharge/webhook", requireDatabase, handleCashfreeSubscriptionWebhook);
 
 app.get("/api/website-plans", requireDatabase, async (req, res) => {
   res.json({ success: true, plans: await allWebsitePlans({ activeOnly: true }) });
