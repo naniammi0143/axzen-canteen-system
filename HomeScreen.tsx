@@ -28,6 +28,7 @@ const GREEN = "#16C784";
 const HALF_ITEMS_CATEGORY = "Half Items";
 const WEIGHT_BILLING_CATEGORY = "Chicken Center";
 const WEIGHT_CATEGORY_KEYWORDS = ["chicken", "meat", "meet", "mutton", "fish", "seafood"];
+const PIECE_ENTRY_KEYWORDS = ["egg", "eggs"];
 
 const defaultItemCategories = [
   "Breakfast",
@@ -41,10 +42,12 @@ const defaultItemCategories = [
   "Juices",
   "Desserts",
   WEIGHT_BILLING_CATEGORY,
+  "Eggs",
   HALF_ITEMS_CATEGORY
 ];
 const registeredCanteen = {
-  name: "Main Canteen",
+  name: "Registered Business Name",
+  adminName: "Venkatesh",
   logoUri: ""
 };
 
@@ -59,6 +62,7 @@ type CartLine = Product & {
   lineTotal?: number;
   ratePerKg?: number;
   billingNote?: string;
+  unitLabel?: "pcs";
 };
 type DrawerOption =
   | "Dashboard"
@@ -162,6 +166,12 @@ type SuperAdminSettings = {
   openAdminDashboardFirst: boolean;
 };
 
+type OutletProfile = {
+  name: string;
+  adminName: string;
+  logoUri: string;
+};
+
 const defaultExpenses: Expense[] = [
   { id: "e1", date: formatDateInput(new Date()), category: "Raw Material", amount: 1850, note: "Vegetables and rice" },
   { id: "e2", date: formatDateInput(new Date()), category: "Staff", amount: 420, note: "Staff meals" },
@@ -241,6 +251,14 @@ const products: Product[] = [
     image: "https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=500&q=80"
   },
   {
+    id: "9",
+    name: "Eggs",
+    price: 6,
+    category: "Eggs",
+    subItems: ["White Eggs", "Brown Eggs", "Tray"],
+    image: "https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?auto=format&fit=crop&w=500&q=80"
+  },
+  {
     id: "6",
     name: "Coffee",
     price: 20,
@@ -276,8 +294,10 @@ function HomeScreenContent() {
   const [activeOption, setActiveOption] = useState<DrawerOption>("New Billing");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [weightProduct, setWeightProduct] = useState<Product | null>(null);
+  const [pieceProduct, setPieceProduct] = useState<Product | null>(null);
   const [catalog, setCatalog] = useState<Product[]>(products);
   const [appCategories, setAppCategories] = useState<string[]>(defaultItemCategories);
+  const [outletProfile, setOutletProfile] = useState<OutletProfile>(registeredCanteen);
   const [superAdminSettings, setSuperAdminSettings] = useState<SuperAdminSettings>({
     showProfitToCanteen: false,
     openAdminDashboardFirst: false
@@ -327,6 +347,10 @@ function HomeScreenContent() {
       setWeightProduct(product);
       return;
     }
+    if (isPieceEntryProduct(product)) {
+      setPieceProduct(product);
+      return;
+    }
     setCartItems(current => {
       const existing = current.find(item => item.id === product.id);
       if (existing) {
@@ -338,21 +362,41 @@ function HomeScreenContent() {
 
   const addWeightProduct = useCallback((product: Product, amount: number, grams: number, optionName?: string) => {
     const lineName = optionName ? `${product.name} - ${optionName}` : product.name;
+    const lineId = `${product.id}-${Date.now()}`;
     setCartItems(current => ([
       ...current,
       {
         ...product,
-        id: `${product.id}-${Date.now()}`,
-        lineId: `${product.id}-${Date.now()}`,
+        id: lineId,
+        lineId,
         name: lineName,
         qty: 1,
         grams,
         lineTotal: amount,
         ratePerKg: product.price,
-        billingNote: `${Math.round(grams)}g @ Rs ${formatMoney(product.price)}/kg`
+        billingNote: `${formatWeightLabel(grams)} @ Rs ${formatMoney(product.price)}/kg`
       }
     ]));
     setWeightProduct(null);
+  }, []);
+
+  const addPieceProduct = useCallback((product: Product, quantity: number, optionName?: string) => {
+    const lineName = optionName ? `${product.name} - ${optionName}` : product.name;
+    const lineId = `${product.id}-${Date.now()}`;
+    setCartItems(current => ([
+      ...current,
+      {
+        ...product,
+        id: lineId,
+        lineId,
+        name: lineName,
+        qty: quantity,
+        lineTotal: product.price * quantity,
+        unitLabel: "pcs",
+        billingNote: `${quantity} pcs @ Rs ${formatMoney(product.price)}`
+      }
+    ]));
+    setPieceProduct(null);
   }, []);
 
   const clearCart = useCallback(() => {
@@ -366,6 +410,9 @@ function HomeScreenContent() {
     const createdAt = new Date();
     const orderTotal = cartItems.reduce((sum, item) => sum + cartLineAmount(item), 0);
     const receiptPaperMm = paperWidthMm(printerPaperSettings.receiptPaperWidth);
+    const hasWeightItems = cartItems.some(item => isWeightBilledProduct(item));
+    const outletName = outletProfile.name.trim() || registeredCanteen.name;
+    const adminName = outletProfile.adminName.trim() || registeredCanteen.adminName;
     const receiptRows = cartItems
       .map(item => `
         <tr>
@@ -376,35 +423,75 @@ function HomeScreenContent() {
         </tr>
       `)
       .join("");
+    const meatReceiptRows = cartItems
+      .map(item => isWeightBilledProduct(item) ? `
+        <div class="meat-line">
+          <div class="meat-item">
+            <div class="meat-name">${item.name}</div>
+            <div class="meat-rate">Rs ${formatMoney(item.ratePerKg || item.price)}/kg | Rs ${formatMoney(cartLineAmount(item))}</div>
+          </div>
+          <div class="meat-weight">${formatMeatPrintWeightLabel(item.grams || 0)}</div>
+        </div>
+      ` : `
+        <div class="meat-line">
+          <div class="meat-item">
+            <div class="meat-name">${item.name}</div>
+            <div class="meat-rate">Rs ${formatMoney(item.price)}</div>
+          </div>
+          <div class="meat-weight small">${cartLineQtyLabel(item)}</div>
+        </div>
+      `)
+      .join("");
     const receiptHtml = `
       <html>
         <head>
           <style>
             @page { size: ${receiptPaperMm}mm auto; margin: 0; }
-            body { width: ${receiptPaperMm}mm; box-sizing: border-box; font-family: Arial, sans-serif; color: #111827; padding: 10px; }
-            h1 { color: #082653; font-size: 22px; margin: 0 0 4px; }
-            .sub { color: #667085; font-size: 12px; margin-bottom: 14px; }
+            body { width: ${receiptPaperMm}mm; box-sizing: border-box; font-family: Arial, sans-serif; color: #111827; padding: ${hasWeightItems ? "6px" : "10px"}; }
+            h1 { color: #082653; font-size: ${hasWeightItems ? "16px" : "22px"}; line-height: 1.08; margin: 0 0 2px; }
+            .admin-name { color: #111827; font-size: 11px; font-weight: 700; margin-bottom: 4px; }
+            .sub { color: #667085; font-size: ${hasWeightItems ? "10px" : "12px"}; margin-bottom: ${hasWeightItems ? "8px" : "14px"}; }
             table { width: 100%; border-collapse: collapse; }
             th, td { border-bottom: 1px solid #e5eaf0; padding: 8px 4px; text-align: left; font-size: 12px; }
             th { color: #082653; }
             .total { margin-top: 14px; padding-top: 10px; border-top: 2px solid #082653; font-size: 18px; font-weight: 700; }
+            .meat-list { border-top: 1px solid #111827; border-bottom: 1px solid #111827; }
+            .meat-line { display: table; width: 100%; table-layout: fixed; padding: 7px 0; border-bottom: 1px dashed #cbd5e1; }
+            .meat-line:last-child { border-bottom: 0; }
+            .meat-item { display: table-cell; width: 50%; vertical-align: middle; min-width: 0; }
+            .meat-name { font-size: 11px; line-height: 1.15; font-weight: 700; color: #111827; overflow: hidden; }
+            .meat-rate { margin-top: 2px; font-size: 9px; line-height: 1.15; color: #667085; }
+            .meat-weight { display: table-cell; width: 50%; vertical-align: middle; color: #000; font-size: 22px; line-height: 1; font-weight: 900; text-align: right; white-space: nowrap; }
+            .meat-weight.small { font-size: 16px; }
+            .meat-total-row { display: table; width: 100%; margin-top: 10px; padding-top: 8px; border-top: 2px solid #111827; }
+            .meat-total-label { display: table-cell; color: #667085; font-size: 11px; font-weight: 700; text-transform: uppercase; vertical-align: bottom; }
+            .meat-total { display: table-cell; color: #000; font-size: 20px; font-weight: 900; text-align: right; white-space: nowrap; }
           </style>
         </head>
         <body>
-          <h1>${registeredCanteen.name}</h1>
+          <h1>${outletName}</h1>
+          <div class="admin-name">${adminName}</div>
           <div class="sub">Receipt ${orderId}<br/>${createdAt.toLocaleString()}<br/>Payment: ${paymentMode}</div>
-          <table>
-            <tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
-            ${receiptRows}
-          </table>
-          <div class="total">Total: Rs ${formatMoney(orderTotal)}</div>
+          ${hasWeightItems ? `
+            <div class="meat-list">${meatReceiptRows}</div>
+            <div class="meat-total-row">
+              <div class="meat-total-label">Total</div>
+              <div class="meat-total">Rs ${formatMoney(orderTotal)}</div>
+            </div>
+          ` : `
+            <table>
+              <tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr>
+              ${receiptRows}
+            </table>
+            <div class="total">Total: Rs ${formatMoney(orderTotal)}</div>
+          `}
         </body>
       </html>
     `;
 
     const file = await generatePDF({
       html: receiptHtml,
-      fileName: `${registeredCanteen.name.replace(/\s+/g, "-").toLowerCase()}-${orderId.replace("#", "")}-receipt`,
+      fileName: `${outletName.replace(/\s+/g, "-").toLowerCase()}-${orderId.replace("#", "")}-receipt`,
       directory: "Documents"
     });
 
@@ -414,17 +501,19 @@ function HomeScreenContent() {
 
     const url = file.filePath.startsWith("file://") ? file.filePath : `file://${file.filePath}`;
     await RNShare.open({
-      title: `${registeredCanteen.name} Receipt ${orderId}`,
+      title: `${outletName} Receipt ${orderId}`,
       message: `Receipt ${orderId}\nPayment: ${paymentMode}\nTotal: Rs ${formatMoney(orderTotal)}`,
       url,
       type: "application/pdf",
-      failOnCancel: false
+      failOnCancel: false,
+      showAppsToView: true,
+      useInternalStorage: true
     });
 
     setOrderDrafts(current => [[orderId, `${cartCount} items`, `Rs ${formatMoney(orderTotal)}`, paymentMode], ...current]);
     setCartItems([]);
     return "Receipt ready";
-  }, [cartCount, cartItems, printerPaperSettings.receiptPaperWidth]);
+  }, [cartCount, cartItems, outletProfile.adminName, outletProfile.name, printerPaperSettings.receiptPaperWidth]);
 
   const openSubItems = useCallback((product: Product) => {
     setSelectedProduct(product);
@@ -473,7 +562,7 @@ function HomeScreenContent() {
     <View style={styles.safe}>
       <StatusBar style="dark" translucent={true} backgroundColor="transparent" />
       <View style={styles.page}>
-        <PremiumHeader onMenuPress={openDrawer} topInset={insets.top} />
+        <PremiumHeader outletProfile={outletProfile} onMenuPress={openDrawer} topInset={insets.top} />
 
         {showBillingGrid ? (
           <FlatList
@@ -525,6 +614,8 @@ function HomeScreenContent() {
             onSuperAdminSettingsChange={setSuperAdminSettings}
             printerPaperSettings={printerPaperSettings}
             onPrinterPaperSettingsChange={setPrinterPaperSettings}
+            outletProfile={outletProfile}
+            onOutletProfileChange={setOutletProfile}
             bottomInset={insets.bottom}
           />
         )}
@@ -548,12 +639,14 @@ function HomeScreenContent() {
         <BottomNav activeOption={activeOption} onSelect={selectBottomNav} bottomInset={insets.bottom} />
         {selectedProduct && <SubItemsSheet product={selectedProduct} onClose={closeSubItems} />}
         {weightProduct && <WeightBillingSheet product={weightProduct} onClose={() => setWeightProduct(null)} onAdd={addWeightProduct} />}
+        {pieceProduct && <PieceBillingSheet product={pieceProduct} onClose={() => setPieceProduct(null)} onAdd={addPieceProduct} />}
         {drawerOpen && (
           <Drawer
             width={Math.min(width * 0.82, 340)}
             progress={drawerProgress}
             onClose={closeDrawer}
             activeOption={activeOption}
+            outletProfile={outletProfile}
             onSelect={selectOption}
           />
         )}
@@ -566,16 +659,16 @@ function Header({ onMenuPress }: { onMenuPress: () => void }) {
   return (
     <View style={styles.header}>
       <TouchableOpacity style={styles.menuButton} activeOpacity={0.8} onPress={onMenuPress}>
-        <Text style={styles.menuIcon}>☰</Text>
+        <View style={styles.menuBars}>
+          <View style={styles.menuBar} />
+          <View style={styles.menuBar} />
+          <View style={styles.menuBar} />
+        </View>
       </TouchableOpacity>
-
-      <View style={styles.logo}>
-        <Text style={styles.logoIcon}>♨</Text>
-      </View>
 
       <View style={styles.headerTitle}>
         <View style={styles.headerNameRow}>
-          <Text style={styles.title}>Main Canteen</Text>
+          <Text style={styles.title}>Axzen POS</Text>
           <View style={styles.statusRow}>
             <Text style={styles.connected}>Connected</Text>
           </View>
@@ -588,18 +681,15 @@ function Header({ onMenuPress }: { onMenuPress: () => void }) {
 
 function PremiumHeader({
   onMenuPress,
-  canteenName = registeredCanteen.name,
-  logoUri = registeredCanteen.logoUri,
+  outletProfile,
   topInset = 0
 }: {
   onMenuPress: () => void;
-  canteenName?: string;
-  logoUri?: string;
+  outletProfile: OutletProfile;
   topInset?: number;
 }) {
   return (
     <View style={[styles.header, { marginTop: Math.max(10, topInset + 8) }]}>
-      <Text style={styles.decorCutlery}>🍴</Text>
       <TouchableOpacity style={styles.menuButton} activeOpacity={0.8} onPress={onMenuPress}>
         <View style={styles.menuBars}>
           <View style={styles.menuBar} />
@@ -608,21 +698,13 @@ function PremiumHeader({
         </View>
       </TouchableOpacity>
 
-      <View style={styles.logo}>
-        {logoUri ? (
-          <Image source={{ uri: logoUri }} style={styles.logoImage} />
-        ) : (
-          <Text style={styles.logoIcon}>🍴</Text>
-        )}
-      </View>
-
       <View style={styles.headerTitle}>
         <Text style={styles.title} numberOfLines={1}>
-          {canteenName.toUpperCase()}
+          {outletProfile.name.toUpperCase()}
         </Text>
         <View style={styles.statusRow}>
           <View style={styles.statusDot} />
-          <Text style={styles.connected}>Online</Text>
+          <Text style={styles.connected}>{outletProfile.adminName}</Text>
         </View>
       </View>
     </View>
@@ -634,12 +716,14 @@ function Drawer({
   progress,
   onClose,
   activeOption,
+  outletProfile,
   onSelect
 }: {
   width: number;
   progress: Animated.Value;
   onClose: () => void;
   activeOption: DrawerOption;
+  outletProfile: OutletProfile;
   onSelect: (option: DrawerOption) => void;
 }) {
   const translateX = progress.interpolate({
@@ -660,11 +744,8 @@ function Drawer({
       <Animated.View style={[styles.drawer, { width, transform: [{ translateX }] }]}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.drawerScroll}>
           <View style={styles.drawerTop}>
-            <View style={styles.drawerLogo}>
-              <Text style={styles.drawerLogoIcon}>♨</Text>
-            </View>
             <View style={styles.drawerTitleBlock}>
-              <Text style={styles.drawerTitle}>Main Canteen</Text>
+              <Text style={styles.drawerTitle}>{outletProfile.name}</Text>
               <View style={styles.drawerMetaRow}>
                 <View style={styles.drawerStatus}>
           <Text style={styles.connected}>Online</Text>
@@ -679,7 +760,7 @@ function Drawer({
             </View>
             <View style={styles.profileTextBlock}>
               <View style={styles.profileNameRow}>
-                <Text style={styles.profileName}>Cashier Name</Text>
+                <Text style={styles.profileName}>{outletProfile.adminName}</Text>
                 <View style={styles.onlineBadge}>
                   <Text style={styles.onlineBadgeText}>Online</Text>
                 </View>
@@ -761,6 +842,8 @@ function OptionContent({
   onSuperAdminSettingsChange,
   printerPaperSettings,
   onPrinterPaperSettingsChange,
+  outletProfile,
+  onOutletProfileChange,
   bottomInset
 }: {
   option: DrawerOption;
@@ -781,6 +864,8 @@ function OptionContent({
   onSuperAdminSettingsChange: (next: SuperAdminSettings) => void;
   printerPaperSettings: PrinterPaperSettings;
   onPrinterPaperSettingsChange: (next: PrinterPaperSettings) => void;
+  outletProfile: OutletProfile;
+  onOutletProfileChange: (next: OutletProfile) => void;
   bottomInset: number;
 }) {
   return (
@@ -811,8 +896,8 @@ function OptionContent({
       {option === "Categories" && <CategoryManagerScreen categories={categories} onCategoriesChange={onCategoriesChange} />}
       {option === "Stock Availability" && <StockAvailabilityScreen products={products} />}
       {option === "Printer Settings" && <PrinterSettingsScreen settings={printerPaperSettings} onSettingsChange={onPrinterPaperSettingsChange} />}
-      {option === "User" && <UserScreen />}
-      {option === "Settings" && <SettingsScreen settings={superAdminSettings} onSettingsChange={onSuperAdminSettingsChange} />}
+      {option === "User" && <UserScreen outletProfile={outletProfile} />}
+      {option === "Settings" && <SettingsScreen settings={superAdminSettings} onSettingsChange={onSuperAdminSettingsChange} outletProfile={outletProfile} onOutletProfileChange={onOutletProfileChange} />}
       {option === "Sync Data" && <SyncDataScreen />}
       {option === "Logout" && <LogoutScreen />}
     </ScrollView>
@@ -915,16 +1000,43 @@ function isWeightBilledProduct(product: Product) {
   return product.billingType === "weight" || WEIGHT_CATEGORY_KEYWORDS.some(keyword => category.includes(keyword));
 }
 
+function isPieceEntryProduct(product: Product) {
+  const category = String(product.category || "").toLowerCase();
+  const name = String(product.name || "").toLowerCase();
+  return !isWeightBilledProduct(product) && PIECE_ENTRY_KEYWORDS.some(keyword => category.includes(keyword) || name.includes(keyword));
+}
+
+function formatWeightLabel(grams: number) {
+  if (grams >= 1000) {
+    const kg = grams / 1000;
+    const kgText = Number.isInteger(kg) ? String(kg) : kg.toFixed(3).replace(/\.?0+$/, "");
+    return `${kgText}kg`;
+  }
+  return `${Math.round(grams)}g`;
+}
+
+function formatMeatPrintWeightLabel(grams: number) {
+  const kg = grams / 1000;
+  const kgText = Number.isInteger(kg) ? String(kg) : kg.toFixed(3).replace(/\.?0+$/, "");
+  return `${kgText || "0"} kg`;
+}
+
+function formatKgInput(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/\.?0+$/, "");
+}
+
 function cartLineAmount(item: CartLine) {
   return Number(item.lineTotal ?? item.price * item.qty);
 }
 
 function cartLineQtyLabel(item: CartLine) {
-  if (isWeightBilledProduct(item) && item.grams) return `${Math.round(item.grams)}g`;
+  if (isWeightBilledProduct(item) && item.grams) return formatWeightLabel(item.grams);
+  if (item.unitLabel === "pcs" || isPieceEntryProduct(item)) return `${item.qty} pcs`;
   return String(item.qty);
 }
 
 function productRateLabel(product: Product) {
+  if (isPieceEntryProduct(product)) return `Rs ${formatMoney(product.price)}/pc`;
   return isWeightBilledProduct(product) ? `Rs ${formatMoney(product.price)}/kg` : `Rs ${product.price}`;
 }
 
@@ -2206,12 +2318,13 @@ function PrinterSettingsScreen({
   );
 }
 
-function UserScreen() {
+function UserScreen({ outletProfile }: { outletProfile: OutletProfile }) {
   return (
     <View style={styles.summaryCard}>
       <Text style={styles.summaryTitle}>User</Text>
-      <InfoRow label="Cashier" value="Venkatesh" />
-      <InfoRow label="Role" value="Cashier" />
+      <InfoRow label="Outlet" value={outletProfile.name} />
+      <InfoRow label="Admin" value={outletProfile.adminName} />
+      <InfoRow label="Role" value="Admin / Cashier" />
       <InfoRow label="Login Time" value="09:00 AM" />
       <TouchableOpacity style={styles.secondaryAction}><Text style={styles.secondaryActionText}>Switch User</Text></TouchableOpacity>
     </View>
@@ -2220,10 +2333,14 @@ function UserScreen() {
 
 function SettingsScreen({
   settings,
-  onSettingsChange
+  onSettingsChange,
+  outletProfile,
+  onOutletProfileChange
 }: {
   settings: SuperAdminSettings;
   onSettingsChange: (next: SuperAdminSettings) => void;
+  outletProfile: OutletProfile;
+  onOutletProfileChange: (next: OutletProfile) => void;
 }) {
   const toggle = (key: keyof SuperAdminSettings) => {
     onSettingsChange({ ...settings, [key]: !settings[key] });
@@ -2233,7 +2350,20 @@ function SettingsScreen({
     <View style={styles.optionStack}>
       <View style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Operational Settings</Text>
-        <InfoRow label="Outlet" value="Main Canteen" />
+        <TextInput
+          value={outletProfile.name}
+          onChangeText={value => onOutletProfileChange({ ...outletProfile, name: value })}
+          placeholder="Outlet / shop name"
+          placeholderTextColor="#8a94a6"
+          style={styles.realInput}
+        />
+        <TextInput
+          value={outletProfile.adminName}
+          onChangeText={value => onOutletProfileChange({ ...outletProfile, adminName: value })}
+          placeholder="Admin / cashier name"
+          placeholderTextColor="#8a94a6"
+          style={styles.realInput}
+        />
         <InfoRow label="Currency" value="Rs" />
         <InfoRow label="Tax" value="0%" />
         <InfoRow label="Compact Mode" value="ON" />
@@ -2351,6 +2481,7 @@ const ProductCard = memo(function ProductCard({
 }) {
   const isHalfItem = product.category === HALF_ITEMS_CATEGORY;
   const isWeightItem = isWeightBilledProduct(product);
+  const isPieceItem = isPieceEntryProduct(product);
 
   return (
     <TouchableOpacity
@@ -2377,6 +2508,7 @@ const ProductCard = memo(function ProductCard({
           <Text numberOfLines={1} style={styles.productName}>{product.name}</Text>
           <Text style={styles.productPrice}>{productRateLabel(product)}</Text>
           {isWeightItem && <Text style={styles.productMeta}>Weight bill</Text>}
+          {isPieceItem && <Text style={styles.productMeta}>Pcs bill</Text>}
         </View>
         <View style={styles.productAddBadge}>
           <Text style={styles.productAddText}>+</Text>
@@ -2433,19 +2565,34 @@ function WeightBillingSheet({
   const options = product.subItems ?? [];
   const [rate, setRate] = useState(String(product.price || ""));
   const [amount, setAmount] = useState("");
+  const [kg, setKg] = useState("");
   const [grams, setGrams] = useState("");
   const [optionName, setOptionName] = useState(options[0] || "");
   const [error, setError] = useState("");
 
   const rateNumber = Number(rate) || 0;
   const amountNumber = Number(amount) || 0;
+  const kgNumber = Number(kg) || 0;
   const gramsNumber = Number(grams) || 0;
 
   const updateAmount = (value: string) => {
     setAmount(value);
     const nextAmount = Number(value);
     if (rateNumber > 0 && Number.isFinite(nextAmount)) {
-      setGrams(nextAmount > 0 ? String(Math.round((nextAmount / rateNumber) * 1000)) : "");
+      const nextGrams = nextAmount > 0 ? Math.round((nextAmount / rateNumber) * 1000) : 0;
+      setGrams(nextGrams ? String(nextGrams) : "");
+      setKg(nextGrams ? formatKgInput(nextGrams / 1000) : "");
+    }
+    setError("");
+  };
+
+  const updateKg = (value: string) => {
+    setKg(value);
+    const nextKg = Number(value);
+    if (rateNumber > 0 && Number.isFinite(nextKg)) {
+      const nextGrams = nextKg > 0 ? Math.round(nextKg * 1000) : 0;
+      setGrams(nextGrams ? String(nextGrams) : "");
+      setAmount(nextKg > 0 ? String(Math.round(nextKg * rateNumber)) : "");
     }
     setError("");
   };
@@ -2455,6 +2602,7 @@ function WeightBillingSheet({
     const nextGrams = Number(value);
     if (rateNumber > 0 && Number.isFinite(nextGrams)) {
       setAmount(nextGrams > 0 ? String(Math.round((nextGrams / 1000) * rateNumber)) : "");
+      setKg(nextGrams > 0 ? formatKgInput(nextGrams / 1000) : "");
     }
     setError("");
   };
@@ -2464,8 +2612,14 @@ function WeightBillingSheet({
     const nextRate = Number(value);
     if (nextRate > 0 && gramsNumber > 0) {
       setAmount(String(Math.round((gramsNumber / 1000) * nextRate)));
+      setKg(formatKgInput(gramsNumber / 1000));
+    } else if (nextRate > 0 && kgNumber > 0) {
+      setAmount(String(Math.round(kgNumber * nextRate)));
+      setGrams(String(Math.round(kgNumber * 1000)));
     } else if (nextRate > 0 && amountNumber > 0) {
-      setGrams(String(Math.round((amountNumber / nextRate) * 1000)));
+      const nextGrams = Math.round((amountNumber / nextRate) * 1000);
+      setGrams(String(nextGrams));
+      setKg(formatKgInput(nextGrams / 1000));
     }
     setError("");
   };
@@ -2473,7 +2627,7 @@ function WeightBillingSheet({
   const submit = () => {
     const finalRate = Number(rate);
     const finalAmount = Number(amount);
-    const finalGrams = Number(grams);
+    const finalGrams = Number(grams) || Math.round((Number(kg) || 0) * 1000);
     if (!finalRate || finalRate <= 0) {
       setError("Enter kg rate");
       return;
@@ -2511,15 +2665,88 @@ function WeightBillingSheet({
 
         <TextInput value={rate} onChangeText={updateRate} keyboardType="numeric" placeholder="Today kg rate" placeholderTextColor="#8a94a6" style={styles.realInput} />
         <View style={styles.inputRow}>
-          <TextInput value={amount} onChangeText={updateAmount} keyboardType="numeric" placeholder="Price Rs" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.inputFlex]} />
+          <TextInput value={amount} onChangeText={updateAmount} keyboardType="numeric" placeholder="Amount Rs" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.inputFlex]} />
+          <TextInput value={kg} onChangeText={updateKg} keyboardType="decimal-pad" placeholder="Kgs" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.inputFlex]} />
           <TextInput value={grams} onChangeText={updateGrams} keyboardType="numeric" placeholder="Grams" placeholderTextColor="#8a94a6" style={[styles.realInput, styles.inputFlex]} />
         </View>
         <Text style={styles.listSub}>
-          {rateNumber > 0 ? `Rs ${formatMoney(rateNumber)}/kg` : "Set today rate"}{amountNumber > 0 && gramsNumber > 0 ? ` - Rs ${formatMoney(amountNumber)} = ${Math.round(gramsNumber)}g` : ""}
+          {rateNumber > 0 ? `Rs ${formatMoney(rateNumber)}/kg` : "Set today rate"}{amountNumber > 0 && gramsNumber > 0 ? ` - Rs ${formatMoney(amountNumber)} = ${formatWeightLabel(gramsNumber)}` : ""}
         </Text>
         {!!error && <Text style={styles.errorText}>{error}</Text>}
         <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={submit}>
           <Text style={styles.primaryActionText}>Add Weight Item</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function PieceBillingSheet({
+  product,
+  onClose,
+  onAdd
+}: {
+  product: Product;
+  onClose: () => void;
+  onAdd: (product: Product, quantity: number, optionName?: string) => void;
+}) {
+  const options = product.subItems ?? [];
+  const [quantity, setQuantity] = useState("");
+  const [optionName, setOptionName] = useState(options[0] || "");
+  const [error, setError] = useState("");
+  const quantityNumber = Number(quantity) || 0;
+  const total = quantityNumber * product.price;
+
+  const submit = () => {
+    const finalQuantity = Number(quantity);
+    if (!Number.isInteger(finalQuantity) || finalQuantity <= 0) {
+      setError("Enter pcs count");
+      return;
+    }
+    onAdd(product, finalQuantity, optionName);
+  };
+
+  return (
+    <View style={styles.subSheetLayer} pointerEvents="box-none">
+      <Pressable style={styles.subSheetOverlay} onPress={onClose} />
+      <View style={styles.subSheet}>
+        <View style={styles.subSheetHeader}>
+          <View>
+            <Text style={styles.subSheetTitle}>{product.name}</Text>
+            <Text style={styles.subSheetSub}>Pcs billing</Text>
+          </View>
+          <TouchableOpacity activeOpacity={0.8} onPress={onClose} style={styles.subSheetClose}>
+            <Text style={styles.subSheetCloseText}>x</Text>
+          </TouchableOpacity>
+        </View>
+
+        {options.length > 0 && (
+          <View style={styles.categoryPicker}>
+            {options.map(item => (
+              <TouchableOpacity key={item} activeOpacity={0.85} onPress={() => setOptionName(item)} style={[styles.smallChip, optionName === item && styles.smallChipActive]}>
+                <Text style={[styles.smallChipText, optionName === item && styles.smallChipTextActive]}>{item}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        <TextInput
+          value={quantity}
+          onChangeText={value => {
+            setQuantity(value.replace(/\D/g, ""));
+            setError("");
+          }}
+          keyboardType="numeric"
+          placeholder="Pcs count"
+          placeholderTextColor="#8a94a6"
+          style={styles.realInput}
+        />
+        <Text style={styles.listSub}>
+          Rs {formatMoney(product.price)} / pc{quantityNumber > 0 ? ` - ${quantityNumber} pcs = Rs ${formatMoney(total)}` : ""}
+        </Text>
+        {!!error && <Text style={styles.errorText}>{error}</Text>}
+        <TouchableOpacity activeOpacity={0.9} style={styles.primaryAction} onPress={submit}>
+          <Text style={styles.primaryActionText}>Add Pcs Item</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -2730,11 +2957,12 @@ const styles = StyleSheet.create({
     backgroundColor: PAGE
   },
   header: {
-    minHeight: 96,
+    minHeight: 84,
     marginHorizontal: 12,
     marginTop: 10,
     paddingHorizontal: 14,
-    borderRadius: 26,
+    paddingVertical: 12,
+    borderRadius: 22,
     backgroundColor: CARD,
     flexDirection: "row",
     alignItems: "center",
@@ -2746,15 +2974,6 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     shadowOffset: { width: 0, height: 12 },
     elevation: 8
-  },
-  decorCutlery: {
-    position: "absolute",
-    right: -4,
-    bottom: -34,
-    color: "#111827",
-    fontSize: 116,
-    opacity: 0.025,
-    transform: [{ rotate: "-12deg" }]
   },
   menuButton: {
     width: 52,
@@ -2779,38 +2998,6 @@ const styles = StyleSheet.create({
     height: 3,
     borderRadius: 4,
     backgroundColor: NAVY
-  },
-  menuIcon: {
-    color: "#0f172a",
-    fontSize: 28,
-    fontWeight: "900"
-  },
-  logo: {
-    width: 64,
-    height: 64,
-    marginLeft: 12,
-    borderRadius: 22,
-    backgroundColor: "#F8FAFC",
-    borderWidth: 1,
-    borderColor: LINE,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    shadowColor: "#101828",
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4
-  },
-  logoImage: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 22
-  },
-  logoIcon: {
-    color: NAVY,
-    fontSize: 26,
-    fontWeight: "900"
   },
   headerTitle: {
     flex: 1,
@@ -3814,10 +4001,12 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: 8
   },
   inputFlex: {
-    flex: 1
+    flex: 1,
+    minWidth: 92
   },
   unitRow: {
     flexDirection: "row",
@@ -4634,41 +4823,25 @@ const styles = StyleSheet.create({
     elevation: 18
   },
   drawerScroll: {
-    paddingTop: 28,
+    paddingTop: 20,
     paddingHorizontal: 18,
     paddingBottom: 136
   },
   drawerTop: {
-    minHeight: 112,
-    borderRadius: 26,
+    minHeight: 96,
+    borderRadius: 22,
     padding: 16,
     backgroundColor: "rgba(255,255,255,0.78)",
     borderWidth: 1,
     borderColor: "rgba(226,232,240,0.9)",
-    flexDirection: "row",
-    alignItems: "center",
     shadowColor: "#101828",
     shadowOpacity: 0.08,
     shadowRadius: 18,
     shadowOffset: { width: 0, height: 10 },
     elevation: 4
   },
-  drawerLogo: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: NAVY,
-    alignItems: "center",
-    justifyContent: "center"
-  },
-  drawerLogoIcon: {
-    color: CARD,
-    fontSize: 26,
-    fontWeight: "900"
-  },
   drawerTitleBlock: {
-    flex: 1,
-    marginLeft: 13
+    flex: 1
   },
   drawerTitle: {
     color: "#111827",

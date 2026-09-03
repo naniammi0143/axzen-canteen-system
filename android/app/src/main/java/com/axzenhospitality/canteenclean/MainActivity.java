@@ -1,4 +1,4 @@
-package com.axenhospitality.canteen;
+package com.axzenhospitality.canteenclean;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
@@ -20,9 +20,13 @@ import android.os.Bundle;
 import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
 import java.io.File;
@@ -40,7 +44,7 @@ public class MainActivity extends BridgeActivity {
     private static final UUID SPP_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private static final int RECEIPT_WIDTH = 384;
     private static final int RECEIPT_MARGIN = 2;
-    private static final byte[] FEED_AND_CUT = new byte[]{0x0A, 0x0A, 0x0A, 0x1B, 0x64, 0x03, 0x1D, 0x56, 0x42, 0x00};
+    private static final byte[] FEED_AND_CUT = new byte[]{0x1D, 0x56, 0x00};
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -49,6 +53,14 @@ public class MainActivity extends BridgeActivity {
         requestBluetoothPermission();
         getBridge().getWebView().addJavascriptInterface(new ThermalPrinterBridge(), "AxenPrinter");
         getBridge().getWebView().addJavascriptInterface(new ShareBridge(), "AxenShare");
+        getBridge().getWebView().addJavascriptInterface(new SafeAreaBridge(), "AxenSafe");
+        applyWebViewSafeInsets();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        applyWebViewSafeInsets();
     }
 
     private void applySystemBars() {
@@ -58,6 +70,61 @@ public class MainActivity extends BridgeActivity {
         WindowInsetsControllerCompat controller = new WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView());
         controller.setAppearanceLightStatusBars(true);
         controller.setAppearanceLightNavigationBars(false);
+    }
+
+    private void applyWebViewSafeInsets() {
+        WebView webView = getBridge().getWebView();
+        if (webView == null) return;
+        webView.setBackgroundColor(Color.WHITE);
+        ViewCompat.setOnApplyWindowInsetsListener(webView, (v, windowInsets) -> {
+            Insets status = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.displayCutout());
+            Insets nav = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars());
+            pushSafeInsets(webView, status.top, nav.bottom);
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(webView);
+        pushSafeInsets(webView, systemBarTopPx(), systemBarBottomPx());
+    }
+
+    private int systemBarTopPx() {
+        WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(getWindow().getDecorView());
+        if (insets != null) {
+            int top = insets.getInsets(WindowInsetsCompat.Type.statusBars() | WindowInsetsCompat.Type.displayCutout()).top;
+            if (top > 0) return top;
+        }
+        int id = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (id > 0) return getResources().getDimensionPixelSize(id);
+        return Math.round(32f * getResources().getDisplayMetrics().density);
+    }
+
+    private int systemBarBottomPx() {
+        WindowInsetsCompat insets = ViewCompat.getRootWindowInsets(getWindow().getDecorView());
+        if (insets != null) {
+            return insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+        }
+        return 0;
+    }
+
+    private void pushSafeInsets(WebView webView, int topPx, int bottomPx) {
+        float density = getResources().getDisplayMetrics().density;
+        float top = topPx / density;
+        float bottom = bottomPx / density;
+        String js = "(function(){var r=document.documentElement;r.classList.add('native-app');"
+            + "if(" + top + ">0)r.style.setProperty('--app-safe-top','" + top + "px');"
+            + "r.style.setProperty('--app-safe-bottom','" + bottom + "px');})();";
+        webView.post(() -> webView.evaluateJavascript(js, null));
+    }
+
+    public class SafeAreaBridge {
+        @JavascriptInterface
+        public float top() {
+            return systemBarTopPx() / getResources().getDisplayMetrics().density;
+        }
+
+        @JavascriptInterface
+        public float bottom() {
+            return systemBarBottomPx() / getResources().getDisplayMetrics().density;
+        }
     }
 
     private void requestBluetoothPermission() {
@@ -119,9 +186,8 @@ public class MainActivity extends BridgeActivity {
             try {
                 OutputStream output = ensurePrinterOutput();
                 output.write(new byte[]{0x1B, 0x40});
-                writeChunked(output, text.getBytes(Charset.forName("UTF-8")));
-                writeChunked(output, FEED_AND_CUT);
-                output.flush();
+                writeChunked(output, trimReceiptText(text).getBytes(Charset.forName("UTF-8")));
+                finishReceipt(output);
                 return "Print sent";
             } catch (Exception error) {
                 closePrinter();
@@ -198,6 +264,38 @@ public class MainActivity extends BridgeActivity {
             new Thread(() -> {
                 try {
                     printReceiptToPrinter(address, text, logoDataUrl, logoPosition, headerName, companyName);
+                } catch (Exception ignored) {}
+            }).start();
+            return "Print queued";
+        }
+
+        @JavascriptInterface
+        public synchronized String printReceiptToPrinterSized(String address, String text, String logoDataUrl, String logoPosition, String headerName, String companyName, int paperWidth) {
+            if (!hasBluetoothPermission()) {
+                requestBluetoothPermission();
+                return "Bluetooth permission needed";
+            }
+
+            try {
+                BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (adapter == null || !adapter.isEnabled()) throw new Exception("Bluetooth is off");
+
+                Set<BluetoothDevice> devices = adapter.getBondedDevices();
+                if (devices == null || devices.isEmpty()) throw new Exception("Pair the thermal printer first");
+
+                BluetoothDevice printer = printerForAddress(devices, address);
+                writeReceiptToPrinter(adapter, printer, text, logoDataUrl, logoPosition, headerName, companyName, paperWidth);
+                return "Print sent";
+            } catch (Exception error) {
+                return "Printer failed: " + error.getMessage();
+            }
+        }
+
+        @JavascriptInterface
+        public String printReceiptToPrinterSizedAsync(String address, String text, String logoDataUrl, String logoPosition, String headerName, String companyName, int paperWidth) {
+            new Thread(() -> {
+                try {
+                    printReceiptToPrinterSized(address, text, logoDataUrl, logoPosition, headerName, companyName, paperWidth);
                 } catch (Exception ignored) {}
             }).start();
             return "Print queued";
@@ -338,6 +436,10 @@ public class MainActivity extends BridgeActivity {
         }
 
         private void writeReceiptToPrinter(BluetoothAdapter adapter, BluetoothDevice printer, String text, String logoDataUrl, String logoPosition, String headerName, String companyName) throws Exception {
+            writeReceiptToPrinter(adapter, printer, text, logoDataUrl, logoPosition, headerName, companyName, RECEIPT_WIDTH);
+        }
+
+        private void writeReceiptToPrinter(BluetoothAdapter adapter, BluetoothDevice printer, String text, String logoDataUrl, String logoPosition, String headerName, String companyName, int paperWidth) throws Exception {
             BluetoothSocket targetSocket = null;
             OutputStream targetOutput = null;
             try {
@@ -348,14 +450,13 @@ public class MainActivity extends BridgeActivity {
                 targetSocket.connect();
                 targetOutput = targetSocket.getOutputStream();
                 targetOutput.write(new byte[]{0x1B, 0x40});
-                Bitmap header = receiptHeaderBitmap(logoDataUrl, logoPosition, headerName, companyName, 100);
+                Bitmap header = receiptHeaderBitmap(logoDataUrl, logoPosition, headerName, companyName, 100, normalizedPaperWidth(paperWidth));
                 if (header != null) {
                     writeRasterImage(targetOutput, header);
                     writeChunked(targetOutput, new byte[]{0x0A});
                 }
-                writeChunked(targetOutput, text.getBytes(Charset.forName("UTF-8")));
-                writeChunked(targetOutput, FEED_AND_CUT);
-                targetOutput.flush();
+                writeChunked(targetOutput, trimReceiptText(text).getBytes(Charset.forName("UTF-8")));
+                finishReceipt(targetOutput);
             } finally {
                 try {
                     if (targetOutput != null) targetOutput.close();
@@ -367,10 +468,14 @@ public class MainActivity extends BridgeActivity {
         }
 
         private Bitmap receiptHeaderBitmap(String logoDataUrl, String logoPosition, String headerName, String companyName, int logoPercent) {
+            return receiptHeaderBitmap(logoDataUrl, logoPosition, headerName, companyName, logoPercent, RECEIPT_WIDTH);
+        }
+
+        private Bitmap receiptHeaderBitmap(String logoDataUrl, String logoPosition, String headerName, String companyName, int logoPercent, int paperWidth) {
             Bitmap logo = decodeLogo(logoDataUrl);
             if (logo == null) return null;
 
-            int width = RECEIPT_WIDTH;
+            int width = normalizedPaperWidth(paperWidth);
             int scale = Math.max(60, Math.min(160, logoPercent));
             String position = logoPosition == null ? "above" : logoPosition.trim().toLowerCase();
             boolean topLogo = !"left".equals(position) && !"right".equals(position);
@@ -487,8 +592,7 @@ public class MainActivity extends BridgeActivity {
                 targetOutput = targetSocket.getOutputStream();
                 targetOutput.write(new byte[]{0x1B, 0x40});
                 writeRasterImage(targetOutput, receiptBitmap(receiptJson));
-                writeChunked(targetOutput, FEED_AND_CUT);
-                targetOutput.flush();
+                finishReceipt(targetOutput);
             } finally {
                 try {
                     if (targetOutput != null) targetOutput.close();
@@ -502,12 +606,13 @@ public class MainActivity extends BridgeActivity {
         private Bitmap receiptBitmap(String receiptJson) throws Exception {
             JSONObject data = new JSONObject(receiptJson == null ? "{}" : receiptJson);
             JSONArray items = data.optJSONArray("items");
-            int width = RECEIPT_WIDTH;
+            int width = normalizedPaperWidth(data.optInt("paperWidth", RECEIPT_WIDTH));
             int left = RECEIPT_MARGIN;
             int right = width - RECEIPT_MARGIN;
             int y = 4;
             int estimatedRows = items == null ? 0 : items.length() * 3;
-            int height = 700 + (estimatedRows * 44);
+            int footerFeedLines = Math.max(0, data.optInt("footerFeedLines", 0));
+            int height = 820 + (estimatedRows * 50) + (footerFeedLines * 40);
             Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
             canvas.drawColor(Color.WHITE);
@@ -536,16 +641,13 @@ public class MainActivity extends BridgeActivity {
             canvas.drawText("Date : " + data.optString("date", "-"), left, y + 24, body);
             canvas.drawText("Time : " + data.optString("time", "-"), right, y + 24, bodyRight);
             y += 34;
-            canvas.drawText("Cashier : " + data.optString("cashier", "-"), left, y + 24, body);
-            canvas.drawText("Token : " + data.optString("token", "-"), right, y + 24, bodyRight);
-            y += 34;
-            canvas.drawText("Customer : " + cleanHeaderText(data.optString("customer", "Walk-in"), "Walk-in"), left, y + 24, body);
-            y += 34;
-            canvas.drawText("Payment : " + data.optString("payment", "Cash"), left, y + 24, body);
+            canvas.drawText("Token :", left, y + 24, body);
+            canvas.drawText(data.optString("token", "-"), right, y + 24, bodyRight);
             y += 38;
             y = drawLine(canvas, linePaint, y, width);
+            boolean hasWeightItems = hasWeightReceiptItems(items);
             canvas.drawText("#  ITEM NAME", left, y + 25, body);
-            canvas.drawText("QTY RATE AMT", right, y + 25, bodyRight);
+            canvas.drawText(hasWeightItems ? "QTY" : "QTY RATE AMT", right, y + 25, bodyRight);
             y += 36;
             y = drawLine(canvas, linePaint, y, width);
 
@@ -554,15 +656,33 @@ public class MainActivity extends BridgeActivity {
                     JSONObject item = items.optJSONObject(i);
                     if (item == null) continue;
                     String name = (i + 1) + " " + cleanHeaderText(item.optString("name", "Item"), "Item");
-                    for (String line : wrapForPaint(name, itemPaint, width - (RECEIPT_MARGIN * 2))) {
-                        canvas.drawText(line, left, y + 26, itemPaint);
-                        y += 32;
-                    }
                     double qty = item.optDouble("qty", 0);
                     double price = item.optDouble("price", 0);
-                    String amount = trimNumber(qty) + " x " + moneyNumber(price) + " = " + moneyNumber(qty * price);
-                    canvas.drawText(amount, right, y + 24, bodyRight);
-                    y += 34;
+                    double amountValue = item.has("amount") ? item.optDouble("amount", qty * price) : qty * price;
+                    String weightUnit = cleanHeaderText(item.optString("weightUnit", ""), "");
+                    String unit = cleanHeaderText(item.optString("unit", ""), "");
+                    boolean weightItem = !weightUnit.isEmpty() || Math.abs(qty - Math.round(qty)) >= 0.001;
+                    if (weightItem) {
+                        String qtyText = formatReceiptQty(qty, weightUnit.isEmpty() ? "KG" : weightUnit);
+                        int qtyWidth = Math.max(70, Math.round(bodyRight.measureText(qtyText)) + 8);
+                        for (String line : wrapForPaint(name, itemPaint, width - (RECEIPT_MARGIN * 2) - qtyWidth)) {
+                            canvas.drawText(line, left, y + 26, itemPaint);
+                            canvas.drawText(qtyText, right, y + 26, bodyRight);
+                            y += 32;
+                            qtyText = "";
+                        }
+                        canvas.drawText("Rs " + moneyNumber(price) + "/kg", left, y + 24, body);
+                        canvas.drawText("Rs " + moneyNumber(amountValue), right, y + 24, bodyRight);
+                        y += 38;
+                    } else {
+                        for (String line : wrapForPaint(name, itemPaint, width - (RECEIPT_MARGIN * 2))) {
+                            canvas.drawText(line, left, y + 26, itemPaint);
+                            y += 32;
+                        }
+                        String amount = formatReceiptQty(qty, unit) + " x " + moneyNumber(price) + " = " + moneyNumber(amountValue);
+                        canvas.drawText(amount, right, y + 24, bodyRight);
+                        y += 34;
+                    }
                 }
             }
 
@@ -573,9 +693,34 @@ public class MainActivity extends BridgeActivity {
             y = drawAmountRow(canvas, receiptPaint(27, true, Paint.Align.LEFT), receiptPaint(27, true, Paint.Align.RIGHT), "TOTAL", data.optDouble("total", 0), y, width);
             y = drawLine(canvas, linePaint, y, width);
             canvas.drawText("THANK YOU! VISIT AGAIN", width / 2, y + 34, footer);
-            y += 118;
+            y += 46 + (footerFeedLines * 24);
 
-            return Bitmap.createBitmap(bitmap, 0, 0, width, Math.min(height, y + 64));
+            return cropReceiptBitmap(bitmap, width, Math.min(height, y));
+        }
+
+        private String trimReceiptText(String text) {
+            String value = text == null ? "" : text;
+            return value.replace("\r\n", "\n").replace("\r", "\n");
+        }
+
+        private Bitmap cropReceiptBitmap(Bitmap bitmap, int width, int maxHeight) {
+            int safeHeight = Math.min(bitmap.getHeight(), Math.max(1, maxHeight));
+            int bottom = 0;
+            for (int y = safeHeight - 1; y >= 0; y--) {
+                boolean rowHasInk = false;
+                for (int x = 0; x < width; x++) {
+                    if (bitmap.getPixel(x, y) != Color.WHITE) {
+                        rowHasInk = true;
+                        break;
+                    }
+                }
+                if (rowHasInk) {
+                    bottom = y + 8;
+                    break;
+                }
+            }
+            if (bottom <= 0) bottom = safeHeight;
+            return Bitmap.createBitmap(bitmap, 0, 0, width, Math.min(safeHeight, bottom));
         }
 
         private Paint receiptPaint(int size, boolean bold, Paint.Align align) {
@@ -597,6 +742,20 @@ public class MainActivity extends BridgeActivity {
             canvas.drawText(label, RECEIPT_MARGIN, baseline, left);
             canvas.drawText("Rs " + moneyNumber(value), width - RECEIPT_MARGIN, baseline, right);
             return y + Math.max(32, Math.round(left.getTextSize() + 9));
+        }
+
+        private boolean hasWeightReceiptItems(JSONArray items) {
+            if (items == null) return false;
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject item = items.optJSONObject(i);
+                if (item == null) continue;
+                String weightUnit = item.optString("weightUnit", "").trim();
+                double qty = item.optDouble("qty", 0);
+                if (!weightUnit.isEmpty() || Math.abs(qty - Math.round(qty)) >= 0.001) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private ArrayList<String> wrapForPaint(String text, Paint paint, int maxWidth) {
@@ -626,6 +785,31 @@ public class MainActivity extends BridgeActivity {
                 return String.valueOf((long) Math.round(value));
             }
             return String.format(java.util.Locale.US, "%.2f", value);
+        }
+
+        private String formatReceiptQty(double value, String unitValue) {
+            String unit = cleanHeaderText(unitValue, "Item");
+            String lower = unit.toLowerCase(java.util.Locale.US);
+            boolean whole = Math.abs(value - Math.round(value)) < 0.001;
+            String number = whole ? String.valueOf((long) Math.round(value)) : String.format(java.util.Locale.US, "%.3f", value);
+            if (lower.equals("kg") || lower.equals("kgs") || lower.equals("kilogram") || lower.equals("kilograms")) return number + " KG";
+            if (lower.equals("ltr") || lower.equals("ltrs") || lower.equals("liter") || lower.equals("litre") || lower.equals("liters") || lower.equals("litres")) return number + " Ltr";
+            if (lower.equals("ml")) return number + " ML";
+            if (lower.equals("gram") || lower.equals("grams") || lower.equals("gm") || lower.equals("gms")) return number + " Grams";
+            return number + (unit.isEmpty() ? "" : " " + unit);
+        }
+
+        private int normalizedPaperWidth(int paperWidth) {
+            return paperWidth >= 560 ? 576 : RECEIPT_WIDTH;
+        }
+
+        private void finishReceipt(OutputStream targetOutput) throws Exception {
+            // Cheap 58mm printers cut at the print head. Feed blank lines first so
+            // "THANK YOU" clears the blade, then cut and wait before closing BT.
+            writeChunked(targetOutput, new byte[]{0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A});
+            writeChunked(targetOutput, FEED_AND_CUT);
+            targetOutput.flush();
+            Thread.sleep(280);
         }
 
         private void writeChunked(OutputStream targetOutput, byte[] bytes) throws Exception {

@@ -13,5 +13,7 @@ android/.gradle/
 android/build/
 android/app/build/
 android/local.properties
+android/key.properties
+android/app/axzen-release-key.jks
 dist/
 coverage/

@@ -4,16 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Axzen Employee</title>
+  <link rel="icon" href="assets/axzenPOS.png?v=2" type="image/png">
+  <link rel="apple-touch-icon" href="assets/axzenPOS.png?v=2">
   <style>
     :root {
-      --page: #f4f6f8;
+      --page: #f4f7fb;
       --surface: #ffffff;
       --surface-2: #eef4ff;
-      --ink: #17202a;
+      --ink: #0f172a;
       --muted: #667085;
-      --line: #dde3ea;
-      --brand: #0a66c2;
-      --brand-2: #09509a;
+      --line: #e4eaf2;
+      --brand: #0b5fe8;
+      --brand-2: #0847b8;
       --green: #12805c;
       --green-soft: #e7f7ef;
       --amber: #b45309;
@@ -24,9 +26,13 @@
       --violet-soft: #f0eafd;
       --cyan: #087f8c;
       --cyan-soft: #e4f7fa;
-      --shadow: 0 16px 40px rgba(15, 23, 42, .08);
-      --radius: 8px;
+      --shadow: 0 12px 28px rgba(15, 23, 42, .08);
+      --radius: 16px;
+      --app-safe-top: env(safe-area-inset-top, 0px);
+      --app-safe-bottom: env(safe-area-inset-bottom, 0px);
     }
+
+    html.native-app { --app-safe-top: 32px; --app-safe-bottom: 12px; }
 
     * { box-sizing: border-box; }
     html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
@@ -52,7 +58,7 @@
       width: min(100%, 480px);
       min-height: 100dvh;
       margin: 0 auto;
-      background: var(--page);
+      background: #f5f7fb;
       position: relative;
       overflow-x: hidden;
     }
@@ -61,9 +67,9 @@
       display: grid;
       align-content: center;
       gap: 18px;
-      padding: 22px;
+      padding: max(22px, calc(var(--app-safe-top) + 18px)) 22px max(22px, calc(var(--app-safe-bottom) + 18px));
       background:
-        linear-gradient(180deg, rgba(10, 102, 194, .08), rgba(18, 128, 92, .08)),
+        linear-gradient(180deg, rgba(11, 95, 232, .08), rgba(18, 128, 92, .08)),
         var(--page);
     }
 
@@ -195,7 +201,7 @@
 
     .app {
       min-height: 100dvh;
-      padding-bottom: calc(84px + env(safe-area-inset-bottom));
+      padding-bottom: calc(84px + var(--app-safe-bottom));
     }
 
     .topbar {
@@ -203,36 +209,48 @@
       top: 0;
       z-index: 12;
       min-height: 72px;
-      display: flex;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
       align-items: center;
-      justify-content: space-between;
       gap: 10px;
-      padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
+      padding: calc(10px + var(--app-safe-top)) 16px 10px;
       border-bottom: 1px solid rgba(221, 227, 234, .9);
       background: rgba(255, 255, 255, .96);
       backdrop-filter: blur(14px);
     }
+    .app.detail-mode .topbar {
+      grid-template-columns: 46px minmax(0, 1fr) 46px;
+    }
+    .app.detail-mode .title-area {
+      justify-content: center;
+      text-align: center;
+    }
+    .app.detail-mode .title-text h1,
+    .app.detail-mode .title-text p { text-align: center; }
 
     .title-area {
       min-width: 0;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
     .title-mark {
-      width: 38px;
+      width: 92px;
       height: 38px;
       border-radius: 8px;
       display: grid;
       place-items: center;
-      background: var(--brand);
-      color: #fff;
+      background: #fff;
+      color: var(--brand);
+      border: 1px solid var(--line);
       font-weight: 950;
+      overflow: hidden;
+      box-shadow: 0 8px 18px rgba(15,23,42,.07);
     }
     .title-text { min-width: 0; }
     .title-text h1 {
-      font-size: 19px;
-      line-height: 24px;
+      font-size: 22px;
+      line-height: 27px;
       font-weight: 900;
       white-space: nowrap;
       overflow: hidden;
@@ -240,7 +258,7 @@
     }
     .title-text p {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
@@ -249,18 +267,44 @@
     .icon-btn {
       width: 42px;
       height: 42px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
+      border: 0;
+      border-radius: 14px;
       display: grid;
       place-items: center;
-      background: #fff;
+      background: #eaf2ff;
       color: var(--brand);
+      box-shadow: none;
+      position: relative;
     }
+    .notify-dot {
+      position: absolute;
+      top: 8px;
+      right: 9px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #2563eb;
+      box-shadow: 0 0 0 2px #eaf2ff;
+    }
+    .icon-btn.is-idle { visibility: hidden; pointer-events: none; }
+    .lucide-icon {
+      display: block;
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .bottom-nav .lucide-icon { width: 24px; height: 24px; }
+    .btn .lucide-icon,
+    .lead-action .lucide-icon { width: 20px; height: 20px; }
 
     main {
       display: grid;
-      gap: 14px;
-      padding: 14px;
+      gap: 12px;
+      padding: 12px;
     }
 
     .hero {
@@ -397,6 +441,449 @@
     .kv span { display: block; color: var(--muted); font-size: 11px; font-weight: 800; }
     .kv strong { display: block; margin-top: 5px; font-weight: 900; overflow-wrap: anywhere; }
 
+    .lead-hero {
+      overflow: hidden;
+      padding: 0;
+      border: 0;
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 10px 28px rgba(15,23,42,.08);
+    }
+    .lead-hero-top {
+      min-height: 132px;
+      display: grid;
+      grid-template-columns: 96px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      position: relative;
+      padding: 20px 16px 34px;
+      background: linear-gradient(135deg, #004fb3, #0069d9 54%, #073c90);
+      color: #fff;
+    }
+    .lead-avatar {
+      width: 78px;
+      height: 78px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,.94);
+      display: grid;
+      place-items: center;
+      background: #fff;
+      color: #0b5fe8;
+      font-size: 32px;
+      font-weight: 950;
+      box-shadow: 0 10px 22px rgba(0,0,0,.16);
+    }
+    .lead-hero-title { min-width: 0; display: grid; gap: 8px; padding-right: 112px; }
+    .lead-hero-title h2 { font-size: 24px; line-height: 30px; font-weight: 950; overflow-wrap: anywhere; }
+    .lead-hero-title p { color: rgba(255,255,255,.9); font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+    .lead-demo-pill { width: max-content; min-height: 28px; border-radius: 999px; padding: 4px 12px; background: #7c3aed; color: #fff; font-weight: 900; font-size: 11px; letter-spacing: .02em; }
+    .lead-status-pill { position: absolute; right: 14px; top: 16px; border: 0; border-radius: 999px; background: #fff; color: #132238; padding: 7px 11px; font-size: 12px; font-weight: 850; white-space: nowrap; display: inline-flex; align-items: center; }
+    .lead-status-dot { width: 10px; height: 10px; display: inline-block; border-radius: 50%; margin-right: 7px; background: #27b77a; }
+    .lead-info-wrap {
+      margin: -24px 12px 14px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 16px 42px rgba(15,23,42,.1);
+    }
+    .lead-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .lead-info-card {
+      min-height: 74px;
+      border: 1px solid #edf1f7;
+      border-radius: 14px;
+      background: #fff;
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      color: inherit;
+      text-align: left;
+    }
+    .lead-info-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: var(--brand);
+      background: #eaf3ff;
+    }
+    .lead-info-card:nth-child(2) .lead-info-icon { color: #7c3aed; background: #f1e8ff; }
+    .lead-info-card:nth-child(3) .lead-info-icon { color: #12805c; background: #e7f7ef; }
+    .lead-info-card:nth-child(4) .lead-info-icon { color: #f97316; background: #fff1e7; }
+    .lead-info-card span { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .lead-info-card strong { display: block; margin-top: 3px; font-size: 15px; font-weight: 950; overflow-wrap: anywhere; }
+    .lead-action-grid { display: grid; grid-template-columns: repeat(6, minmax(76px, 1fr)); gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+    .lead-action-grid::-webkit-scrollbar { display: none; }
+    .lead-action {
+      min-width: 76px;
+      min-height: 82px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      gap: 6px;
+      background: #fff;
+      box-shadow: 0 8px 18px rgba(15,23,42,.05);
+      font-size: 11px;
+      font-weight: 850;
+      color: #344054;
+    }
+    .lead-action.green { color: var(--green); background: #f2fbf7; border-color: #ccebdd; }
+    .lead-action.amber { color: #ea580c; background: #fff7ed; border-color: #fed7aa; }
+    .lead-action.violet { color: #7c3aed; background: #f7f1ff; border-color: #ddd6fe; }
+    .lead-action.red { color: var(--red); background: #fff7f6; border-color: #f4c7c2; }
+    .lead-actions-panel .btn { width: 100%; }
+    .activity-card .row { border: 0; padding: 6px 0; grid-template-columns: 42px 1fr auto; }
+    .last-activity .activity-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 36px;
+      color: #344054;
+      font-weight: 750;
+    }
+    .last-activity .activity-line svg { color: var(--brand); flex: 0 0 auto; }
+    .last-activity .activity-line.phone svg { color: var(--green); }
+    .last-activity .activity-line b { color: var(--brand); font-weight: 850; }
+    .section-title-icon {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .timeline {
+      display: grid;
+      gap: 0;
+      position: relative;
+      padding-left: 4px;
+    }
+    .timeline-item {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      text-align: left;
+      padding: 8px 0 14px;
+      position: relative;
+    }
+    .timeline-item::before {
+      content: "";
+      position: absolute;
+      left: 16px;
+      top: 36px;
+      bottom: 0;
+      width: 2px;
+      background: #dbe7f8;
+    }
+    .timeline-item:last-child::before { display: none; }
+    .timeline-item.current h3 { color: var(--brand); }
+    .timeline-item .muted-label { color: var(--muted); font-size: 12px; font-weight: 750; }
+    .timeline-item .current-label { color: var(--brand); font-size: 12px; font-weight: 850; }
+    .activity-dot {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #eaf3ff;
+      color: var(--brand);
+      font-weight: 950;
+    }
+    .account-card {
+      overflow: hidden;
+      padding: 0;
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #dfe6ef;
+      box-shadow: 0 10px 22px rgba(15,23,42,.06);
+    }
+    .account-hero {
+      display: grid;
+      grid-template-columns: 94px minmax(0, 1fr) 122px;
+      gap: 12px;
+      align-items: center;
+      min-height: 118px;
+      padding: 18px 18px 16px 18px;
+      background: linear-gradient(135deg, #045be7, #0754cf 62%, #0750bd);
+      color: #fff;
+    }
+    .account-avatar {
+      width: 82px;
+      height: 82px;
+      border-radius: 50%;
+      border: 0;
+      display: grid;
+      place-items: center;
+      background: #fff;
+      color: #075bd8;
+      font-size: 32px;
+      font-weight: 950;
+      box-shadow: 0 12px 26px rgba(0,0,0,.18);
+    }
+    .account-title { min-width: 0; }
+    .account-title h2 { font-size: 22px; line-height: 27px; font-weight: 950; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .account-title p { color: rgba(255,255,255,.94); font-size: 14px; line-height: 20px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .account-edit {
+      border: 1px solid rgba(255,255,255,.75);
+      border-radius: 8px;
+      min-height: 48px;
+      padding: 0 10px;
+      background: transparent;
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 900;
+      justify-self: end;
+    }
+    .account-edit svg {
+      width: 21px;
+      height: 21px;
+      stroke-width: 2.3;
+    }
+    .account-status {
+      width: max-content;
+      min-height: 28px;
+      padding: 0 13px;
+      border-radius: 999px;
+      border: 1px solid #bbf7d0;
+      background: #ecfdf3;
+      color: #027a48;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      font-weight: 850;
+      margin-top: 8px;
+    }
+    .account-tabs {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .account-tabs button {
+      min-height: 48px;
+      border: 0;
+      background: #fff;
+      color: #475467;
+      font-size: 13px;
+      font-weight: 650;
+      border-bottom: 3px solid transparent;
+    }
+    .account-tabs button.active { color: #005fe8; border-bottom-color: #005fe8; font-weight: 850; }
+    .verify-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 14px 14px 16px; }
+    .verify-pill {
+      min-height: 38px;
+      border: 1px solid #d6dee9;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: #fff;
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: 750;
+      color: var(--green);
+      text-align: center;
+    }
+    .verify-pill.pending { color: #d97706; }
+    .verify-mark {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-grid;
+      place-items: center;
+      flex: 0 0 auto;
+      background: #16a34a;
+      color: #fff;
+    }
+    .verify-mark.pending { background: #f59e0b; }
+    .verify-mark svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 3;
+    }
+    .profile-card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px;
+      box-shadow: 0 8px 20px rgba(15,23,42,.06);
+      display: grid;
+      gap: 12px;
+    }
+    .profile-card-head {
+      display: grid;
+      grid-template-columns: 40px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+    }
+    .profile-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #eaf3ff;
+      color: var(--brand);
+    }
+    .profile-map {
+      min-height: 106px;
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(45deg, transparent 48%, #dbe4ef 49%, #dbe4ef 51%, transparent 52%),
+        linear-gradient(-45deg, transparent 48%, #dbe4ef 49%, #dbe4ef 51%, transparent 52%),
+        #eef3f8;
+      background-size: 42px 42px;
+    }
+    .profile-map::after {
+      content: "";
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      left: 58%;
+      top: 38%;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      background: var(--brand);
+      box-shadow: 0 6px 18px rgba(10,102,194,.35);
+    }
+    .work-location-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(190px, 1fr);
+      gap: 14px;
+      align-items: stretch;
+    }
+    .work-location-copy {
+      display: grid;
+      align-content: center;
+      gap: 7px;
+      padding-left: 44px;
+    }
+    .profile-detail-table { display: grid; gap: 7px; padding-left: 44px; }
+    .profile-detail-row {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      gap: 12px;
+      color: #475467;
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 500;
+    }
+    .profile-detail-row strong { color: #101828; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+    .bank-head-actions { display: inline-flex; align-items: center; gap: 12px; }
+    .plain-link {
+      border: 0;
+      background: transparent;
+      color: #005fe8;
+      font-weight: 850;
+      padding: 0;
+    }
+    .payout-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr minmax(150px, auto);
+      gap: 10px;
+      align-items: center;
+      border-top: 1px dashed var(--line);
+      padding-top: 12px;
+    }
+    .payout-row strong { display: block; font-size: 20px; font-weight: 950; }
+    .printer-asset {
+      min-height: 82px;
+      display: grid;
+      grid-template-columns: 72px minmax(0, 1fr) auto 40px 24px;
+      gap: 12px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .printer-photo {
+      width: 58px;
+      height: 50px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(160deg, #1f2937, #030712);
+      color: #fff;
+    }
+    .qr-chip {
+      width: 38px;
+      height: 38px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: #111827;
+      background: repeating-linear-gradient(90deg, #111 0 3px, #fff 3px 6px);
+      font-size: 0;
+    }
+    .arrow-more { color: #475467; font-size: 30px; line-height: 1; }
+    .profile-footer-actions {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .profile-footer-actions button {
+      min-height: 50px;
+      border: 0;
+      border-right: 1px solid var(--line);
+      background: #fff;
+      color: var(--brand);
+      font-weight: 850;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .profile-footer-actions svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2.1;
+    }
+    .profile-footer-actions button:last-child { border-right: 0; color: var(--red); }
+    .nav-btn[data-nav="add"].active::after { display: none; }
+    .nav-btn[data-nav="add"] {
+      transform: translateY(-18px);
+      width: 62px;
+      min-height: 62px;
+      justify-self: center;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      box-shadow: 0 12px 26px rgba(10,102,194,.28);
+    }
+    @media (max-width: 380px) {
+      .lead-hero-top { grid-template-columns: 84px minmax(0, 1fr); }
+      .lead-status-pill { position: static; grid-column: 1 / -1; justify-self: start; }
+      .lead-hero-title { padding-right: 0; }
+      .lead-info-grid { grid-template-columns: 1fr; }
+      .account-hero { grid-template-columns: 78px minmax(0, 1fr); }
+      .account-edit { grid-column: 1 / -1; justify-content: center; }
+      .verify-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; padding-inline: 12px; }
+      .verify-pill { min-height: 54px; padding: 6px; flex-direction: column; font-size: 12px; line-height: 14px; }
+      .payout-row { grid-template-columns: 1fr; }
+      .work-location-layout { grid-template-columns: 1fr; }
+      .work-location-copy, .profile-detail-table { padding-left: 0; }
+      .profile-detail-row { grid-template-columns: 1fr; gap: 2px; }
+      .printer-asset { grid-template-columns: 62px minmax(0, 1fr) auto; }
+      .qr-chip, .arrow-more { display: none; }
+    }
+
     .bottom-nav {
       position: fixed;
       left: 50%;
@@ -407,7 +894,7 @@
       display: grid;
       grid-template-columns: repeat(5, 1fr);
       gap: 4px;
-      padding: 8px 9px calc(8px + env(safe-area-inset-bottom));
+      padding: 8px 9px calc(8px + var(--app-safe-bottom));
       border-top: 1px solid var(--line);
       background: rgba(255,255,255,.98);
       backdrop-filter: blur(14px);
@@ -424,11 +911,23 @@
       font-size: 10px;
       line-height: 12px;
       font-weight: 850;
+      position: relative;
     }
+    .bottom-nav.manager { grid-template-columns: repeat(6, 1fr); }
     .nav-btn.active {
-      background: var(--surface-2);
+      background: transparent;
       color: var(--brand);
     }
+    .nav-btn.active::after {
+      content: "";
+      position: absolute;
+      top: 4px;
+      width: 18px;
+      height: 3px;
+      border-radius: 99px;
+      background: var(--brand);
+    }
+    .nav-btn { position: relative; }
 
     .sheet {
       position: fixed;
@@ -475,37 +974,28 @@
 <body>
   <section class="screen login" id="loginScreen">
     <div class="brand">
-      <div class="brand-mark">AX</div>
       <h1>Axzen Employee</h1>
       <p>Customer onboarding, approvals, payments, printers and team tracking in one clean workflow.</p>
     </div>
     <form class="panel" id="loginForm">
-      <div class="role-toggle">
-        <button class="chip active" type="button" data-login-role="employee">Employee</button>
-        <button class="chip" type="button" data-login-role="manager">Manager</button>
-      </div>
-      <label class="field">Employee ID <input id="loginId" value="MKT001" autocomplete="username" required></label>
-      <label class="field">Password <input id="password" value="1234" type="password" autocomplete="current-password" required></label>
+      <label class="field">Login ID <input id="loginId" autocomplete="username" required></label>
+      <label class="field">Password <input id="password" type="password" autocomplete="current-password" required></label>
       <button class="btn" id="loginBtn" type="submit">Login</button>
-      <div class="status" id="loginStatus">Employee: MKT001 / 1234. Manager: SUPER / admin123.</div>
+      <div class="status" id="loginStatus">Enter your login details.</div>
     </form>
   </section>
 
   <section class="screen app hidden" id="appScreen">
     <header class="topbar">
+      <button class="icon-btn is-idle" id="backBtn" type="button" aria-label="Back"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
       <div class="title-area">
-        <button class="icon-btn hidden" id="backBtn" type="button" aria-label="Back">
-          <svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg>
-        </button>
-        <div class="title-mark" id="titleMark">AX</div>
+        <div class="title-mark" id="titleMark"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></div>
         <div class="title-text">
           <h1 id="pageTitle">Dashboard</h1>
           <p id="pageSub">Axzen employee workflow</p>
         </div>
       </div>
-      <button class="icon-btn" id="notifyBtn" type="button" aria-label="Notifications">
-        <svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/><path d="M19 3h.01"/></svg>
-      </button>
+      <button class="icon-btn" id="notifyBtn" type="button" aria-label="Notifications"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="notify-dot"></span></button>
     </header>
     <main id="page"></main>
     <nav class="bottom-nav" id="tabs"></nav>
@@ -517,33 +1007,78 @@
 
   <script>
     const $ = id => document.getElementById(id);
+    if (window.Capacitor) document.documentElement.classList.add("native-app");
     const liveApi = "https://canteen.axzen.in";
     const API = (window.Capacitor || location.protocol === "capacitor:") ? liveApi : "";
     const TOKEN_KEY = "axzen_employee_token";
     const USER_KEY = "axzen_employee_user";
+    const DATA_CACHE_KEY = "axzen_employee_dashboard_cache";
+
+    function lucideIcon(name, size = 22) {
+      const paths = {
+        house: '<path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/>',
+        clipboardList: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/>',
+        plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+        creditCard: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+        users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
+        chartNoAxesColumn: '<path d="M5 21V10"/><path d="M12 21V3"/><path d="M19 21v-6"/>',
+        user: '<circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+        fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h6"/>',
+        mapPin: '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/>',
+        building2: '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18"/><path d="M6 12H4a2 2 0 0 0-2 2v8h20v-8a2 2 0 0 0-2-2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
+        printer: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/>',
+        landmark: '<path d="M3 22h18"/><path d="M6 18V9"/><path d="M10 18V9"/><path d="M14 18V9"/><path d="M18 18V9"/><path d="m12 2 9 5H3z"/>',
+        check: '<path d="m20 6-11 11-5-5"/>',
+        clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+        x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+        bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+        phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2A19.8 19.8 0 0 1 3.1 5.2 2 2 0 0 1 5.1 3h3a2 2 0 0 1 2 1.7l.4 2.5a2 2 0 0 1-.6 1.8l-1.2 1.2a16 16 0 0 0 5.1 5.1l1.2-1.2a2 2 0 0 1 1.8-.6l2.5.4a2 2 0 0 1 1.7 2Z"/>',
+        messageCircle: '<path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.4-4.1A8 8 0 1 1 20 11.5Z"/>',
+        playCircle: '<circle cx="12" cy="12" r="10"/><path d="m10 8 6 4-6 4Z"/>',
+        shoppingBag: '<path d="M6 7h12l1 14H5Z"/><path d="M9 7a3 3 0 0 1 6 0"/>',
+        helpCircle: '<circle cx="12" cy="12" r="10"/><path d="M9.5 9a3 3 0 1 1 4.8 2.4c-1 .7-1.8 1.3-1.8 2.6"/><path d="M12 18h.01"/>',
+        logOut: '<path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M21 3v18"/>',
+        pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+        qrCode: '<rect x="3" y="3" width="5" height="5"/><rect x="16" y="3" width="5" height="5"/><rect x="3" y="16" width="5" height="5"/><path d="M12 7h.01"/><path d="M12 12h4"/><path d="M12 16h.01"/><path d="M16 16h.01"/><path d="M21 12h.01"/><path d="M21 21h-5v-5"/>',
+        chevronRight: '<path d="m9 18 6-6-6-6"/>',
+        store: '<path d="m3 9 2-5h14l2 5"/><path d="M4 9v11h16V9"/><path d="M9 22V12h6v10"/>',
+        shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+        activity: '<path d="M22 12h-4l-3 7-6-14-3 7H2"/>',
+        userPlus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/>'
+      };
+      return `<svg class="lucide-icon" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.user}</svg>`;
+    }
 
     const icons = {
-      home: '<svg viewBox="0 0 24 24"><path d="m3 11 9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
-      leads: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>',
-      plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
-      rupee: '<svg viewBox="0 0 24 24"><path d="M6 3h12"/><path d="M6 8h12"/><path d="M6 13h5a5 5 0 0 0 0-10"/><path d="m6 13 8 8"/></svg>',
-      users: '<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-      chart: '<svg viewBox="0 0 24 24"><path d="M4 19V5"/><path d="M4 19h16"/><rect x="7" y="11" width="3" height="5"/><rect x="12" y="7" width="3" height="9"/><rect x="17" y="4" width="3" height="12"/></svg>',
-      user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>'
+      home: lucideIcon("house", 24),
+      leads: lucideIcon("clipboardList", 24),
+      plus: lucideIcon("plus", 24),
+      rupee: lucideIcon("store", 24),
+      store: lucideIcon("store", 24),
+      shield: lucideIcon("shield", 24),
+      users: lucideIcon("users", 24),
+      chart: lucideIcon("chartNoAxesColumn", 24),
+      plan: lucideIcon("fileText", 24),
+      user: lucideIcon("user", 24)
     };
 
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
     const money = value => "Rs " + Number(value || 0).toLocaleString("en-IN");
     const fmtDate = value => value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
+    const fmtDateTime = value => {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    };
     const mobileDigits = value => String(value || "").replace(/\D/g, "");
     const today = () => new Date().toISOString().slice(0, 10);
 
-    let selectedLoginRole = "employee";
     let token = localStorage.getItem(TOKEN_KEY) || "";
     let user = readJson(USER_KEY);
     let route = "dashboard";
     let stack = [];
-    let data = demoData();
+    let data = readJson(DATA_CACHE_KEY) || demoData();
     let selectedCanteenId = null;
     let busy = false;
     let filterStatus = "All";
@@ -618,18 +1153,22 @@
     function setPage(title, sub) {
       $("pageTitle").textContent = title;
       $("pageSub").textContent = sub || (isManager() ? "Manager control center" : "Employee sales workflow");
-      $("titleMark").textContent = isManager() ? "SA" : "AX";
-      $("backBtn").classList.toggle("hidden", stack.length === 0);
+      $("titleMark").innerHTML = lucideIcon(isManager() ? "users" : "user", 22);
+      const detail = ["canteenDetail", "profile"].includes(route);
+      $("appScreen").classList.toggle("detail-mode", detail);
+      $("titleMark").classList.toggle("hidden", detail);
+      $("backBtn").classList.toggle("is-idle", !detail && stack.length === 0);
       renderTabs();
     }
 
     function navItems() {
       return isManager()
-        ? [["dashboard", icons.home, "Home"], ["canteens", icons.leads, "Leads"], ["approvals", icons.plus, "Approve"], ["team", icons.users, "Team"], ["profile", icons.user, "Profile"]]
-        : [["dashboard", icons.home, "Home"], ["canteens", icons.leads, "Leads"], ["add", icons.plus, "Add"], ["payments", icons.rupee, "Money"], ["profile", icons.user, "Profile"]];
+        ? [["dashboard", icons.home, "Home"], ["canteens", icons.leads, "Leads"], ["approvals", icons.shield, "Approvals"], ["plans", icons.plan, "Plans"], ["team", icons.users, "Team"], ["profile", icons.user, "Profile"]]
+        : [["dashboard", icons.home, "Home"], ["canteens", icons.leads, "Leads"], ["add", icons.plus, "Add"], ["payments", icons.store, "Customers"], ["profile", icons.user, "Profile"]];
     }
 
     function renderTabs() {
+      $("tabs").classList.toggle("manager", isManager());
       $("tabs").innerHTML = navItems().map(([id, icon, label]) =>
         `<button class="nav-btn ${route === id ? "active" : ""}" type="button" data-nav="${id}">${icon}<span>${label}</span></button>`
       ).join("");
@@ -637,7 +1176,9 @@
     }
 
     function go(next, push = true) {
-      if (push && route !== next) stack.push(route);
+      const roots = new Set(["dashboard", "canteens", "add", "payments", "profile", "approvals", "plans", "team", "reports"]);
+      if (roots.has(next)) stack = [];
+      else if (push && route !== next) stack.push(route);
       route = next;
       render();
       window.scrollTo({ top: 0, behavior: "instant" });
@@ -659,9 +1200,10 @@
       try {
         if (!silent) setBusy(true);
         const body = await api("/marketing-api/dashboard");
-        data = { ...demoData(), ...body };
+        data = body;
+        localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(data));
       } catch (error) {
-        toast(error.message + ". Showing cached demo data.", "error");
+        if (!silent) toast(error.message + ". Check your connection and try again.", "error");
       } finally {
         setBusy(false);
       }
@@ -676,7 +1218,7 @@
 
     function toast(message, type = "ok") {
       const card = $("sheetCard");
-      card.innerHTML = `<div class="section-head"><h2>${type === "error" ? "Problem" : "Done"}</h2><button class="icon-btn" id="closeToast" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div><p class="status ${type === "error" ? "error" : "ok"}">${esc(message)}</p>`;
+      card.innerHTML = `<div class="section-head"><h2>${type === "error" ? "Problem" : "Done"}</h2><button class="icon-btn" id="closeToast" type="button">${lucideIcon("x", 22)}</button></div><p class="status ${type === "error" ? "error" : "ok"}">${esc(message)}</p>`;
       $("sheet").classList.remove("hidden");
       $("closeToast").addEventListener("click", closeSheet);
     }
@@ -686,6 +1228,266 @@
       if (!isManager() && user?.employeeId) rows = rows.filter(row => String(row.submittedBy || "") === String(user.employeeId));
       if (filterStatus !== "All") rows = rows.filter(row => String(row.status || "").toLowerCase().includes(filterStatus.toLowerCase()));
       return rows;
+    }
+
+    function employeeRows() {
+      let rows = Array.isArray(data.canteens) ? data.canteens : [];
+      if (!isManager() && user?.employeeId) rows = rows.filter(row => String(row.submittedBy || "") === String(user.employeeId));
+      return rows;
+    }
+
+    function dateKey(value) {
+      if (!value) return "";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value).slice(0, 10);
+      return date.toISOString().slice(0, 10);
+    }
+
+    function isExpiredCustomer(item) {
+      const status = String(item?.status || "").toLowerCase();
+      if (status.includes("expired")) return true;
+      // Trial/Active/Blocked status should not be reclassified as expired based on date alone
+      if (status.includes("trial") || status.includes("active") || status.includes("blocked")) return false;
+      if (!item?.planExpiryDate) return false;
+      const expiry = new Date(`${String(item.planExpiryDate).slice(0, 10)}T23:59:59`);
+      return !Number.isNaN(expiry.getTime()) && expiry < new Date();
+    }
+
+    function hasCustomerLogin(item) {
+      return Boolean(item?.canteenLoginId || item?.activatedCanteenId);
+    }
+
+    function isPayingOrTrialCustomer(item) {
+      if (!hasCustomerLogin(item) || isExpiredCustomer(item)) return false;
+      const status = String(item?.status || "").toLowerCase();
+      return status.includes("active") || status.includes("trial") || Number(item?.paidAmount || 0) > 0 || String(item?.paymentMode || "").toLowerCase().includes("success");
+    }
+
+    function customerRows() {
+      return employeeRows().filter(isPayingOrTrialCustomer);
+    }
+
+    function leadRows() {
+      return employeeRows().filter(item => !isPayingOrTrialCustomer(item));
+    }
+
+    function todayTaskRows() {
+      const key = today();
+      return employeeRows().filter(item => {
+        const next = item.nextFollowUp || item.followUpDate || item.lastActivity?.followUpDate;
+        return dateKey(next) === key || (Array.isArray(item.followUps) && item.followUps.some(row => dateKey(row.followUpDate || row.nextFollowUp) === key));
+      });
+    }
+
+    function expiredRows() {
+      return employeeRows().filter(isExpiredCustomer);
+    }
+
+    function daysUntilExpiry(item) {
+      if (!item?.planExpiryDate) return null;
+      const expiry = new Date(`${String(item.planExpiryDate).slice(0, 10)}T23:59:59`);
+      if (Number.isNaN(expiry.getTime())) return null;
+      return Math.ceil((expiry.getTime() - Date.now()) / 86400000);
+    }
+
+    function expiryFollowupRows() {
+      return employeeRows().filter(item => {
+        const days = daysUntilExpiry(item);
+        return days !== null && days >= 0 && days <= 2;
+      });
+    }
+
+    function planRows() {
+      const rows = Array.isArray(data.websitePlans) && data.websitePlans.length
+        ? data.websitePlans
+        : [
+            { id: 1, name: "Starter", offerPrice: "599", billingCycle: "month", active: true },
+            { id: 2, name: "Growth", offerPrice: "799", billingCycle: "month", active: true },
+            { id: 3, name: "Professional", offerPrice: "999", billingCycle: "month", active: true },
+            { id: 4, name: "Business", offerPrice: "Custom Pricing", billingCycle: "month", active: true }
+          ];
+      return rows.filter(row => row.active !== false);
+    }
+
+    function planOptionsHtml(selected = "") {
+      const names = new Set();
+      return planRows().map(row => {
+        const name = String(row.name || "Plan").trim();
+        if (names.has(name)) return "";
+        names.add(name);
+        return `<option value="${esc(name)}" ${String(selected || "").toLowerCase() === name.toLowerCase() ? "selected" : ""}>${esc(name)}</option>`;
+      }).join("");
+    }
+
+    function employeePayments() {
+      const ids = new Set(employeeRows().map(row => Number(row.id)));
+      return (data.payments || []).filter(row => ids.has(Number(row.canteenId)) || (!isManager() && String(row.collectedBy || "") === String(user?.employeeId || "")));
+    }
+
+    function commissionRows() {
+      const seen = new Set();
+      return employeePayments()
+        .filter(row => Number(row.amount || 0) > 0)
+        .filter(row => {
+          const key = Number(row.canteenId || 0);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .map(row => {
+          const canteen = (data.canteens || []).find(item => Number(item.id) === Number(row.canteenId));
+          return { ...row, commission: Number(canteen?.commissionAmount ?? row.commissionAmount ?? Math.round(Number(row.amount || 0) * 0.1)) };
+        });
+    }
+
+    function assignedPrinters() {
+      return (data.printers || []).filter(row => {
+        if (isManager()) return true;
+        const status = String(row.status || "").toLowerCase();
+        return String(row.allottedTo || "") === String(user?.employeeId || "") && status.includes("executive");
+      });
+    }
+
+    function customerPrinters(item = {}) {
+      return (data.printers || []).filter(row => Number(row.marketingCanteenId || 0) === Number(item.id || 0));
+    }
+
+    function printersAvailableForDemo(item = {}) {
+      return (data.printers || []).filter(row => {
+        const status = String(row.status || "").toLowerCase();
+        const withEmployee = status.includes("executive") && String(row.allottedTo || "") === String(user?.employeeId || "");
+        const alreadyForLead = Number(row.marketingCanteenId || 0) === Number(item.id || 0);
+        return withEmployee || alreadyForLead;
+      });
+    }
+
+    function leadInfoCard(key, label, value) {
+      const iconMap = {
+        location: lucideIcon("mapPin", 22),
+        business: lucideIcon("building2", 22),
+        assigned: lucideIcon("user", 22),
+        plan: lucideIcon("fileText", 22)
+      };
+      return `<button class="lead-info-card" type="button" data-info="${key}"><span class="lead-info-icon">${iconMap[key] || icons.plus}</span><span>${esc(label)}<strong>${esc(value || "-")}</strong></span></button>`;
+    }
+
+    function leadActionButton(action, label, tone, icon) {
+      return `<button class="lead-action ${tone || ""}" type="button" data-action="${action}">${icon}<span>${esc(label)}</span></button>`;
+    }
+
+    function maskAccount(value = "") {
+      const digits = String(value || "").replace(/\D/g, "");
+      return digits ? `**** **** ${digits.slice(-4)}` : "-";
+    }
+
+    function employeeInitials() {
+      const parts = String(user?.name || user?.employeeId || "AX").trim().split(/\s+/);
+      return parts.slice(0, 2).map(part => part[0] || "").join("").toUpperCase() || "AX";
+    }
+
+    function verificationBadge(label, ok) {
+      const mark = ok
+        ? `<span class="verify-mark">${lucideIcon("check", 16)}</span>`
+        : `<span class="verify-mark pending">${lucideIcon("clock", 16)}</span>`;
+      return `<span class="verify-pill ${ok ? "" : "pending"}">${mark}${esc(label)}</span>`;
+    }
+
+    function profileIcon(name) {
+      const map = {
+        location: lucideIcon("mapPin", 22),
+        bank: lucideIcon("landmark", 22),
+        printer: lucideIcon("printer", 22),
+        person: lucideIcon("user", 22)
+      };
+      return map[name] || icons.user;
+    }
+
+    function footerIcon(name) {
+      const map = {
+        docs: lucideIcon("fileText", 20),
+        help: lucideIcon("helpCircle", 20),
+        logout: lucideIcon("logOut", 20),
+        edit: lucideIcon("pencil", 20)
+      };
+      return map[name] || "";
+    }
+
+    function openProfileEditSheet() {
+      $("sheetCard").innerHTML = `
+        <div class="section-head"><h2>Edit Profile</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+        <label class="field">Mobile <input id="editMobile" inputmode="tel" value="${esc(user?.mobile || "")}"></label>
+        <label class="field">Email <input id="editEmail" value="${esc(user?.email || "")}"></label>
+        <label class="field">Address <textarea id="editAddress">${esc(user?.address || "")}</textarea></label>
+        <label class="field">Emergency Contact <input id="editEmergency" inputmode="tel" value="${esc(user?.emergencyContact || "")}"></label>
+        <button class="btn" id="saveProfileEdit" type="button">Save Profile</button>`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+      $("saveProfileEdit").addEventListener("click", () => {
+        user = { ...user, mobile: formValue("editMobile"), email: formValue("editEmail"), address: formValue("editAddress"), emergencyContact: formValue("editEmergency") };
+        localStorage.setItem(USER_KEY, JSON.stringify(user));
+        closeSheet();
+        toast("Profile update saved.");
+        renderProfile();
+      });
+    }
+
+    function openLocationSheet() {
+      $("sheetCard").innerHTML = `<div class="section-head"><h2>Update Location</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div><p class="muted">GPS permission tarvata current work location save avtundi.</p><button class="btn green" id="captureLocationBtn" type="button">Capture Current Location</button><div class="status" id="locationStatus"></div>`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+      $("captureLocationBtn").addEventListener("click", () => {
+        const status = $("locationStatus");
+        if (!navigator.geolocation) {
+          status.textContent = "Location not supported on this device.";
+          status.className = "status error";
+          return;
+        }
+        status.textContent = "Reading GPS...";
+        navigator.geolocation.getCurrentPosition(position => {
+          const saved = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: Math.round(position.coords.accuracy || 0),
+            capturedAt: new Date().toISOString(),
+            address: user?.address || "Current GPS location"
+          };
+          localStorage.setItem("axzen_employee_location", JSON.stringify(saved));
+          status.textContent = "Location saved.";
+          status.className = "status ok";
+          setTimeout(() => { closeSheet(); renderProfile(); }, 400);
+        }, () => {
+          status.textContent = "Permission denied. Enable location permission in phone settings.";
+          status.className = "status error";
+        }, { enableHighAccuracy: true, timeout: 12000 });
+      });
+    }
+
+    function openPayoutSheet(amount) {
+      $("sheetCard").innerHTML = `<div class="section-head"><h2>Request Payout</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div><div class="subtle-panel"><h3>Available ${money(amount)}</h3><p class="muted">Destination: verified bank/UPI on profile.</p></div><label class="field">Amount <input id="payoutAmount" type="number" value="${Number(amount || 0)}"></label><button class="btn green" id="confirmPayout" type="button">Request Payout</button>`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+      $("confirmPayout").addEventListener("click", () => {
+        const rows = readJson("axzen_employee_payouts") || [];
+        rows.unshift({ payoutId: `PO${Date.now()}`, amount: Number(formValue("payoutAmount") || 0), status: "Requested", requestedAt: new Date().toISOString() });
+        localStorage.setItem("axzen_employee_payouts", JSON.stringify(rows));
+        closeSheet();
+        toast("Payout request submitted.");
+      });
+    }
+
+    function openPrinterIssueSheet(serial = "") {
+      $("sheetCard").innerHTML = `<div class="section-head"><h2>Report Printer Issue</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div><label class="field">Printer <input id="issuePrinter" value="${esc(serial)}"></label><label class="field">Issue Type <select id="issueType"><option>Printing problem</option><option>Bluetooth problem</option><option>Not powering on</option><option>Paper feed issue</option><option>Damaged</option><option>Lost</option><option>Other</option></select></label><label class="field">Description <textarea id="issueDesc"></textarea></label><button class="btn red" id="submitIssue" type="button">Submit Issue</button>`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+      $("submitIssue").addEventListener("click", () => { closeSheet(); toast(`Issue ticket created for ${formValue("issuePrinter") || "printer"}.`); });
+    }
+
+    function openDocumentsSheet() {
+      openSheet("Documents & KYC", `<div class="kv-grid">${kv("Aadhaar", "Verification Pending")}${kv("PAN", "Not Uploaded")}${kv("Bank Proof", "Pending")}${kv("Profile Photo", "Ready")}</div><label class="field">Document Type <select><option>Aadhaar</option><option>PAN</option><option>Bank Proof</option><option>Address Proof</option></select></label><button class="btn">Upload / Capture</button>`);
+    }
+
+    function openSupportSheet() {
+      openSheet("Help & Support", `<div class="actions"><a class="btn green" href="tel:+919876543210">Call Support</a><a class="btn green" href="https://wa.me/919876543210" target="_blank" rel="noopener">WhatsApp</a></div><label class="field">Support Message <textarea></textarea></label><button class="btn">Raise Ticket</button>`);
     }
 
     function selectedCanteen() {
@@ -747,7 +1549,10 @@
 
     function renderDashboard() {
       const cards = data.summary?.cards || {};
-      const rows = currentRows();
+      const rows = leadRows();
+      const tasks = todayTaskRows();
+      const expired = expiredRows();
+      const expiryDue = expiryFollowupRows();
       setPage(isManager() ? "Control Center" : `Hi, ${user?.name || "Employee"}`, isManager() ? "Approvals, collections and team" : "Add customers and complete onboarding");
       $("page").innerHTML = `
         <section class="hero">
@@ -766,11 +1571,23 @@
           ${metric("Trial", cards.trialCanteens || 0)}
           ${metric("Pending Pay", money(cards.pendingPayments || 0))}
           ${metric("Printers", cards.printersAssigned || 0)}
-          ${metric("Installations", cards.pendingInstallations || 0)}
-          ${metric("Today New", cards.todaysRegistrations || 0)}
+            ${metric("Installations", cards.pendingInstallations || 0)}
+            ${metric("Today New", cards.todaysRegistrations || 0)}
         </section>
         <section class="panel">
-          <div class="section-head"><h2>${isManager() ? "Needs Action" : "My Recent Customers"}</h2><button class="btn small soft" type="button" data-route="${isManager() ? "approvals" : "add"}">${isManager() ? "Open" : "Add New"}</button></div>
+          <div class="section-head"><h2>Today Tasks</h2>${pill(`${tasks.length} due`)}</div>
+          <div class="list">${tasks.length ? customerList(tasks) : `<div class="empty">No follow-ups scheduled for today.</div>`}</div>
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>Trial / Expired Follow-up</h2>${pill(`${expired.length} expired`)}</div>
+          <div class="list">${expired.length ? customerList(expired.slice(0, 5)) : `<div class="empty">No expired customers today.</div>`}</div>
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>Expiring in 2 Days</h2>${pill(`${expiryDue.length} due`)}</div>
+          <div class="list">${expiryDue.length ? customerList(expiryDue.slice(0, 8)) : `<div class="empty">No trial or paid customers expiring in 2 days.</div>`}</div>
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>${isManager() ? "Needs Action" : "Open Leads"}</h2><button class="btn small soft" type="button" data-route="${isManager() ? "approvals" : "add"}">${isManager() ? "Open" : "Add New"}</button></div>
           <div class="list">${customerList(rows.slice(0, 5))}</div>
         </section>
         <section class="panel">
@@ -798,11 +1615,18 @@
     }
 
     function renderCanteens() {
-      setPage(isManager() ? "All Customers" : "My Customers", `${currentRows().length} records`);
-      const tabs = ["All", "Pending", "Active", "Trial", "Rejected", "Blocked"];
+      const rows = isManager() ? currentRows() : leadRows().filter(row => {
+        if (filterStatus === "All") return true;
+        const hay = `${row.status || ""} ${row.currentStage || ""} ${row.lastActivity?.outcome || ""}`.toLowerCase();
+        if (filterStatus === "Follow") return hay.includes("follow") || Boolean(row.nextFollowUp);
+        if (filterStatus === "Expired") return isExpiredCustomer(row);
+        return hay.includes(filterStatus.toLowerCase());
+      });
+      setPage(isManager() ? "All Customers" : "Leads", `${rows.length} records`);
+      const tabs = isManager() ? ["All", "Pending", "Active", "Trial", "Rejected", "Blocked", "Expired"] : ["All", "Pending", "Follow", "Rejected", "Blocked", "Expired"];
       $("page").innerHTML = `
         <section class="chips">${tabs.map(tab => `<button class="chip ${filterStatus === tab ? "active" : ""}" type="button" data-filter="${tab}">${tab}</button>`).join("")}</section>
-        <section class="list">${customerList(currentRows())}</section>`;
+        <section class="list">${customerList(rows)}</section>`;
       document.querySelectorAll("[data-filter]").forEach(btn => btn.addEventListener("click", () => {
         filterStatus = btn.dataset.filter;
         renderCanteens();
@@ -817,44 +1641,65 @@
         $("page").innerHTML = `<div class="empty">No customer selected.</div>`;
         return;
       }
-      setPage("Lead Details", item.canteenName);
+      const isCustomer = isPayingOrTrialCustomer(item);
+      setPage(isCustomer ? "Customer Details" : "Lead Details", item.canteenName);
       const phone = mobileDigits(item.ownerMobile);
       const last = item.lastActivity || {};
       const rows = timelineRows(item);
+      const printers = customerPrinters(item);
+      const demoState = String(item.status || item.currentStage || "").toLowerCase().includes("demo") ? "DEMO GIVEN" : stageLabel(statusStage(item));
+      const maskedPhone = phone ? `${phone.slice(0, 2)}xxxxxx${phone.slice(-2)}` : "-";
+      const followValue = last.followUpDate || item.nextFollowUp;
+      const followText = followValue
+        ? `${fmtDate(followValue)}${last.followUpTime ? `, ${esc(last.followUpTime)}` : ""}`
+        : "Not scheduled";
+      const statusText = isExpiredCustomer(item) ? "Expired" : isCustomer ? "Active Customer" : "Active Lead";
       $("page").innerHTML = `
-        <section class="panel">
-          <div class="section-head"><div><h2>${esc(item.canteenName)}</h2><p class="muted">${esc(item.businessCategory || "Business")} | ${esc(item.city || "-")}</p></div>${pill(item.status)}</div>
-          <div class="kv-grid">
-            <button class="kv" type="button" data-info="location"><span>Location</span><strong>${esc([item.city, item.state].filter(Boolean).join(", ") || item.address || "-")}</strong></button>
-            <button class="kv" type="button" data-info="business"><span>Business Type</span><strong>${esc(item.businessCategory || "-")}</strong></button>
-            <button class="kv" type="button" data-info="assigned"><span>Assigned</span><strong>${esc(item.submittedBy || "-")}</strong></button>
-            <button class="kv" type="button" data-info="plan"><span>Plan</span><strong>${esc(item.selectedPlan || "Not selected")}</strong></button>
-            ${kv("Payment", `${money(item.paidAmount)} paid`)}
-            ${kv("Pending", money(item.pendingAmount))}
-            ${kv("Next Follow-up", item.nextFollowUp ? fmtDate(item.nextFollowUp) : "-")}
-            ${kv("Stage", stageLabel(statusStage(item)))}
+        <section class="panel lead-hero">
+          <div class="lead-hero-top">
+            <div class="lead-avatar">${esc(String(item.canteenName || "A").slice(0, 1).toUpperCase())}</div>
+            <div class="lead-hero-title">
+              <h2>${esc(item.canteenName)}</h2>
+              <p>${esc(item.ownerName || "-")} | ${esc(maskedPhone)}</p>
+              <span class="lead-demo-pill">${esc(demoState)}</span>
+            </div>
+            <div class="lead-status-pill"><span class="lead-status-dot"></span>${esc(statusText)}</div>
           </div>
+          <div class="lead-info-wrap"><div class="lead-info-grid">
+            ${leadInfoCard("location", "Location", [item.city, item.state].filter(Boolean).join(", ") || item.address || "-")}
+            ${leadInfoCard("business", "Business Type", item.businessCategory || "-")}
+            ${leadInfoCard("assigned", "Assigned", item.submittedBy || "-")}
+            ${leadInfoCard("plan", "Plan", item.selectedPlan || "Not selected")}
+          </div></div>
         </section>
-        <section class="panel">
-          <div class="section-head"><h2>Last Activity</h2><button class="btn small soft" type="button" data-action="editActivity">Edit</button></div>
-          <div class="list">
-            <div class="row"><div><h3>${esc(last.type || stageLabel(statusStage(item)))}</h3><p>${esc(last.outcome || item.notes || "No recent notes")}</p><p>${item.nextFollowUp ? `Next follow-up: ${fmtDate(item.nextFollowUp)}` : "No follow-up scheduled"}</p></div>${pill(last.outcome || item.status)}</div>
+        <section class="panel last-activity">
+          <div class="section-head">
+            <h2 class="section-title-icon">${lucideIcon("activity", 18)} Last Activity</h2>
+            <button class="plain-link" type="button" data-action="editActivity">${lucideIcon("pencil", 16)} Edit</button>
           </div>
+          <div class="activity-line phone">${lucideIcon("phone", 18)}<span>${esc(last.outcome || last.type || "Call later")}</span></div>
+          <div class="activity-line">${lucideIcon("clock", 18)}<span>Next follow-up: <b>${followText}</b></span></div>
         </section>
-        <section class="panel">
-          <div class="actions">
-            <button class="btn small green" type="button" data-action="call">Call</button>
-            <button class="btn small green" type="button" data-action="whatsapp">WhatsApp</button>
-            <button class="btn small amber" type="button" data-action="visit">Visit</button>
-            <button class="btn small soft" type="button" data-action="followup">Follow-up</button>
-            <button class="btn small soft" type="button" data-action="demo">Demo</button>
-            <button class="btn small red" type="button" data-action="closeSale">Close Sale</button>
-            ${isManager() ? `<button class="btn small soft" type="button" data-action="payment">Update Payment</button>` : ""}
+        <section class="panel lead-actions-panel">
+          <div class="lead-action-grid">
+            ${leadActionButton("call", "Call", "green", lucideIcon("phone", 20))}
+            ${leadActionButton("whatsapp", "WhatsApp", "green", lucideIcon("messageCircle", 20))}
+            ${leadActionButton("visit", "Visit", "amber", lucideIcon("mapPin", 20))}
+            ${leadActionButton("followup", "Follow-up", "", lucideIcon("userPlus", 20))}
+            ${leadActionButton("demo", "Demo", "violet", lucideIcon("playCircle", 20))}
+            ${leadActionButton("closeSale", "Close Sale", "red", lucideIcon("shoppingBag", 20))}
           </div>
+          <button class="btn ghost" type="button" data-action="payment">${isManager() ? "Update Payment" : "Payment Request"}</button>
         </section>
-        <section class="panel">
-          <div class="section-head"><h2>Activity Timeline</h2><button class="btn small soft" type="button" data-action="advance">Advance</button></div>
-          <div class="list">${rows.map((row, index) => `<button class="row" type="button" data-timeline="${index}"><div><h3>${esc(row.type || "Activity")}</h3><p>${esc(row.outcome || "Updated")} | ${esc(row.employeeId || "-")}</p><p>${esc(row.notes || "")}</p></div><div><strong>${fmtDate(row.createdAt || Date.now())}</strong><p>${row.followUpDate ? `Follow-up ${esc(row.followUpDate)}` : ""}</p></div></button>`).join("")}</div>
+        <section class="panel activity-card">
+          <div class="section-head">
+            <h2 class="section-title-icon">${lucideIcon("clock", 18)} Activity Timeline</h2>
+            <button class="plain-link" type="button" data-action="advance">Advance &gt;</button>
+          </div>
+          <div class="timeline">${rows.map((row, index) => {
+            const current = index === rows.length - 1;
+            return `<button class="timeline-item ${current ? "current" : ""}" type="button" data-timeline="${index}"><span class="activity-dot">${index + 1}</span><div><h3>${esc(row.type || "Activity")}</h3><p class="${current ? "current-label" : "muted-label"}">${esc(current ? (row.outcome || "Current") : (row.outcome || "Completed"))}</p></div><strong>${fmtDateTime(row.createdAt || Date.now())}</strong></button>`;
+          }).join("")}</div>
         </section>
         <section class="panel">
           <div class="section-head"><h2>Credentials</h2>${item.canteenLoginId ? pill("Ready") : pill("After Approval")}</div>
@@ -864,6 +1709,10 @@
             ${kv("Password", item.defaultPassword)}
             ${kv("Expiry", item.planExpiryDate)}
           </div>
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>${isCustomer ? "Customer Printers" : "Demo Printers"}</h2>${pill(`${printers.length} allotted`)}</div>
+          <div class="list">${printers.length ? printers.map(row => `<article class="row"><div><h3>${esc(row.serialNumber || "-")}</h3><p>${esc(row.model || "Thermal Printer")} | ${esc(row.status || "Allotted")}</p></div>${pill(row.allottedToName || item.submittedByName || "Employee")}</article>`).join("") : `<div class="empty">No printers allotted yet.</div>`}</div>
         </section>`;
       document.querySelectorAll("[data-info]").forEach(btn => btn.addEventListener("click", () => openInfoSheet(item, btn.dataset.info)));
       document.querySelectorAll("[data-timeline]").forEach(btn => btn.addEventListener("click", () => openTimelineSheet(rows[Number(btn.dataset.timeline)])));
@@ -954,14 +1803,51 @@
 
     function openDemoSheet(item) {
       const alreadyDone = timelineRows(item).some(row => String(row.type || "").toUpperCase().includes("DEMO GIVEN"));
-      openSheet("Demo", `<button class="btn green" id="startDemoBtn" type="button">Start Demo</button><label class="field">Demo Result <select id="demoOutcome"><option>Very Interested</option><option>Interested</option><option>Need Time</option><option>Price Issue</option><option>Manager Discussion Required</option><option>Not Interested</option></select></label><label class="field">Plan Interested <select id="demoPlan"><option>Starter</option><option>Professional</option><option>Premium</option><option>Enterprise</option></select></label><label class="field">Expected Purchase Date <input id="demoPurchaseDate" type="date"></label>${activityForm(`<button class="btn" id="completeDemoBtn" type="button">Complete Demo</button>`)}`);
-      $("startDemoBtn").addEventListener("click", () => saveWorkflow(item, { type: "Demo Started", outcome: "Started", notes: "Demo started", stage: "DEMO_SCHEDULED" }));
-      $("completeDemoBtn").addEventListener("click", () => saveWorkflow(item, { type: alreadyDone ? "Demo Updated" : "Demo Given", outcome: formValue("demoOutcome"), notes: formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: "DEMO_GIVEN", status: "DEMO GIVEN" }));
+      const needsPrinter = Number(item.printersRequired || 0) > 0;
+      const printers = printersAvailableForDemo(item);
+      const printerField = needsPrinter
+        ? `<label class="field">Demo Printer <select id="demoPrinterSerial"><option value="">Select allotted printer</option>${printers.map(row => `<option value="${esc(row.serialNumber)}" data-model="${esc(row.model || "")}" ${String(row.serialNumber || "") === String(item.printerSerialNumber || "") ? "selected" : ""}>${esc(row.model || "Thermal Printer")} - ${esc(row.serialNumber || "-")}</option>`).join("")}</select></label><p class="muted">${printers.length ? "Select the printer given to this employee before starting demo." : "No printer allotted to this employee. Ask admin to assign printer to employee first."}</p>`
+        : `<p class="muted">Printer not required for this customer.</p>`;
+      openSheet("Demo", `${printerField}<button class="btn green" id="startDemoBtn" type="button">Start Demo</button><label class="field">Demo Result <select id="demoOutcome"><option>Very Interested</option><option>Interested</option><option>Need Time</option><option>Price Issue</option><option>Manager Discussion Required</option><option>Not Interested</option></select></label><label class="field">Plan Interested <select id="demoPlan">${planOptionsHtml(item.selectedPlan || "Starter")}</select></label><label class="field">Demo Days Requested <input id="demoDaysInput" type="number" min="1" value="${Number(item.requestedDemoDays || item.demoDays || 7)}"></label><label class="field">Expected Purchase Date <input id="demoPurchaseDate" type="date"></label>${activityForm(`<button class="btn" id="completeDemoBtn" type="button">Complete Demo</button>`)}`);
+      $("startDemoBtn").addEventListener("click", () => {
+        const select = $("demoPrinterSerial");
+        if (needsPrinter && !formValue("demoPrinterSerial")) {
+          toast("Select allotted printer before demo start.", "error");
+          return;
+        }
+        saveWorkflow(item, {
+          type: "Demo Started",
+          outcome: "Started",
+          notes: "Demo started",
+          stage: "DEMO_SCHEDULED",
+          printerSerialNumber: formValue("demoPrinterSerial"),
+          printerModel: select?.selectedOptions?.[0]?.dataset?.model || ""
+        });
+      });
+      $("completeDemoBtn").addEventListener("click", () => saveWorkflow(item, { type: alreadyDone ? "Demo Updated" : "Demo Given", outcome: formValue("demoOutcome"), notes: formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: "DEMO_GIVEN", status: "DEMO GIVEN", selectedPlan: formValue("demoPlan"), planType: "Trial", demoDays: Number(formValue("demoDaysInput") || 7), trialDays: Number(formValue("demoDaysInput") || 7) }));
     }
 
     function openCloseSaleSheet(item) {
-      openSheet("Close Sale", `<label class="field">Selected Plan <select id="salePlan"><option>${esc(item.selectedPlan || "Professional")}</option><option>Starter</option><option>Premium</option><option>Enterprise</option></select></label><label class="field">Plan Amount <input id="saleAmount" type="number" value="${Number(item.paidAmount || 999)}"></label><label class="field">Discount <input id="saleDiscount" type="number" value="0"></label><label class="field">Payment Status <select id="salePaymentStatus"><option>Paid</option><option>Partially Paid</option><option>Pending</option></select></label><label class="field">Payment Mode <select id="salePaymentMode"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Payment Link</option></select></label><label class="field">Printer Required <select id="salePrinter"><option>Yes</option><option>No</option></select></label><label class="field">Installation Date <input id="saleInstallDate" type="date" value="${today()}"></label>${activityForm(`<button class="btn red" id="submitSaleBtn" type="button">Submit Sale</button>`)}`);
-      $("submitSaleBtn").addEventListener("click", () => saveWorkflow(item, { type: "Sale Submitted", outcome: formValue("salePaymentStatus"), notes: formValue("activityNotes"), followUpDate: formValue("activityDate"), followUpTime: formValue("activityTime"), stage: "SALE_PENDING_APPROVAL", status: "SALE PENDING APPROVAL" }));
+      const suggested = planRows().find(row => String(row.name || "").toLowerCase() === String(item.selectedPlan || "").toLowerCase()) || {};
+      const amount = Number(item.paidAmount || String(suggested.offerPrice || "").replace(/[^0-9.]/g, "") || 999);
+      openSheet("Close Sale", `<label class="field">Selected Plan <select id="salePlan">${planOptionsHtml(item.selectedPlan || "Professional")}</select></label><label class="field">Plan Amount <input id="saleAmount" type="number" value="${amount}"></label><label class="field">Paid Amount <input id="salePaidAmount" type="number" value="${Number(item.paidAmount || amount)}"></label><label class="field">Pending Amount <input id="salePendingAmount" type="number" value="${Number(item.pendingAmount || 0)}"></label><label class="field">Plan Months <input id="salePlanMonths" type="number" min="1" value="1"></label><label class="field">Payment Status <select id="salePaymentStatus"><option>Paid</option><option>Partially Paid</option><option>Pending</option></select></label><label class="field">Payment Mode <select id="salePaymentMode"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Payment Link</option></select></label><label class="field">Printer Required <select id="salePrinter"><option>Yes</option><option>No</option></select></label><label class="field">Installation Date <input id="saleInstallDate" type="date" value="${today()}"></label>${activityForm(`<button class="btn red" id="submitSaleBtn" type="button">Submit Sale For Approval</button>`)}`);
+      $("submitSaleBtn").addEventListener("click", () => saveWorkflow(item, {
+        type: "Sale Submitted",
+        outcome: formValue("salePaymentStatus"),
+        notes: formValue("activityNotes"),
+        followUpDate: formValue("activityDate"),
+        followUpTime: formValue("activityTime"),
+        stage: "SALE_PENDING_APPROVAL",
+        status: "SALE PENDING APPROVAL",
+        selectedPlan: formValue("salePlan"),
+        planType: "Paid",
+        planStartDate: today(),
+        planMonths: Number(formValue("salePlanMonths") || 1),
+        paidAmount: Number(formValue("salePaidAmount") || 0),
+        pendingAmount: Number(formValue("salePendingAmount") || 0),
+        paymentMode: formValue("salePaymentMode"),
+        paymentApprovalStatus: "Pending"
+      }));
     }
 
     function openAdvanceSheet(item) {
@@ -996,17 +1882,19 @@
               <label class="field full">Business Name <input id="canteenName" placeholder="Sri Sai Restaurant" required></label>
               <label class="field">Owner Name <input id="ownerName" placeholder="Owner name" required></label>
               <label class="field">Owner Mobile <input id="ownerMobile" inputmode="tel" placeholder="9876543210" required></label>
-              <label class="field">Business Type <select id="businessCategory"><option>Canteen</option><option>Restaurant</option><option>Hotel</option><option>Cafe</option><option>Bakery</option><option>Chicken Shop</option><option>Retail</option></select></label>
+              <label class="field">Business Type <select id="businessCategory"><option>Canteen</option><option>Restaurant</option><option>Hotel</option><option>Cafe</option><option>Bakery</option><option>Chicken Shop</option><option>Meat Shop</option><option>Juice Shop</option><option>Retail</option></select></label>
               <label class="field">City <input id="city" placeholder="Hyderabad"></label>
               <label class="field">State <input id="state" value="Telangana"></label>
               <label class="field">Counters <input id="counters" type="number" min="1" value="1"></label>
               <label class="field">Printers Required <input id="printersRequired" type="number" min="0" value="1"></label>
-              <label class="field">Plan <select id="selectedPlan"><option>Starter</option><option>Professional</option><option>Premium</option><option>Enterprise</option></select></label>
+              <label class="field">Plan <select id="selectedPlan">${planOptionsHtml("Starter")}</select></label>
               <label class="field">Plan Type <select id="planType"><option>Trial</option><option>Paid</option></select></label>
+              <label class="field">Demo / Trial Days <input id="demoDays" type="number" min="1" value="7"></label>
               <label class="field">Paid Amount <input id="paidAmount" type="number" min="0" value="0"></label>
               <label class="field">Pending Amount <input id="pendingAmount" type="number" min="0" value="0"></label>
               <label class="field">Payment Mode <select id="paymentMode"><option>UPI</option><option>Cash</option><option>Bank Transfer</option><option>Payment Link</option><option>Trial</option></select></label>
               <label class="field">Start Date <input id="planStartDate" type="date" value="${today()}"></label>
+              <label class="field full">Customer POS Items <textarea id="menuSetupItems" placeholder="Tea - 10&#10;Meals - 80&#10;Dosa - 45"></textarea></label>
               <label class="field full">Address <textarea id="address" placeholder="Full shop address"></textarea></label>
               <label class="field full">Notes <textarea id="notes" placeholder="Menu setup, printer, follow-up notes"></textarea></label>
             </div>
@@ -1014,6 +1902,19 @@
           </form>
         </section>`;
       $("customerForm").addEventListener("submit", submitCustomer);
+      const categorySelect = $("businessCategory");
+      const menuBox = $("menuSetupItems");
+      const menuPlaceholder = value => {
+        const kind = String(value || "").toLowerCase();
+        if (kind.includes("chicken") || kind.includes("meat")) return "Chicken Curry Cut - 240\nBoneless Chicken - 320\nMutton Curry Cut - 780";
+        if (kind.includes("juice") || kind.includes("retail")) return "Water Bottle - 20\nJuice - 35\nBiscuits - 10";
+        return "Tea - 10\nMeals - 80\nDosa - 45";
+      };
+      if (categorySelect && menuBox) {
+        const applyPlaceholder = () => { menuBox.placeholder = menuPlaceholder(categorySelect.value); };
+        applyPlaceholder();
+        categorySelect.addEventListener("change", applyPlaceholder);
+      }
     }
 
     async function submitCustomer(event) {
@@ -1026,13 +1927,20 @@
         city: $("city").value.trim(),
         state: $("state").value.trim(),
         counters: Number($("counters").value || 1),
-        printersRequired: Number($("printersRequired").value || 0),
+        printersRequired: 0,
+        requestedPrinters: Number($("printersRequired").value || 0),
         selectedPlan: $("selectedPlan").value,
         planType: $("planType").value,
+        demoDays: Number($("demoDays").value || 0),
+        trialDays: $("planType").value === "Trial" ? Number($("demoDays").value || 0) : 0,
         paidAmount: Number($("paidAmount").value || 0),
         pendingAmount: Number($("pendingAmount").value || 0),
         paymentMode: $("paymentMode").value,
         planStartDate: $("planStartDate").value,
+        menuSetupItems: $("menuSetupItems").value.split(/\n/).map(line => line.trim()).filter(Boolean).map(line => {
+          const [name, price] = line.split(/\s*-\s*/);
+          return { name: name || line, price: Number(price || 0) };
+        }),
         address: $("address").value.trim(),
         notes: $("notes").value.trim()
       };
@@ -1051,27 +1959,40 @@
     }
 
     function renderApprovals() {
-      const pending = (data.canteens || []).filter(row => String(row.status || "").toLowerCase().includes("pending"));
+      const pending = (data.canteens || []).filter(row => String(row.status || "").toLowerCase().includes("pending") || isExpiredCustomer(row));
       setPage("Approvals", `${pending.length} pending customers`);
       $("page").innerHTML = `<section class="list">${pending.length ? pending.map(row => `
         <article class="panel">
           <div class="section-head"><div><h2>${esc(row.canteenName)}</h2><p class="muted">${esc(row.ownerName)} | ${esc(row.ownerMobile)}</p></div>${pill(row.status)}</div>
-          <div class="kv-grid">${kv("Plan", row.selectedPlan)}${kv("Paid", money(row.paidAmount))}${kv("Pending", money(row.pendingAmount))}${kv("Printers", row.printersRequired)}</div>
+          <div class="kv-grid">${kv("Plan", row.selectedPlan)}${kv("Type", row.planType || "Trial")}${kv("Expiry", row.planExpiryDate || "-")}${kv("Paid", money(row.requestedPaidAmount ?? row.paidAmount))}${kv("Pending", money(row.requestedPendingAmount ?? row.pendingAmount))}${kv("Printers", row.printersRequired)}</div>
           <div class="actions">
-            <button class="btn small green" type="button" data-approve="${row.id}">Approve</button>
-            <button class="btn small red" type="button" data-reject="${row.id}">Reject</button>
+            ${isExpiredCustomer(row) ? `<button class="btn small green" type="button" data-extend="${row.id}">Extend</button>` : `<button class="btn small green" type="button" data-approve="${row.id}">Approve</button><button class="btn small soft" type="button" data-review="${row.id}">Review</button><button class="btn small red" type="button" data-reject="${row.id}">Reject</button>`}
             <button class="btn small soft" type="button" data-canteen="${row.id}">Details</button>
           </div>
         </article>`).join("") : `<div class="empty">No pending approvals.</div>`}</section>`;
       document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => approveCanteen(btn.dataset.approve)));
+      document.querySelectorAll("[data-review]").forEach(btn => btn.addEventListener("click", () => openApprovalReviewSheet(btn.dataset.review)));
       document.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", () => openRejectSheet(btn.dataset.reject)));
+      document.querySelectorAll("[data-extend]").forEach(btn => btn.addEventListener("click", () => openExtendSheet(btn.dataset.extend)));
       bindRoutes();
     }
 
-    async function approveCanteen(id) {
+    async function approveCanteen(id, overrides = {}) {
       try {
         setBusy(true);
-        await api(`/marketing-api/canteens/${id}/approve`, { method: "POST", body: JSON.stringify({ status: "Trial" }) });
+        const row = (data.canteens || []).find(item => Number(item.id) === Number(id)) || {};
+        const planType = overrides.planType || row.planType || (Number(row.requestedPaidAmount ?? row.paidAmount ?? 0) > 0 ? "Paid" : "Trial");
+        await api(`/marketing-api/canteens/${id}/approve`, { method: "POST", body: JSON.stringify({
+          status: planType === "Trial" ? "Trial" : "Active",
+          planType,
+          selectedPlan: overrides.selectedPlan || row.selectedPlan || "Starter",
+          trialDays: Number(overrides.demoDays || row.requestedDemoDays || row.demoDays || 7),
+          planMonths: Number(overrides.planMonths || 1),
+          paidAmount: Number(overrides.paidAmount ?? row.requestedPaidAmount ?? row.paidAmount ?? 0),
+          pendingAmount: Number(overrides.pendingAmount ?? row.requestedPendingAmount ?? row.pendingAmount ?? 0),
+          paymentMode: overrides.paymentMode || row.requestedPaymentMode || row.paymentMode || (planType === "Trial" ? "Trial" : "UPI"),
+          commissionAmount: Number(overrides.commissionAmount ?? row.commissionAmount ?? 0)
+        }) });
         await refreshData({ silent: true });
         toast("Customer approved and login credentials generated.");
         renderApprovals();
@@ -1080,6 +2001,35 @@
       } finally {
         setBusy(false);
       }
+    }
+
+    function openApprovalReviewSheet(id) {
+      const item = (data.canteens || []).find(row => Number(row.id) === Number(id)) || {};
+      const paymentRequested = item.paymentApprovalStatus === "Pending" || Number(item.requestedPaidAmount || 0) > 0;
+      $("sheetCard").innerHTML = `
+        <div class="section-head"><h2>Review Approval</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+        <div class="subtle-panel"><h3>${esc(item.canteenName || "Customer")}</h3><p class="muted">${paymentRequested ? "Employee submitted payment for approval." : "Adjust trial or paid plan before approval."}</p></div>
+        <label class="field">Plan <select id="reviewPlan">${planOptionsHtml(item.selectedPlan || "Starter")}</select></label>
+        <label class="field">Plan Type <select id="reviewPlanType"><option ${String(item.planType || "").toLowerCase() === "trial" ? "selected" : ""}>Trial</option><option ${String(item.planType || "").toLowerCase() === "paid" ? "selected" : ""}>Paid</option></select></label>
+        <label class="field">Trial / Demo Days <input id="reviewDemoDays" type="number" min="1" value="${Number(item.requestedDemoDays || item.demoDays || 7)}"></label>
+        <label class="field">Paid Amount <input id="reviewPaid" type="number" min="0" value="${Number(item.requestedPaidAmount ?? item.paidAmount ?? 0)}"></label>
+        <label class="field">Pending Amount <input id="reviewPending" type="number" min="0" value="${Number(item.requestedPendingAmount ?? item.pendingAmount ?? 0)}"></label>
+        <label class="field">Payment Mode <select id="reviewPaymentMode"><option>${esc(item.requestedPaymentMode || item.paymentMode || "UPI")}</option><option>UPI</option><option>Cash</option><option>Bank Transfer</option><option>Payment Link</option><option>Trial</option></select></label>
+        <label class="field">Plan Months <input id="reviewPlanMonths" type="number" min="1" value="1"></label>
+        <label class="field">Employee Commission <input id="reviewCommission" type="number" min="0" value="${Number(item.commissionAmount || 0)}"></label>
+        <button class="btn green" id="reviewApproveBtn" type="button">Approve & Activate</button>`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+      $("reviewApproveBtn").addEventListener("click", () => approveCanteen(id, {
+        selectedPlan: formValue("reviewPlan"),
+        planType: formValue("reviewPlanType"),
+        demoDays: Number(formValue("reviewDemoDays") || 7),
+        planMonths: Number(formValue("reviewPlanMonths") || 1),
+        paidAmount: Number(formValue("reviewPaid") || 0),
+        pendingAmount: Number(formValue("reviewPending") || 0),
+        paymentMode: formValue("reviewPaymentMode"),
+        commissionAmount: Number(formValue("reviewCommission") || 0)
+      }));
     }
 
     function openRejectSheet(id) {
@@ -1104,35 +2054,91 @@
       });
     }
 
+    function openExtendSheet(id) {
+      const item = (data.canteens || []).find(row => Number(row.id) === Number(id)) || {};
+      $("sheetCard").innerHTML = `
+        <div class="section-head"><h2>Extend Demo</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+        <div class="subtle-panel"><h3>${esc(item.canteenName || "Customer")}</h3><p class="muted">Current expiry: ${esc(item.planExpiryDate || "-")}</p></div>
+        <label class="field">Plan <select id="extendPlan">${planOptionsHtml(item.selectedPlan || "Starter")}</select></label>
+        <label class="field">Extend Till <input id="extendDate" type="date" value="${today()}"></label>
+        <button class="btn green" id="confirmExtend" type="button">Approve Extension</button>`;
+      $("sheet").classList.remove("hidden");
+      $("closeSheetBtn").addEventListener("click", closeSheet);
+      $("confirmExtend").addEventListener("click", async () => {
+        try {
+          setBusy(true);
+          await api(`/marketing-api/canteens/${id}/plan`, { method: "POST", body: JSON.stringify({ status: "Trial", planType: "Trial", selectedPlan: $("extendPlan").value, planExpiryDate: $("extendDate").value }) });
+          closeSheet();
+          await refreshData({ silent: true });
+          toast("Demo extension approved.");
+          renderApprovals();
+        } catch (error) {
+          toast(error.message, "error");
+        } finally {
+          setBusy(false);
+        }
+      });
+    }
+
     function renderPayments() {
-      setPage("Payments", isManager() ? "Collections and dues" : "My collected payments");
-      const rows = data.payments || [];
+      setPage(isManager() ? "Payments" : "Customers", isManager() ? "Collections and dues" : "Trial running, paid and login-created customers");
+      const rows = employeePayments();
+      const customers = customerRows();
       $("page").innerHTML = `
         <section class="metrics three">
           ${metric("Collected", money(rows.reduce((sum, row) => sum + Number(row.amount || 0), 0)))}
           ${metric("Pending", money((data.summary?.cards?.pendingPayments) || 0))}
-          ${metric("Records", rows.length)}
+          ${metric("Customers", customers.length)}
         </section>
-        <section class="list">${rows.length ? rows.map(row => `
+        <section class="panel">
+          <div class="section-head"><h2>My Customers</h2>${pill(`${customers.length} ready`)}</div>
+          <div class="list">${customers.length ? customers.map(row => `
+            <article class="row clickable" data-canteen="${esc(row.id)}">
+              <div><h3>${esc(row.canteenName)}</h3><p>${esc(row.ownerName)} | ${esc(row.ownerMobile)}</p><p>Login: ${esc(row.canteenLoginId || "-")} | Pass: ${esc(row.defaultPassword || "-")}</p></div>
+              <div>${pill(isExpiredCustomer(row) ? "Expired" : row.status)}</div>
+            </article>`).join("") : `<div class="empty">No active, trial or paid customers assigned.</div>`}</div>
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>Payment Success</h2>${pill(`${rows.length} records`)}</div>
+          <div class="list">${rows.length ? rows.map(row => `
           <article class="row">
             <div><h3>${esc(row.canteenName)}</h3><p>${esc(row.collectedByName || row.collectedBy || "-")} | ${esc(row.paymentMode)} | ${fmtDate(row.createdAt)}</p></div>
             <div><strong>${money(row.amount)}</strong><p>${pill(Number(row.pendingAmount || 0) > 0 ? "Pending" : "Paid")}</p></div>
-          </article>`).join("") : `<div class="empty">No payment records.</div>`}</section>`;
+          </article>`).join("") : `<div class="empty">No payment records.</div>`}</div>
+        </section>`;
+      bindRoutes();
     }
 
     function openPaymentSheet(item) {
+      const manager = isManager();
       $("sheetCard").innerHTML = `
         <div class="section-head"><h2>Update Payment</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+        <label class="field">Plan <select id="payPlan">${planOptionsHtml(item.selectedPlan || "Professional")}</select></label>
         <label class="field">Paid Amount <input id="payPaid" type="number" value="${Number(item.paidAmount || 0)}"></label>
         <label class="field">Pending Amount <input id="payPending" type="number" value="${Number(item.pendingAmount || 0)}"></label>
+        <label class="field">Plan Months <input id="payMonths" type="number" min="1" value="1"></label>
         <label class="field">Payment Mode <select id="payMode"><option>UPI</option><option>Cash</option><option>Bank Transfer</option><option>Payment Link</option></select></label>
-        <button class="btn" id="savePayment" type="button">Save Payment</button>`;
+        <button class="btn" id="savePayment" type="button">${manager ? "Save & Activate" : "Send For Manager Approval"}</button>`;
       $("sheet").classList.remove("hidden");
       $("closeSheetBtn").addEventListener("click", closeSheet);
       $("savePayment").addEventListener("click", async () => {
         try {
           setBusy(true);
-          await api(`/marketing-api/canteens/${item.id}/payment`, { method: "POST", body: JSON.stringify({ paidAmount: Number($("payPaid").value || 0), pendingAmount: Number($("payPending").value || 0), paymentMode: $("payMode").value }) });
+          const payload = {
+            selectedPlan: formValue("payPlan"),
+            paidAmount: Number($("payPaid").value || 0),
+            pendingAmount: Number($("payPending").value || 0),
+            paymentMode: $("payMode").value,
+            planType: "Paid",
+            planStartDate: today(),
+            planMonths: Number(formValue("payMonths") || 1),
+            activate: true
+          };
+          if (manager) {
+            await api(`/marketing-api/canteens/${item.id}/payment`, { method: "POST", body: JSON.stringify(payload) });
+          } else {
+            await api(`/marketing-api/canteens/${item.id}/workflow`, { method: "POST", body: JSON.stringify({ ...payload, type: "Payment Update Submitted", outcome: "Pending Manager Approval", stage: "PAYMENT_PENDING", status: "PAYMENT PENDING APPROVAL", paymentApprovalStatus: "Pending" }) });
+          }
           closeSheet();
           await refreshData({ silent: true });
           renderDetail();
@@ -1207,6 +2213,80 @@
       }
     }
 
+    function renderPlans() {
+      if (!isManager()) {
+        setPage("Plans", "Manager only");
+        $("page").innerHTML = `<div class="empty">Only manager / super admin can edit subscription packages.</div>`;
+        return;
+      }
+      setPage("Subscription Plans", "Packages shown in customer POS app");
+      const rows = planRows();
+      $("page").innerHTML = `
+        <section class="panel">
+          <div class="section-head"><h2>Create / Update Plan</h2>${pill("Super Admin")}</div>
+          <form class="form-grid" id="planForm">
+            <label class="field">Plan ID <input id="planId" type="number" value="${Number(rows[0]?.id || 1)}"></label>
+            <label class="field">Plan Name <input id="planName" value="${esc(rows[0]?.name || "Starter")}"></label>
+            <label class="field">Monthly Price <input id="planPrice" value="${esc(rows[0]?.offerPrice || "599")}"></label>
+            <label class="field">Original Price <input id="planOriginal" value="${esc(rows[0]?.originalPrice || "")}"></label>
+            <label class="field">Badge <input id="planBadge" value="${esc(rows[0]?.badge || "")}"></label>
+            <label class="field">Sort Order <input id="planSort" type="number" value="${Number(rows[0]?.sortOrder || rows[0]?.id || 1)}"></label>
+            <label class="field">Popular <select id="planPopular"><option value="false">No</option><option value="true">Yes</option></select></label>
+            <label class="field">Active <select id="planActive"><option value="true">Yes</option><option value="false">No</option></select></label>
+            <label class="field full">Description <textarea id="planDescription">${esc(rows[0]?.description || "")}</textarea></label>
+            <label class="field full">Features <textarea id="planFeatures" placeholder="One feature per line">${esc((rows[0]?.features || []).join("\n"))}</textarea></label>
+            <button class="btn full" type="submit">Save Plan</button>
+          </form>
+        </section>
+        <section class="panel">
+          <div class="section-head"><h2>Current Packages</h2>${pill(`${rows.length} plans`)}</div>
+          <div class="list">${rows.map(row => `<article class="row clickable" data-plan-edit="${esc(row.id)}"><div><h3>${esc(row.name)}</h3><p>${esc(row.description || "")}</p><p>${money(String(row.offerPrice || "").replace(/[^0-9.]/g, ""))} / ${esc(row.billingCycle || "month")} | ${row.active === false ? "Inactive" : "Active"}</p></div>${pill(row.popular ? "Popular" : row.badge || "Plan")}</article>`).join("")}</div>
+        </section>`;
+      const fill = row => {
+        $("planId").value = Number(row.id || Date.now());
+        $("planName").value = row.name || "";
+        $("planPrice").value = row.offerPrice || "";
+        $("planOriginal").value = row.originalPrice || "";
+        $("planBadge").value = row.badge || "";
+        $("planSort").value = Number(row.sortOrder || row.id || 1);
+        $("planPopular").value = row.popular ? "true" : "false";
+        $("planActive").value = row.active === false ? "false" : "true";
+        $("planDescription").value = row.description || "";
+        $("planFeatures").value = (row.features || []).join("\n");
+      };
+      document.querySelectorAll("[data-plan-edit]").forEach(btn => btn.addEventListener("click", () => {
+        const row = rows.find(item => Number(item.id) === Number(btn.dataset.planEdit));
+        if (row) fill(row);
+      }));
+      $("planForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        try {
+          setBusy(true);
+          await api("/marketing-api/website-plans", { method: "POST", body: JSON.stringify({
+            id: Number(formValue("planId") || Date.now()),
+            name: formValue("planName"),
+            description: formValue("planDescription"),
+            originalPrice: formValue("planOriginal"),
+            offerPrice: formValue("planPrice"),
+            billingCycle: "month",
+            badge: formValue("planBadge"),
+            cta: `Choose ${formValue("planName")}`,
+            popular: $("planPopular").value === "true",
+            active: $("planActive").value === "true",
+            sortOrder: Number(formValue("planSort") || 1),
+            features: $("planFeatures").value.split(/\n/).map(line => line.trim()).filter(Boolean)
+          }) });
+          await refreshData({ silent: true });
+          toast("Plan package saved.");
+          renderPlans();
+        } catch (error) {
+          toast(error.message, "error");
+        } finally {
+          setBusy(false);
+        }
+      });
+    }
+
     function renderReports() {
       const rows = data.summary?.marketingPerformance || [];
       setPage("Reports", "Sales, approvals and collection");
@@ -1227,13 +2307,149 @@
     }
 
     function renderProfile() {
-      setPage("Profile", user?.role || "employee");
+      setPage("Employee Account", "Profile & work assets");
+      const commissions = commissionRows();
+      const commissionTotal = commissions.reduce((sum, row) => sum + Number(row.commission || 0), 0);
+      const payments = employeePayments().filter(row => Number(row.amount || 0) > 0);
+      const printers = assignedPrinters();
+      const savedBank = readJson("axzen_employee_bank") || {};
+      const savedLocation = readJson("axzen_employee_location") || {};
+      const payoutRequests = readJson("axzen_employee_payouts") || [];
+      const requestedTotal = payoutRequests.filter(row => String(row.status || "").toLowerCase() === "requested").reduce((sum, row) => sum + Number(row.amount || 0), 0);
+      const availablePayout = Math.max(0, commissionTotal - requestedTotal);
+      const nextSettlement = new Date(Date.now() + 3 * 86400000).toISOString();
+      const displayAvailable = availablePayout;
+      const displayPending = requestedTotal;
+      const bank = {
+        bankName: savedBank.bankName || user?.bankName || "HDFC Bank",
+        name: user?.bankAccountName || savedBank.name || "",
+        accountNumber: user?.bankAccountNumber || savedBank.accountNumber || "",
+        ifsc: user?.bankIfsc || savedBank.ifsc || "",
+        upi: user?.bankUpi || savedBank.upi || ""
+      };
       $("page").innerHTML = `
-        <section class="panel">
-          <div class="section-head"><div><h2>${esc(user?.name || "User")}</h2><p class="muted">${esc(user?.employeeId || "")} | ${esc(user?.role || "")}</p></div>${pill(user?.active !== false ? "Active" : "Blocked")}</div>
-          <div class="kv-grid">${kv("Mobile", user?.mobile)}${kv("Target", user?.target)}${kv("Mode", token ? "Live API" : "Demo fallback")}${kv("API", API || "Same domain")}</div>
-          <button class="btn red" id="logoutBtn" type="button">Logout</button>
+        <section class="panel account-card">
+          <div class="account-hero">
+            <div class="account-avatar">${esc(employeeInitials())}</div>
+            <div class="account-title">
+              <h2>${esc(user?.name || "Employee")}</h2>
+              <p>Marketing Executive</p>
+              <p>Employee ID: ${esc(user?.employeeId || "-")}</p>
+              <span class="account-status"><span class="verify-mark"><svg viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg></span>Active</span>
+            </div>
+            <button class="account-edit" id="editProfileBtn" type="button">${footerIcon("edit")} Edit Profile</button>
+          </div>
+          <div class="account-tabs">
+            <button class="active" type="button" data-profile-jump="overview">Overview</button>
+            <button type="button" data-profile-jump="bankCard">Bank & Payouts</button>
+            <button type="button" data-profile-jump="printerCard">Printers</button>
+            <button type="button" data-profile-jump="personalCard">Personal</button>
+          </div>
+          <div class="verify-grid">
+            ${verificationBadge("Mobile Verified", Boolean(user?.mobile))}
+            ${verificationBadge(bank.accountNumber ? "Bank Verified" : "Bank Pending", Boolean(bank.accountNumber && bank.ifsc))}
+            ${verificationBadge(user?.aadhaarNumber ? "KYC Verified" : "KYC Pending", Boolean(user?.aadhaarNumber))}
+          </div>
+        </section>
+        <section class="profile-card" id="overview">
+          <div class="profile-card-head"><span class="profile-icon">${profileIcon("location")}</span><div><h2>Work Location</h2><p class="muted">${esc(savedLocation.address || user?.address || "Not set")}</p></div><button class="btn small soft" id="updateLocationBtn" type="button">Update</button></div>
+          <div class="work-location-layout">
+            <div class="work-location-copy">
+              <h3>${esc(user?.address || savedLocation.address || "Not set")}</h3>
+              ${savedLocation.updatedAt ? `<p class="muted">Last updated ${fmtDateTime(savedLocation.updatedAt)}</p>` : ""}
+              <button class="btn small soft" id="updateLocationInlineBtn" type="button">Update Location</button>
+            </div>
+            <div class="profile-map"></div>
+          </div>
+        </section>
+        <section class="profile-card" id="bankCard">
+          <div class="profile-card-head"><span class="profile-icon">${profileIcon("bank")}</span><div><h2>Bank & Payouts</h2></div><div class="bank-head-actions">${pill(bank.accountNumber ? "Verified" : "Pending")}<button class="plain-link" id="manageBankBtn" type="button">Manage</button></div></div>
+          <div class="profile-detail-table">
+            <div class="profile-detail-row"><span>Bank Name</span><strong>${esc(bank.bankName || "-")}</strong></div>
+            <div class="profile-detail-row"><span>Account Holder</span><strong>${esc(bank.name || user?.name || "-")}</strong></div>
+            <div class="profile-detail-row"><span>Account Number</span><strong>${bank.accountNumber ? esc(maskAccount(bank.accountNumber)) : "-"}</strong></div>
+            <div class="profile-detail-row"><span>IFSC</span><strong>${esc(bank.ifsc || "-")}</strong></div>
+            <div class="profile-detail-row"><span>UPI ID</span><strong>${esc(bank.upi || "-")}</strong></div>
+          </div>
+          <div class="payout-row">
+            <div><span class="muted">Available</span><strong style="color:var(--green)">${money(displayAvailable)}</strong></div>
+            <div><span class="muted">Pending</span><strong style="color:#d97706">${money(displayPending)}</strong></div>
+            <button class="btn" id="requestPayoutBtn" type="button">Request Payout</button>
+          </div>
+          <p class="muted">Next settlement: ${fmtDate(nextSettlement)}</p>
+        </section>
+        <section class="profile-card" id="printerCard">
+          <div class="profile-card-head"><span class="profile-icon">${profileIcon("printer")}</span><div><h2>Printers With Me</h2></div><div class="bank-head-actions">${pill(`${printers.length} Devices`)}<button class="plain-link" type="button">View all</button></div></div>
+          <div class="list">${printers.length ? printers.map(row => `<article class="printer-asset"><span class="printer-photo">${profileIcon("printer")}</span><div><h3>${esc(row.serialNumber || row.assetId || "-")}</h3><p>${esc(row.model || "58mm Bluetooth Printer")}</p><p>Assigned ${fmtDate(row.assignedAt || row.createdAt || Date.now())}</p></div>${pill(row.status || "With Executive")}<button class="qr-chip" type="button" aria-label="QR">${lucideIcon("qrCode", 18)}</button><span class="arrow-more">${lucideIcon("chevronRight", 18)}</span></article>`).join("") : `<div class="empty">No printers currently with you.</div>`}</div>
+          <button class="btn small soft" id="reportIssueBtn" type="button">Report Issue</button>
+        </section>
+        <section class="profile-card" id="personalCard">
+          <div class="profile-card-head"><span class="profile-icon">${profileIcon("person")}</span><div><h2>Personal Details</h2></div><button class="plain-link" id="personalEditBtn" type="button">Edit</button></div>
+          <div class="profile-detail-table">
+            <div class="profile-detail-row"><span>Mobile</span><strong>${esc(user?.mobile || "-")}</strong></div>
+            <div class="profile-detail-row"><span>Email</span><strong>${esc(user?.email || "-")}</strong></div>
+            <div class="profile-detail-row"><span>Date of Birth</span><strong>${esc(user?.dateOfBirth || "-")}</strong></div>
+            <div class="profile-detail-row"><span>Emergency Contact</span><strong>${esc(user?.emergencyContact || "-")}</strong></div>
+            <div class="profile-detail-row"><span>Address</span><strong>${esc(user?.address || "-")}</strong></div>
+          </div>
         </section>`;
+      $("page").insertAdjacentHTML("beforeend", `<section class="profile-footer-actions"><button id="documentsBtn" type="button">${footerIcon("docs")} Documents & KYC</button><button id="supportBtn" type="button">${footerIcon("help")} Help & Support</button><button id="logoutBtn" type="button">${footerIcon("logout")} Log out</button></section>`);
+      $("editProfileBtn")?.addEventListener("click", openProfileEditSheet);
+      $("personalEditBtn")?.addEventListener("click", openProfileEditSheet);
+      $("updateLocationBtn")?.addEventListener("click", openLocationSheet);
+      $("updateLocationInlineBtn")?.addEventListener("click", openLocationSheet);
+      $("requestPayoutBtn")?.addEventListener("click", () => openPayoutSheet(displayAvailable));
+      $("reportIssueBtn")?.addEventListener("click", () => openPrinterIssueSheet(printers[0]?.serialNumber || ""));
+      document.querySelectorAll("[data-printer-issue]").forEach(btn => btn.addEventListener("click", () => openPrinterIssueSheet(btn.dataset.printerIssue)));
+      $("documentsBtn")?.addEventListener("click", openDocumentsSheet);
+      $("supportBtn")?.addEventListener("click", openSupportSheet);
+      document.querySelectorAll("[data-profile-jump]").forEach(btn => btn.addEventListener("click", () => {
+        document.querySelectorAll(".account-tabs button").forEach(tab => tab.classList.toggle("active", tab === btn));
+        document.getElementById(btn.dataset.profileJump)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }));
+      $("manageBankBtn")?.addEventListener("click", () => {
+        $("sheetCard").innerHTML = `
+          <div class="section-head"><h2>Bank Change Request</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
+          <div class="form">
+            <label class="field">Bank Name <input id="bankDisplayName" value="${esc(bank.bankName || "")}"></label>
+            <label class="field">Account Holder <input id="bankName" value="${esc(bank.name || user?.name || "")}"></label>
+            <label class="field">Account Number <input id="bankAccount" inputmode="numeric" value="${esc(bank.accountNumber || "")}"></label>
+            <label class="field">Confirm Account Number <input id="bankAccountConfirm" inputmode="numeric" value="${esc(bank.accountNumber || "")}"></label>
+            <label class="field">IFSC <input id="bankIfsc" value="${esc(bank.ifsc || "")}"></label>
+            <label class="field">UPI ID <input id="bankUpi" value="${esc(bank.upi || "")}"></label>
+            <button class="btn" id="saveBankBtn" type="button">Submit For Verification</button>
+          </div>`;
+        $("sheet").classList.remove("hidden");
+        $("closeSheetBtn").addEventListener("click", closeSheet);
+        $("saveBankBtn")?.addEventListener("click", async () => {
+          if (formValue("bankAccount") !== formValue("bankAccountConfirm")) {
+            toast("Account numbers do not match.", "error");
+            return;
+          }
+        const bankPayload = { bankName: formValue("bankDisplayName"), name: formValue("bankName"), accountNumber: formValue("bankAccount"), ifsc: formValue("bankIfsc"), upi: formValue("bankUpi") };
+        localStorage.setItem("axzen_employee_bank", JSON.stringify(bankPayload));
+        try {
+          const body = await api("/marketing-api/me/bank", {
+            method: "PUT",
+            body: JSON.stringify({
+              bankAccountName: bankPayload.name,
+              bankAccountNumber: bankPayload.accountNumber,
+              bankIfsc: bankPayload.ifsc,
+              bankUpi: bankPayload.upi
+            })
+          });
+          if (body.user) {
+            user = body.user;
+            localStorage.setItem(USER_KEY, JSON.stringify(user));
+          }
+          toast("Bank details uploaded.");
+        } catch {
+          toast("Bank details saved on this device.");
+        }
+          closeSheet();
+          renderProfile();
+        });
+      });
       $("logoutBtn").addEventListener("click", logout);
     }
 
@@ -1248,6 +2464,7 @@
       if (route === "add") return renderAdd();
       if (route === "approvals") return renderApprovals();
       if (route === "payments") return renderPayments();
+      if (route === "plans") return renderPlans();
       if (route === "team") return renderTeam();
       if (route === "reports") return renderReports();
       if (route === "profile") return renderProfile();
@@ -1280,12 +2497,12 @@
         user = body.user;
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(USER_KEY, JSON.stringify(user));
-        await refreshData({ silent: true });
         route = "dashboard";
         stack = [];
         $("loginScreen").classList.add("hidden");
         $("appScreen").classList.remove("hidden");
         render();
+        refreshData({ silent: true }).then(render).catch(() => {});
       } catch (error) {
         $("loginStatus").className = "status error";
         $("loginStatus").textContent = error.message;
@@ -1304,18 +2521,9 @@
       stack = [];
     }
 
-    document.querySelectorAll("[data-login-role]").forEach(btn => btn.addEventListener("click", () => {
-      selectedLoginRole = btn.dataset.loginRole;
-      document.querySelectorAll("[data-login-role]").forEach(item => item.classList.toggle("active", item === btn));
-      $("loginId").value = selectedLoginRole === "manager" ? "SUPER" : "MKT001";
-      $("password").value = selectedLoginRole === "manager" ? "admin123" : "1234";
-      $("loginStatus").className = "status";
-      $("loginStatus").textContent = selectedLoginRole === "manager" ? "Manager login: SUPER / admin123." : "Employee login: MKT001 / 1234.";
-    }));
-
     $("loginForm").addEventListener("submit", login);
     $("backBtn").addEventListener("click", () => {
-      route = route === "canteenDetail" ? "canteens" : (stack.pop() || "dashboard");
+      route = stack.pop() || (route === "canteenDetail" ? "canteens" : "dashboard");
       render();
     });
     $("notifyBtn").addEventListener("click", openNotifications);
@@ -1326,7 +2534,8 @@
     if (token && user) {
       $("loginScreen").classList.add("hidden");
       $("appScreen").classList.remove("hidden");
-      refreshData({ silent: true }).finally(render);
+      render();
+      refreshData({ silent: true }).then(render).catch(() => {});
     }
   </script>
 </body>

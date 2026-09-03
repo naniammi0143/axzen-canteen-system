@@ -2,6 +2,8 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "node backend/server.js",
+    "preview:all": "node scripts/dev-preview.js",
+    "preview:sa": "node scripts/preview-sa.js",
     "android:add": "cap add android",
     "android:sync": "cap sync android",
     "android:open": "cap open android"
@@ -25,6 +27,7 @@
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "@react-native-community/cli": "^20.2.0",
     "@types/react": "^19.2.17",
     "typescript": "^7.0.2"
   }

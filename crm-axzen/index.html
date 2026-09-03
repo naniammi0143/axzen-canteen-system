@@ -128,49 +128,128 @@ button{cursor:pointer}
   align-items:center;
   justify-content:center;
 }
-.preview-board{
-  width:min(740px,92%);
+.receipt-stage{
+  width:min(520px,92%);
   display:grid;
-  gap:14px;
+  gap:12px;
+  justify-items:center;
 }
-.preview-row{
-  min-height:78px;
-  display:grid;
-  grid-template-columns:1.2fr .8fr .8fr;
-  gap:14px;
+.receipt-caption{
+  width:100%;
+  display:flex;
+  align-items:end;
+  justify-content:space-between;
+  color:#0f172a;
 }
-.preview-cell,.preview-large{
-  background:rgba(255,255,255,.78);
-  border:1px solid rgba(217,225,236,.9);
-  border-radius:8px;
-  box-shadow:var(--shadow);
+.receipt-caption strong{
+  font-size:18px;
+  font-weight:850;
 }
-.preview-large{
-  min-height:250px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:0;
-  overflow:hidden;
+.receipt-caption span{
+  font-size:12px;
+  color:var(--muted);
 }
-.preview-chart{
+.receipt-frame{
+  width:min(300px,100%);
+  padding:14px 10px;
+  border-radius:20px;
   background:
-    linear-gradient(180deg, transparent 79%, #dbe5f2 80%),
-    linear-gradient(90deg, transparent 79%, #dbe5f2 80%);
-  background-size:40px 40px;
+    radial-gradient(circle at top, rgba(21,94,239,.10), transparent 46%),
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(245,248,252,.94));
+  box-shadow:0 18px 40px rgba(16,24,40,.16);
+  border:1px solid rgba(214,224,236,.85);
   position:relative;
 }
-.preview-chart:after{
+.receipt-frame:before,
+.receipt-frame:after{
   content:"";
   position:absolute;
-  inset:42px 34px;
-  border-left:5px solid var(--brand);
-  border-bottom:5px solid var(--teal);
-  transform:skew(-12deg);
+  left:50%;
+  width:128px;
+  height:10px;
+  margin-left:-64px;
+  border-radius:999px;
+  background:rgba(15,23,42,.08);
+  filter:blur(1px);
 }
-.preview-list{padding:20px;display:grid;gap:12px}
-.preview-line{height:12px;border-radius:99px;background:#dbe5f2}
-.preview-line:nth-child(2){width:78%;background:#cce3df}
-.preview-line:nth-child(3){width:58%;background:#e7d7b5}
+.receipt-frame:before{top:-5px}
+.receipt-frame:after{bottom:-5px}
+.receipt-paper{
+  background:#fff;
+  border-radius:16px;
+  padding:14px 11px 12px;
+  border:1px dashed #d6deea;
+  color:#111827;
+  font-family:"Courier New",Courier,monospace;
+  font-size:10.5px;
+  line-height:1.32;
+}
+.receipt-text{
+  margin:0;
+  display:block;
+  white-space:pre;
+  font:inherit;
+  color:inherit;
+}
+.receipt-text .receipt-title{
+  display:block;
+  width:100%;
+  text-align:center;
+  font-family:"Plus Jakarta Sans",Inter,Segoe UI,Roboto,Arial,sans-serif;
+  font-size:13px;
+  font-weight:900;
+  letter-spacing:.04em;
+  line-height:1.1;
+  margin:0 auto 1px;
+  transform:translateX(-11px);
+}
+.receipt-rule{
+  border-top:1px dashed #111827;
+  margin:6px 0;
+}
+.receipt-row{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+}
+.receipt-row.center{justify-content:center}
+.receipt-row.items{align-items:flex-start}
+.receipt-row .name{
+  flex:1;
+  min-width:0;
+}
+.receipt-row .amount{
+  white-space:nowrap;
+}
+.receipt-total{
+  font-weight:800;
+}
+.receipt-foot{
+  text-align:center;
+  margin-top:6px;
+  font-family:"Plus Jakarta Sans",Inter,Segoe UI,Roboto,Arial,sans-serif;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.04em;
+}
+.receipt-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background:rgba(21,94,239,.08);
+  color:#164b96;
+  font-size:11px;
+  font-weight:800;
+}
+.receipt-badge i{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:var(--green);
+  display:inline-block;
+}
 .hint{font-size:13px;color:var(--muted);line-height:1.5}
 .error{color:#b42318;font-size:13px;min-height:18px}
 
@@ -269,6 +348,10 @@ button{cursor:pointer}
   display:grid;
   grid-template-columns:1.1fr .9fr;
   gap:18px;
+}
+.receipt-panel{
+  display:grid;
+  gap:12px;
 }
 .panel{padding:17px;min-width:0}
 .panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
@@ -399,20 +482,36 @@ tbody tr:hover{background:#fbfdff}
     </div>
   </div>
   <div class="auth-art" aria-hidden="true">
-    <div class="preview-board">
-      <div class="preview-row">
-        <div class="preview-cell"></div>
-        <div class="preview-cell"></div>
-        <div class="preview-cell"></div>
+    <div class="receipt-stage">
+      <div class="receipt-caption">
+        <div>
+          <strong>Print receipt preview</strong><br>
+          <span>Iki page lo direct ga receipt ela print avuthundo kanipistundi.</span>
+        </div>
+        <div class="receipt-badge"><i></i> Thermal paper</div>
       </div>
-      <div class="preview-large">
-        <div class="preview-chart"></div>
-        <div class="preview-list">
-          <div class="preview-line"></div>
-          <div class="preview-line"></div>
-          <div class="preview-line"></div>
-          <div class="preview-line"></div>
-          <div class="preview-line"></div>
+      <div class="receipt-frame">
+        <div class="receipt-paper">
+<pre class="receipt-text"><span class="receipt-title">SHAD KITCHEN</span>
+         axzen infotech         
+--------------------------------
+Date:31/08/2026    Time:12:30 PM
+Cashier: AJAY      Payment: Cash
+Token: 9029
+--------------------------------
+# ITEM NAME          QTY     AMT
+--------------------------------
+1 Mutton Biryani
+    1 x 410.00            410.00
+2 Chicken Curry
+    2 x 180.00            360.00
+--------------------------------
+SUBTOTAL               Rs 770.00
+DISCOUNT                 Rs 0.00
+--------------------------------
+TOTAL                  Rs 770.00
+================================
+     THANK YOU! VISIT AGAIN</pre>
         </div>
       </div>
     </div>
@@ -460,6 +559,39 @@ tbody tr:hover{background:#fbfdff}
           <div class="panel">
             <div class="panel-head"><h3>Follow-ups</h3><button class="ghost" data-go="tasks" type="button">View tasks</button></div>
             <div id="taskCards" class="records"></div>
+          </div>
+        </div>
+        <div class="panel receipt-panel">
+          <div class="panel-head">
+            <div>
+              <h3>Print receipt preview</h3>
+              <p class="muted-text">Login ayyaka ikkade thermal receipt ela kanipistundo choodachu.</p>
+            </div>
+            <div class="receipt-badge"><i></i> Live preview</div>
+          </div>
+          <div class="receipt-frame" style="width:min(100%,420px);margin:0 auto;">
+            <div class="receipt-paper">
+<pre class="receipt-text"><span class="receipt-title">SHAD KITCHEN</span>
+         axzen infotech         
+--------------------------------
+Date:31/08/2026    Time:12:30 PM
+Cashier: AJAY      Payment: Cash
+Token: 9029
+--------------------------------
+# ITEM NAME          QTY     AMT
+--------------------------------
+1 Mutton Biryani
+    1 x 410.00            410.00
+2 Chicken Curry
+    2 x 180.00            360.00
+--------------------------------
+SUBTOTAL               Rs 770.00
+DISCOUNT                 Rs 0.00
+--------------------------------
+TOTAL                  Rs 770.00
+================================
+     THANK YOU! VISIT AGAIN</pre>
+            </div>
           </div>
         </div>
       </section>

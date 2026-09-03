@@ -85,7 +85,16 @@ const defaultCatalogItems = [
   { id: 105, name: "Curd Rice", price: 40, category: "Lunch", image: "https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?auto=format&fit=crop&w=500&q=80" },
   { id: 106, name: "Water Bottle", price: 20, category: "Drinks", image: "https://images.unsplash.com/photo-1550505095-81378a674395?auto=format&fit=crop&w=500&q=80" },
   { id: 107, name: "Biscuits", price: 10, category: "Snacks", image: "https://images.unsplash.com/photo-1558961363-fa8fdf82db35?auto=format&fit=crop&w=500&q=80" },
-  { id: 108, name: "Banana", price: 10, category: "Snacks", image: "https://images.unsplash.com/photo-1603833665858-e61d17a86224?auto=format&fit=crop&w=500&q=80" }
+  { id: 108, name: "Banana", price: 10, category: "Snacks", image: "https://images.unsplash.com/photo-1603833665858-e61d17a86224?auto=format&fit=crop&w=500&q=80" },
+  { id: 201, name: "Chicken Curry Cut", price: 240, category: "Chicken", billingType: "weight" },
+  { id: 202, name: "Chicken Fry Pieces", price: 260, category: "Chicken", billingType: "weight" },
+  { id: 203, name: "Boneless Chicken", price: 320, category: "Chicken", billingType: "weight" },
+  { id: 204, name: "Chicken Leg Pieces", price: 280, category: "Chicken", billingType: "weight" },
+  { id: 205, name: "Chicken Wings", price: 220, category: "Chicken", billingType: "weight" },
+  { id: 206, name: "Chicken Liver", price: 180, category: "Chicken", billingType: "weight" },
+  { id: 207, name: "Mutton Curry Cut", price: 780, category: "Chicken", billingType: "weight" },
+  { id: 208, name: "Mutton Keema", price: 820, category: "Chicken", billingType: "weight" },
+  { id: 209, name: "Eggs", price: 6, category: "Chicken", unit: "Pieces" }
 ];
 
 const defaultStockItems = [
@@ -376,6 +385,7 @@ const menuItemSchema = new mongoose.Schema({
   price: Number,
   halfPrice: Number,
   category: String,
+  unit: String,
   billingType: { type: String, enum: ["quantity", "weight"], default: "quantity" },
   image: String,
   nameTe: String,
@@ -488,6 +498,10 @@ const marketingUserSchema = new mongoose.Schema({
   mobile: String,
   aadhaarNumber: String,
   panNumber: String,
+  bankAccountName: String,
+  bankAccountNumber: String,
+  bankIfsc: String,
+  bankUpi: String,
   password: String,
   role: { type: String, enum: ["marketing", "super_admin"], default: "marketing" },
   active: { type: Boolean, default: true },
@@ -512,9 +526,19 @@ const marketingCanteenSchema = new mongoose.Schema({
   planType: String,
   planStartDate: String,
   planExpiryDate: String,
+  demoDays: Number,
+  requestedDemoDays: Number,
   paymentMode: String,
   paidAmount: Number,
   pendingAmount: Number,
+  requestedPaidAmount: Number,
+  requestedPendingAmount: Number,
+  requestedPaymentMode: String,
+  paymentApprovalStatus: String,
+  paymentApprovalRequestedBy: String,
+  paymentApprovalRequestedAt: String,
+  commissionAmount: Number,
+  menuSetupItems: [mongoose.Schema.Types.Mixed],
   notes: String,
   documents: String,
   status: { type: String, index: true },
@@ -728,6 +752,10 @@ function publicMarketingUser(user) {
     mobile: user.mobile || "",
     aadhaarNumber: user.aadhaarNumber || "",
     panNumber: user.panNumber || "",
+    bankAccountName: user.bankAccountName || "",
+    bankAccountNumber: user.bankAccountNumber || "",
+    bankIfsc: user.bankIfsc || "",
+    bankUpi: user.bankUpi || "",
     role: user.role,
     active: user.active !== false,
     target: Number(user.target || 0)
@@ -762,8 +790,8 @@ function requireMarketingAuth(req, res, next) {
 
 function requireSuperAdmin(req, res, next) {
   return requireMarketingAuth(req, res, () => {
-    if (req.marketingUser.role !== "super_admin") {
-      return res.status(403).json({ success: false, message: "Super admin access required" });
+    if (req.marketingUser.role !== "super_admin" && req.marketingUser.role !== "manager") {
+      return res.status(403).json({ success: false, message: "Manager or super admin access required" });
     }
     return next();
   });
@@ -810,6 +838,8 @@ function planExpiryFromPayload(payload, current = {}) {
   if (payload.planExpiryDate) return String(payload.planExpiryDate);
   const trialDays = Number(payload.trialDays || payload.trailDays || 0);
   if (trialDays > 0) return addDaysDate(trialDays, payload.planStartDate || current.planStartDate || new Date());
+  const months = Number(payload.months || payload.planMonths || 0);
+  if (months > 0) return addMonthsDate(months, payload.planStartDate || current.planStartDate || new Date());
   return String(current.planExpiryDate || "");
 }
 
@@ -824,7 +854,7 @@ async function canteenAccessStatus(canteenId) {
       await MarketingCanteen.updateOne({ _id: marketing._id }, { $set: { status: "Expired", online: false, updatedAt: new Date().toISOString() } }).catch(() => {});
       await Canteen.updateOne({ canteenId: targetCanteenId }, { $set: { active: false } }).catch(() => {});
     }
-    return { allowed: false, message: TRIAL_EXPIRED_MESSAGE };
+    return { allowed: true, expired: true, message: TRIAL_EXPIRED_MESSAGE };
   }
 
   const core = await Canteen.findOne({ canteenId: targetCanteenId }).lean();
@@ -1215,6 +1245,7 @@ async function saveMenuItem(payload) {
     price: Number(payload.price || 0),
     halfPrice: Number(payload.halfPrice || payload.singlePrice || payload.halfItemPrice || 0),
     category: payload.category || "Snacks",
+    unit: String(payload.unit || payload.saleUnit || "Plate").trim() || "Plate",
     billingType: payload.billingType === "weight" ? "weight" : "quantity",
     image: payload.image || "",
     subItems: normalizeSubItems(payload.subItems),
@@ -1223,6 +1254,20 @@ async function saveMenuItem(payload) {
   };
 
   if (!item.name) throw new Error("Product name is required");
+
+  const sameName = current.find(row =>
+    String(row.name || "").trim().toLowerCase() === item.name.toLowerCase() &&
+    Number(row.id) !== Number(item.id)
+  );
+  if (sameName) {
+    const updatingExistingId = current.some(row => Number(row.id) === Number(item.id));
+    if (updatingExistingId) throw new Error("This item is already in your menu");
+    item.id = Number(sameName.id);
+    if (!item.image) item.image = sameName.image || "";
+    if (!item.nameTe) item.nameTe = sameName.nameTe || "";
+    if (!item.unit && sameName.unit) item.unit = sameName.unit;
+    if ((!item.subItems || !item.subItems.length) && Array.isArray(sameName.subItems)) item.subItems = sameName.subItems;
+  }
 
   if (!mongoReady) {
     const existing = memory.menuItems.find(row =>
@@ -1300,23 +1345,135 @@ async function saveCreditor(payload) {
   ));
 }
 
-function defaultMenuForBusinessCategory(category = "Canteen") {
-  const normalized = String(category || "Canteen").toLowerCase();
-  if (normalized.includes("chicken") || normalized.includes("meat") || normalized.includes("mutton")) {
-    return defaultMenuItems
-      .filter(item => item.billingType === "weight" || String(item.category || "").toLowerCase().includes("chicken"))
-      .map(item => ({
-        ...item,
-        category: String(item.name || "").toLowerCase().includes("mutton") ? "Mutton" : "Chicken"
-      }));
+const CANTEEN_MEAL_CATEGORIES = ["tiffin", "breakfast", "meals", "biryani", "starters", "chinese", "lunch", "dinner", "desserts", "tea", "coffee"];
+const CANTEEN_MEAL_NAMES = ["idly", "idli", "dosa", "vada", "poori", "puri", "chapati", "parota", "paratha", "pongal", "upma", "meals", "biryani", "lemon rice", "curd rice", "bonda"];
+
+function shopKindFromCategory(category = "", posMode = "") {
+  const text = `${category} ${posMode}`.toLowerCase();
+  if (["chicken", "meat", "meet", "mutton", "fish", "seafood"].some(keyword => text.includes(keyword))) return "chicken";
+  if (["cool", "drink", "juice"].some(keyword => text.includes(keyword))) return "drinks";
+  if (["retail", "super", "grocery"].some(keyword => text.includes(keyword))) return "retail";
+  return "canteen";
+}
+
+function posModeForCategory(category = "", posMode = "") {
+  return shopKindFromCategory(category, posMode) === "chicken" ? "chicken_shop" : "canteen";
+}
+
+function isCanteenMealItem(item) {
+  const category = String(item?.category || "").toLowerCase();
+  const name = String(item?.name || "").toLowerCase();
+  if (CANTEEN_MEAL_CATEGORIES.some(keyword => category.includes(keyword))) return true;
+  return CANTEEN_MEAL_NAMES.some(keyword => name.includes(keyword));
+}
+
+function isChickenLikeItem(item) {
+  const category = String(item?.category || "").toLowerCase();
+  const name = String(item?.name || "").toLowerCase();
+  if (item?.billingType === "weight") return true;
+  if (["chicken", "meat", "mutton", "fish", "seafood", "egg"].some(keyword => category.includes(keyword))) return true;
+  if (name.includes("egg")) return true;
+  return ["chicken", "meat", "mutton", "fish", "keema", "liver", "wings"].some(keyword => name.includes(keyword));
+}
+
+function itemFitsBusinessCategory(item, businessCategory = "Canteen", posMode = "") {
+  const kind = shopKindFromCategory(businessCategory, posMode);
+  if (kind === "chicken") {
+    if (isChickenLikeItem(item)) return true;
+    const category = String(item?.category || "").toLowerCase();
+    return ["snacks", "drinks", "juice"].some(keyword => category.includes(keyword)) && !isCanteenMealItem(item);
   }
-  if (normalized.includes("cool") || normalized.includes("drink") || normalized.includes("juice")) {
+  if (kind === "drinks") {
+    const category = String(item?.category || "").toLowerCase();
+    const name = String(item?.name || "").toLowerCase();
+    return ["juice", "drinks"].some(keyword => category.includes(keyword)) || /water|juice|soda|cool|drink/.test(name);
+  }
+  if (kind === "retail") {
+    const category = String(item?.category || "").toLowerCase();
+    return ["drinks", "snacks", "juice"].some(keyword => category.includes(keyword)) && !isCanteenMealItem(item);
+  }
+  return true;
+}
+
+function inferMenuCategory(name = "", businessCategory = "Canteen") {
+  const value = String(name || "").toLowerCase();
+  if (["chicken", "mutton", "meat", "fish", "keema"].some(keyword => value.includes(keyword))) return "Chicken";
+  if (value.includes("egg")) return "Chicken";
+  if (["idly", "idli", "dosa", "vada", "poori", "puri", "pongal", "upma"].some(keyword => value.includes(keyword))) return "Tiffin";
+  if (value.includes("biryani")) return "Biryani";
+  if (value.includes("meal")) return "Meals";
+  if (value.includes("tea")) return "Tea";
+  if (value.includes("coffee")) return "Coffee";
+  if (value.includes("juice")) return "Juice";
+  const kind = shopKindFromCategory(businessCategory);
+  if (kind === "chicken") return "Chicken";
+  if (kind === "drinks") return "Drinks";
+  return "Snacks";
+}
+
+function defaultMenuForBusinessCategory(category = "Canteen") {
+  const kind = shopKindFromCategory(category);
+  if (kind === "chicken") return [];
+  if (kind === "drinks") {
     return defaultMenuItems.filter(item => ["Juice", "Drinks"].includes(item.category) || ["Water Bottle"].includes(item.name));
   }
-  if (normalized.includes("retail") || normalized.includes("super") || normalized.includes("grocery")) {
+  if (kind === "retail") {
     return defaultMenuItems.filter(item => ["Drinks", "Snacks", "Juice"].includes(item.category));
   }
   return defaultMenuItems.filter(item => item.billingType !== "weight");
+}
+
+async function sanitizeMenuForBusinessCategory(canteenId, businessCategory, posMode) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (shopKindFromCategory(businessCategory, posMode) === "canteen") return;
+  const items = await allMenuItems(targetCanteenId, { includeHidden: true });
+  const mismatched = items.filter(item => item.hidden !== true && !itemFitsBusinessCategory(item, businessCategory, posMode));
+  if (!mismatched.length) return;
+  if (!mongoReady) {
+    mismatched.forEach(item => { item.hidden = true; });
+    return;
+  }
+  await MenuItem.updateMany(
+    { canteenId: targetCanteenId, id: { $in: mismatched.map(item => Number(item.id)) } },
+    { $set: { hidden: true } }
+  );
+}
+
+async function allCatalogItemsForCanteen(canteenId = DEFAULT_CANTEEN_ID, search = "") {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  const query = String(search || "").trim().toLowerCase();
+  const currentNames = new Set((await allMenuItems(targetCanteenId, { includeHidden: true })).map(item => String(item.name || "").trim().toLowerCase()));
+  const rows = [];
+  const push = item => {
+    const name = String(item?.name || "").replace(/\s+/g, " ").trim();
+    if (!name) return;
+    if (query && !name.toLowerCase().includes(query) && !String(item.category || "").toLowerCase().includes(query)) return;
+    rows.push({
+      catalogId: Number(item.catalogId || item.id || 0),
+      name,
+      nameTe: String(item.nameTe || item.teluguName || "").trim(),
+      image: String(item.image || "").trim(),
+      category: String(item.category || inferMenuCategory(name)).trim() || "Snacks",
+      billingType: item.billingType === "weight" ? "weight" : "quantity",
+      unit: String(item.unit || "").trim(),
+      active: currentNames.has(name.toLowerCase())
+    });
+  };
+  defaultCatalogItems.forEach(push);
+  if (!mongoReady) {
+    memory.globalCatalogItems.forEach(push);
+  } else {
+    (await GlobalCatalogItem.find({}).select("catalogId name image").sort({ sourceCount: -1, name: 1 }).limit(800).lean()).forEach(push);
+  }
+  const unique = new Map();
+  rows.forEach(item => {
+    const key = item.name.toLowerCase();
+    const current = unique.get(key);
+    if (!current || (!current.image && item.image) || (current.active && !item.active)) unique.set(key, { ...item, active: currentNames.has(key) });
+  });
+  return [...unique.values()]
+    .sort((a, b) => Number(a.active) - Number(b.active) || a.name.localeCompare(b.name))
+    .slice(0, 400);
 }
 
 async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen", businessCategory = "Canteen") {
@@ -1326,13 +1483,15 @@ async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen", busi
       await saveMenuItem({ ...item, canteenId: targetCanteenId });
     }
   }
-  if (!(await allStockItems(targetCanteenId)).length) {
+  const kind = shopKindFromCategory(businessCategory);
+  if (kind === "canteen" && !(await allStockItems(targetCanteenId)).length) {
     for (const item of defaultStockItems) {
       await saveStockItem({ ...item, canteenId: targetCanteenId });
     }
   }
-  const posMode = String(businessCategory || "").toLowerCase().includes("chicken") ? "chicken_shop" : "canteen";
+  const posMode = posModeForCategory(businessCategory);
   await saveSettings({ ...defaultSettings, canteenName, businessCategory, posMode }, targetCanteenId);
+  await sanitizeMenuForBusinessCategory(targetCanteenId, businessCategory, posMode);
 }
 
 async function allStockItems(canteenId = DEFAULT_CANTEEN_ID) {
@@ -1464,7 +1623,7 @@ async function getSettings(canteenId = DEFAULT_CANTEEN_ID) {
   if (!mongoReady) {
     const merged = { ...defaultSettings, ...memory.settings, canteenId: targetCanteenId };
     if (coreCategory && (!merged.businessCategory || merged.businessCategory === defaultSettings.businessCategory)) merged.businessCategory = coreCategory;
-    if (String(merged.businessCategory || "").toLowerCase().includes("chicken")) merged.posMode = "chicken_shop";
+    if (String(merged.businessCategory || merged.posMode || "").toLowerCase().match(/chicken|meat|mutton|fish/)) merged.posMode = "chicken_shop";
     return merged;
   }
   const stored = await ReportSetting.findOne({ key: "app", canteenId: targetCanteenId }).lean();
@@ -1473,7 +1632,7 @@ async function getSettings(canteenId = DEFAULT_CANTEEN_ID) {
     : null;
   const merged = { ...defaultSettings, canteenId: targetCanteenId, ...(stored || legacy || {}) };
   if (coreCategory && (!merged.businessCategory || merged.businessCategory === defaultSettings.businessCategory)) merged.businessCategory = coreCategory;
-  if (String(merged.businessCategory || "").toLowerCase().includes("chicken")) merged.posMode = "chicken_shop";
+  if (shopKindFromCategory(merged.businessCategory, merged.posMode) === "chicken") merged.posMode = "chicken_shop";
   return merged;
 }
 
@@ -1913,8 +2072,12 @@ async function saveMarketingUser(payload, actor) {
     mobile: normalizeMobile(payload.mobile ?? existingEmployee.mobile ?? ""),
     aadhaarNumber: String(payload.aadhaarNumber ?? existingEmployee.aadhaarNumber ?? "").trim(),
     panNumber: String(payload.panNumber ?? existingEmployee.panNumber ?? "").trim().toUpperCase(),
+    bankAccountName: String(payload.bankAccountName ?? existingEmployee.bankAccountName ?? "").trim(),
+    bankAccountNumber: String(payload.bankAccountNumber ?? existingEmployee.bankAccountNumber ?? "").replace(/\D/g, ""),
+    bankIfsc: String(payload.bankIfsc ?? existingEmployee.bankIfsc ?? "").trim().toUpperCase(),
+    bankUpi: String(payload.bankUpi ?? existingEmployee.bankUpi ?? "").trim(),
     password: String(payload.password ?? existingEmployee.password ?? "1234"),
-    role: payload.role ? (payload.role === "super_admin" ? "super_admin" : "marketing") : (existingEmployee.role || "marketing"),
+    role: payload.role ? (["super_admin", "manager"].includes(payload.role) ? payload.role : "marketing") : (existingEmployee.role || "marketing"),
     active: payload.active !== undefined ? payload.active !== false : existingEmployee.active !== false,
     target: Number(payload.target ?? existingEmployee.target ?? 0),
     updatedAt: new Date().toISOString()
@@ -2066,15 +2229,22 @@ async function subscriptionStatusForCanteen(canteenId) {
     amount: monthlyPrice * months
   }));
   const expiryDate = marketing?.planExpiryDate || "";
+  const expiryMs = expiryDate ? new Date(`${String(expiryDate).slice(0, 10)}T23:59:59+05:30`).getTime() : NaN;
+  const daysRemaining = Number.isNaN(expiryMs) ? null : Math.ceil((expiryMs - Date.now()) / 86400000);
   return {
     canteenId: targetCanteenId,
     canteenName: marketing?.canteenName || core?.name || "",
     marketingCanteenId: marketing?.id || 0,
+    printerModel: marketing?.printerModel || "",
+    printerSerialNumber: marketing?.printerSerialNumber || "",
     planName: selectedPlan.name || selectedPlanName || "Professional",
+    planType: marketing?.planType || (core?.paymentStatus === "paid" ? "Paid" : "Trial"),
     monthlyPrice,
     expiryDate,
     status: marketing?.status || (core?.active === false ? "Blocked" : "Active"),
     expired: isPastDate(expiryDate),
+    daysRemaining,
+    expiresSoon: daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 2,
     durations
   };
 }
@@ -2424,16 +2594,20 @@ function normalizeMarketingCanteen(payload, user) {
     city: String(payload.city || "").trim(),
     state: String(payload.state || "").trim(),
     counters: Number(payload.counters || 1),
-    printersRequired: Number(payload.printersRequired || 0),
+    printersRequired: Number(payload.requestedPrinters ?? payload.printersRequired ?? 0),
     printerModel: String(payload.printerModel || "").trim(),
     printerSerialNumber: String(payload.printerSerialNumber || "").trim().toUpperCase(),
     selectedPlan: String(payload.selectedPlan || "Starter"),
     planType: String(payload.planType || "Trial"),
     planStartDate,
     planExpiryDate: planExpiryFromPayload(payload, { planStartDate }),
+    demoDays: Number(payload.demoDays || payload.trialDays || 0),
+    requestedDemoDays: Number(payload.demoDays || payload.trialDays || 0),
     paymentMode: String(payload.paymentMode || "Cash"),
     paidAmount: Number(payload.paidAmount || 0),
     pendingAmount: Number(payload.pendingAmount || 0),
+    commissionAmount: Number(payload.commissionAmount || 0),
+    menuSetupItems: Array.isArray(payload.menuSetupItems) ? payload.menuSetupItems : [],
     notes: String(payload.notes || ""),
     documents: String(payload.documents || ""),
     status: "Pending Approval",
@@ -2452,22 +2626,8 @@ async function createMarketingCanteen(payload, user) {
   if (!canteen.canteenName || !canteen.ownerName || !canteen.ownerMobile) {
     throw new Error("Canteen name, owner name, and owner mobile are required");
   }
-  const selectedPrinter = await validatePrinterForMarketingCanteen(canteen, user);
   if (!mongoReady) memory.marketingCanteens.unshift(canteen);
   else await MarketingCanteen.create(canteen);
-  if (selectedPrinter) {
-    await savePrinterInventory({
-      serialNumber: selectedPrinter.serialNumber,
-      model: selectedPrinter.model,
-      status: "Allotted",
-      allottedTo: user.employeeId,
-      allottedToName: user.name,
-      marketingCanteenId: canteen.id,
-      marketingCanteenName: canteen.canteenName
-    }, user);
-    canteen.printersAssigned = 1;
-    await updateMarketingCanteen(canteen.id, { printersAssigned: 1 }, user);
-  }
   await addMarketingPayment({
     canteenId: canteen.id,
     canteenName: canteen.canteenName,
@@ -2546,6 +2706,27 @@ async function activateApprovedCanteen(canteen, actor) {
     mustChangePassword: true
   });
   await seedCanteenDefaults(credentials.activatedCanteenId, canteen.canteenName, canteen.businessCategory || "Canteen");
+  const setupItems = Array.isArray(canteen.menuSetupItems) ? canteen.menuSetupItems : [];
+  for (const [index, item] of setupItems.entries()) {
+    const name = String(item?.name || "").trim();
+    if (!name) continue;
+    const category = String(item.category || inferMenuCategory(name, canteen.businessCategory)).trim() || "Snacks";
+    const eggItem = name.toLowerCase().includes("egg");
+    const billingType = String(item.billingType || "").toLowerCase() === "weight" || (!eggItem && isChickenLikeItem({ name, category }))
+      ? "weight"
+      : "quantity";
+    const nextItem = {
+      canteenId: credentials.activatedCanteenId,
+      name,
+      price: Number(item.price || 0),
+      category,
+      billingType,
+      image: String(item.image || ""),
+      sortOrder: 1000 + index
+    };
+    if (!itemFitsBusinessCategory(nextItem, canteen.businessCategory || "Canteen")) continue;
+    await saveMenuItem(nextItem);
+  }
   if (canteen.printerSerialNumber) {
     await savePrinterInventory({
       serialNumber: canteen.printerSerialNumber,
@@ -2583,7 +2764,7 @@ function isToday(dateValue) {
 function marketingSummary(canteens, users, activities, payments = [], supportTickets = [], enquiries = [], printers = []) {
   const active = canteens.filter(item => item.status === "Active");
   const trial = canteens.filter(item => item.status === "Trial");
-  const expired = canteens.filter(item => item.status === "Expired" || (item.planExpiryDate && new Date(item.planExpiryDate) < new Date() && item.status !== "Blocked"));
+  const expired = canteens.filter(item => item.status === "Expired" || (item.planExpiryDate && new Date(item.planExpiryDate) < new Date() && item.status !== "Blocked" && item.status !== "Trial" && item.status !== "Active"));
   const blocked = canteens.filter(item => item.status === "Blocked" || item.blocked);
   const pendingPayments = canteens.reduce((sum, item) => sum + Number(item.pendingAmount || 0), 0);
   const visibleIds = new Set(canteens.map(item => Number(item.id)));
@@ -2859,14 +3040,20 @@ app.get("/health", (req, res) => {
   res.json({ success: true, mongoReady, database: DB_NAME, mongoError });
 });
 
-app.get("/products", async (req, res) => {
-  const authUser = canteenUserFromRequest(req);
-  res.json(await allMenuItems(authUser?.canteenId || DEFAULT_CANTEEN_ID));
+app.get("/products", requireCanteenAuth, async (req, res) => {
+  const canteenId = req.authUser.canteenId || DEFAULT_CANTEEN_ID;
+  const settings = await getSettings(canteenId);
+  await sanitizeMenuForBusinessCategory(canteenId, settings.businessCategory, settings.posMode);
+  res.json(await allMenuItems(canteenId));
 });
 
 app.get("/catalog/default-products", requireAdmin, async (req, res) => {
-  const liveIds = new Set((await allMenuItems(req.authUser.canteenId)).map(item => Number(item.id)));
-  res.json(defaultCatalogItems.map(item => ({ ...item, active: liveIds.has(Number(item.id)) })));
+  const liveNames = new Set((await allMenuItems(req.authUser.canteenId, { includeHidden: true })).map(item => String(item.name || "").trim().toLowerCase()));
+  res.json(defaultCatalogItems.map(item => ({ ...item, active: liveNames.has(String(item.name || "").trim().toLowerCase()) })));
+});
+
+app.get("/catalog/all-items", requireAdmin, async (req, res) => {
+  res.json(await allCatalogItemsForCanteen(req.authUser.canteenId, req.query.q));
 });
 
 app.get("/catalog/item-suggestions", requireAdmin, async (req, res) => {
@@ -2900,9 +3087,8 @@ app.post("/creditors", requireDatabase, requireAdmin, async (req, res) => {
   }
 });
 
-app.get("/stock", async (req, res) => {
-  const authUser = canteenUserFromRequest(req);
-  res.json(await allStockItems(authUser?.canteenId || DEFAULT_CANTEEN_ID));
+app.get("/stock", requireCanteenAuth, async (req, res) => {
+  res.json(await allStockItems(req.authUser.canteenId));
 });
 
 app.post("/stock", requireDatabase, requireStockAccess, async (req, res) => {
@@ -2982,7 +3168,13 @@ app.post("/login", requireDatabase, async (req, res) => {
 
   if (!user) return res.status(401).json({ success: false, message: blockedMessage });
   const canteen = await getCoreCanteen(user.canteenId);
-  res.json({ success: true, user: { ...publicUser(user), canteen }, token: signToken(user), settings: await getSettings(user.canteenId) });
+  const subscription = await subscriptionStatusForCanteen(user.canteenId);
+  const canteenWithPrinter = {
+    ...canteen,
+    printerModel: subscription.printerModel || canteen?.printerModel || "",
+    printerSerialNumber: subscription.printerSerialNumber || canteen?.printerSerialNumber || ""
+  };
+  res.json({ success: true, user: { ...publicUser(user), canteen: canteenWithPrinter }, token: signToken(user), settings: await getSettings(user.canteenId) });
 });
 
 app.post("/activate-owner", requireDatabase, requireAdmin, async (req, res) => {
@@ -3215,6 +3407,21 @@ app.get("/marketing-api/me", requireMarketingAuth, async (req, res) => {
   res.json({ success: true, user: req.marketingUser });
 });
 
+app.put("/marketing-api/me/bank", requireDatabase, requireMarketingAuth, async (req, res) => {
+  try {
+    const user = await saveMarketingUser({
+      employeeId: req.marketingUser.employeeId,
+      bankAccountName: req.body.bankAccountName,
+      bankAccountNumber: req.body.bankAccountNumber,
+      bankIfsc: req.body.bankIfsc,
+      bankUpi: req.body.bankUpi
+    }, req.marketingUser);
+    res.json({ success: true, user: publicMarketingUser(user) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || "Bank details save failed" });
+  }
+});
+
 app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   const allCanteens = await allMarketingCanteens();
   const users = await allMarketingUsers();
@@ -3224,21 +3431,22 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   const enquiries = await allEnquiries();
   const websitePlans = await allWebsitePlans();
   const printers = await allPrinters();
-  const canteens = req.marketingUser.role === "super_admin"
+  const isAdmin = req.marketingUser.role === "super_admin" || req.marketingUser.role === "manager";
+  const canteens = isAdmin
     ? allCanteens
     : allCanteens.filter(item => item.submittedBy === req.marketingUser.employeeId);
   const visibleIds = new Set(canteens.map(item => Number(item.id)));
-  const visibleUsers = req.marketingUser.role === "super_admin"
+  const visibleUsers = isAdmin
     ? users
     : users.filter(item => item.employeeId === req.marketingUser.employeeId);
-  const visiblePayments = req.marketingUser.role === "super_admin"
+  const visiblePayments = isAdmin
     ? payments
     : payments.filter(item => visibleIds.has(Number(item.canteenId)));
-  const visibleSupportTickets = req.marketingUser.role === "super_admin"
+  const visibleSupportTickets = isAdmin
     ? supportTickets
     : supportTickets.filter(item => canteens.some(canteen => canteen.canteenName === item.canteenName));
-  const visibleEnquiries = req.marketingUser.role === "super_admin" ? enquiries : [];
-  const visiblePrinters = req.marketingUser.role === "super_admin"
+  const visibleEnquiries = isAdmin ? enquiries : [];
+  const visiblePrinters = isAdmin
     ? printers
     : printers.filter(item =>
         item.allottedTo === req.marketingUser.employeeId ||
@@ -3252,9 +3460,9 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     payments: visiblePayments,
     supportTickets: visibleSupportTickets,
     enquiries: visibleEnquiries,
-    websitePlans: req.marketingUser.role === "super_admin" ? websitePlans : [],
-    activities: req.marketingUser.role === "super_admin" ? activities : [],
-    summary: marketingSummary(canteens, visibleUsers, req.marketingUser.role === "super_admin" ? activities : [], visiblePayments, visibleSupportTickets, visibleEnquiries, visiblePrinters)
+    websitePlans: isAdmin ? websitePlans : [],
+    activities: isAdmin ? activities : [],
+    summary: marketingSummary(canteens, visibleUsers, isAdmin ? activities : [], visiblePayments, visibleSupportTickets, visibleEnquiries, visiblePrinters)
   });
 });
 
@@ -3326,8 +3534,29 @@ app.post("/marketing-api/canteens", requireDatabase, requireMarketingAuth, async
 
 app.post("/marketing-api/canteens/:id/approve", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
+    const before = (await allMarketingCanteens()).find(item => Number(item.id) === Number(req.params.id)) || {};
+    const paidAmount = Object.prototype.hasOwnProperty.call(req.body, "paidAmount")
+      ? Number(req.body.paidAmount || 0)
+      : Number(before.requestedPaidAmount ?? before.paidAmount ?? 0);
+    const pendingAmount = Object.prototype.hasOwnProperty.call(req.body, "pendingAmount")
+      ? Number(req.body.pendingAmount || 0)
+      : Number(before.requestedPendingAmount ?? before.pendingAmount ?? 0);
+    const planType = String(req.body.planType || before.planType || (paidAmount > 0 ? "Paid" : "Trial"));
+    const status = String(req.body.status || (planType.toLowerCase() === "trial" ? "Trial" : "Active"));
+    const planStartDate = String(req.body.planStartDate || before.planStartDate || new Date().toISOString().slice(0, 10));
+    const planExpiryDate = planExpiryFromPayload({ ...req.body, planStartDate }, before);
     const approved = await updateMarketingCanteen(req.params.id, {
-      status: req.body.status || "Active",
+      status,
+      planType,
+      selectedPlan: req.body.selectedPlan || before.selectedPlan || "Starter",
+      planStartDate,
+      planExpiryDate,
+      demoDays: Number(req.body.demoDays || before.requestedDemoDays || before.demoDays || 0),
+      paidAmount,
+      pendingAmount,
+      paymentMode: req.body.paymentMode || before.requestedPaymentMode || before.paymentMode || (planType === "Trial" ? "Trial" : "UPI"),
+      paymentApprovalStatus: "Approved",
+      commissionAmount: Number(req.body.commissionAmount ?? before.commissionAmount ?? 0),
       approvedBy: req.marketingUser.employeeId,
       approvedAt: new Date().toISOString(),
       online: true
@@ -3357,7 +3586,8 @@ app.post("/marketing-api/canteens/:id/workflow", requireDatabase, requireMarketi
     const rows = await allMarketingCanteens();
     const current = rows.find(item => Number(item.id) === Number(req.params.id));
     if (!current) return res.status(404).json({ success: false, message: "Lead not found" });
-    if (req.marketingUser.role !== "super_admin" && String(current.submittedBy || "") !== String(req.marketingUser.employeeId || "")) {
+    const isAdminRole = req.marketingUser.role === "super_admin" || req.marketingUser.role === "manager";
+    if (!isAdminRole && String(current.submittedBy || "") !== String(req.marketingUser.employeeId || "")) {
       return res.status(403).json({ success: false, message: "You can update only your assigned leads" });
     }
     const activity = {
@@ -3376,13 +3606,54 @@ app.post("/marketing-api/canteens/:id/workflow", requireDatabase, requireMarketi
     const timeline = Array.isArray(current.activityTimeline) ? current.activityTimeline : [];
     const followUps = Array.isArray(current.followUps) ? current.followUps : [];
     const nextStage = String(req.body.stage || current.currentStage || current.status || "").trim();
+    const printerPatch = {};
+    if (String(activity.type || "").toLowerCase().includes("demo started") && Number(current.printersRequired || 0) > 0) {
+      const demoCanteen = {
+        ...current,
+        printerModel: String(req.body.printerModel || current.printerModel || "").trim(),
+        printerSerialNumber: String(req.body.printerSerialNumber || current.printerSerialNumber || "").trim().toUpperCase()
+      };
+      const selectedPrinter = await validatePrinterForMarketingCanteen(demoCanteen, req.marketingUser);
+      if (selectedPrinter) {
+        await savePrinterInventory({
+          serialNumber: selectedPrinter.serialNumber,
+          model: selectedPrinter.model,
+          status: "Allotted",
+          allottedTo: req.marketingUser.employeeId,
+          allottedToName: req.marketingUser.name,
+          marketingCanteenId: current.id,
+          marketingCanteenName: current.canteenName
+        }, req.marketingUser);
+        printerPatch.printerModel = selectedPrinter.model;
+        printerPatch.printerSerialNumber = selectedPrinter.serialNumber;
+        printerPatch.printersAssigned = Math.max(1, Number(current.printersAssigned || 0));
+      }
+    }
     const patch = {
+      ...printerPatch,
       currentStage: nextStage || current.currentStage || current.status,
       status: String(req.body.status || nextStage || current.status || "Pending Approval").replace(/_/g, " "),
       nextFollowUp,
       lastActivity: activity,
       activityTimeline: [...timeline, activity]
     };
+    if (req.body.selectedPlan) patch.selectedPlan = String(req.body.selectedPlan || current.selectedPlan || "Starter");
+    if (req.body.planType) patch.planType = String(req.body.planType || current.planType || "Trial");
+    if (req.body.planStartDate) patch.planStartDate = String(req.body.planStartDate);
+    if (req.body.planExpiryDate || req.body.trialDays || req.body.demoDays || req.body.planMonths || req.body.months) patch.planExpiryDate = planExpiryFromPayload(req.body, current);
+    if (req.body.demoDays || req.body.trialDays) {
+      patch.demoDays = Number(req.body.demoDays || req.body.trialDays || current.demoDays || 0);
+      patch.requestedDemoDays = patch.demoDays;
+    }
+    if (Array.isArray(req.body.menuSetupItems)) patch.menuSetupItems = req.body.menuSetupItems;
+    if (Object.prototype.hasOwnProperty.call(req.body, "paidAmount")) patch.requestedPaidAmount = Number(req.body.paidAmount || 0);
+    if (Object.prototype.hasOwnProperty.call(req.body, "pendingAmount")) patch.requestedPendingAmount = Number(req.body.pendingAmount || 0);
+    if (req.body.paymentMode) patch.requestedPaymentMode = String(req.body.paymentMode || "UPI");
+    if (req.body.paymentApprovalStatus) {
+      patch.paymentApprovalStatus = String(req.body.paymentApprovalStatus);
+      patch.paymentApprovalRequestedBy = req.marketingUser.employeeId;
+      patch.paymentApprovalRequestedAt = new Date().toISOString();
+    }
     if (activity.followUpDate) patch.followUps = [...followUps, { ...activity, status: "Scheduled" }];
     const canteen = await updateMarketingCanteen(req.params.id, patch, req.marketingUser);
     await addMarketingActivity({ type: "lead_workflow", text: `${activity.type} saved for ${current.canteenName}`, actor: req.marketingUser.name, canteenId: current.id });
@@ -3425,8 +3696,22 @@ app.post("/marketing-api/canteens/:id/payment", requireDatabase, requireSuperAdm
     const canteen = await updateMarketingCanteen(req.params.id, {
       paidAmount: nextPaidAmount,
       pendingAmount: Number(req.body.pendingAmount || 0),
-      paymentMode: req.body.paymentMode || "UPI"
+      paymentMode: req.body.paymentMode || "UPI",
+      selectedPlan: req.body.selectedPlan || before?.selectedPlan || "Professional",
+      planType: req.body.planType || (nextPaidAmount > 0 ? "Paid" : before?.planType || "Trial"),
+      planStartDate: req.body.planStartDate || before?.planStartDate || new Date().toISOString().slice(0, 10),
+      planExpiryDate: planExpiryFromPayload(req.body, before || {}),
+      paymentApprovalStatus: "Approved",
+      status: req.body.activate === true || nextPaidAmount > 0 ? "Active" : before?.status || "Pending Approval",
+      blocked: false,
+      online: true
     }, req.marketingUser);
+    if (canteen.activatedCanteenId) {
+      await Canteen.findOneAndUpdate(
+        { canteenId: normalizeCanteenId(canteen.activatedCanteenId) },
+        { $set: { active: true, paymentStatus: Number(canteen.pendingAmount || 0) > 0 ? "pending" : "paid", paymentReference: canteen.paymentMode, plan: canteen.selectedPlan || "Professional" } }
+      );
+    }
     await addMarketingPayment({
       canteenId: canteen.id,
       canteenName: canteen.canteenName,
@@ -3460,7 +3745,7 @@ app.post("/marketing-api/canteens/:id/plan", requireDatabase, requireSuperAdmin,
     if (canteen.activatedCanteenId) {
       await Canteen.findOneAndUpdate(
         { canteenId: normalizeCanteenId(canteen.activatedCanteenId) },
-        { $set: { active: status !== "Expired" && status !== "Blocked" } }
+        { $set: { active: status !== "Expired" && status !== "Blocked", plan: canteen.selectedPlan || "Professional" } }
       );
     }
     await addMarketingActivity({ type: "plan", text: `${canteen.canteenName} plan updated`, actor: req.marketingUser.name, canteenId: canteen.id });
