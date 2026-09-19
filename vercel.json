@@ -5,6 +5,8 @@
   ],
   "routes": [
     { "src": "/api/cron/whatsapp", "dest": "/api/cron/whatsapp.js" },
+    { "src": "/app/?", "dest": "/app/index.html" },
+    { "src": "/downloads/(.*)", "dest": "/downloads/$1" },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }

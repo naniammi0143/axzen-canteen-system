@@ -1010,6 +1010,7 @@
     if (window.Capacitor) document.documentElement.classList.add("native-app");
     const liveApi = "https://canteen.axzen.in";
     const API = (window.Capacitor || location.protocol === "capacitor:") ? liveApi : "";
+    const POS_APP_DOWNLOAD_URL = `${liveApi}/app`;
     const TOKEN_KEY = "axzen_employee_token";
     const USER_KEY = "axzen_employee_user";
     const DATA_CACHE_KEY = "axzen_employee_dashboard_cache";
@@ -1044,7 +1045,8 @@
         store: '<path d="m3 9 2-5h14l2 5"/><path d="M4 9v11h16V9"/><path d="M9 22V12h6v10"/>',
         shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
         activity: '<path d="M22 12h-4l-3 7-6-14-3 7H2"/>',
-        userPlus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/>'
+        userPlus: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/>',
+        download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>'
       };
       return `<svg class="lucide-icon" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.user}</svg>`;
     }
@@ -1684,6 +1686,7 @@
           <div class="lead-action-grid">
             ${leadActionButton("call", "Call", "green", lucideIcon("phone", 20))}
             ${leadActionButton("whatsapp", "WhatsApp", "green", lucideIcon("messageCircle", 20))}
+            ${leadActionButton("sendApk", "Send APK", "violet", lucideIcon("download", 20))}
             ${leadActionButton("visit", "Visit", "amber", lucideIcon("mapPin", 20))}
             ${leadActionButton("followup", "Follow-up", "", lucideIcon("userPlus", 20))}
             ${leadActionButton("demo", "Demo", "violet", lucideIcon("playCircle", 20))}
@@ -1719,6 +1722,7 @@
       document.querySelector("[data-action='editActivity']")?.addEventListener("click", () => openActivitySheet(item));
       document.querySelector("[data-action='call']")?.addEventListener("click", () => openCallSheet(item));
       document.querySelector("[data-action='whatsapp']")?.addEventListener("click", () => openWhatsAppSheet(item));
+      document.querySelector("[data-action='sendApk']")?.addEventListener("click", () => openWhatsAppSheet(item, "APK Download Link"));
       document.querySelector("[data-action='visit']")?.addEventListener("click", () => openVisitSheet(item));
       document.querySelector("[data-action='followup']")?.addEventListener("click", () => openFollowupSheet(item));
       document.querySelector("[data-action='demo']")?.addEventListener("click", () => openDemoSheet(item));
@@ -1768,18 +1772,22 @@
       });
     }
 
-    function openWhatsAppSheet(item) {
+    function openWhatsAppSheet(item, presetTemplate = "Introduction") {
       const phone = leadPhone(item);
+      const owner = String(item.ownerName || "").trim() || "there";
+      const agent = String(user?.name || "Axzen").trim();
       const messages = {
-        Introduction: `Hi ${item.ownerName || ""}, this is ${user?.name || "Axzen"} from Axzen Infotech.`,
+        Introduction: `Hi ${owner}, this is ${agent} from Axzen Infotech.`,
         "POS Details": "Axzen POS helps with billing, inventory, reports, users and WhatsApp reports.",
         Pricing: `Your selected plan is ${item.selectedPlan || "Professional"}.`,
         "Demo Details": "We can schedule a quick POS demo for your business.",
         Brochure: "Please review the Axzen POS brochure and let us know your preferred plan.",
+        "APK Download Link": `Hi ${owner}, this is ${agent} from Axzen Infotech.\n\nInstall Axzen POS on your Android phone using this link:\n${POS_APP_DOWNLOAD_URL}\n\nOpen the link → Download APK → Install.\nNo Bluetooth or file share needed.`,
         "Follow-up Message": "Following up on your Axzen POS enquiry.",
         "Custom Message": ""
       };
-      openSheet("WhatsApp Message", `<label class="field">Template <select id="waTemplate">${Object.keys(messages).map(key => `<option>${esc(key)}</option>`).join("")}</select></label><label class="field">Message <textarea id="waMessage">${esc(messages.Introduction)}</textarea></label><a class="btn green" id="openWaBtn" href="#" target="_blank" rel="noopener">Open WhatsApp</a><label class="field">Result <select id="waOutcome"><option>Message Sent</option><option>Customer Replied</option><option>Interested</option><option>Follow-up Required</option></select></label>${activityForm(`<button class="btn" id="saveWaBtn" type="button">Save WhatsApp Activity</button>`)}`);
+      const selectedTemplate = messages[presetTemplate] !== undefined ? presetTemplate : "Introduction";
+      openSheet("WhatsApp Message", `<label class="field">Template <select id="waTemplate">${Object.keys(messages).map(key => `<option ${key === selectedTemplate ? "selected" : ""}>${esc(key)}</option>`).join("")}</select></label><label class="field">Message <textarea id="waMessage">${esc(messages[selectedTemplate])}</textarea></label><a class="btn green" id="openWaBtn" href="#" target="_blank" rel="noopener">Open WhatsApp</a><label class="field">Result <select id="waOutcome"><option>Message Sent</option><option>Customer Replied</option><option>Interested</option><option>Follow-up Required</option></select></label>${activityForm(`<button class="btn" id="saveWaBtn" type="button">Save WhatsApp Activity</button>`)}`);
       $("waTemplate").addEventListener("change", () => { $("waMessage").value = messages[$("waTemplate").value] || ""; updateWaLink(); });
       $("waMessage").addEventListener("input", updateWaLink);
       function updateWaLink() { $("openWaBtn").href = `https://wa.me/91${phone}?text=${encodeURIComponent($("waMessage").value)}`; }
