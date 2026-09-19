@@ -1,0 +1,30 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Dine In Demo Boot</title>
+</head>
+<body>
+<script>
+  const user = {
+    name: "Demo Cashier",
+    mobile: "9000000001",
+    role: "cashier",
+    canteenId: "DEMOREST",
+    canteenName: "Axzen Demo Restaurant",
+    branchAddress: "Hyderabad"
+  };
+  const products = [
+    { id: 101, name: "Chicken Biryani", nameTe: "", category: "Meals", price: 180, halfPrice: 0, image: "", unit: "Plate", active: true },
+    { id: 102, name: "Veg Meals", nameTe: "", category: "Meals", price: 120, halfPrice: 0, image: "", unit: "Plate", active: true },
+    { id: 103, name: "Masala Dosa", nameTe: "", category: "Tiffin", price: 60, halfPrice: 0, image: "", unit: "Plate", active: true },
+    { id: 104, name: "Filter Coffee", nameTe: "", category: "Drinks", price: 30, halfPrice: 0, image: "", unit: "Cup", active: true }
+  ];
+  localStorage.setItem("AXEN_SESSION", JSON.stringify(user));
+  localStorage.setItem("AXEN_PRODUCTS::DEMOREST", JSON.stringify(products));
+  localStorage.setItem("AXEN_PRODUCTS", JSON.stringify(products));
+  location.replace("./index.html");
+</script>
+</body>
+</html>

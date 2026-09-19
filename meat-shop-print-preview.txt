@@ -1,0 +1,16 @@
+          REGISTERED BUSINESS NAME
+          Admin / Cashier Name
+
+Receipt #10428
+10/08/2026, 8:45 PM
+Payment: Cash
+--------------------------------
+
+Chicken - Curry Cut      0.890 kg
+Rs 300.00/kg | Rs 267.00
+
+Mutton - Keema           1.250 kg
+Rs 780.00/kg | Rs 975.00
+
+--------------------------------
+TOTAL              Rs 1242.00

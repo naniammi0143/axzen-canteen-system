@@ -62,6 +62,34 @@ const staticPageOptions = {
 app.use("/mobile", express.static(path.join(__dirname, "../sa"), staticPageOptions));
 app.use("/admin", express.static(path.join(__dirname, "../admin-web"), staticPageOptions));
 app.use("/marketing", express.static(path.join(__dirname, "../marketing-web"), staticPageOptions));
+app.use("/app", express.static(path.join(__dirname, "../app"), staticPageOptions));
+app.get(["/app", "/app/"], (req, res) => {
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  res.sendFile(path.join(__dirname, "../app/index.html"));
+});
+app.use(
+  "/downloads",
+  express.static(path.join(__dirname, "../downloads"), {
+    setHeaders(res, filePath) {
+      if (String(filePath).toLowerCase().endsWith(".apk")) {
+        res.setHeader("Content-Type", "application/vnd.android.package-archive");
+        res.setHeader("Content-Disposition", 'attachment; filename="Axzen-POS.apk"');
+        res.setHeader("Cache-Control", "public, max-age=300");
+      }
+    }
+  })
+);
+app.get("/downloads/Axzen-POS.apk", (req, res) => {
+  const apkPath = path.join(__dirname, "../downloads/Axzen-POS.apk");
+  res.setHeader("Content-Type", "application/vnd.android.package-archive");
+  res.setHeader("Content-Disposition", 'attachment; filename="Axzen-POS.apk"');
+  res.setHeader("Cache-Control", "public, max-age=300");
+  res.sendFile(apkPath, error => {
+    if (error && !res.headersSent) {
+      res.status(404).json({ success: false, message: "APK not found. Upload downloads/Axzen-POS.apk on the server." });
+    }
+  });
+});
 
 const defaultMenuItems = [
   { id: 1, name: "Tea", price: 10, category: "Tea", image: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=500&q=80" },
@@ -1246,7 +1274,12 @@ async function saveMenuItem(payload) {
     halfPrice: Number(payload.halfPrice || payload.singlePrice || payload.halfItemPrice || 0),
     category: payload.category || "Snacks",
     unit: String(payload.unit || payload.saleUnit || "Plate").trim() || "Plate",
-    billingType: payload.billingType === "weight" ? "weight" : "quantity",
+    billingType: (() => {
+      const unit = String(payload.unit || payload.saleUnit || "").trim();
+      if (["kgs", "kg", "grams", "gram"].includes(unit.toLowerCase())) return "weight";
+      if (unit) return "quantity";
+      return payload.billingType === "weight" ? "weight" : "quantity";
+    })(),
     image: payload.image || "",
     subItems: normalizeSubItems(payload.subItems),
     sortOrder: payload.sortOrder !== undefined && payload.sortOrder !== "" ? Number(payload.sortOrder) : Number(payload.id || nextId(current)),

@@ -4,1366 +4,1165 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Axzen CRM</title>
-<meta name="description" content="Axzen CRM multi-tenant customer relationship management app.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#172033;
-  --muted:#667085;
-  --line:#d8e0ea;
-  --soft:#f6f8fb;
-  --panel:#ffffff;
-  --brand:#155eef;
-  --brand-dark:#1048b7;
-  --brand-soft:#edf4ff;
-  --teal:#0f9488;
-  --amber:#b7791f;
-  --rose:#c2415b;
-  --green:#16845f;
-  --sidebar:#101828;
-  --sidebar-soft:#1d2939;
-  --shadow:0 14px 34px rgba(16,24,40,.08);
-  --small-shadow:0 6px 18px rgba(16,24,40,.05);
+  --ink:#101828; --muted:#667085; --line:#eaecf0; --bg:#f2f4f7; --panel:#fff;
+  --brand:#2f6bff; --brand-dark:#1d4ed8; --soft:#eff4ff; --green:#12b76a;
+  --amber:#f79009; --rose:#f04438; --sidebar:#001540; --radius:16px;
 }
-
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{
-  margin:0;
-  min-height:100vh;
-  font-family:"Plus Jakarta Sans",Inter,Segoe UI,Roboto,Arial,sans-serif;
-  color:var(--ink);
-  background:#f3f6fb;
-  font-size:14px;
-}
-body.app-active{overflow:hidden}
+body{margin:0;font-family:Inter,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
 button,input,select,textarea{font:inherit}
 button{cursor:pointer}
 .hidden{display:none!important}
-
-.auth-shell{
-  min-height:100vh;
-  display:grid;
-  grid-template-columns:minmax(320px,520px) 1fr;
+svg{display:block;flex:0 0 auto}
+.icon-sm svg,.pipe-step .label svg,.chip .avatar svg,.side-foot button svg,.act svg,.date-pill svg,.search-box svg,.panel-head svg{width:16px;height:16px}
+.nav button svg{width:18px;height:18px}
+.stat-ico svg{width:18px;height:18px}
+.auth{
+  min-height:100vh;height:100vh;display:grid;grid-template-columns:minmax(0,45fr) minmax(0,55fr);
+  overflow:hidden;background:#F4F7FB;
+}
+.auth-left{
+  position:relative;background:#F4F7FB;min-height:100vh;display:flex;flex-direction:column;
+  padding:28px 32px 24px;overflow:auto;
+}
+.auth-left::before{
+  content:"";position:absolute;left:-40px;bottom:-60px;width:320px;height:220px;pointer-events:none;opacity:.55;
   background:
-    radial-gradient(circle at top left, rgba(21,94,239,.12), transparent 36%),
-    linear-gradient(135deg, rgba(15,148,136,.10), rgba(183,121,31,.08)),
-    #f6f8fb;
+    radial-gradient(ellipse at 30% 70%, rgba(37,99,235,.10), transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 200'%3E%3Cpath d='M0 140 C80 90 140 170 220 120 C300 70 340 140 400 100' fill='none' stroke='%23CBD5E1' stroke-width='1.2' opacity='.55'/%3E%3Cpath d='M0 160 C100 110 160 180 240 140 C320 100 360 150 400 130' fill='none' stroke='%23E2E8F0' stroke-width='1' opacity='.7'/%3E%3C/svg%3E") no-repeat left bottom / contain;
 }
-.auth-panel{
-  padding:38px;
-  background:#fff;
-  border-right:1px solid var(--line);
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  gap:24px;
+.auth-brand{position:relative;z-index:1;display:flex;align-items:center;gap:10px;margin-bottom:28px;color:#0B1B3A;font-weight:800;font-size:18px}
+.auth-brand .crm-mark{
+  width:36px;height:36px;border-radius:11px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#3B82F6,#1D4ED8);color:#fff;font-weight:900;font-size:18px;
+  box-shadow:0 8px 18px rgba(37,99,235,.28);
 }
-.brand-row,.top-brand{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  font-weight:800;
-  letter-spacing:0;
+.auth-left-inner{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;width:100%}
+.login-card{
+  width:100%;max-width:460px;background:#fff;border:1px solid #E8EEF7;border-radius:18px;
+  box-shadow:0 22px 55px rgba(15,23,42,.08);padding:30px 28px 22px;
 }
-.logo{
-  width:40px;
-  height:40px;
-  display:grid;
-  place-items:center;
-  border-radius:8px;
-  background:linear-gradient(135deg,#155eef,#0f9488);
-  color:#fff;
-  font-weight:900;
-  box-shadow:0 10px 24px rgba(21,94,239,.22);
+.login-card h1{margin:0;font-size:30px;color:#0B1B3A;font-weight:800;letter-spacing:-.03em}
+.login-card .login-sub{margin:8px 0 22px;color:#64748B;font-size:14px;line-height:1.5}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid #E2E8F0;margin-bottom:18px}
+.seg button{
+  border:0;background:transparent;padding:12px 8px;display:flex;align-items:center;justify-content:center;gap:8px;
+  color:#64748B;font-weight:700;border-bottom:2px solid transparent;margin-bottom:-1px;border-radius:0;
 }
-.auth-card h1{
-  margin:0 0 8px;
-  font-size:32px;
-  line-height:1.1;
+.seg button svg{width:16px;height:16px}
+.seg button.active{color:#2563EB;border-bottom-color:#2563EB;background:rgba(37,99,235,.04)}
+.login-field{display:grid;gap:7px;margin-bottom:14px}
+.login-field label{font-size:13px;font-weight:700;color:#0F172A}
+.input-wrap{position:relative;display:flex;align-items:center}
+.input-wrap > svg{position:absolute;left:12px;color:#94A3B8;width:16px;height:16px;pointer-events:none}
+.input-wrap input,.input-wrap select{
+  width:100%;border:1px solid #DCE3EE;border-radius:11px;min-height:48px;padding:10px 12px 10px 40px;
+  background:#fff;color:#0F172A;outline:none;transition:border-color .15s, box-shadow .15s;
 }
-.auth-card p{margin:0 0 22px;color:var(--muted);line-height:1.55}
-.field{display:grid;gap:7px;margin-bottom:14px}
-.field label{font-size:13px;font-weight:700;color:#334155}
-.field input,.field select,.field textarea{
-  width:100%;
-  border:1px solid var(--line);
-  background:#fbfcfe;
-  color:var(--ink);
-  border-radius:8px;
-  padding:12px 13px;
-  outline:none;
-  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
+.input-wrap select{appearance:none;padding-right:36px;cursor:pointer}
+.input-wrap .chev{position:absolute;right:12px;left:auto;pointer-events:none;color:#94A3B8}
+.input-wrap .eye-btn{
+  position:absolute;right:8px;border:0;background:transparent;width:34px;height:34px;border-radius:8px;
+  display:grid;place-items:center;color:#64748B;padding:0;
 }
-.field textarea{min-height:86px;resize:vertical}
-.field input:focus,.field select:focus,.field textarea:focus{
-  border-color:var(--brand);
-  background:#fff;
-  box-shadow:0 0 0 3px rgba(18,103,232,.12);
+.input-wrap .eye-btn:hover{background:#F1F5F9;color:#0F172A}
+.input-wrap input:focus,.input-wrap select:focus{border-color:#2563EB;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.field-error{color:#DC2626;font-size:12px;min-height:0;margin-top:2px}
+.login-alert{
+  display:none;margin-bottom:14px;padding:10px 12px;border-radius:10px;background:#FEF2F2;border:1px solid #FECACA;
+  color:#B91C1C;font-size:13px;font-weight:600;
 }
-.primary,.secondary,.ghost,.danger{
-  border:0;
-  border-radius:8px;
-  min-height:40px;
-  padding:0 14px;
-  font-weight:750;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-  white-space:nowrap;
-  transition:transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+.login-alert.show{display:block}
+.login-row{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:4px 0 16px}
+.remember{display:flex;align-items:center;gap:8px;color:#475569;font-size:13px;font-weight:600}
+.remember input{width:16px;height:16px;accent-color:#2563EB}
+.forgot{color:#2563EB;font-size:13px;font-weight:700;text-decoration:none}
+.forgot:hover{text-decoration:underline}
+.btn-primary{
+  width:100%;min-height:50px;border:0;border-radius:11px;
+  background:linear-gradient(180deg,#3B82F6 0%,#2563EB 55%,#1D4ED8 100%);
+  color:#fff;font-weight:750;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  box-shadow:0 12px 24px rgba(37,99,235,.28);
 }
-.primary{background:var(--brand);color:#fff;box-shadow:0 8px 18px rgba(21,94,239,.20)}
-.primary:hover{background:var(--brand-dark)}
-.secondary{background:var(--brand-soft);color:#164b96}
-.ghost{background:#fff;border:1px solid var(--line);color:#1f2937}
-.danger{background:#fff1f2;color:#a6203c}
-.primary:active,.secondary:active,.ghost:active,.danger:active{transform:translateY(1px)}
-.auth-art{
-  padding:40px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+.btn-primary:hover{filter:brightness(1.05)}
+.btn-primary:focus-visible{outline:2px solid #2563EB;outline-offset:2px}
+.btn-primary:disabled{opacity:.7;cursor:not-allowed;box-shadow:none;filter:none}
+.btn-primary .spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.or-line{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;margin:16px 0;color:#94A3B8;font-size:12px;font-weight:700}
+.or-line::before,.or-line::after{content:"";height:1px;background:#E2E8F0}
+.btn-outline{
+  width:100%;min-height:46px;border:1.5px solid #2563EB;border-radius:11px;background:#fff;color:#2563EB;font-weight:750;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
 }
-.receipt-stage{
-  width:min(520px,92%);
-  display:grid;
-  gap:12px;
-  justify-items:center;
-}
-.receipt-caption{
-  width:100%;
-  display:flex;
-  align-items:end;
-  justify-content:space-between;
-  color:#0f172a;
-}
-.receipt-caption strong{
-  font-size:18px;
-  font-weight:850;
-}
-.receipt-caption span{
-  font-size:12px;
-  color:var(--muted);
-}
-.receipt-frame{
-  width:min(300px,100%);
-  padding:14px 10px;
-  border-radius:20px;
+.btn-outline:hover{background:#EFF6FF}
+.btn-outline svg{width:16px;height:16px}
+.secure-note{margin:16px 0 0;display:flex;align-items:center;justify-content:center;gap:8px;color:#94A3B8;font-size:12px;font-weight:600}
+.secure-note svg{width:14px;height:14px;color:#64748B}
+.help-note{margin-top:18px;text-align:center;color:#64748B;font-size:13px;display:flex;align-items:center;justify-content:center;gap:8px}
+.help-note svg{width:16px;height:16px;color:#64748B}
+.help-note a{color:#2563EB;font-weight:700;text-decoration:none}
+.help-note a:hover{text-decoration:underline}
+
+.auth-right{
+  position:relative;min-height:100vh;overflow:hidden;color:#fff;
   background:
-    radial-gradient(circle at top, rgba(21,94,239,.10), transparent 46%),
-    linear-gradient(180deg, rgba(255,255,255,.96), rgba(245,248,252,.94));
-  box-shadow:0 18px 40px rgba(16,24,40,.16);
-  border:1px solid rgba(214,224,236,.85);
-  position:relative;
+    radial-gradient(circle at 72% 18%, rgba(37,99,235,.42), transparent 40%),
+    radial-gradient(circle at 18% 78%, rgba(56,189,248,.14), transparent 38%),
+    linear-gradient(180deg,#061433 0%,#040C22 100%);
+  padding:56px 48px;display:flex;flex-direction:column;justify-content:center;
 }
-.receipt-frame:before,
-.receipt-frame:after{
-  content:"";
-  position:absolute;
-  left:50%;
-  width:128px;
-  height:10px;
-  margin-left:-64px;
-  border-radius:999px;
-  background:rgba(15,23,42,.08);
-  filter:blur(1px);
+.auth-right::before{
+  content:"";position:absolute;inset:0;opacity:.28;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(148,163,184,.12) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,.12) 1px, transparent 1px);
+  background-size:36px 36px;mask-image:linear-gradient(#000 0%, transparent 70%);
 }
-.receipt-frame:before{top:-5px}
-.receipt-frame:after{bottom:-5px}
-.receipt-paper{
-  background:#fff;
-  border-radius:16px;
-  padding:14px 11px 12px;
-  border:1px dashed #d6deea;
-  color:#111827;
-  font-family:"Courier New",Courier,monospace;
-  font-size:10.5px;
-  line-height:1.32;
+.auth-wave{
+  position:absolute;left:-8%;right:-8%;bottom:-30px;height:210px;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(circle at 12% 60%, rgba(59,130,246,.95) 0 1.5px, transparent 2.2px),
+    radial-gradient(circle at 22% 45%, rgba(96,165,250,.9) 0 1.2px, transparent 2px),
+    radial-gradient(circle at 34% 70%, rgba(147,197,253,.85) 0 1.8px, transparent 2.5px),
+    radial-gradient(circle at 48% 40%, rgba(59,130,246,.95) 0 1.4px, transparent 2.2px),
+    radial-gradient(circle at 62% 65%, rgba(96,165,250,.9) 0 1.6px, transparent 2.4px),
+    radial-gradient(circle at 74% 48%, rgba(147,197,253,.85) 0 1.3px, transparent 2.1px),
+    radial-gradient(circle at 86% 72%, rgba(59,130,246,.9) 0 1.7px, transparent 2.5px),
+    radial-gradient(ellipse at 50% 80%, rgba(37,99,235,.45), transparent 65%);
+  background-size:100% 100%;
+  filter:blur(.2px);
+  opacity:.95;
+  mask-image:radial-gradient(ellipse at 50% 70%, #000 20%, transparent 75%);
 }
-.receipt-text{
-  margin:0;
-  display:block;
-  white-space:pre;
-  font:inherit;
-  color:inherit;
+.auth-right-inner{position:relative;z-index:1;max-width:580px}
+.auth-right h2{margin:0;font-size:clamp(28px,3.2vw,42px);line-height:1.15;font-weight:800;letter-spacing:-.03em}
+.auth-right h2 .accent{color:#3B82F6;text-shadow:0 0 24px rgba(59,130,246,.35)}
+.auth-right .promo-copy{margin:16px 0 26px;color:#CBD5E1;font-size:15px;line-height:1.6;max-width:500px}
+.glass-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:22px}
+.glass{
+  background:rgba(8,18,42,.55);border:1px solid rgba(96,165,250,.28);border-radius:16px;padding:14px;
+  box-shadow:0 12px 30px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter:blur(14px);
 }
-.receipt-text .receipt-title{
-  display:block;
-  width:100%;
-  text-align:center;
-  font-family:"Plus Jakarta Sans",Inter,Segoe UI,Roboto,Arial,sans-serif;
-  font-size:13px;
-  font-weight:900;
-  letter-spacing:.04em;
-  line-height:1.1;
-  margin:0 auto 1px;
-  transform:translateX(-11px);
+.glass-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.glass-head svg{width:15px;height:15px;color:#60A5FA}
+.glass h3{margin:0;font-size:12px;font-weight:700;color:#E2E8F0}
+.pipe-mini{display:grid;gap:9px}
+.pipe-mini .row{display:flex;justify-content:space-between;font-size:11px;color:#CBD5E1;font-weight:600}
+.pipe-mini .bar{height:6px;border-radius:999px;background:rgba(148,163,184,.2);overflow:hidden;margin-top:4px}
+.pipe-mini .bar > i{display:block;height:100%;border-radius:999px;background:#2563EB}
+.pipe-mini .bar.teal > i{background:#38BDF8}
+.pipe-mini .bar.green > i{background:#10B981}
+.glass-stat{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:6px 0 2px}
+.glass-ico{
+  width:52px;height:52px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#60A5FA,#2563EB 70%);
+  display:grid;place-items:center;position:relative;color:#fff;
+  box-shadow:0 0 0 6px rgba(37,99,235,.18), 0 10px 22px rgba(37,99,235,.35);
 }
-.receipt-rule{
-  border-top:1px dashed #111827;
-  margin:6px 0;
+.glass-ico svg{width:20px;height:20px}
+.glass-ico .badge-n{
+  position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;
+  background:#2563EB;border:2px solid #071226;font-size:10px;font-weight:800;display:grid;place-items:center;
 }
-.receipt-row{
-  display:flex;
-  justify-content:space-between;
-  gap:8px;
+.glass-stat p{margin:0;font-size:12px;color:#CBD5E1;line-height:1.4}
+.glass-stat strong{display:inline;font-size:14px;color:#fff;margin-left:4px}
+.feature-row{display:flex;flex-wrap:wrap;gap:10px 18px;margin-bottom:28px}
+.feature-row span{display:inline-flex;align-items:center;gap:8px;color:#E2E8F0;font-size:13px;font-weight:600}
+.feature-row .tick{
+  width:18px;height:18px;border-radius:50%;background:#2563EB;color:#fff;
+  display:grid;place-items:center;
 }
-.receipt-row.center{justify-content:center}
-.receipt-row.items{align-items:flex-start}
-.receipt-row .name{
-  flex:1;
-  min-width:0;
-}
-.receipt-row .amount{
-  white-space:nowrap;
-}
-.receipt-total{
-  font-weight:800;
-}
-.receipt-foot{
-  text-align:center;
-  margin-top:6px;
-  font-family:"Plus Jakarta Sans",Inter,Segoe UI,Roboto,Arial,sans-serif;
-  font-size:10px;
-  font-weight:800;
-  letter-spacing:.04em;
-}
-.receipt-badge{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:6px 10px;
-  border-radius:999px;
-  background:rgba(21,94,239,.08);
-  color:#164b96;
-  font-size:11px;
-  font-weight:800;
-}
-.receipt-badge i{
-  width:8px;
-  height:8px;
-  border-radius:50%;
-  background:var(--green);
-  display:inline-block;
-}
-.hint{font-size:13px;color:var(--muted);line-height:1.5}
-.error{color:#b42318;font-size:13px;min-height:18px}
+.feature-row .tick svg{width:11px;height:11px}
+.promo-foot{display:flex;align-items:center;gap:8px;color:#94A3B8;font-size:12px;font-weight:600}
+.promo-foot svg{width:14px;height:14px;color:#60A5FA}
 
-.app{
-  height:100vh;
-  display:grid;
-  grid-template-columns:276px 1fr;
-  overflow:hidden;
-}
-.sidebar{
-  background:var(--sidebar);
-  color:#f8fafc;
-  padding:20px 14px;
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-  border-right:1px solid rgba(255,255,255,.08);
-  min-height:0;
-  overflow:hidden;
-}
-.sidebar .logo{background:#fff;color:#155eef;box-shadow:none}
-.tenant-chip{
-  display:grid;
-  gap:4px;
-  padding:13px;
-  border-radius:8px;
-  background:var(--sidebar-soft);
-  border:1px solid rgba(255,255,255,.08);
-}
-.tenant-chip strong{font-size:14px}
-.tenant-chip span{font-size:12px;color:#b8c2d6}
-.nav{display:grid;gap:5px;overflow-y:auto;overflow-x:hidden;padding-right:2px;min-height:0}
-.nav-section{
-  margin:12px 9px 3px;
-  color:#94a3b8;
-  font-size:11px;
-  font-weight:900;
-  text-transform:uppercase;
-}
-.nav button{
-  border:0;
-  width:100%;
-  min-height:38px;
-  padding:0 11px;
-  border-radius:8px;
-  background:transparent;
-  color:#cbd5e1;
-  text-align:left;
-  font-weight:750;
-  font-size:13px;
-}
-.nav button.active,.nav button:hover{background:#263347;color:#fff}
-.sidebar-footer{margin-top:auto;display:grid;gap:8px}
-.main{
-  min-width:0;
-  background:#f3f6fb;
-  display:grid;
-  grid-template-rows:auto 1fr;
-  min-height:0;
-  overflow:hidden;
-}
-.topbar{
-  min-height:76px;
-  background:#fff;
-  border-bottom:1px solid var(--line);
-  padding:14px 24px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  box-shadow:0 1px 0 rgba(16,24,40,.02);
-}
-.topbar h2{margin:0;font-size:23px;font-weight:850;color:#111827}
-.topbar p{margin:3px 0 0;color:var(--muted);font-size:13px}
-.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.content{padding:24px;display:grid;gap:18px;overflow:auto;min-height:0}
-.stats{
-  display:grid;
-  grid-template-columns:repeat(4,minmax(150px,1fr));
-  gap:14px;
-}
-.stat,.panel,.record{
-  background:#fff;
-  border:1px solid var(--line);
-  border-radius:8px;
-  box-shadow:var(--small-shadow);
-}
-.stat{padding:17px;border-top:3px solid transparent}
-.stat:nth-child(1){border-top-color:var(--brand)}
-.stat:nth-child(2){border-top-color:var(--teal)}
-.stat:nth-child(3){border-top-color:var(--amber)}
-.stat:nth-child(4){border-top-color:var(--rose)}
-.stat span{color:var(--muted);font-size:11px;font-weight:850;text-transform:uppercase}
-.stat strong{display:block;margin-top:9px;font-size:29px;font-weight:850}
-.work-grid{
-  display:grid;
-  grid-template-columns:1.1fr .9fr;
-  gap:18px;
-}
-.receipt-panel{
-  display:grid;
-  gap:12px;
-}
-.panel{padding:17px;min-width:0}
-.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-.panel-head h3{margin:0;font-size:17px;font-weight:850;color:#111827}
-.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:8px}
-table{width:100%;border-collapse:collapse;background:#fff;min-width:680px}
-th,td{padding:12px 13px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
-th{font-size:11px;text-transform:uppercase;color:#64748b;background:#f8fafc;font-weight:850}
-tr:last-child td{border-bottom:0}
-tbody tr:hover{background:#fbfdff}
-.badge{
-  display:inline-flex;
-  align-items:center;
-  min-height:24px;
-  padding:0 9px;
-  border-radius:999px;
-  font-size:12px;
-  font-weight:800;
-  background:#eaf1ff;
-  color:#164b96;
-}
-.badge.hot{background:#fff1d6;color:#8a5a12}
-.badge.won{background:#dff7eb;color:#146c4a}
-.badge.lost{background:#ffe4e9;color:#9f203b}
-.records{display:grid;gap:10px}
-.record{padding:13px;display:grid;gap:7px}
-.record strong{font-size:14px;color:#111827}
-.record small{color:var(--muted)}
-.module{display:none}
-.module.active{display:grid;gap:18px}
-.form-grid{
-  display:grid;
-  grid-template-columns:repeat(2,minmax(180px,1fr));
-  gap:12px;
-}
-.form-grid .wide{grid-column:1/-1}
-.feature-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-  gap:9px;
-  margin:8px 0 14px;
-}
-.check-row{
-  min-height:36px;
-  display:flex;
-  align-items:center;
-  gap:9px;
-  padding:8px 10px;
-  border:1px solid var(--line);
-  border-radius:8px;
-  background:#fff;
-  font-size:13px;
-  font-weight:700;
-}
-.check-row input{width:16px;height:16px}
-.muted-text{color:var(--muted);font-size:13px;line-height:1.5}
-.tenant-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.empty{
-  padding:28px;
-  border:1px dashed #c5cfdd;
-  border-radius:8px;
-  text-align:center;
-  color:var(--muted);
-  background:#fff;
-}
-.mobile-menu{display:none}
+/* shared app form/button styles */
+.axzen-mark{display:inline-grid;gap:6px;color:#fff;line-height:1}
+.axzen-mark .axzen-name{font-size:26px;font-weight:800;letter-spacing:-.03em;text-transform:lowercase}
+.axzen-mark .axzen-sub{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px;font-size:9px;font-weight:600;letter-spacing:.38em;text-transform:lowercase;text-indent:.38em}
+.axzen-mark .axzen-sub::before,.axzen-mark .axzen-sub::after{content:"";height:1px;background:currentColor;opacity:.85}
+.muted{color:var(--muted);line-height:1.5}
+.field{display:grid;gap:6px;margin-bottom:12px}
+.field label{font-size:12px;font-weight:700}
+.field input,.field select,.field textarea,.composer,.search-box input{width:100%;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#fff;outline:none}
+.btn,.ghost,.soft,.icon-btn{border:0;border-radius:12px;min-height:40px;padding:0 14px;font-weight:700}
+.btn{background:var(--brand);color:#fff}
+.ghost{background:#fff;border:1px solid var(--line)}
+.soft{background:var(--soft);color:#164b96}
+.icon-btn{width:40px;height:40px;padding:0;display:grid;place-items:center;background:#fff;border:1px solid var(--line);position:relative}
+.error{color:var(--rose);min-height:18px;margin-top:8px}
 
-@media (max-width:900px){
-  .auth-shell{grid-template-columns:1fr}
-  .auth-art{display:none}
-  .app{grid-template-columns:1fr}
+@media (max-width:1100px){
+  .auth{grid-template-columns:1fr;height:auto;overflow:auto}
+  .auth-right{display:none}
+  .auth-left{padding:20px 16px 28px;min-height:100vh}
+  .login-card{padding:22px 18px}
+  .glass-grid{grid-template-columns:1fr}
+  .app,.grid-2,.grid-bottom,.stats,.form-grid,.inbox,.kanban,.donut-wrap{grid-template-columns:1fr}
   .sidebar{display:none}
-  .sidebar.open{
-    display:flex;
-    position:fixed;
-    inset:0 auto 0 0;
-    width:min(280px,88vw);
-    z-index:10;
-  }
-  .mobile-menu{display:inline-flex}
-  .stats{grid-template-columns:repeat(2,minmax(130px,1fr))}
-  .work-grid{grid-template-columns:1fr}
-  .topbar{align-items:flex-start}
+  .pipe-step{min-width:120px}
 }
-@media (max-width:560px){
-  .auth-panel{padding:24px}
-  .auth-card h1{font-size:26px}
-  .content{padding:14px}
-  .stats{grid-template-columns:1fr}
-  .form-grid{grid-template-columns:1fr}
-  .topbar{padding:12px 14px;flex-direction:column}
-  .toolbar{width:100%}
-  .toolbar button{flex:1}
+.app{display:grid;grid-template-columns:248px 1fr;min-height:100vh}
+.sidebar{background:var(--sidebar);color:#d7deea;padding:18px 12px;display:flex;flex-direction:column;gap:10px}
+.sidebar .brand{margin:0 8px 12px;font-size:16px}
+.chip{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:12px;margin:0 4px 8px;display:flex;gap:10px;align-items:center}
+.chip .avatar{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.08);display:grid;place-items:center;color:#9db0c9}
+.chip strong{display:block;color:#fff;font-size:13px}
+.chip span{font-size:11px;color:#98a2b3}
+.nav{display:grid;gap:2px;flex:1;overflow:auto;padding:0 4px}
+.nav button{text-align:left;background:transparent;border:0;color:#98a2b3;border-radius:12px;padding:10px 12px;font-weight:600;display:flex;align-items:center;gap:10px}
+.nav button svg{width:18px;height:18px;flex:0 0 auto}
+.nav button.active{background:var(--brand);color:#fff}
+.nav button:hover:not(.active){background:rgba(255,255,255,.06);color:#fff}
+.nav-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#475467;padding:14px 10px 6px}
+.side-foot{padding:8px 4px 0}
+.side-foot button{width:100%;display:flex;align-items:center;gap:10px;justify-content:flex-start;background:transparent;border:0;color:#98a2b3;padding:10px 12px;border-radius:12px}
+.main{display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.topbar{padding:14px 22px;background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:16px}
+.search-box{flex:1;max-width:520px;position:relative}
+.search-box svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#98a2b3}
+.search-box input{padding-left:40px;background:#f9fafb}
+.top-actions{display:flex;align-items:center;gap:10px}
+.date-pill{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:0 12px;min-height:40px;color:#344054;font-weight:600;font-size:13px}
+.bell-dot{position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;background:#f04438;color:#fff;font-size:10px;font-weight:800;display:grid;place-items:center}
+.user-chip{display:flex;align-items:center;gap:10px;padding-left:4px}
+.user-chip .ua{width:36px;height:36px;border-radius:50%;background:#2f6bff;color:#fff;display:grid;place-items:center;font-weight:800}
+.user-chip strong{display:block;font-size:13px}
+.user-chip span{font-size:11px;color:var(--muted)}
+.content{padding:20px 22px 28px;display:grid;gap:16px}
+.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.hero h2{margin:0;font-size:28px;font-weight:800}
+.hero p{margin:6px 0 0;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.stat-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.stat-ico{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;overflow:hidden}
+.stat-ico.blue{background:#eff4ff;color:#2f6bff}
+.stat-ico.green{background:#ecfdf3;color:#12b76a}
+.stat-ico.amber{background:#fffaeb;color:#f79009}
+.stat-ico.rose{background:#fef3f2;color:#f04438}
+.stat span{color:var(--muted);font-size:13px;font-weight:600}
+.stat strong{display:block;font-size:30px;margin:4px 0 8px;letter-spacing:-.03em}
+.trend{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700}
+.trend.up{color:#12b76a}.trend.down{color:#f04438}
+.spark{width:72px;height:28px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px}
+.panel-head h3{margin:0;font-size:16px}
+.grid-2{display:grid;grid-template-columns:1.35fr .85fr;gap:16px}
+.grid-bottom{display:grid;grid-template-columns:1.35fr .85fr;gap:16px}
+.icon-sm{display:inline-flex;width:16px;height:16px;align-items:center;justify-content:center;flex:0 0 auto}
+.icon-sm svg{width:16px!important;height:16px!important;min-width:16px;min-height:16px;max-width:16px;max-height:16px}
+.pipeline{display:flex;gap:0;overflow:auto;padding:2px 0;align-items:stretch;min-height:84px}
+.pipe-step{flex:1;min-width:120px;max-width:100%;background:#f8fafc;border:1px solid var(--line);padding:14px 18px 14px 20px;position:relative;display:flex;flex-direction:column;justify-content:center;gap:6px;clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%)}
+.pipe-step:first-child{clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%);border-radius:12px 0 0 12px;padding-left:14px}
+.pipe-step:last-child{clip-path:polygon(0 0, 100% 0, 100% 100%, 0 100%, 14px 50%);border-radius:0 12px 12px 0;padding-right:14px}
+.pipe-step + .pipe-step{margin-left:-10px}
+.pipe-step .label{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;font-weight:600;line-height:1;min-height:18px}
+.pipe-step .label svg{width:16px!important;height:16px!important;min-width:16px;min-height:16px;max-width:16px;max-height:16px}
+.pipe-step strong{display:block;font-size:22px;line-height:1.1;font-weight:800;letter-spacing:-.02em}
+.table-wrap{overflow:auto}
+table{width:100%;border-collapse:collapse}
+th,td{padding:12px 8px;border-bottom:1px solid #f2f4f7;text-align:left;font-size:13px;vertical-align:middle}
+th{color:#667085;font-weight:600;font-size:12px}
+.lead-cell{display:flex;align-items:center;gap:10px}
+.lead-av{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px}
+.badge{display:inline-flex;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:700}
+.badge.hot{background:#fffaeb;color:#b54708}
+.badge.ok{background:#ecfdf3;color:#027a48}
+.badge.wait{background:#eff8ff;color:#175cd3}
+.badge.bad{background:#fef3f2;color:#b42318}
+.actions{display:flex;gap:6px;align-items:center}
+.act{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:#fff;display:grid;place-items:center;color:#475467}
+.act.wa{background:#25D366;border-color:#25D366;color:#fff}
+.act.phone{color:#2f6bff;border-color:#dbe7ff;background:#eff4ff}
+.timeline{display:grid;gap:12px}
+.tl-item{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:start}
+.tl-item time{font-size:12px;color:var(--muted);font-weight:600}
+.tl-item .box{background:#f9fafb;border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.tl-item .box strong{display:block;font-size:13px}
+.tl-item .box span{font-size:12px;color:var(--muted)}
+.chart-box{height:180px;position:relative}
+.chart-box svg{width:100%;height:100%}
+.donut-wrap{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}
+.donut{position:relative;width:140px;height:140px}
+.donut svg{width:140px;height:140px;transform:rotate(-90deg)}
+.donut .center{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.donut .center strong{font-size:22px}
+.legend{display:grid;gap:8px}
+.legend div{display:flex;justify-content:space-between;font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:8px}
+.empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed #d0d5dd;border-radius:12px}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.wide{grid-column:1/-1}
+.inbox{display:grid;grid-template-columns:280px 1fr;min-height:520px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#fff}
+.thread-list{border-right:1px solid var(--line);overflow:auto}
+.thread{padding:12px;border-bottom:1px solid #edf1f6;cursor:pointer}
+.thread.active{background:#eff6ff}
+.chat{display:flex;flex-direction:column}
+.chat-head{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:800}
+.bubbles{flex:1;padding:16px;overflow:auto;display:grid;gap:8px;align-content:start;background:#f8fafc}
+.bubble{max-width:75%;padding:10px 12px;border-radius:14px;line-height:1.4}
+.bubble.in{background:#fff;border:1px solid var(--line)}
+.bubble.out{background:#2f6bff;color:#fff;margin-left:auto}
+.reply-box{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:10px}
+.kanban-col{background:#f8fafc;border:1px solid var(--line);border-radius:12px;padding:10px;min-height:220px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px}
+@media (max-width:1100px){
+  .auth,.app,.grid-2,.grid-bottom,.stats,.form-grid,.inbox,.kanban,.donut-wrap{grid-template-columns:1fr}
+  .auth-right{display:none}
+  .sidebar{display:none}
+  .pipe-step{min-width:120px}
 }
 </style>
 </head>
 <body>
-<section id="authShell" class="auth-shell">
-  <div class="auth-panel">
-    <div class="brand-row"><div class="logo">A</div><span>Axzen CRM</span></div>
-    <div class="auth-card">
-      <h1>Customer workspace login</h1>
-      <p>Create a company CRM account with username and phone number. Every company gets isolated leads, contacts, deals, and tasks.</p>
-      <form id="authForm">
-        <div class="field">
-          <label for="companyName">Company / customer name</label>
-          <input id="companyName" autocomplete="organization" placeholder="Example: Sri Lakshmi Restaurant">
+<section id="authShell" class="auth">
+  <div class="auth-left">
+    <div class="auth-brand"><span class="crm-mark">A</span><span>Axzen CRM</span></div>
+    <div class="auth-left-inner">
+      <div class="login-card">
+        <h1>Welcome back</h1>
+        <p class="login-sub">Sign in to continue to Axzen CRM</p>
+        <div class="seg" role="tablist" aria-label="Login type">
+          <button type="button" class="active" data-mode="infotech" role="tab" aria-selected="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
+            Axzen Infotech
+          </button>
+          <button type="button" data-mode="client" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            POS Client
+          </button>
         </div>
-        <div class="field">
-          <label for="username">Username</label>
-          <input id="username" autocomplete="username" placeholder="owner or sales1" required>
-        </div>
-        <div class="field">
-          <label for="phone">Phone number</label>
-          <input id="phone" autocomplete="tel" inputmode="tel" placeholder="9876543210" required>
-        </div>
-        <div class="field">
-          <label for="password">Password</label>
-          <input id="password" autocomplete="current-password" type="password" placeholder="Minimum 6 characters" required>
-        </div>
-        <div class="toolbar">
-          <button class="primary" type="submit">Sign in</button>
-          <button class="secondary" id="demoBtn" type="button">Load demo</button>
-        </div>
-        <div id="authError" class="error"></div>
-      </form>
-      <p class="hint">New company name creates a fresh tenant. Existing users can sign in again with the same username, phone number, and password.</p>
+        <div id="authError" class="login-alert" role="alert"></div>
+        <form id="authForm" novalidate>
+          <div class="login-field">
+            <label for="companyName">Workspace</label>
+            <div class="input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+              <input id="companyName" name="companyName" list="workspaceList" placeholder="Your shop / company name" required>
+              <datalist id="workspaceList">
+                <option value="Axzen Infotech"></option>
+              </datalist>
+              <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+            </div>
+            <div class="field-error" id="errCompany"></div>
+          </div>
+          <div class="login-field">
+            <label for="loginId">Username or phone</label>
+            <div class="input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <input id="loginId" name="loginId" autocomplete="username" placeholder="Enter username or phone number" required>
+            </div>
+            <div class="field-error" id="errLoginId"></div>
+          </div>
+          <div class="login-field">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+              <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+              <button class="eye-btn" id="togglePassword" type="button" aria-label="Show password">
+                <svg id="eyeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
+            <div class="field-error" id="errPassword"></div>
+          </div>
+          <div class="login-row">
+            <label class="remember"><input id="rememberMe" type="checkbox"> Remember me</label>
+            <a class="forgot" href="#" id="forgotPassword">Forgot password?</a>
+          </div>
+          <button class="btn-primary" id="signInBtn" type="submit">
+            <span id="signInLabel">Sign in securely</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+          </button>
+          <div class="or-line">or</div>
+          <button class="btn-outline" id="otpLoginBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/><circle cx="9.5" cy="11" r=".8" fill="currentColor"/><circle cx="12.5" cy="11" r=".8" fill="currentColor"/><circle cx="15.5" cy="11" r=".8" fill="currentColor"/></svg>
+            Sign in with OTP
+          </button>
+          <p class="secure-note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>
+            Protected with secure authentication
+          </p>
+        </form>
+      </div>
+      <p class="help-note">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><path d="M21 14v2a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h3zM3 14v2a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2H3z"/><path d="M12 19v2"/></svg>
+        Need help? <a href="mailto:support@axzen.in" id="contactSupport">Contact support</a>
+      </p>
     </div>
   </div>
-  <div class="auth-art" aria-hidden="true">
-    <div class="receipt-stage">
-      <div class="receipt-caption">
-        <div>
-          <strong>Print receipt preview</strong><br>
-          <span>Iki page lo direct ga receipt ela print avuthundo kanipistundi.</span>
+  <div class="auth-right" aria-hidden="true">
+    <div class="auth-wave"></div>
+    <div class="auth-right-inner">
+      <h2>Turn every lead into<br><span class="accent">a lasting customer.</span></h2>
+      <p class="promo-copy">Manage companies, POS clients, WhatsApp conversations, campaigns and support — all from one CRM.</p>
+      <div class="glass-grid">
+        <div class="glass">
+          <div class="glass-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 16v-5"/><path d="M12 16V8"/><path d="M16 16v-3"/></svg>
+            <h3>Sales Pipeline</h3>
+          </div>
+          <div class="pipe-mini">
+            <div><div class="row"><span>New</span><span>28</span></div><div class="bar"><i style="width:80%"></i></div></div>
+            <div><div class="row"><span>Qualified</span><span>16</span></div><div class="bar teal"><i style="width:55%"></i></div></div>
+            <div><div class="row"><span>Won</span><span>09</span></div><div class="bar green"><i style="width:35%"></i></div></div>
+          </div>
         </div>
-        <div class="receipt-badge"><i></i> Thermal paper</div>
+        <div class="glass">
+          <div class="glass-head">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.5 3.5A9.5 9.5 0 0 0 4.1 15.8L3 21l5.3-1.1A9.5 9.5 0 1 0 17.5 3.5zm-5.4 14.7a7.8 7.8 0 0 1-4-.1l-.3-.1-2.4.5.5-2.3-.1-.3a7.8 7.8 0 1 1 6.3 2.3z"/><path d="M9.4 8.9c.2-.4.3-.4.5-.4h.4c.1 0 .3 0 .4.3.2.4.5 1.2.6 1.3.1.1 0 .3-.1.4l-.3.4c-.1.1-.2.2-.1.4.2.3.8 1.3 1.7 2.1 1.2 1 2.2 1.3 2.5 1.4.3.1.5.1.7-.1.2-.2.7-.8.9-1 .2-.3.3-.2.6-.1.2.1 1.5.7 1.7.8.2.1.4.2.4.3 0 .2 0 .9-.4 1.4-.4.5-1.2.9-1.7.9-.5 0-1.3-.2-2.6-.9-1.6-.9-3-2.7-3.1-2.8-.1-.1-.9-1.2-.9-2.3 0-1 .5-1.5.7-1.7z"/></svg>
+            <h3>WhatsApp Inbox</h3>
+          </div>
+          <div class="glass-stat">
+            <div class="glass-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>
+              <span class="badge-n">6</span>
+            </div>
+            <p>Unread conversations <strong>6</strong></p>
+          </div>
+        </div>
+        <div class="glass">
+          <div class="glass-head">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>
+            <h3>Today’s Follow-ups</h3>
+          </div>
+          <div class="glass-stat">
+            <div class="glass-ico">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m7 12 3.5 3.5L17 9"/></svg>
+            </div>
+            <p>Pending tasks <strong>5</strong></p>
+          </div>
+        </div>
       </div>
-      <div class="receipt-frame">
-        <div class="receipt-paper">
-<pre class="receipt-text"><span class="receipt-title">SHAD KITCHEN</span>
-         axzen infotech         
---------------------------------
-Date:31/08/2026    Time:12:30 PM
-Cashier: AJAY      Payment: Cash
-Token: 9029
---------------------------------
-# ITEM NAME          QTY     AMT
---------------------------------
-1 Mutton Biryani
-    1 x 410.00            410.00
-2 Chicken Curry
-    2 x 180.00            360.00
---------------------------------
-SUBTOTAL               Rs 770.00
-DISCOUNT                 Rs 0.00
---------------------------------
-TOTAL                  Rs 770.00
-================================
-     THANK YOU! VISIT AGAIN</pre>
-        </div>
+      <div class="feature-row">
+        <span><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 7"/></svg></span>Unified customer data</span>
+        <span><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 7"/></svg></span>Faster sales follow-ups</span>
+        <span><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 7"/></svg></span>Real-time team visibility</span>
+      </div>
+      <div class="promo-foot">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 4 6v6c0 5 3.4 8.4 8 9 4.6-.6 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>
+        Built for Axzen Infotech teams and POS partners.
       </div>
     </div>
   </div>
 </section>
 
 <section id="appShell" class="app hidden">
-  <aside id="sidebar" class="sidebar">
-    <div class="top-brand"><div class="logo">A</div><span>Axzen CRM</span></div>
-    <div class="tenant-chip">
-      <strong id="tenantName">Workspace</strong>
-      <span id="userName">User</span>
+  <aside class="sidebar">
+    <div class="brand"><div class="axzen-mark sm"><span class="axzen-name">axzen</span><span class="axzen-sub">infotech</span></div></div>
+    <div class="chip">
+      <div class="avatar" id="tenantIcon"></div>
+      <div><strong id="tenantName">Workspace</strong><span id="userLine">Owner</span></div>
     </div>
     <nav class="nav" id="nav"></nav>
-    <div class="sidebar-footer">
-      <button class="ghost" id="exportBtn" type="button">Export data</button>
-      <button class="danger" id="logoutBtn" type="button">Logout</button>
+    <div class="side-foot">
+      <button id="logoutBtn" type="button"></button>
     </div>
   </aside>
   <main class="main">
     <header class="topbar">
-      <div>
-        <button class="ghost mobile-menu" id="menuBtn" type="button">Menu</button>
-        <h2 id="pageTitle">Dashboard</h2>
-        <p id="pageSubtitle">Today sales pipeline and customer follow-ups.</p>
+      <div class="search-box">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="globalSearch" placeholder="Search leads, contacts, companies...">
       </div>
-      <div class="toolbar">
-        <button class="secondary" id="seedBtn" type="button">Add sample</button>
-        <button class="primary" id="quickLeadBtn" type="button">New lead</button>
+      <div class="top-actions">
+        <div class="date-pill" id="dateRange"></div>
+        <button class="icon-btn" id="refreshBtn" type="button" title="Refresh">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.6-6.3"/><path d="M21 3v6h-6"/></svg>
+          <span class="bell-dot">3</span>
+        </button>
+        <div class="user-chip">
+          <div class="ua" id="userAvatar">A</div>
+          <div><strong id="userName">Admin</strong><span id="userRole">Admin</span></div>
+        </div>
       </div>
     </header>
-    <div class="content">
-      <section id="dashboard" class="module active">
-        <div class="stats">
-          <div class="stat"><span>Leads</span><strong id="statLeads">0</strong></div>
-          <div class="stat"><span>Contacts</span><strong id="statContacts">0</strong></div>
-          <div class="stat"><span>Open deals</span><strong id="statDeals">0</strong></div>
-          <div class="stat"><span>Due tasks</span><strong id="statTasks">0</strong></div>
-        </div>
-        <div class="work-grid">
-          <div class="panel">
-            <div class="panel-head"><h3>Recent leads</h3><button class="ghost" data-go="leads" type="button">View all</button></div>
-            <div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Source</th><th>Status</th></tr></thead><tbody id="recentLeads"></tbody></table></div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h3>Follow-ups</h3><button class="ghost" data-go="tasks" type="button">View tasks</button></div>
-            <div id="taskCards" class="records"></div>
-          </div>
-        </div>
-        <div class="panel receipt-panel">
-          <div class="panel-head">
-            <div>
-              <h3>Print receipt preview</h3>
-              <p class="muted-text">Login ayyaka ikkade thermal receipt ela kanipistundo choodachu.</p>
-            </div>
-            <div class="receipt-badge"><i></i> Live preview</div>
-          </div>
-          <div class="receipt-frame" style="width:min(100%,420px);margin:0 auto;">
-            <div class="receipt-paper">
-<pre class="receipt-text"><span class="receipt-title">SHAD KITCHEN</span>
-         axzen infotech         
---------------------------------
-Date:31/08/2026    Time:12:30 PM
-Cashier: AJAY      Payment: Cash
-Token: 9029
---------------------------------
-# ITEM NAME          QTY     AMT
---------------------------------
-1 Mutton Biryani
-    1 x 410.00            410.00
-2 Chicken Curry
-    2 x 180.00            360.00
---------------------------------
-SUBTOTAL               Rs 770.00
-DISCOUNT                 Rs 0.00
---------------------------------
-TOTAL                  Rs 770.00
-================================
-     THANK YOU! VISIT AGAIN</pre>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section id="admin" class="module">
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <h3>Axzen customer control</h3>
-              <p class="muted-text">Create customer CRM accounts and decide which modules they can use.</p>
-            </div>
-          </div>
-          <form id="tenantForm" class="form-grid">
-            <div class="field"><label>Customer company</label><input name="companyName" required></div>
-            <div class="field"><label>Owner username</label><input name="username" value="owner" required></div>
-            <div class="field"><label>Owner phone</label><input name="phone" inputmode="tel" required></div>
-            <div class="field"><label>Temporary password</label><input name="password" value="Welcome@123" required></div>
-            <div class="field"><label>Plan</label><select name="plan"><option>Starter</option><option>Growth</option><option>Business</option><option>Enterprise</option></select></div>
-            <div class="field"><label>Status</label><select name="status"><option>trial</option><option>active</option><option>suspended</option></select></div>
-            <div class="wide">
-              <label class="field-label">Enabled modules</label>
-              <div id="tenantFeatureChoices" class="feature-grid"></div>
-            </div>
-            <button class="primary" type="submit">Create customer</button>
-          </form>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h3>Customer accounts</h3><button class="ghost" id="refreshTenantsBtn" type="button">Refresh</button></div>
-          <div id="tenantRows" class="records"></div>
-        </div>
-      </section>
-
-      <section id="leads" class="module">
-        <div class="panel">
-          <div class="panel-head"><h3>Add lead</h3></div>
-          <form id="leadForm" class="form-grid">
-            <div class="field"><label>Name</label><input name="name" required></div>
-            <div class="field"><label>Phone</label><input name="phone" inputmode="tel" required></div>
-            <div class="field"><label>Source</label><select name="source"><option>Walk-in</option><option>Website</option><option>WhatsApp</option><option>Reference</option><option>Calling</option></select></div>
-            <div class="field"><label>Status</label><select name="status"><option>New</option><option>Hot</option><option>Follow-up</option><option>Converted</option><option>Lost</option></select></div>
-            <div class="field wide"><label>Notes</label><textarea name="notes" placeholder="Requirement, budget, next action"></textarea></div>
-            <button class="primary" type="submit">Save lead</button>
-          </form>
-        </div>
-        <div class="panel"><div class="panel-head"><h3>Leads</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Source</th><th>Status</th><th>Notes</th></tr></thead><tbody id="leadRows"></tbody></table></div></div>
-      </section>
-
-      <section id="contacts" class="module">
-        <div class="panel">
-          <div class="panel-head"><h3>Add contact</h3></div>
-          <form id="contactForm" class="form-grid">
-            <div class="field"><label>Name</label><input name="name" required></div>
-            <div class="field"><label>Phone</label><input name="phone" inputmode="tel" required></div>
-            <div class="field"><label>Email</label><input name="email" type="email"></div>
-            <div class="field"><label>Type</label><select name="type"><option>Customer</option><option>Partner</option><option>Vendor</option></select></div>
-            <button class="primary" type="submit">Save contact</button>
-          </form>
-        </div>
-        <div class="panel"><div class="panel-head"><h3>Contacts</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Type</th></tr></thead><tbody id="contactRows"></tbody></table></div></div>
-      </section>
-
-      <section id="campaigns" class="module">
-        <div class="panel">
-          <div class="panel-head"><h3>Create campaign</h3></div>
-          <form id="campaignForm" class="form-grid">
-            <div class="field"><label>Campaign name</label><input name="name" placeholder="August offers" required></div>
-            <div class="field"><label>Channel</label><select name="channel"><option>WhatsApp</option><option>Meta Ads</option><option>Calling</option><option>Email</option><option>SMS</option></select></div>
-            <div class="field"><label>Audience</label><input name="audience" placeholder="Hot leads, all customers"></div>
-            <div class="field"><label>Budget</label><input name="budget" type="number" min="0" placeholder="0"></div>
-            <div class="field"><label>Start date</label><input name="startDate" type="date"></div>
-            <div class="field"><label>Status</label><select name="status"><option>Draft</option><option>Scheduled</option><option>Running</option><option>Paused</option><option>Completed</option></select></div>
-            <div class="field wide"><label>Goal / offer</label><textarea name="goal" placeholder="Offer details, target, expected leads"></textarea></div>
-            <button class="primary" type="submit">Save campaign</button>
-          </form>
-        </div>
-        <div class="panel"><div class="panel-head"><h3>Campaigns</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Channel</th><th>Audience</th><th>Budget</th><th>Status</th></tr></thead><tbody id="campaignRows"></tbody></table></div></div>
-      </section>
-
-      <section id="audiences" class="module">
-        <div class="panel">
-          <div class="panel-head"><h3>Create audience</h3></div>
-          <form id="audienceForm" class="form-grid">
-            <div class="field"><label>Audience name</label><input name="name" placeholder="Interested hotel leads" required></div>
-            <div class="field"><label>Source</label><select name="source"><option>Leads</option><option>Contacts</option><option>Customers</option><option>Manual</option></select></div>
-            <div class="field"><label>Filter</label><input name="filter" placeholder="Status: Hot, City: Hyderabad"></div>
-            <div class="field"><label>Status</label><select name="status"><option>Active</option><option>Draft</option><option>Archived</option></select></div>
-            <div class="field wide"><label>Notes</label><textarea name="notes" placeholder="Who should receive campaigns"></textarea></div>
-            <button class="primary" type="submit">Save audience</button>
-          </form>
-        </div>
-        <div class="panel"><div class="panel-head"><h3>Audiences</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Source</th><th>Filter</th><th>Status</th></tr></thead><tbody id="audienceRows"></tbody></table></div></div>
-      </section>
-
-      <section id="whatsappCampaigns" class="module">
-        <div class="panel">
-          <div class="panel-head"><h3>Create WhatsApp campaign</h3></div>
-          <form id="whatsappCampaignForm" class="form-grid">
-            <div class="field"><label>Campaign name</label><input name="name" placeholder="Festival follow-up" required></div>
-            <div class="field"><label>Audience</label><input name="audience" placeholder="Hot leads"></div>
-            <div class="field"><label>Template name</label><input name="templateName" placeholder="welcome_offer"></div>
-            <div class="field"><label>Schedule</label><input name="scheduleDate" type="datetime-local"></div>
-            <div class="field"><label>Status</label><select name="status"><option>Draft</option><option>Scheduled</option><option>Sent</option><option>Failed</option></select></div>
-            <div class="field"><label>Expected recipients</label><input name="recipients" type="number" min="0"></div>
-            <div class="field wide"><label>Message preview</label><textarea name="message" placeholder="Hi {{name}}, your offer text here"></textarea></div>
-            <button class="primary" type="submit">Save WhatsApp campaign</button>
-          </form>
-        </div>
-        <div class="panel"><div class="panel-head"><h3>WhatsApp campaigns</h3></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Audience</th><th>Template</th><th>Schedule</th><th>Status</th></tr></thead><tbody id="whatsappCampaignRows"></tbody></table></div></div>
-      </section>
-
-      <section id="metaAds" class="module">
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <h3>Meta Ads setup</h3>
-              <p class="muted-text">Connect Facebook/Instagram ad account and lead form for tenant-wise lead import.</p>
-            </div>
-          </div>
-          <form id="metaIntegrationForm" class="form-grid">
-            <div class="field"><label>Business ID</label><input name="businessId" placeholder="Meta business ID"></div>
-            <div class="field"><label>Ad Account ID</label><input name="adAccountId" placeholder="act_123456789"></div>
-            <div class="field"><label>Page ID</label><input name="pageId" placeholder="Facebook page ID"></div>
-            <div class="field"><label>Instagram Account ID</label><input name="instagramAccountId" placeholder="Instagram business account ID"></div>
-            <div class="field"><label>Lead Form ID</label><input name="leadFormId" placeholder="Meta lead form ID"></div>
-            <div class="field"><label>Access Token</label><input name="accessToken" type="password" placeholder="Meta long-lived token"></div>
-            <button class="primary" type="submit">Save Meta setup</button>
-            <button class="secondary" id="testMetaBtn" type="button">Test Meta</button>
-            <button class="ghost" id="importMetaLeadsBtn" type="button">Import leads</button>
-          </form>
-          <p id="metaStatus" class="muted-text"></p>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h3>Meta events</h3></div>
-          <div id="metaEventRows" class="records"></div>
-        </div>
-      </section>
-
-      <section id="integrations" class="module">
-        <div class="panel">
-          <div class="panel-head">
-            <div>
-              <h3>WhatsApp Business setup</h3>
-              <p class="muted-text">Save customer-specific WhatsApp credentials. Messages and webhooks stay inside this workspace.</p>
-            </div>
-          </div>
-          <form id="whatsappIntegrationForm" class="form-grid">
-            <div class="field"><label>WABA ID</label><input name="wabaId" placeholder="WhatsApp Business Account ID"></div>
-            <div class="field"><label>Phone Number ID</label><input name="phoneNumberId" placeholder="Meta phone number ID"></div>
-            <div class="field"><label>Display phone</label><input name="displayPhone" placeholder="919876543210"></div>
-            <div class="field"><label>Default template</label><input name="defaultTemplate" placeholder="welcome_offer"></div>
-            <div class="field wide"><label>Access Token</label><input name="accessToken" type="password" placeholder="Permanent access token"></div>
-            <button class="primary" type="submit">Save WhatsApp setup</button>
-            <button class="secondary" id="testWhatsappBtn" type="button">Test WhatsApp</button>
-          </form>
-          <p id="whatsappStatus" class="muted-text"></p>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h3>Send test WhatsApp</h3></div>
-          <form id="sendWhatsappForm" class="form-grid">
-            <div class="field"><label>Recipient phone</label><input name="to" inputmode="tel" placeholder="919876543210" required></div>
-            <div class="field wide"><label>Message</label><textarea name="message" placeholder="Test message from Axzen CRM" required></textarea></div>
-            <button class="primary" type="submit">Send test message</button>
-          </form>
-          <p id="sendWhatsappStatus" class="muted-text"></p>
-        </div>
-      </section>
-
-      <section id="deals" class="module">
-        <div class="panel">
-          <div class="panel-head"><h3>Add deal</h3></div>
-          <form id="dealForm" class="form-grid">
-            <div class="field"><label>Deal title</label><input name="title" required></div>
-            <div class="field"><label>Amount</label><input name="amount" type="number" min="0" required></div>
-            <div class="field"><label>Stage</label><select name="stage"><option>Open</option><option>Proposal</option><option>Won</option><option>Lost</option></select></div>
-            <div class="field"><label>Owner</label><input name="owner"></div>
-            <button class="primary" type="submit">Save deal</button>
-          </form>
-        </div>
-        <div class="panel"><div class="panel-head"><h3>Deals</h3></div><div class="table-wrap"><table><thead><tr><th>Title</th><th>Amount</th><th>Stage</th><th>Owner</th></tr></thead><tbody id="dealRows"></tbody></table></div></div>
-      </section>
-
-      <section id="tasks" class="module">
-        <div class="panel">
-          <div class="panel-head"><h3>Add task</h3></div>
-          <form id="taskForm" class="form-grid">
-            <div class="field"><label>Task</label><input name="title" required></div>
-            <div class="field"><label>Due date</label><input name="dueDate" type="date" required></div>
-            <div class="field"><label>Priority</label><select name="priority"><option>Normal</option><option>High</option><option>Low</option></select></div>
-            <div class="field"><label>Status</label><select name="status"><option>Open</option><option>Done</option></select></div>
-            <button class="primary" type="submit">Save task</button>
-          </form>
-        </div>
-        <div class="panel"><div class="panel-head"><h3>Tasks</h3></div><div class="table-wrap"><table><thead><tr><th>Task</th><th>Due date</th><th>Priority</th><th>Status</th></tr></thead><tbody id="taskRows"></tbody></table></div></div>
-      </section>
-
-      <section id="settings" class="module">
-        <div class="panel">
-          <div class="panel-head"><h3>Workspace settings</h3></div>
-          <div class="records">
-            <div class="record"><strong>Tenant ID</strong><small id="tenantIdText"></small></div>
-            <div class="record"><strong>Login rule</strong><small>Username + phone number. Backend version should add OTP or password.</small></div>
-            <div class="record"><strong>Data rule</strong><small>Every record stores tenantId, createdBy, and createdAt for customer-wise isolation.</small></div>
-          </div>
-        </div>
-      </section>
-
-      <section id="genericModule" class="module">
-        <div class="panel">
-          <div class="panel-head"><h3 id="genericTitle">Module</h3></div>
-          <p id="genericCopy" class="muted-text"></p>
-          <form id="genericForm" class="form-grid"></form>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h3 id="genericListTitle">Records</h3></div>
-          <div id="genericRows" class="records"></div>
-        </div>
-      </section>
-    </div>
+    <div class="content" id="page"></div>
   </main>
 </section>
 
 <script>
 const SESSION_KEY = "axzenCrm.session";
-const moduleCatalog = [
-  { id:"dashboard", label:"Dashboard", group:"Main", collection:null, defaultEnabled:true },
-  { id:"leads", label:"Leads", group:"Sales", collection:"leads", defaultEnabled:true },
-  { id:"contacts", label:"Contacts", group:"Sales", collection:"contacts", defaultEnabled:true },
-  { id:"companies", label:"Companies", group:"Sales", collection:"companies", defaultEnabled:true },
-  { id:"pipeline", label:"Pipeline", group:"Sales", collection:"pipeline", defaultEnabled:true },
-  { id:"customers", label:"Customers", group:"Sales", collection:"customers", defaultEnabled:true },
-  { id:"campaigns", label:"Campaigns", group:"Marketing", collection:"campaigns", defaultEnabled:false },
-  { id:"audiences", label:"Audiences", group:"Marketing", collection:"audiences", defaultEnabled:false },
-  { id:"whatsappCampaigns", label:"WhatsApp Campaigns", group:"Marketing", collection:"whatsappCampaigns", defaultEnabled:false },
-  { id:"metaAds", label:"Meta Ads", group:"Marketing", collection:"metaAds", defaultEnabled:false },
-  { id:"creatives", label:"Creatives", group:"Marketing", collection:"creatives", defaultEnabled:false },
-  { id:"analytics", label:"Analytics", group:"Marketing", collection:"analytics", defaultEnabled:false },
-  { id:"conversations", label:"Conversations", group:"Communication", collection:"conversations", defaultEnabled:false },
-  { id:"tasks", label:"Tasks & Follow-ups", group:"Communication", collection:"tasks", defaultEnabled:true },
-  { id:"calendar", label:"Calendar", group:"Communication", collection:"calendar", defaultEnabled:true },
-  { id:"employees", label:"Employees", group:"Team", collection:"employees", defaultEnabled:false },
-  { id:"fieldVisits", label:"Field Visits", group:"Team", collection:"fieldVisits", defaultEnabled:false },
-  { id:"products", label:"Products", group:"Business", collection:"products", defaultEnabled:false },
-  { id:"quotations", label:"Quotations", group:"Business", collection:"quotations", defaultEnabled:false },
-  { id:"deals", label:"Deals", group:"Business", collection:"deals", defaultEnabled:true },
-  { id:"subscriptions", label:"Subscriptions", group:"Business", collection:"subscriptions", defaultEnabled:false },
-  { id:"payments", label:"Payments", group:"Business", collection:"payments", defaultEnabled:false },
-  { id:"supportTickets", label:"Support Tickets", group:"Business", collection:"supportTickets", defaultEnabled:false },
-  { id:"reports", label:"Reports", group:"Intelligence", collection:"reports", defaultEnabled:true },
-  { id:"automations", label:"Automations", group:"Intelligence", collection:"automations", defaultEnabled:false },
-  { id:"aiAssistant", label:"AI Assistant", group:"Intelligence", collection:"aiAssistant", defaultEnabled:false },
-  { id:"integrations", label:"Integrations", group:"System", collection:"integrations", defaultEnabled:false },
-  { id:"usersRoles", label:"Users & Roles", group:"System", collection:"usersRoles", defaultEnabled:true },
-  { id:"settings", label:"Settings", group:"System", collection:null, defaultEnabled:true }
-];
-const initialState = Object.fromEntries(moduleCatalog.map(item => item.collection).filter(Boolean).concat("notes").map(name => [name, []]));
-const genericFieldPresets = {
-  companies:[["name","Company name","text"],["industry","Industry","text"],["phone","Phone","tel"],["status","Status","select:Active|Prospect|Inactive"]],
-  pipeline:[["title","Pipeline item","text"],["stage","Stage","select:New|Qualified|Proposal|Won|Lost"],["value","Value","number"],["owner","Owner","text"]],
-  customers:[["name","Customer name","text"],["phone","Phone","tel"],["segment","Segment","text"],["status","Status","select:Active|Inactive|VIP"]],
-  creatives:[["name","Creative name","text"],["type","Type","select:Image|Video|Copy|Poster"],["campaign","Campaign","text"],["status","Status","select:Draft|Approved|Published"]],
-  analytics:[["title","Report name","text"],["metric","Metric","text"],["value","Value","number"],["period","Period","text"]],
-  conversations:[["name","Customer name","text"],["channel","Channel","select:WhatsApp|Instagram|Phone|Email"],["message","Latest message","textarea"],["status","Status","select:Open|Waiting|Closed"]],
-  calendar:[["title","Event title","text"],["date","Date","date"],["time","Time","text"],["status","Status","select:Scheduled|Done|Cancelled"]],
-  employees:[["name","Employee name","text"],["phone","Phone","tel"],["role","Role","text"],["status","Status","select:Active|Inactive"]],
-  fieldVisits:[["customer","Customer","text"],["employee","Employee","text"],["visitDate","Visit date","date"],["outcome","Outcome","textarea"]],
-  products:[["name","Product name","text"],["sku","SKU","text"],["price","Price","number"],["status","Status","select:Active|Inactive"]],
-  quotations:[["title","Quotation title","text"],["customer","Customer","text"],["amount","Amount","number"],["status","Status","select:Draft|Sent|Accepted|Rejected"]],
-  subscriptions:[["customer","Customer","text"],["plan","Plan","select:Starter|Growth|Business|Enterprise"],["renewalDate","Renewal date","date"],["status","Status","select:Trial|Active|Expired|Cancelled"]],
-  payments:[["customer","Customer","text"],["amount","Amount","number"],["method","Method","select:Cash|UPI|Card|Bank Transfer"],["status","Status","select:Pending|Paid|Failed|Refunded"]],
-  supportTickets:[["subject","Subject","text"],["customer","Customer","text"],["priority","Priority","select:Low|Normal|High|Urgent"],["status","Status","select:Open|In Progress|Resolved"]],
-  reports:[["title","Report title","text"],["type","Type","select:Sales|Marketing|Payments|Team"],["period","Period","text"],["status","Status","select:Ready|Draft"]],
-  automations:[["name","Automation name","text"],["trigger","Trigger","text"],["action","Action","textarea"],["status","Status","select:Active|Paused"]],
-  aiAssistant:[["title","Request title","text"],["prompt","Prompt","textarea"],["output","Output","textarea"],["status","Status","select:Draft|Generated|Reviewed"]],
-  usersRoles:[["name","User name","text"],["phone","Phone","tel"],["role","Role","select:Owner|Admin|Sales|Marketing|Support|Viewer"],["status","Status","select:Active|Inactive"]]
+const I = {
+  dash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>`,
+  leads: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>`,
+  contacts: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 6h11M8 12h11M8 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>`,
+  companies: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>`,
+  pipeline: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 4h18l-6 8v6l-6 2v-8L3 4z"/></svg>`,
+  customers: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+  campaigns: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m3 11 18-8-8 18-2-8-8-2z"/></svg>`,
+  audiences: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3"/><circle cx="16" cy="9" r="2.5"/><path d="M3 19a6 6 0 0 1 12 0"/><path d="M14 19a5 5 0 0 1 7 0"/></svg>`,
+  whatsapp: `<svg viewBox="0 0 24 24"><path fill="#25D366" d="M12.04 2C6.58 2 2.15 6.4 2.15 11.84c0 1.98.57 3.84 1.56 5.42L2 22l4.9-1.63a9.8 9.8 0 0 0 5.14 1.45h.01c5.46 0 9.89-4.4 9.89-9.84C21.94 6.4 17.5 2 12.04 2z"/><path fill="#fff" d="M17.2 14.5c-.24-.12-1.43-.7-1.65-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1-.37-1.9-1.17-.7-.62-1.17-1.39-1.31-1.63-.14-.24-.01-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.48-.4-.41-.54-.42h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.7 2.6 4.12 3.64.58.25 1.03.4 1.38.51.58.18 1.1.16 1.52.1.46-.07 1.43-.58 1.63-1.15.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28z"/></svg>`,
+  meta: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 12c0-2.2 1.6-4 3.6-4 1.2 0 2.2.6 3.4 2.2C15.2 8.6 16.2 8 17.4 8c2 0 3.6 1.8 3.6 4s-1.6 4-3.6 4c-1.2 0-2.2-.6-3.4-2.2C12.8 15.4 11.8 16 10.6 16 8.6 16 7 14.2 7 12z"/><path d="M3 12c0-2.2 1.6-4 3.6-4 .7 0 1.4.2 2 .7"/></svg>`,
+  creatives: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5"/><path d="M4 19h16"/><path d="M8 15v-4"/><path d="M12 15V8"/><path d="M16 15v-6"/></svg>`,
+  analytics: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m7 14 4-4 3 3 5-6"/></svg>`,
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>`,
+  inbox: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>`,
+  tickets: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8a2 2 0 0 0 2-2V5h12v1a2 2 0 0 0 2 2v2a2 2 0 0 1 0 4v2a2 2 0 0 0-2 2v1H6v-1a2 2 0 0 0-2-2v-2a2 2 0 0 1 0-4V8z"/><path d="M12 8v8"/></svg>`,
+  tasks: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>`,
+  collapse: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m15 18-6-6 6-6"/></svg>`,
+  phone: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.5-1.1a2 2 0 0 1 2.1-.4c.9.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z"/></svg>`,
+  dots: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="12" cy="19" r="1.6"/></svg>`,
+  waMini: `<svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M12.04 2C6.58 2 2.15 6.4 2.15 11.84c0 1.98.57 3.84 1.56 5.42L2 22l4.9-1.63a9.8 9.8 0 0 0 5.14 1.45h.01c5.46 0 9.89-4.4 9.89-9.84C21.94 6.4 17.5 2 12.04 2zm5.16 12.5c-.24-.12-1.43-.7-1.65-.78-.22-.08-.38-.12-.54.12-.16.24-.62.78-.76.94-.14.16-.28.18-.52.06-.24-.12-1-.37-1.9-1.17-.7-.62-1.17-1.39-1.31-1.63-.14-.24-.01-.37.1-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.48-.4-.41-.54-.42h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.7 2.6 4.12 3.64.58.25 1.03.4 1.38.51.58.18 1.1.16 1.52.1.46-.07 1.43-.58 1.63-1.15.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28z"/></svg>`,
+  building: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-6h6v6"/></svg>`
 };
-let state = structuredClone(initialState);
-let session = loadSession();
-let currentTenant = null;
-let currentUser = null;
-let currentView = "dashboard";
-let adminTenants = [];
 
-function loadSession(){
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY)); }
-  catch { return null; }
+const INFOTECH_NAV = [
+  ["dashboard","Dashboard",I.dash],["leads","Leads",I.leads],["customers","Customers",I.customers],
+  ["companies","Companies",I.companies],["deals","Pipeline",I.pipeline],["inbox","Inbox",I.inbox],
+  ["ads","Campaigns",I.campaigns],["whatsapp","WhatsApp Campaigns",I.whatsapp],["meta","Meta Ads",I.meta],
+  ["tickets","Tickets",I.tickets],["tasks","Follow-ups",I.tasks],["settings","Settings",I.settings]
+];
+const CLIENT_NAV = [
+  ["dashboard","Dashboard",I.dash],["leads","Leads",I.leads],["customers","Customers",I.customers],
+  ["tasks","Follow-ups",I.tasks],["inbox","Inbox",I.inbox],["tickets","Tickets",I.tickets],["settings","Settings",I.settings]
+];
+const LEAD_STAGES = ["New","Demo","Proposal","Won","Lost"];
+const AV_COLORS = ["#2f6bff","#12b76a","#f79009","#7a5af8","#f04438","#0ba5ec"];
+
+let session = null, currentTenant = null, currentUser = null, state = {}, inbox = [], adminTenants = [];
+let view = "dashboard", selectedThread = null, loginMode = "infotech", adsInsights = null;
+
+try { session = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { session = null; }
+
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = (v) => "₹" + Number(v || 0).toLocaleString("en-IN");
+const numLabel = (v) => Number(v || 0).toLocaleString("en-IN");
+const isInfotech = () => currentUser?.role === "Platform Admin" || currentTenant?.workspaceType === "infotech";
+const rows = (name) => state[name] || [];
+function initials(name){ return String(name||"A").trim().split(/\s+/).slice(0,2).map(p=>p[0]||"").join("").toUpperCase() || "A"; }
+function avColor(name){ let n=0; for(const c of String(name||"")) n+=c.charCodeAt(0); return AV_COLORS[n % AV_COLORS.length]; }
+function badge(v){
+  const s = String(v||"").toLowerCase();
+  const cls = /won|active|resolved|done|converted/.test(s) ? "ok" : /lost|expired|urgent|failed|overdue/.test(s) ? "bad" : /hot|proposal|high|open/.test(s) ? "hot" : "wait";
+  return `<span class="badge ${cls}">${esc(v||"-")}</span>`;
 }
-function saveSession(){ localStorage.setItem(SESSION_KEY, JSON.stringify(session)); }
-function cleanPhone(value){ return String(value || "").replace(/\D/g,""); }
-function titleCase(value){ return String(value || "").trim().replace(/\s+/g," "); }
-function money(value){ return "Rs " + Number(value || 0).toLocaleString("en-IN"); }
-function byTenant(collection){ return state[collection] || []; }
-function isPlatformAdmin(){ return currentUser?.role === "Platform Admin"; }
-function enabledFeatures(){ return isPlatformAdmin() ? moduleCatalog.map(item => item.id).concat("admin") : (currentTenant?.features || []); }
-function moduleById(id){ return moduleCatalog.find(item => item.id === id); }
-function escapeHtml(value){
-  return String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#039;" }[char]));
+function empty(text){ return `<div class="empty">${esc(text)}</div>`; }
+function spark(color){
+  return `<svg class="spark" viewBox="0 0 72 28" fill="none"><path d="M1 20 C10 18, 14 8, 22 12 S34 24, 42 16 S56 4, 71 8" stroke="${color}" stroke-width="2" fill="none"/><path d="M1 20 C10 18, 14 8, 22 12 S34 24, 42 16 S56 4, 71 8 L71 28 L1 28 Z" fill="${color}" opacity=".12"/></svg>`;
+}
+function greet(){
+  const h = new Date().getHours();
+  return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
+}
+function weekLabel(){
+  const end = new Date();
+  const start = new Date(); start.setDate(end.getDate()-6);
+  const fmt = (d) => d.toLocaleDateString("en-IN",{month:"short",day:"2-digit"});
+  return `${fmt(start)} – ${fmt(end)}, ${end.getFullYear()}`;
 }
 
 async function api(path, options = {}){
-  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
-  if(session?.token) headers.Authorization = `Bearer ${session.token}`;
-  const response = await fetch(path, { ...options, headers });
-  const data = await response.json().catch(() => ({}));
-  if(!response.ok || data.success === false){
-    throw new Error(data.message || "Server request failed");
-  }
+  const headers = { "Content-Type":"application/json", ...(options.headers||{}) };
+  if (session?.token) headers.Authorization = `Bearer ${session.token}`;
+  const res = await fetch(path, { ...options, headers });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.success === false) throw new Error(data.message || "Request failed");
   return data;
 }
 
-async function signIn(companyName, username, phone, password){
-  if(!titleCase(username) || cleanPhone(phone).length < 8 || String(password || "").length < 6){
-    throw new Error("Username, valid phone number, minimum 6 character password kavali.");
-  }
-  const data = await api("/api/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ companyName, username, phone, password })
-  });
-  session = { token: data.token };
-  currentTenant = data.tenant;
-  currentUser = data.user;
-  saveSession();
-  await bootstrap();
-}
-
 async function bootstrap(){
-  if(!session?.token) return;
   const data = await api("/api/bootstrap");
   currentTenant = data.tenant;
   currentUser = data.user;
-  state = { ...structuredClone(initialState), ...data.data };
-  if(isPlatformAdmin()) await loadAdminTenants();
+  state = data.data || {};
+  const inboxData = await api("/api/inbox").catch(() => ({ conversations: state.conversations || [] }));
+  inbox = inboxData.conversations || [];
+  if (isInfotech()) {
+    const admin = await api("/api/admin/tenants").catch(() => ({ tenants: [] }));
+    adminTenants = admin.tenants || [];
+    adsInsights = await api("/api/ads/insights").catch(() => null);
+  }
+}
+
+const REMEMBER_KEY = "axzenCrm.remember";
+let loginBusy = false;
+
+function clearLoginErrors(){
+  ["errCompany","errLoginId","errPassword"].forEach(id => { if ($(id)) $(id).textContent = ""; });
+  const alert = $("authError");
+  if (alert) { alert.textContent = ""; alert.classList.remove("show"); }
+}
+
+function showAuthError(message){
+  const alert = $("authError");
+  if (!alert) return;
+  alert.textContent = message;
+  alert.classList.add("show");
+}
+
+function loadRemembered(){
+  try {
+    const saved = JSON.parse(localStorage.getItem(REMEMBER_KEY) || "null");
+    if (!saved) return;
+    if (saved.mode) setMode(saved.mode, { skipClear: true });
+    if (saved.companyName) $("companyName").value = saved.companyName;
+    if (saved.loginId) $("loginId").value = saved.loginId;
+    else if (saved.username || saved.phone) $("loginId").value = saved.username || saved.phone || "";
+    if ($("rememberMe")) $("rememberMe").checked = true;
+  } catch {}
+}
+
+function saveRemembered(){
+  if (!$("rememberMe")?.checked) {
+    localStorage.removeItem(REMEMBER_KEY);
+    return;
+  }
+  localStorage.setItem(REMEMBER_KEY, JSON.stringify({
+    mode: loginMode,
+    companyName: $("companyName").value.trim(),
+    loginId: $("loginId").value.trim()
+  }));
+}
+
+function setMode(mode, options = {}){
+  loginMode = mode;
+  document.querySelectorAll("[data-mode]").forEach(btn => {
+    const active = btn.dataset.mode === mode;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  if (options.skipClear) return;
+  if (mode === "infotech") {
+    $("companyName").value = "Axzen Infotech";
+    $("loginId").value = "";
+    $("password").value = "";
+  } else {
+    $("companyName").value = "";
+    $("loginId").value = "";
+    $("password").value = "";
+    $("companyName").placeholder = "Your shop / company name";
+  }
+  clearLoginErrors();
+}
+
+function validateLogin(){
+  clearLoginErrors();
+  let ok = true;
+  const companyName = $("companyName").value.trim();
+  const loginId = $("loginId").value.trim();
+  const password = $("password").value;
+  if (!companyName) { $("errCompany").textContent = "Workspace is required."; ok = false; }
+  if (!loginId) { $("errLoginId").textContent = "Username or phone is required."; ok = false; }
+  if (password.length < 6) { $("errPassword").textContent = "Password must be at least 6 characters."; ok = false; }
+  return ok;
+}
+
+async function signIn(event){
+  event.preventDefault();
+  if (loginBusy) return;
+  if (!validateLogin()) return;
+  clearLoginErrors();
+  loginBusy = true;
+  const btn = $("signInBtn");
+  const label = $("signInLabel");
+  if (btn) btn.disabled = true;
+  if (label) label.innerHTML = `<span class="spin" aria-hidden="true"></span> Signing in...`;
+  try {
+    const loginId = $("loginId").value.trim();
+    const digits = loginId.replace(/\D/g, "");
+    const looksPhone = digits.length >= 8 && !/[a-zA-Z_]/.test(loginId);
+    const data = await api("/api/auth/login", {
+      method:"POST",
+      body: JSON.stringify({
+        companyName: $("companyName").value.trim(),
+        loginId,
+        username: looksPhone ? "" : loginId,
+        phone: looksPhone ? loginId : "",
+        password: $("password").value
+      })
+    });
+    saveRemembered();
+    session = { token: data.token };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    currentTenant = data.tenant;
+    currentUser = data.user;
+    await bootstrap();
+    view = "dashboard";
+    render();
+  } catch (error) {
+    showAuthError(error.message || "Login failed. Please try again.");
+  } finally {
+    loginBusy = false;
+    if (btn) btn.disabled = false;
+    if (label) label.textContent = "Sign in securely";
+  }
+}
+
+function bindAuthUi(){
+  document.querySelectorAll("[data-mode]").forEach(btn => {
+    btn.onclick = () => setMode(btn.dataset.mode);
+  });
+  $("authForm")?.addEventListener("submit", signIn);
+  $("togglePassword")?.addEventListener("click", () => {
+    const input = $("password");
+    if (!input) return;
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    $("togglePassword").setAttribute("aria-label", show ? "Hide password" : "Show password");
+  });
+  $("forgotPassword")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    showAuthError("Password reset is not available yet. Contact Axzen support.");
+  });
+  $("otpLoginBtn")?.addEventListener("click", () => {
+    // TODO: connect OTP authentication flow when backend OTP endpoint is ready.
+    showAuthError("OTP sign-in is coming soon. Please use password login for now.");
+  });
+}
+
+function logout(){
+  session = null;
+  localStorage.removeItem(SESSION_KEY);
+  render();
 }
 
 async function addRecord(collection, values){
-  const data = await api(`/api/${collection}`, {
-    method: "POST",
-    body: JSON.stringify(values)
-  });
-  state[collection].unshift(data.record);
+  const data = await api(`/api/${collection}`, { method:"POST", body: JSON.stringify(values) });
+  state[collection] = [data.record, ...(state[collection] || [])];
+  if (collection === "conversations") inbox.unshift(data.record);
+  if (collection === "campaigns" || collection === "whatsappCampaigns") {
+    adsInsights = await api("/api/ads/insights").catch(() => adsInsights);
+  }
   render();
 }
 
-function badgeClass(value){
-  const v = String(value || "").toLowerCase();
-  if(v.includes("hot") || v.includes("high") || v.includes("proposal")) return "hot";
-  if(v.includes("won") || v.includes("converted") || v.includes("done")) return "won";
-  if(v.includes("lost")) return "lost";
-  return "";
-}
-
-function row(cells){
-  return "<tr>" + cells.map(cell => "<td>" + cell + "</td>").join("") + "</tr>";
-}
-function emptyRow(colspan, text){
-  return `<tr><td colspan="${colspan}"><div class="empty">${escapeHtml(text)}</div></td></tr>`;
-}
-
-function render(){
-  if(!session?.token || !currentTenant || !currentUser){
-    document.body.classList.remove("app-active");
-    document.getElementById("authShell").classList.remove("hidden");
-    document.getElementById("appShell").classList.add("hidden");
-    return;
-  }
-  document.body.classList.add("app-active");
-  document.getElementById("authShell").classList.add("hidden");
-  document.getElementById("appShell").classList.remove("hidden");
-  document.getElementById("tenantName").textContent = currentTenant.name;
-  document.getElementById("userName").textContent = `${currentUser.displayName} - ${currentUser.phone}`;
-  document.getElementById("tenantIdText").textContent = currentTenant.id;
-  renderNav();
-  if(isPlatformAdmin()) renderAdmin();
-
-  const leads = byTenant("leads");
-  const contacts = byTenant("contacts");
-  const deals = byTenant("deals");
-  const tasks = byTenant("tasks");
-  const campaigns = byTenant("campaigns");
-  const audiences = byTenant("audiences");
-  const whatsappCampaigns = byTenant("whatsappCampaigns");
-  const integrationEvents = byTenant("integrationEvents");
-  document.getElementById("statLeads").textContent = leads.length;
-  document.getElementById("statContacts").textContent = contacts.length;
-  document.getElementById("statDeals").textContent = deals.filter(d => !["Won","Lost"].includes(d.stage)).length;
-  document.getElementById("statTasks").textContent = tasks.filter(t => t.status !== "Done").length;
-
-  document.getElementById("recentLeads").innerHTML = leads.slice(0,5).map(lead => row([
-    escapeHtml(lead.name),
-    escapeHtml(lead.phone),
-    escapeHtml(lead.source),
-    `<span class="badge ${badgeClass(lead.status)}">${escapeHtml(lead.status)}</span>`
-  ])).join("") || emptyRow(4, "No leads yet.");
-
-  document.getElementById("taskCards").innerHTML = tasks.slice(0,5).map(task => `
-    <div class="record">
-      <strong>${escapeHtml(task.title)}</strong>
-      <small>${escapeHtml(task.dueDate)} - ${escapeHtml(task.priority)} - ${escapeHtml(task.status)}</small>
-    </div>
-  `).join("") || `<div class="empty">No follow-ups yet.</div>`;
-
-  document.getElementById("leadRows").innerHTML = leads.map(lead => row([
-    escapeHtml(lead.name),
-    escapeHtml(lead.phone),
-    escapeHtml(lead.source),
-    `<span class="badge ${badgeClass(lead.status)}">${escapeHtml(lead.status)}</span>`,
-    escapeHtml(lead.notes)
-  ])).join("") || emptyRow(5, "No leads yet.");
-
-  document.getElementById("contactRows").innerHTML = contacts.map(contact => row([
-    escapeHtml(contact.name),
-    escapeHtml(contact.phone),
-    escapeHtml(contact.email),
-    escapeHtml(contact.type)
-  ])).join("") || emptyRow(4, "No contacts yet.");
-
-  document.getElementById("campaignRows").innerHTML = campaigns.map(campaign => row([
-    escapeHtml(campaign.name),
-    escapeHtml(campaign.channel),
-    escapeHtml(campaign.audience),
-    money(campaign.budget),
-    `<span class="badge ${badgeClass(campaign.status)}">${escapeHtml(campaign.status)}</span>`
-  ])).join("") || emptyRow(5, "No campaigns yet.");
-
-  document.getElementById("audienceRows").innerHTML = audiences.map(audience => row([
-    escapeHtml(audience.name),
-    escapeHtml(audience.source),
-    escapeHtml(audience.filter),
-    `<span class="badge ${badgeClass(audience.status)}">${escapeHtml(audience.status)}</span>`
-  ])).join("") || emptyRow(4, "No audiences yet.");
-
-  document.getElementById("whatsappCampaignRows").innerHTML = whatsappCampaigns.map(campaign => row([
-    escapeHtml(campaign.name),
-    escapeHtml(campaign.audience),
-    escapeHtml(campaign.templateName),
-    escapeHtml(campaign.scheduleDate),
-    `<span class="badge ${badgeClass(campaign.status)}">${escapeHtml(campaign.status)}</span>`
-  ])).join("") || emptyRow(5, "No WhatsApp campaigns yet.");
-
-  document.getElementById("metaEventRows").innerHTML = integrationEvents
-    .filter(event => event.provider === "meta" || event.provider === "whatsapp")
-    .slice(0,12)
-    .map(event => `
-      <div class="record">
-        <strong>${escapeHtml(event.provider)} - ${escapeHtml(event.type)}</strong>
-        <small>${escapeHtml(new Date(event.createdAt).toLocaleString())}</small>
-      </div>
-    `).join("") || `<div class="empty">Integration activity will appear here.</div>`;
-
-  document.getElementById("dealRows").innerHTML = deals.map(deal => row([
-    escapeHtml(deal.title),
-    money(deal.amount),
-    `<span class="badge ${badgeClass(deal.stage)}">${escapeHtml(deal.stage)}</span>`,
-    escapeHtml(deal.owner)
-  ])).join("") || emptyRow(4, "No deals yet.");
-
-  document.getElementById("taskRows").innerHTML = tasks.map(task => row([
-    escapeHtml(task.title),
-    escapeHtml(task.dueDate),
-    `<span class="badge ${badgeClass(task.priority)}">${escapeHtml(task.priority)}</span>`,
-    `<span class="badge ${badgeClass(task.status)}">${escapeHtml(task.status)}</span>`
-  ])).join("") || emptyRow(4, "No tasks yet.");
+async function patchRecord(collection, id, values){
+  const data = await api(`/api/${collection}/${id}`, { method:"PATCH", body: JSON.stringify(values) });
+  state[collection] = (state[collection] || []).map(row => row.id === id ? data.record : row);
+  inbox = inbox.map(row => row.id === id ? { ...row, ...data.record } : row);
+  render();
 }
 
 function renderNav(){
-  const allowed = enabledFeatures();
-  const items = [];
-  if(isPlatformAdmin()) items.push({ id:"admin", label:"Axzen Admin", group:"Main" });
-  moduleCatalog.forEach(item => {
-    if(allowed.includes(item.id)) items.push(item);
-  });
-  let lastGroup = "";
-  document.getElementById("nav").innerHTML = items.map(item => {
-    const section = item.group !== lastGroup ? `<div class="nav-section">${escapeHtml(item.group)}</div>` : "";
-    lastGroup = item.group;
-    return `${section}<button data-view="${item.id}" class="${currentView === item.id ? "active" : ""}">${escapeHtml(item.label)}</button>`;
-  }).join("");
+  const items = isInfotech() ? INFOTECH_NAV : CLIENT_NAV;
+  $("nav").innerHTML = items.map(([id,label,icon]) =>
+    `<button data-view="${id}" class="${view===id?"active":""}">${icon}<span>${label}</span></button>`
+  ).join("");
+  $("nav").querySelectorAll("button").forEach(btn => btn.onclick = () => { view = btn.dataset.view; selectedThread = null; render(); });
+  $("logoutBtn").innerHTML = `${I.collapse}<span>Collapse / Logout</span>`;
 }
 
-function renderFeatureChoices(containerId, selected, prefix){
-  const selectedSet = new Set(selected || moduleCatalog.filter(item => item.defaultEnabled).map(item => item.id));
-  document.getElementById(containerId).innerHTML = moduleCatalog
-    .filter(item => item.id !== "dashboard" && item.id !== "settings")
-    .map(item => `
-      <label class="check-row">
-        <input type="checkbox" name="${prefix}" value="${item.id}" ${selectedSet.has(item.id) ? "checked" : ""}>
-        <span>${escapeHtml(item.label)}</span>
-      </label>
-    `).join("");
+function table(headers, body){
+  return `<div class="table-wrap"><table><thead><tr>${headers.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
-async function loadAdminTenants(){
-  const data = await api("/api/admin/tenants");
-  adminTenants = data.tenants || [];
+function hero(title, sub, actionLabel = "+ New Lead", actionView = "leads"){
+  return `<div class="hero">
+    <div><h2>${esc(title)}</h2><p>${esc(sub)}</p></div>
+    <button class="btn" id="quickBtn" type="button" data-go="${actionView}">${esc(actionLabel)}</button>
+  </div>`;
 }
 
-function renderAdmin(){
-  renderFeatureChoices("tenantFeatureChoices", moduleCatalog.filter(item => item.defaultEnabled).map(item => item.id), "features");
-  document.getElementById("tenantRows").innerHTML = adminTenants.map(tenant => {
-    const features = new Set(tenant.features || []);
-    const featureText = moduleCatalog.filter(item => features.has(item.id)).map(item => item.label).join(", ");
-    return `
-      <div class="record" data-tenant-id="${escapeHtml(tenant.id)}">
-        <strong>${escapeHtml(tenant.name)} <span class="badge">${escapeHtml(tenant.plan)}</span> <span class="badge ${tenant.status === "suspended" ? "lost" : "won"}">${escapeHtml(tenant.status)}</span></strong>
-        <small>Users: ${escapeHtml(tenant.users?.length || 0)} - Leads: ${escapeHtml(tenant.usage?.leads || 0)} - Contacts: ${escapeHtml(tenant.usage?.contacts || 0)} - Deals: ${escapeHtml(tenant.usage?.deals || 0)}</small>
-        <small>${escapeHtml(featureText || "No modules enabled")}</small>
-        <div class="feature-grid">
-          ${moduleCatalog.filter(item => item.id !== "dashboard" && item.id !== "settings").map(item => `
-            <label class="check-row">
-              <input type="checkbox" name="tenantFeature" value="${item.id}" ${features.has(item.id) ? "checked" : ""}>
-              <span>${escapeHtml(item.label)}</span>
-            </label>
-          `).join("")}
-        </div>
-        <div class="tenant-actions">
-          <select name="tenantPlan"><option ${tenant.plan === "Starter" ? "selected" : ""}>Starter</option><option ${tenant.plan === "Growth" ? "selected" : ""}>Growth</option><option ${tenant.plan === "Business" ? "selected" : ""}>Business</option><option ${tenant.plan === "Enterprise" ? "selected" : ""}>Enterprise</option></select>
-          <select name="tenantStatus"><option ${tenant.status === "trial" ? "selected" : ""}>trial</option><option ${tenant.status === "active" ? "selected" : ""}>active</option><option ${tenant.status === "suspended" ? "selected" : ""}>suspended</option></select>
-          <button class="primary" data-save-tenant type="button">Save modules</button>
+function dashboard(){
+  const leads = rows("leads");
+  const customers = rows("customers");
+  const deals = rows("deals").filter(d => !["Won","Lost"].includes(d.stage));
+  const tasks = rows("tasks").filter(t => t.status !== "Done");
+  const allTasks = rows("tasks");
+  const done = allTasks.filter(t => t.status === "Done").length;
+  const pending = allTasks.filter(t => t.status !== "Done").length;
+  const overdue = allTasks.filter(t => t.status !== "Done" && t.dueDate && new Date(t.dueDate) < new Date()).length;
+  const pct = allTasks.length ? Math.round((done / allTasks.length) * 100) : 0;
+  const name = currentUser.displayName || currentUser.username || "Admin";
+  const stageCount = (s) => leads.filter(l => String(l.status||"New").toLowerCase().includes(s)).length;
+  const revenue = rows("deals").reduce((s,d)=>s+Number(d.amount||0),0);
+
+  return `
+    ${hero(`${greet()}, ${name} 👋`, "Here’s what’s happening with your sales pipeline today.")}
+    <div class="stats">
+      <div class="stat"><div class="stat-top"><div class="stat-ico blue">${I.leads}</div>${spark("#2f6bff")}</div><span>Total Leads</span><strong>${leads.length}</strong><div class="trend up">↑ 20% <span class="muted">vs last 7 days</span></div></div>
+      <div class="stat"><div class="stat-top"><div class="stat-ico green">${I.customers}</div>${spark("#12b76a")}</div><span>Customers</span><strong>${isInfotech()?adminTenants.filter(t=>t.plan!=="Platform").length:customers.length}</strong><div class="trend up">↑ 16.7% <span class="muted">vs last 7 days</span></div></div>
+      <div class="stat"><div class="stat-top"><div class="stat-ico amber">${I.pipeline}</div>${spark("#f79009")}</div><span>Open Deals</span><strong>${deals.length}</strong><div class="trend up">↑ 33.3% <span class="muted">vs last 7 days</span></div></div>
+      <div class="stat"><div class="stat-top"><div class="stat-ico rose">${I.tasks}</div>${spark("#f04438")}</div><span>Due Tasks</span><strong>${tasks.length}</strong><div class="trend down">↓ 25% <span class="muted">vs last 7 days</span></div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Sales Pipeline</h3></div>
+      <div class="pipeline">
+        <div class="pipe-step"><div class="label"><span class="icon-sm">${I.leads}</span><span>New</span></div><strong>${leads.filter(l=>!l.status||String(l.status).toLowerCase()==="new").length}</strong></div>
+        <div class="pipe-step"><div class="label"><span class="icon-sm">${I.phone}</span><span>Demo</span></div><strong>${stageCount("demo")}</strong></div>
+        <div class="pipe-step"><div class="label"><span class="icon-sm">${I.tasks}</span><span>Proposal</span></div><strong>${stageCount("proposal")}</strong></div>
+        <div class="pipe-step"><div class="label"><span class="icon-sm">${I.campaigns}</span><span>Follow-up</span></div><strong>${stageCount("follow")}</strong></div>
+        <div class="pipe-step"><div class="label"><span class="icon-sm">${I.analytics}</span><span>Won</span></div><strong>${stageCount("won")}</strong></div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Recent Leads</h3><button class="ghost" data-go="leads" type="button">View all</button></div>
+        ${leads.length ? table(["Lead","Phone","Source","Status","Actions"], leads.slice(0,6).map(lead => {
+          const phone = esc(lead.phone||"");
+          return `<tr>
+            <td><div class="lead-cell"><div class="lead-av" style="background:${avColor(lead.name)}">${esc(initials(lead.name))}</div><strong>${esc(lead.name)}</strong></div></td>
+            <td>${phone||"-"}</td>
+            <td>${/whatsapp/i.test(lead.source||"") ? `<span style="display:inline-flex;align-items:center;gap:6px;color:#128C7E">${I.waMini}${esc(lead.source)}</span>` : esc(lead.source||"-")}</td>
+            <td>${badge(lead.status||"New")}</td>
+            <td><div class="actions">
+              <a class="act phone" href="tel:${phone}" title="Call">${I.phone}</a>
+              <a class="act wa" href="https://wa.me/${String(lead.phone||"").replace(/\D/g,"")}" target="_blank" rel="noopener" title="WhatsApp">${I.waMini}</a>
+              <button class="act" type="button" data-open-lead="${esc(lead.id)}" title="More">${I.dots}</button>
+            </div></td>
+          </tr>`;
+        }).join("")) : empty("No leads yet.")}
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Today’s Follow-ups</h3><button class="ghost" data-go="tasks" type="button">View tasks</button></div>
+        <div class="timeline">
+          ${tasks.slice(0,5).map((t,i)=>`<div class="tl-item">
+            <time>${esc(t.dueDate || "Today")}</time>
+            <div class="box"><strong>${esc(t.title)}</strong><span>${esc(t.priority||"Normal")} priority</span></div>
+            <button class="btn" style="min-height:32px;padding:0 10px;font-size:12px" data-done-task="${esc(t.id)}" type="button">Complete</button>
+          </div>`).join("") || empty("No follow-ups today.")}
         </div>
       </div>
-    `;
-  }).join("") || `<div class="empty">No customer accounts yet.</div>`;
-}
-
-function renderGenericModule(view){
-  const item = moduleById(view);
-  if(!item) return;
-  document.getElementById("genericTitle").textContent = item.label;
-  document.getElementById("genericListTitle").textContent = `${item.label} records`;
-  document.getElementById("genericCopy").textContent = `${item.label} module is enabled for this customer. Detailed screens, workflows and reports can be built here without mixing data with other customers.`;
-  document.getElementById("genericForm").dataset.collection = item.collection || "";
-  const fields = genericFieldPresets[item.collection] || [["name","Name","text"],["status","Status","text"],["notes","Notes","textarea"]];
-  document.getElementById("genericForm").innerHTML = fields.map(([name,label,type]) => {
-    if(type === "textarea") {
-      return `<div class="field wide"><label>${escapeHtml(label)}</label><textarea name="${escapeHtml(name)}" required></textarea></div>`;
-    }
-    if(type.startsWith("select:")) {
-      return `<div class="field"><label>${escapeHtml(label)}</label><select name="${escapeHtml(name)}">${type.slice(7).split("|").map(option => `<option>${escapeHtml(option)}</option>`).join("")}</select></div>`;
-    }
-    return `<div class="field"><label>${escapeHtml(label)}</label><input name="${escapeHtml(name)}" type="${escapeHtml(type)}" required></div>`;
-  }).join("") + `<button class="primary" type="submit">Save ${escapeHtml(item.label)}</button>`;
-  const rows = item.collection ? byTenant(item.collection) : [];
-  document.getElementById("genericRows").innerHTML = rows.slice(0,8).map(record => `
-    <div class="record">
-      <strong>${escapeHtml(record.title || record.name || record.subject || item.label)}</strong>
-      <small>${escapeHtml(record.status || record.type || record.stage || record.role || record.createdAt || "")}</small>
     </div>
-  `).join("") || `<div class="empty">${escapeHtml(item.label)} records will appear here.</div>`;
+    <div class="grid-bottom">
+      <div class="panel">
+        <div class="panel-head"><div><h3>Sales Overview</h3><div class="muted">${money(revenue)} pipeline value</div></div><span class="trend up">↑ 12%</span></div>
+        <div class="chart-box">
+          <svg viewBox="0 0 560 180" preserveAspectRatio="none">
+            <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#2f6bff" stop-opacity=".25"/><stop offset="100%" stop-color="#2f6bff" stop-opacity="0"/></linearGradient></defs>
+            <path d="M0 140 C70 120, 110 90, 160 100 S250 150, 300 110 S400 40, 460 70 S520 120, 560 90 L560 180 L0 180 Z" fill="url(#g1)"/>
+            <path d="M0 140 C70 120, 110 90, 160 100 S250 150, 300 110 S400 40, 460 70 S520 120, 560 90" fill="none" stroke="#2f6bff" stroke-width="3"/>
+          </svg>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Task Completion</h3></div>
+        <div class="donut-wrap">
+          <div class="donut">
+            <svg viewBox="0 0 36 36">
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#eaecf0" stroke-width="4"/>
+              <circle cx="18" cy="18" r="14" fill="none" stroke="#12b76a" stroke-width="4" stroke-dasharray="${pct} ${100-pct}" stroke-linecap="round"/>
+            </svg>
+            <div class="center"><strong>${pct}%</strong><span class="muted">Completed</span></div>
+          </div>
+          <div class="legend">
+            <div><span><i class="dot" style="background:#12b76a"></i>Completed</span><strong>${done}</strong></div>
+            <div><span><i class="dot" style="background:#f79009"></i>Pending</span><strong>${pending}</strong></div>
+            <div><span><i class="dot" style="background:#f04438"></i>Overdue</span><strong>${overdue}</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>`;
 }
 
-function setView(view){
-  const allowed = enabledFeatures();
-  if(!allowed.includes(view) && view !== "admin"){
-    view = "dashboard";
-  }
-  currentView = view;
-  const target = document.getElementById(view) ? view : "genericModule";
-  document.querySelectorAll(".module").forEach(item => item.classList.toggle("active", item.id === target));
-  if(target === "genericModule") renderGenericModule(view);
-  renderNav();
-  const titles = {
-    dashboard:["Dashboard","Today sales pipeline and customer follow-ups."],
-    admin:["Axzen Admin","Create customer accounts and control their CRM modules."],
-    leads:["Leads","Capture enquiries from calls, website, WhatsApp, and walk-ins."],
-    contacts:["Contacts","Manage converted customers, partners, and vendors."],
-    companies:["Companies","Business accounts linked to leads, contacts, deals and support."],
-    pipeline:["Pipeline","Stage-wise sales flow for every customer workspace."],
-    customers:["Customers","Converted customer base with history and segmentation."],
-    deals:["Deals","Track proposal value and sales stage."],
-    tasks:["Tasks","Follow-ups, reminders, and staff work."],
-    campaigns:["Campaigns","Plan and measure outreach across WhatsApp, ads and email."],
-    audiences:["Audiences","Create customer segments for targeted campaigns."],
-    whatsappCampaigns:["WhatsApp Campaigns","Send approved messages and track delivery per customer."],
-    metaAds:["Meta Ads","Connect Meta lead forms and keep ad leads tenant-wise."],
-    creatives:["Creatives","Store campaign media, captions and offer assets."],
-    analytics:["Analytics","Marketing and sales performance by source."],
-    conversations:["Conversations","Customer message history and replies."],
-    calendar:["Calendar","Follow-up calendar, visits and reminders."],
-    employees:["Employees","Team directory, roles and assignment capacity."],
-    fieldVisits:["Field Visits","Sales visits, location updates and visit notes."],
-    products:["Products","Products and services for quotations and deals."],
-    quotations:["Quotations","Create estimates and send them to customers."],
-    subscriptions:["Subscriptions","Customer plans, renewal dates and limits."],
-    payments:["Payments","Payment collection and outstanding reports."],
-    supportTickets:["Support Tickets","Issues, SLA tracking and support ownership."],
-    reports:["Reports","Sales, marketing, team and revenue reports."],
-    automations:["Automations","Rules for lead assignment, reminders and messages."],
-    aiAssistant:["AI Assistant","Draft messages, summarize leads and suggest next actions."],
-    integrations:["Integrations","Connect WhatsApp, Meta, Google, website forms and payment systems."],
-    usersRoles:["Users & Roles","Manage staff access inside a customer workspace."],
-    settings:["Settings","Tenant identity and CRM data rules."]
-  };
-  document.getElementById("pageTitle").textContent = (titles[view] || [moduleById(view)?.label || "Module",""])[0];
-  document.getElementById("pageSubtitle").textContent = (titles[view] || ["",""])[1];
-  document.getElementById("sidebar").classList.remove("open");
+function leadList(list){
+  if (!list.length) return empty("No leads yet.");
+  return table(["Name","Phone","Source","Status"], list.map(lead => `<tr>
+    <td><div class="lead-cell"><div class="lead-av" style="background:${avColor(lead.name)}">${esc(initials(lead.name))}</div>${esc(lead.name)}</div></td>
+    <td>${esc(lead.phone)}</td><td>${esc(lead.source||"-")}</td>
+    <td>${badge(lead.status)}${LEAD_STAGES.map(stage => stage===lead.status?"":`<button class="ghost" data-stage="${stage}" data-id="${esc(lead.id)}" style="margin-left:6px;min-height:28px;padding:0 8px">${stage}</button>`).join("")}</td>
+  </tr>`).join(""));
 }
 
-function formValues(form){
-  return Object.fromEntries(new FormData(form).entries());
-}
-function resetForm(form){ form.reset(); form.querySelector("input,select,textarea")?.focus(); }
-function setStatus(id, message){ document.getElementById(id).textContent = message; }
-async function saveIntegration(provider, form, statusId){
-  const values = formValues(form);
-  try {
-    await api(`/api/integrations/${provider}`, { method:"PUT", body:JSON.stringify(values) });
-    setStatus(statusId, `${provider} setup saved.`);
-    form.querySelectorAll("input[type='password']").forEach(input => input.value = "");
-    await bootstrap();
-    render();
-  } catch (err) {
-    setStatus(statusId, err.message);
-  }
-}
-async function postIntegrationAction(path, statusId, body = {}){
-  try {
-    const data = await api(path, { method:"POST", body:JSON.stringify(body) });
-    setStatus(statusId, data.imported ? `Success. Imported ${data.imported.length} leads.` : `Success. Status ${data.status || 200}.`);
-    await bootstrap();
-    render();
-  } catch (err) {
-    setStatus(statusId, err.message);
-  }
-}
-function seedSample(){
-  addRecord("leads", { name:"Ramesh Kumar", phone:"9848012345", source:"WhatsApp", status:"Hot", notes:"Needs CRM for hotel banquet enquiries." });
-  addRecord("contacts", { name:"Sana Foods", phone:"9700011122", email:"sales@sanafoods.example", type:"Customer" });
-  addRecord("deals", { title:"Annual CRM subscription", amount:36000, stage:"Proposal", owner:"Owner" });
-  addRecord("tasks", { title:"Call Ramesh for demo timing", dueDate:new Date().toISOString().slice(0,10), priority:"High", status:"Open" });
+function leadsPage(){
+  return `${hero(isInfotech()?"Company sales leads":"Shop leads", isInfotech()?"Hotels, canteens, chicken shops you want to close.":"Walk-in, WhatsApp, and ad enquiries.")}
+    <div class="panel">
+      <h3>Add lead</h3>
+      <form id="leadForm" class="form-grid">
+        <div class="field"><label>Name</label><input name="name" required></div>
+        <div class="field"><label>Phone</label><input name="phone" required></div>
+        <div class="field"><label>Source</label><select name="source"><option>WhatsApp</option><option>Meta Ads</option><option>Website</option><option>Field visit</option><option>Walk-in</option></select></div>
+        <div class="field"><label>Status</label><select name="status">${LEAD_STAGES.map(s=>`<option>${s}</option>`).join("")}</select></div>
+        <div class="field wide"><label>Need</label><textarea name="notes" placeholder="Plan, printers, city"></textarea></div>
+        <button class="btn" type="submit">Save lead</button>
+      </form>
+    </div>
+    <div class="panel"><h3>Board</h3>
+      <div class="kanban">${LEAD_STAGES.map(stage => {
+        const items = rows("leads").filter(l => (l.status||"New") === stage);
+        return `<div class="kanban-col"><strong>${stage}</strong>${items.map(l=>`<div class="card"><strong>${esc(l.name)}</strong><div class="muted">${esc(l.phone)}</div>
+          <div class="actions" style="margin-top:8px">
+            <a class="act phone" href="tel:${esc(l.phone||"")}">${I.phone}</a>
+            <a class="act wa" href="https://wa.me/${String(l.phone||"").replace(/\D/g,"")}" target="_blank">${I.waMini}</a>
+          </div></div>`).join("") || "<p class='muted'>Empty</p>"}</div>`;
+      }).join("")}</div>
+    </div>
+    <div class="panel"><h3>All leads</h3>${leadList(rows("leads"))}</div>`;
 }
 
-document.getElementById("authForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  const error = document.getElementById("authError");
-  error.textContent = "";
-  try {
-    await signIn(companyName.value, username.value, phone.value, password.value);
-    render();
-  } catch (err) {
-    error.textContent = err.message;
-  }
-});
-document.getElementById("demoBtn").addEventListener("click", () => {
-  companyName.value = "Axzen Demo Customer";
-  username.value = "owner";
-  phone.value = "9876543210";
-  password.value = "demo123";
-});
-document.getElementById("nav").addEventListener("click", event => {
-  const button = event.target.closest("button[data-view]");
-  if(button) setView(button.dataset.view);
-});
-document.getElementById("tenantForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  const values = formValues(event.currentTarget);
-  values.features = Array.from(event.currentTarget.querySelectorAll("input[name='features']:checked")).map(input => input.value);
-  values.features.push("dashboard", "settings");
-  await api("/api/admin/tenants", { method:"POST", body:JSON.stringify(values) });
-  await loadAdminTenants();
-  renderAdmin();
-  event.currentTarget.reset();
-  event.currentTarget.username.value = "owner";
-  event.currentTarget.password.value = "Welcome@123";
-});
-document.getElementById("refreshTenantsBtn").addEventListener("click", async () => {
-  await loadAdminTenants();
-  renderAdmin();
-});
-document.getElementById("tenantRows").addEventListener("click", async event => {
-  const button = event.target.closest("[data-save-tenant]");
-  if(!button) return;
-  const card = button.closest("[data-tenant-id]");
-  const features = Array.from(card.querySelectorAll("input[name='tenantFeature']:checked")).map(input => input.value);
-  features.push("dashboard", "settings");
-  await api(`/api/admin/tenants/${card.dataset.tenantId}`, {
-    method:"PATCH",
-    body:JSON.stringify({
-      plan: card.querySelector("[name='tenantPlan']").value,
-      status: card.querySelector("[name='tenantStatus']").value,
-      features
-    })
+function companiesPage(){
+  const clients = adminTenants.filter(t => t.workspaceType !== "infotech" && t.plan !== "Platform");
+  return `${hero("Companies","Create a POS client CRM login after you close the sale.","+ New company","companies")}
+    <div class="panel">
+      <h3>Create POS client workspace</h3>
+      <form id="tenantForm" class="form-grid">
+        <div class="field"><label>Shop / company</label><input name="companyName" required placeholder="Sri Lakshmi Canteen"></div>
+        <div class="field"><label>Owner username</label><input name="username" value="owner" required></div>
+        <div class="field"><label>Phone</label><input name="phone" required></div>
+        <div class="field"><label>Password</label><input name="password" value="Welcome@123" required></div>
+        <div class="field"><label>Plan</label><select name="plan"><option>Starter</option><option>Growth</option><option>Business</option></select></div>
+        <div class="field"><label>Status</label><select name="status"><option>trial</option><option>active</option></select></div>
+        <button class="btn" type="submit">Create client CRM</button>
+      </form>
+    </div>
+    <div class="panel"><h3>Client accounts</h3>
+      ${clients.map(t => `<div class="card"><strong>${esc(t.name)}</strong><div class="muted">${esc(t.plan)} · ${esc(t.status)} · users: ${(t.users||[]).map(u=>u.username).join(", ")||"-"}</div>
+        <div class="muted">Leads ${t.usage?.leads||0} · Contacts ${t.usage?.contacts||0}</div></div>`).join("") || empty("No POS clients yet.")}
+    </div>`;
+}
+
+function customersPage(){
+  const list = rows("customers");
+  return `${hero("Customers","People this POS shop already serves.","+ New customer","customers")}
+    <div class="panel">
+      <form id="customerForm" class="form-grid">
+        <div class="field"><label>Name</label><input name="name" required></div>
+        <div class="field"><label>Phone</label><input name="phone" required></div>
+        <div class="field"><label>Segment</label><select name="segment"><option>Regular</option><option>VIP</option><option>Credit</option></select></div>
+        <div class="field"><label>Status</label><select name="status"><option>Active</option><option>Inactive</option></select></div>
+        <button class="btn" type="submit">Save customer</button>
+      </form>
+    </div>
+    <div class="panel">${list.length ? table(["Name","Phone","Segment","Status","Actions"], list.map(c=>`<tr>
+      <td><div class="lead-cell"><div class="lead-av" style="background:${avColor(c.name)}">${esc(initials(c.name))}</div>${esc(c.name)}</div></td>
+      <td>${esc(c.phone)}</td><td>${esc(c.segment)}</td><td>${badge(c.status)}</td>
+      <td><div class="actions"><a class="act phone" href="tel:${esc(c.phone||"")}">${I.phone}</a><a class="act wa" href="https://wa.me/${String(c.phone||"").replace(/\D/g,"")}" target="_blank">${I.waMini}</a></div></td>
+    </tr>`).join("")) : empty("No customers yet.")}</div>`;
+}
+
+function dealsPage(){
+  const list = rows("deals");
+  return `${hero("Pipeline","Deal value for Infotech company sales.","+ New deal","deals")}
+    <div class="panel">
+      <form id="dealForm" class="form-grid">
+        <div class="field"><label>Deal</label><input name="title" required></div>
+        <div class="field"><label>Amount</label><input name="amount" type="number" min="0" required></div>
+        <div class="field"><label>Stage</label><select name="stage"><option>Open</option><option>Proposal</option><option>Won</option><option>Lost</option></select></div>
+        <div class="field"><label>Company</label><input name="owner" placeholder="Shop name"></div>
+        <button class="btn" type="submit">Save deal</button>
+      </form>
+    </div>
+    <div class="panel">${list.length ? table(["Deal","Amount","Stage","Company"], list.map(d=>`<tr><td>${esc(d.title)}</td><td>${money(d.amount)}</td><td>${badge(d.stage)}</td><td>${esc(d.owner)}</td></tr>`).join("")) : empty("No deals yet.")}</div>`;
+}
+
+function inboxPage(){
+  const thread = inbox.find(x => x.id === selectedThread) || inbox[0];
+  selectedThread = thread?.id || null;
+  const messages = Array.isArray(thread?.messages) && thread.messages.length
+    ? thread.messages
+    : (thread?.lastMessage ? [{ direction:"in", body: thread.lastMessage, at: thread.createdAt }] : []);
+  return `${hero("Inbox", isInfotech()?"Reply to Infotech leads and POS-shop customer messages.":"Reply to this shop’s customer WhatsApp / CRM messages.","+ Open thread","inbox")}
+    <div class="panel" style="margin-bottom:0">
+      <form id="startChatForm" class="form-grid">
+        <div class="field"><label>Customer name</label><input name="name" required></div>
+        <div class="field"><label>Phone</label><input name="phone" required></div>
+        <div class="field wide"><label>First message / note</label><textarea name="lastMessage" placeholder="Hi, I need a printer"></textarea></div>
+        <button class="btn" type="submit">Open thread</button>
+      </form>
+    </div>
+    <div class="inbox">
+      <div class="thread-list">
+        ${inbox.map(item => `<div class="thread ${item.id===selectedThread?"active":""}" data-thread="${esc(item.id)}">
+          <strong>${esc(item.name||item.phone)}</strong>
+          <div class="muted">${esc(item.workspaceName || currentTenant.name)} · ${esc(item.channel||"CRM")}</div>
+          <div class="muted">${esc(item.lastMessage||"")}</div>
+        </div>`).join("") || `<div class="empty">No messages</div>`}
+      </div>
+      <div class="chat">
+        ${thread ? `
+          <div class="chat-head">${esc(thread.name||thread.phone)} · ${esc(thread.phone||"")} ${badge(thread.status||"Open")}</div>
+          <div class="bubbles">${messages.map(m => `<div class="bubble ${m.direction==="out"?"out":"in"}">${esc(m.body)}<div class="muted" style="font-size:11px;margin-top:4px;opacity:.8">${esc(m.by||"")} ${m.at?new Date(m.at).toLocaleString():""}</div></div>`).join("") || empty("No chat yet")}</div>
+          <form id="replyForm" class="reply-box">
+            <input class="composer" name="body" placeholder="Type reply..." required>
+            <button class="btn" type="submit">Send</button>
+          </form>` : empty("Select a conversation")}
+      </div>
+    </div>`;
+}
+
+function adsPage(kind="ads"){
+  const totals = adsInsights?.totals || {};
+  const list = adsInsights?.campaigns || rows("campaigns");
+  const title = kind === "whatsapp" ? "WhatsApp Campaigns" : kind === "meta" ? "Meta Ads" : "Campaigns & reach";
+  return `${hero(title, adsInsights?.apiMessage || "API later connect cheste live reach avuthayi.","+ Save campaign","ads")}
+    <div class="stats">
+      <div class="stat"><div class="stat-top"><div class="stat-ico green">${I.whatsapp}</div></div><span>WhatsApp reach</span><strong>${numLabel(totals.whatsappReach)}</strong></div>
+      <div class="stat"><div class="stat-top"><div class="stat-ico blue">${I.meta}</div></div><span>Instagram / Meta reach</span><strong>${numLabel((totals.instagramReach||0)+(totals.adsReach||0))}</strong></div>
+      <div class="stat"><div class="stat-top"><div class="stat-ico amber">${I.analytics}</div></div><span>Impressions</span><strong>${numLabel(totals.impressions)}</strong></div>
+      <div class="stat"><div class="stat-top"><div class="stat-ico rose">${I.leads}</div></div><span>Leads from ads</span><strong>${numLabel(totals.leads)}</strong></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Campaign</h3>
+        <form id="campaignForm" class="form-grid">
+          <div class="field"><label>Name</label><input name="name" required></div>
+          <div class="field"><label>Channel</label><select name="channel"><option ${kind==="meta"?"selected":""}>Meta Ads</option><option ${kind==="whatsapp"?"selected":""}>WhatsApp</option><option>Instagram</option></select></div>
+          <div class="field"><label>Budget</label><input name="budget" type="number" min="0"></div>
+          <div class="field"><label>Status</label><select name="status"><option>Draft</option><option>Running</option><option>Paused</option></select></div>
+          <div class="field"><label>Reach</label><input name="reach" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Impressions</label><input name="impressions" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Clicks</label><input name="clicks" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Leads</label><input name="leads" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>WhatsApp sent</label><input name="sent" type="number" min="0" placeholder="0"></div>
+          <div class="field"><label>Delivered</label><input name="delivered" type="number" min="0" placeholder="0"></div>
+          <div class="field wide"><label>Offer</label><textarea name="goal"></textarea></div>
+          <button class="btn" type="submit">Save campaign</button>
+        </form>
+      </div>
+      <div class="panel">
+        <h3>Meta / WhatsApp API</h3>
+        <form id="metaIntegrationForm" class="form-grid">
+          <div class="field"><label>Ad Account ID</label><input name="adAccountId"></div>
+          <div class="field"><label>Lead Form ID</label><input name="leadFormId"></div>
+          <div class="field wide"><label>Access token</label><input name="accessToken" type="password"></div>
+          <button class="btn" type="submit">Save Meta</button>
+          <button class="ghost" id="importMetaBtn" type="button">Import leads</button>
+          <button class="soft" id="refreshInsightsBtn" type="button">Refresh reach</button>
+        </form>
+        <p class="muted" id="metaStatus"></p>
+      </div>
+    </div>
+    <div class="panel"><h3>Campaign reach</h3>${list.length ? table(
+      ["Name","Channel","Reach","Impressions","Clicks","Leads","WA sent","Status"],
+      list.map(c => `<tr>
+        <td>${esc(c.name)}</td><td>${esc(c.channel)}</td><td>${numLabel(c.reach)}</td>
+        <td>${numLabel(c.impressions)}</td><td>${numLabel(c.clicks)}</td><td>${numLabel(c.leads)}</td>
+        <td>${numLabel(c.sent)}</td><td>${badge(c.status)}</td>
+      </tr>`).join("")
+    ) : empty("No campaigns yet.")}</div>`;
+}
+
+function ticketsPage(){
+  const list = rows("supportTickets");
+  return `${hero("Tickets", isInfotech()?"Support for POS clients.":"Printer / login / billing issues.","+ New ticket","tickets")}
+    <div class="panel">
+      <form id="ticketForm" class="form-grid">
+        <div class="field"><label>Subject</label><input name="subject" required></div>
+        <div class="field"><label>Customer / shop</label><input name="customer" required></div>
+        <div class="field"><label>Priority</label><select name="priority"><option>Normal</option><option>High</option><option>Urgent</option></select></div>
+        <div class="field"><label>Status</label><select name="status"><option>Open</option><option>In Progress</option><option>Resolved</option></select></div>
+        <button class="btn" type="submit">Create ticket</button>
+      </form>
+    </div>
+    <div class="panel">${list.length ? table(["Subject","Customer","Priority","Status"], list.map(t=>`<tr>
+      <td>${esc(t.subject)}</td><td>${esc(t.customer)}</td><td>${badge(t.priority)}</td>
+      <td>${badge(t.status)} ${t.status==="Resolved"?"":`<button class="ghost" data-resolve="${esc(t.id)}" style="min-height:28px">Resolve</button>`}</td>
+    </tr>`).join("")) : empty("No tickets")}</div>`;
+}
+
+function tasksPage(){
+  const list = rows("tasks");
+  return `${hero("Follow-ups","Call / visit / WhatsApp reminders.","+ New task","tasks")}
+    <div class="panel">
+      <form id="taskForm" class="form-grid">
+        <div class="field"><label>Task</label><input name="title" required></div>
+        <div class="field"><label>Due</label><input name="dueDate" type="date" required></div>
+        <div class="field"><label>Priority</label><select name="priority"><option>Normal</option><option>High</option><option>Low</option></select></div>
+        <div class="field"><label>Status</label><select name="status"><option>Open</option><option>Done</option></select></div>
+        <button class="btn" type="submit">Save</button>
+      </form>
+    </div>
+    <div class="panel">${list.length ? table(["Task","Due","Priority","Status"], list.map(t=>`<tr><td>${esc(t.title)}</td><td>${esc(t.dueDate)}</td><td>${badge(t.priority)}</td><td>${badge(t.status)}</td></tr>`).join("")) : empty("No tasks")}</div>`;
+}
+
+function settingsPage(){
+  return `${hero("Settings", isInfotech()?"Axzen Infotech platform workspace.":"This POS client workspace.","Refresh","dashboard")}
+  <div class="panel">
+    <div class="card"><strong>Workspace</strong><div class="muted">${esc(currentTenant.name)} · ${esc(currentTenant.workspaceType||"-")} · ${esc(currentTenant.plan)}</div></div>
+    <div class="card"><strong>Login</strong><div class="muted">${esc(currentUser.username)} · ${esc(currentUser.phone)} · ${esc(currentUser.role)}</div></div>
+    <div class="card"><strong>Rule</strong><div class="muted">Infotech sells to companies. Each POS shop CRM is isolated. Infotech inbox can reply to shop-customer threads.</div></div>
+  </div>`;
+}
+
+function bindPage(){
+  $("leadForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await addRecord("leads", Object.fromEntries(new FormData(e.target))); });
+  $("customerForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await addRecord("customers", Object.fromEntries(new FormData(e.target))); });
+  $("dealForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await addRecord("deals", Object.fromEntries(new FormData(e.target))); });
+  $("taskForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await addRecord("tasks", Object.fromEntries(new FormData(e.target))); });
+  $("ticketForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await addRecord("supportTickets", Object.fromEntries(new FormData(e.target))); });
+  $("campaignForm")?.addEventListener("submit", async (e) => { e.preventDefault(); await addRecord("campaigns", Object.fromEntries(new FormData(e.target))); });
+  $("startChatForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const values = Object.fromEntries(new FormData(e.target));
+    await addRecord("conversations", { ...values, channel:"CRM", status:"Open", messages: values.lastMessage ? [{ direction:"in", body: values.lastMessage, at: new Date().toISOString() }] : [] });
   });
-  await loadAdminTenants();
-  renderAdmin();
-});
-document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => setView(button.dataset.go)));
-document.getElementById("menuBtn").addEventListener("click", () => document.getElementById("sidebar").classList.add("open"));
-document.getElementById("quickLeadBtn").addEventListener("click", () => setView("leads"));
-document.getElementById("logoutBtn").addEventListener("click", () => {
-  session = null;
-  currentTenant = null;
-  currentUser = null;
-  state = structuredClone(initialState);
-  localStorage.removeItem(SESSION_KEY);
-  render();
-});
-document.getElementById("seedBtn").addEventListener("click", seedSample);
-document.getElementById("exportBtn").addEventListener("click", () => {
-  const tenantData = { tenant: currentTenant, user: currentUser, data: state };
-  const blob = new Blob([JSON.stringify(tenantData, null, 2)], { type:"application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "axzen-crm-export.json";
-  link.click();
-  URL.revokeObjectURL(url);
-});
+  $("tenantForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await api("/api/admin/tenants", { method:"POST", body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+    await bootstrap();
+    render();
+  });
+  $("metaIntegrationForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await api("/api/integrations/meta", { method:"PUT", body: JSON.stringify(Object.fromEntries(new FormData(e.target))) });
+    $("metaStatus").textContent = "Meta setup saved.";
+  });
+  $("importMetaBtn")?.addEventListener("click", async () => {
+    try {
+      const data = await api("/api/integrations/meta/import-leads", { method:"POST", body: "{}" });
+      $("metaStatus").textContent = `Imported ${data.imported?.length || 0} leads.`;
+      await bootstrap();
+      render();
+    } catch (error) { $("metaStatus").textContent = error.message; }
+  });
+  $("refreshInsightsBtn")?.addEventListener("click", async () => {
+    adsInsights = await api("/api/ads/insights").catch(() => adsInsights);
+    render();
+  });
+  $("replyForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!selectedThread) return;
+    const body = Object.fromEntries(new FormData(e.target)).body;
+    const data = await api(`/api/conversations/${selectedThread}/reply`, { method:"POST", body: JSON.stringify({ body }) });
+    inbox = inbox.map(row => row.id === selectedThread ? { ...row, ...data.record } : row);
+    render();
+  });
+  $("quickBtn")?.addEventListener("click", () => { view = $("quickBtn").dataset.go || "leads"; render(); });
+  document.querySelectorAll("[data-go]").forEach(btn => btn.addEventListener("click", () => { view = btn.dataset.go; render(); }));
+  document.querySelectorAll("[data-thread]").forEach(el => el.onclick = () => { selectedThread = el.dataset.thread; render(); });
+  document.querySelectorAll("[data-stage]").forEach(btn => btn.onclick = () => patchRecord("leads", btn.dataset.id, { status: btn.dataset.stage }));
+  document.querySelectorAll("[data-resolve]").forEach(btn => btn.onclick = () => patchRecord("supportTickets", btn.dataset.resolve, { status: "Resolved" }));
+  document.querySelectorAll("[data-done-task]").forEach(btn => btn.onclick = () => patchRecord("tasks", btn.dataset.doneTask, { status: "Done" }));
+  document.querySelectorAll("[data-open-lead]").forEach(btn => btn.onclick = () => { view = "leads"; render(); });
+}
 
-document.getElementById("leadForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await addRecord("leads", formValues(event.currentTarget));
-  resetForm(event.currentTarget);
-});
-document.getElementById("contactForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await addRecord("contacts", formValues(event.currentTarget));
-  resetForm(event.currentTarget);
-});
-document.getElementById("campaignForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await addRecord("campaigns", formValues(event.currentTarget));
-  resetForm(event.currentTarget);
-});
-document.getElementById("audienceForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await addRecord("audiences", formValues(event.currentTarget));
-  resetForm(event.currentTarget);
-});
-document.getElementById("whatsappCampaignForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await addRecord("whatsappCampaigns", formValues(event.currentTarget));
-  resetForm(event.currentTarget);
-});
-document.getElementById("genericForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  const collection = event.currentTarget.dataset.collection;
-  if(!collection) return;
-  await addRecord(collection, formValues(event.currentTarget));
-  resetForm(event.currentTarget);
-  renderGenericModule(currentView);
-});
-document.getElementById("metaIntegrationForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await saveIntegration("meta", event.currentTarget, "metaStatus");
-});
-document.getElementById("testMetaBtn").addEventListener("click", () => postIntegrationAction("/api/integrations/meta/test", "metaStatus"));
-document.getElementById("importMetaLeadsBtn").addEventListener("click", () => postIntegrationAction("/api/integrations/meta/import-leads", "metaStatus"));
-document.getElementById("whatsappIntegrationForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await saveIntegration("whatsapp", event.currentTarget, "whatsappStatus");
-});
-document.getElementById("testWhatsappBtn").addEventListener("click", () => postIntegrationAction("/api/integrations/whatsapp/test", "whatsappStatus"));
-document.getElementById("sendWhatsappForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await postIntegrationAction("/api/integrations/whatsapp/send", "sendWhatsappStatus", formValues(event.currentTarget));
-  event.currentTarget.reset();
-});
-document.getElementById("dealForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await addRecord("deals", formValues(event.currentTarget));
-  resetForm(event.currentTarget);
-});
-document.getElementById("taskForm").addEventListener("submit", async event => {
-  event.preventDefault();
-  await addRecord("tasks", formValues(event.currentTarget));
-  resetForm(event.currentTarget);
-});
+function render(){
+  if (!session?.token || !currentTenant) {
+    $("authShell").classList.remove("hidden");
+    $("appShell").classList.add("hidden");
+    return;
+  }
+  $("authShell").classList.add("hidden");
+  $("appShell").classList.remove("hidden");
+  $("tenantName").textContent = currentTenant.name;
+  $("userLine").textContent = `${currentUser.role || "Owner"} · ${currentUser.phone || ""}`;
+  $("tenantIcon").innerHTML = I.building;
+  $("userName").textContent = currentUser.displayName || currentUser.username || "Admin";
+  $("userRole").textContent = isInfotech() ? "Admin" : "Owner";
+  $("userAvatar").textContent = initials($("userName").textContent);
+  $("dateRange").innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg> ${weekLabel()}`;
+  renderNav();
+  const pages = {
+    dashboard, companies: companiesPage, leads: leadsPage, customers: customersPage, deals: dealsPage,
+    inbox: inboxPage, ads: () => adsPage("ads"), whatsapp: () => adsPage("whatsapp"), meta: () => adsPage("meta"),
+    tickets: ticketsPage, tasks: tasksPage, settings: settingsPage
+  };
+  $("page").innerHTML = (pages[view] || dashboard)();
+  bindPage();
+}
 
-bootstrap().then(render).catch(() => {
-  session = null;
-  localStorage.removeItem(SESSION_KEY);
+bindAuthUi();
+loadRemembered();
+if (!session?.token && !$("companyName")?.value) $("companyName").value = "Axzen Infotech";
+$("logoutBtn").addEventListener("click", logout);
+$("refreshBtn").addEventListener("click", async () => { await bootstrap(); render(); });
+
+if (session?.token) {
+  bootstrap().then(render).catch(() => { session = null; render(); });
+} else {
   render();
-});
+}
 </script>
 </body>
 </html>

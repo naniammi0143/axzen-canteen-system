@@ -21,6 +21,7 @@ import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
@@ -55,6 +56,30 @@ public class MainActivity extends BridgeActivity {
         getBridge().getWebView().addJavascriptInterface(new ShareBridge(), "AxenShare");
         getBridge().getWebView().addJavascriptInterface(new SafeAreaBridge(), "AxenSafe");
         applyWebViewSafeInsets();
+        installBackNavigation();
+    }
+
+    private void installBackNavigation() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                WebView webView = getBridge() != null ? getBridge().getWebView() : null;
+                if (webView == null) {
+                    moveTaskToBack(true);
+                    return;
+                }
+                webView.evaluateJavascript(
+                    "(function(){try{if(typeof window.AxenNativeBack==='function'){return window.AxenNativeBack()?true:false;}return false;}catch(e){return false;}})()",
+                    value -> {
+                        boolean handled = "true".equals(value);
+                        if (!handled) {
+                            // Root screen: send app to background instead of killing the process.
+                            moveTaskToBack(true);
+                        }
+                    }
+                );
+            }
+        });
     }
 
     @Override
