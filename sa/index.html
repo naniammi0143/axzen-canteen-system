@@ -1132,6 +1132,63 @@
     .bottom-nav.user-nav { bottom: 0; }
     .bottom-nav.user-nav { grid-template-columns: repeat(4, 1fr); }
     .bottom-nav button { min-height: 56px; border: 0; background: white; color: var(--muted); font-size: 11px; font-weight: 500; }
+
+    .dine-tables-page { display: grid; gap: 14px; }
+    .dine-tables-hero {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 16px;
+      border: 1px solid #E8ECF3;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 10px 24px #1018280d;
+    }
+    .dine-tables-hero h2 { margin: 0; font-size: 22px; font-weight: 950; color: #111827; }
+    .dine-tables-hero p { margin: 4px 0 0; color: #6B7280; font-weight: 750; }
+    .dine-tables-hero .orders-hero-icon {
+      width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center;
+      background: #EEF5FF; color: #0B2E6D;
+    }
+    .dine-tables-hero .orders-hero-icon svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .dine-tables-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .dine-table-card {
+      min-height: 112px;
+      border: 1px solid #E8ECF3;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 10px 22px #1018280d;
+      padding: 14px 12px;
+      display: grid;
+      align-content: space-between;
+      text-align: left;
+      gap: 8px;
+    }
+    .dine-table-card strong { font-size: 18px; font-weight: 950; color: #111827; }
+    .dine-table-card small { color: #6B7280; font-weight: 800; }
+    .dine-table-card .dine-table-meta { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .dine-table-card .dine-status {
+      display: inline-flex; align-items: center; min-height: 24px; padding: 0 10px;
+      border-radius: 999px; font-size: 11px; font-weight: 900;
+      background: #ECFDF3; color: #166534;
+    }
+    .dine-table-card.occupied .dine-status { background: #FFF7ED; color: #C2410C; }
+    .dine-table-card.occupied { border-color: #FDBA74; background: #FFFBF7; }
+    .dine-table-card.active-table { outline: 2px solid #2563EB; }
+    #cartCheckoutActions { display: grid; gap: 8px; margin-top: 8px; }
+    #cartCheckoutActions .place { width: 100%; margin-top: 0; }
+    #cartCheckoutActions .table-add-order {
+      background: #0B2E6D !important;
+      box-shadow: 0 12px 26px #0b2e6d33 !important;
+    }
+    @media (min-width: 761px) {
+      .dine-tables-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
     .bottom-nav button span, .admin-tabs button span { display: inline-grid; place-items: center; margin-right: 6px; font-size: 15px; line-height: 1; }
     .bottom-nav button b { font: inherit; font-weight: 500; }
     .bottom-nav button.active { color: var(--blue); }
@@ -5282,7 +5339,7 @@
       </section>
       <nav class="bottom-nav user-nav" id="userNav">
         <button class="active" data-nav="billing"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg></span><b>Home</b></button>
-        <button data-nav="bulk"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h10l2 4v14H5V7l2-4Z"/><path d="M7 7h10"/><path d="M9 12h6"/><path d="M9 16h6"/></svg></span><b>Orders</b></button>
+        <button data-nav="dinein"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10h16v10H4z"/><path d="M8 10V7h8v3"/><path d="M7 14h4"/><path d="M13 14h4"/></svg></span><b>Dine In</b></button>
         <button data-nav="report"><span aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 20V10"/><path d="M12 20V4"/><path d="M19 20v-7"/><path d="M3 20h18"/></svg></span><b>Reports</b></button>
         <button data-nav="delivery"><span class="delivery-nav-wrap" aria-hidden="true"><img class="delivery-nav-icon" src="assets/deliverynavigation.png" alt=""></span><b>Delivery</b></button>
       </nav>
@@ -5309,7 +5366,9 @@
             <strong>Total Amount</strong>
             <strong id="cartTotal">Rs 0</strong>
           </div>
-          <button class="primary place" id="placeOrder">Proceed to Payment <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></button>
+          <div id="cartCheckoutActions">
+            <button class="primary place" id="placeOrder">Proceed to Payment <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></button>
+          </div>
           <div class="status" id="posMessage"></div>
         </div>
       </section>
@@ -5377,13 +5436,15 @@
         return defaults;
       }
     })();
-    const appBuild = "3.67";
+    const appBuild = "3.68";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const productUnitOverridesKey = "AXEN_PRODUCT_UNIT_OVERRIDES";
     const pendingOrdersKey = "AXEN_PENDING_ORDERS";
     const heldOrdersKey = "AXEN_HELD_ORDERS";
     const bulkDraftKey = "AXEN_BULK_ORDER_DRAFT";
+    const dineTablesKey = "AXEN_DINE_TABLES";
+    const DINE_TABLE_COUNT = 12;
     const storePurchasesKey = "AXEN_STORE_PURCHASES";
     const storeUsageKey = "AXEN_STORE_USAGE";
     const storeTabKey = "AXEN_STORE_TAB";
@@ -5441,6 +5502,7 @@
     let cartDiscount = 0;
     let adminTab = "dashboard";
     let activePosSection = "billing";
+    let activeTableNo = null;
     let showingCategoryHome = false;
     let openedFromCategoryHome = false;
     let serverOnline = navigator.onLine;
@@ -5611,7 +5673,7 @@
       const option = cleanAscii(item?.optionName || item?.variantName || "");
       return option && !name.toUpperCase().includes(option.toUpperCase()) ? `${name} ${option}` : name;
     }
-    const scopedJsonKeys = new Set([productCacheKey, productUnitOverridesKey, pendingOrdersKey, heldOrdersKey, bulkDraftKey, storePurchasesKey, storeUsageKey, storeTabKey, chickenPricesKey]);
+    const scopedJsonKeys = new Set([productCacheKey, productUnitOverridesKey, pendingOrdersKey, heldOrdersKey, bulkDraftKey, dineTablesKey, storePurchasesKey, storeUsageKey, storeTabKey, chickenPricesKey]);
     const jsonStorageKey = key => scopedJsonKeys.has(key) ? scopedStorageKey(key) : key;
     const readJson = (key, fallback) => {
       try { return JSON.parse(localStorage.getItem(jsonStorageKey(key))) || fallback; } catch { return fallback; }
@@ -6128,6 +6190,11 @@
       if (viewIsOpen("setupView")) return true;
       if (viewIsOpen("loginView")) return false;
       if (viewIsOpen("posView")) {
+        if (activeTableNo && activePosSection === "billing") {
+          closeActiveDineTableSession({ clearCart: true });
+          setPosSection("dinein");
+          return true;
+        }
         if (activePosSection !== "billing") {
           setPosSection("billing");
           return true;
@@ -6796,6 +6863,14 @@
       cart = [];
       cartDiscount = 0;
       selectedSubItems = {};
+      if (activeTableNo) {
+        const tables = dineTables();
+        const index = tables.findIndex(row => Number(row.tableNo) === Number(activeTableNo));
+        if (index >= 0) {
+          tables[index] = { ...tables[index], items: [], total: 0, status: "free", openedAt: null };
+          setDineTables(tables);
+        }
+      }
       renderCart();
       renderProducts();
     }
@@ -6806,6 +6881,175 @@
         setBulkDraft([]);
         renderOptionPage();
       }
+      if (activePosSection === "dinein") renderOptionPage();
+    }
+
+    function dineTables() {
+      const saved = readJson(dineTablesKey, null);
+      if (Array.isArray(saved) && saved.length) {
+        return saved.map((row, index) => ({
+          tableNo: Number(row.tableNo || index + 1),
+          status: row.items?.length ? "occupied" : (row.status || "free"),
+          items: Array.isArray(row.items) ? row.items : [],
+          openedAt: row.openedAt || null,
+          kitchenRounds: Number(row.kitchenRounds || 0),
+          lastKitchenAt: row.lastKitchenAt || null
+        }));
+      }
+      return Array.from({ length: DINE_TABLE_COUNT }, (_, index) => ({
+        tableNo: index + 1,
+        status: "free",
+        items: [],
+        openedAt: null,
+        kitchenRounds: 0,
+        lastKitchenAt: null
+      }));
+    }
+
+    function setDineTables(tables) {
+      writeJson(dineTablesKey, tables);
+    }
+
+    function getDineTable(tableNo) {
+      return dineTables().find(row => Number(row.tableNo) === Number(tableNo)) || null;
+    }
+
+    function saveActiveTableFromCart() {
+      if (!activeTableNo) return;
+      const tables = dineTables();
+      const index = tables.findIndex(row => Number(row.tableNo) === Number(activeTableNo));
+      if (index < 0) return;
+      const items = cart.map(item => ({ ...item }));
+      const total = items.reduce((sum, item) => sum + cartLineTotal(item), 0);
+      tables[index] = {
+        ...tables[index],
+        items,
+        total,
+        status: items.length ? "occupied" : "free",
+        openedAt: items.length ? (tables[index].openedAt || new Date().toISOString()) : null
+      };
+      setDineTables(tables);
+    }
+
+    function openDineTable(tableNo) {
+      if (activeTableNo && Number(activeTableNo) !== Number(tableNo)) saveActiveTableFromCart();
+      activeTableNo = Number(tableNo);
+      const table = getDineTable(activeTableNo);
+      cart = (table?.items || []).map(item => ({ ...item }));
+      cartDiscount = 0;
+      selectedSubItems = {};
+      setPosSection("billing", { keepTable: true });
+      renderCart();
+      renderProducts();
+      if ($("posMessage")) {
+        $("posMessage").textContent = `Table ${activeTableNo} ready — add items, then Add Order / Generate Bill`;
+        $("posMessage").className = "status ok";
+      }
+    }
+
+    function closeActiveDineTableSession({ clearCart = true } = {}) {
+      if (activeTableNo) saveActiveTableFromCart();
+      activeTableNo = null;
+      if (clearCart) {
+        cart = [];
+        cartDiscount = 0;
+        selectedSubItems = {};
+      }
+      renderCart();
+      renderProducts();
+    }
+
+    function clearDineTable(tableNo) {
+      const tables = dineTables();
+      const index = tables.findIndex(row => Number(row.tableNo) === Number(tableNo));
+      if (index < 0) return;
+      tables[index] = {
+        ...tables[index],
+        items: [],
+        total: 0,
+        status: "free",
+        openedAt: null,
+        kitchenRounds: 0,
+        lastKitchenAt: null
+      };
+      setDineTables(tables);
+      if (Number(activeTableNo) === Number(tableNo)) {
+        activeTableNo = null;
+        cart = [];
+        cartDiscount = 0;
+        selectedSubItems = {};
+        renderCart();
+        renderProducts();
+      }
+    }
+
+    function buildCartOrderPayload(extra = {}) {
+      const orderSubtotal = cart.reduce((sum, item) => sum + cartLineTotal(item), 0);
+      const discount = Math.min(orderSubtotal, Math.max(0, Number(cartDiscount || 0)));
+      const orderTotal = Math.max(0, orderSubtotal - discount);
+      return {
+        id: Date.now(),
+        clientOrderId: "mobile-" + Date.now() + "-" + Math.random().toString(16).slice(2),
+        tokenNumber: extra.tokenNumber || nextDailyTokenNumber(),
+        time: new Date().toLocaleString(),
+        createdAt: new Date().toISOString(),
+        canteen: settings.canteenName,
+        cashier: user?.name || "",
+        cashierMobile: user?.mobile || "",
+        branchAddress: user?.branchAddress || "",
+        payment: extra.payment || "Pending",
+        paymentBreakup: extra.paymentBreakup || { cash: 0, online: 0, credit: 0 },
+        creditName: extra.creditName || "",
+        subtotal: orderSubtotal,
+        discount,
+        total: orderTotal,
+        orderType: extra.orderType || (activeTableNo ? "dinein" : "counter"),
+        tableNo: extra.tableNo != null ? extra.tableNo : (activeTableNo || ""),
+        items: cart.map(item => ({
+          id: item.id,
+          lineId: item.lineId,
+          parentId: item.parentId || item.id,
+          name: item.name,
+          nameTe: item.nameTe || suggestTeluguName(item.name),
+          printName: printItemName(item),
+          optionName: item.optionName || "",
+          price: item.price,
+          qty: item.qty,
+          unit: lineSaleUnit(item),
+          billingType: isWeightCartLine(item) ? "weight" : "quantity",
+          unitPrice: item.unitPrice || item.price,
+          enteredAmount: item.enteredAmount || cartLineTotal(item),
+          weightUnit: isWeightCartLine(item) ? (item.weightUnit || "Kg") : ""
+        }))
+      };
+    }
+
+    function dineInPageHtml() {
+      const tables = dineTables();
+      const occupied = tables.filter(row => row.status === "occupied" || (row.items || []).length).length;
+      const cards = tables.map(row => {
+        const qty = (row.items || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
+        const total = (row.items || []).reduce((sum, item) => sum + cartLineTotal(item), 0);
+        const busy = qty > 0;
+        const active = Number(activeTableNo) === Number(row.tableNo);
+        return `
+          <button class="dine-table-card ${busy ? "occupied" : ""} ${active ? "active-table" : ""}" data-open-table="${row.tableNo}" type="button">
+            <strong>Table ${row.tableNo}</strong>
+            <div class="dine-table-meta">
+              <small>${busy ? `${qty} items · ${money(total)}` : "Empty"}</small>
+              <span class="dine-status">${busy ? "Running" : "Free"}</span>
+            </div>
+          </button>`;
+      }).join("");
+      return `
+        <div class="dine-tables-page">
+          <div class="dine-tables-hero">
+            <span class="orders-hero-icon"><svg viewBox="0 0 24 24"><path d="M4 10h16v10H4z"/><path d="M8 10V7h8v3"/><path d="M7 14h4"/><path d="M13 14h4"/></svg></span>
+            <div><h2>Dine In</h2><p>Select a table, add menu items, send kitchen order, then generate bill.</p></div>
+            <span class="orders-fade-icon">${occupied}/${tables.length}</span>
+          </div>
+          <div class="dine-tables-grid">${cards}</div>
+        </div>`;
     }
 
     function renderCart() {
@@ -6813,8 +7057,29 @@
       cartDiscount = Math.min(subtotal, Math.max(0, Number(cartDiscount || 0)));
       const total = Math.max(0, subtotal - cartDiscount);
       const qty = cart.reduce((sum, item) => sum + item.qty, 0);
-      $("cartTitle").textContent = "Current Order";
-      $("cartSubtitle").textContent = qty ? `${cart.length} items • ${qty} qty` : "Cart empty";
+      if (activeTableNo) {
+        $("cartTitle").textContent = `Table ${activeTableNo}`;
+        $("cartSubtitle").textContent = qty ? `${cart.length} items • ${qty} qty` : "Add items for this table";
+      } else {
+        $("cartTitle").textContent = "Current Order";
+        $("cartSubtitle").textContent = qty ? `${cart.length} items • ${qty} qty` : "Cart empty";
+      }
+      const cartTop = document.querySelector(".cart-top-actions");
+      if (cartTop) {
+        let tablesBtn = $("backToTablesBtn");
+        if (activeTableNo) {
+          if (!tablesBtn) {
+            tablesBtn = document.createElement("button");
+            tablesBtn.id = "backToTablesBtn";
+            tablesBtn.type = "button";
+            tablesBtn.textContent = "Tables";
+            cartTop.insertBefore(tablesBtn, cartTop.firstChild);
+          }
+          tablesBtn.classList.remove("hidden");
+        } else if (tablesBtn) {
+          tablesBtn.remove();
+        }
+      }
       if ($("cartSubtotal")) $("cartSubtotal").textContent = money(subtotal);
       const discountNode = document.querySelector(".cart-summary .green strong");
       if (discountNode) discountNode.textContent = `- ${money(cartDiscount)}`;
@@ -6837,7 +7102,18 @@
             <button class="cart-remove" data-remove-line="${esc(item.lineId)}" type="button" aria-label="Remove item">×</button>
           </div>
         </div>
-      `).join("") || `<div class="muted">Cart empty</div>`;
+      `).join("") || `<div class="muted">${activeTableNo ? "No items on this table yet" : "Cart empty"}</div>`;
+      const actions = $("cartCheckoutActions");
+      if (actions) {
+        if (activeTableNo) {
+          actions.innerHTML = `
+            <button class="primary place table-add-order" id="addTableOrder" type="button">Add Order (Kitchen)</button>
+            <button class="primary place" id="generateTableBill" type="button">Generate Bill</button>`;
+        } else {
+          actions.innerHTML = `<button class="primary place" id="placeOrder" type="button">Proceed to Payment <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></button>`;
+        }
+      }
+      if (activeTableNo) saveActiveTableFromCart();
     }
 
     function openCartViewModal() {
@@ -7158,6 +7434,7 @@
           alignLeft + line,
           leftRight(`Date:${dateText}`, `Time:${timeText}`),
           leftRight(`Cashier: ${cashierLabel}`, `Payment: ${paymentLabel}`),
+          order.tableNo ? `Table: ${order.tableNo}`.slice(0, width) : "",
           `Token: ${tokenNo}`.slice(0, width),
           line,
           ...(order.items || []).map(meatItemLine),
@@ -7175,6 +7452,7 @@
         alignLeft + line,
         leftRight(`Date:${dateText}`, `Time:${timeText}`),
         leftRight(`Cashier: ${cashierLabel}`, `Payment: ${paymentLabel}`),
+        order.tableNo ? `Table: ${order.tableNo}`.slice(0, width) : "",
         `Token: ${tokenNo}`.slice(0, width),
         line,
         `# ITEM NAME${" ".repeat(Math.max(1, width - "# ITEM NAME".length - "QTY     AMT".length))}QTY     AMT`,
@@ -7287,8 +7565,9 @@
       });
       const header = includeHeader ? [
         escInit + normalSize + alignCenter + boldOn + center(headerName.toUpperCase()),
-        center("KITCHEN TOKEN")
-      ] : [escInit + alignCenter + boldOn];
+        center("KITCHEN TOKEN"),
+        order.tableNo ? center(`TABLE ${order.tableNo}`) : ""
+      ].filter(Boolean) : [escInit + alignCenter + boldOn];
       return [
         ...header,
         // Left align + half-width pad so double-size TOKEN sits in the paper middle.
@@ -7306,27 +7585,35 @@
       ].join("\n");
     }
 
-    async function receipt(order) {
-      const options = receiptPrintOptions(order);
+    async function receipt(order, printMode = "both") {
+      const options = { ...receiptPrintOptions(order), printMode };
       const hasWeightItems = (order.items || []).some(item => isWeightCartLine(item));
       if (hasWeightItems) options.receiptJson = "";
       const useLogoHeader = hasWeightItems ? false : (canPrintReceiptLogo(options) || canPrintReceiptBitmap(options));
-      const text = receiptText(order, false, !useLogoHeader);
+      const text = printMode === "kitchen"
+        ? kitchenTokenText(order, true)
+        : receiptText(order, false, !useLogoHeader);
       if (window.AxenPrinter && (typeof window.AxenPrinter.printToPrinterAsync === "function" || typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
         try {
           const result = printOrderToEnabledPrinters(order, text, options);
-          $("posMessage").textContent = isPrintSuccess(result) ? "Order saved and print started" : (result || "Order saved. Printer not connected.");
+          const okText = printMode === "kitchen"
+            ? "Kitchen order sent"
+            : printMode === "billing"
+            ? "Bill sent to counter"
+            : "Order saved and print started";
+          $("posMessage").textContent = isPrintSuccess(result) ? okText : (result || "Order saved. Printer not connected.");
           $("posMessage").className = isPrintSuccess(result) ? "status ok" : "status error";
-          return;
+          return result;
         } catch (error) {
           $("posMessage").textContent = `Order saved. Print failed: ${error.message || "Printer not connected."}`;
           $("posMessage").className = "status error";
-          return;
+          return error?.message || "Print failed";
         }
       }
       console.log(text);
       $("posMessage").textContent = "Order saved. Direct print works only inside APK with printer permission.";
       $("posMessage").className = "status error";
+      return "Printer not connected";
     }
 
     function receiptPrintOptions(order = {}) {
@@ -8009,6 +8296,7 @@
 
     function printOrderToEnabledPrinters(order, customerText, customerOptions = {}) {
       const jobs = [];
+      const mode = customerOptions.printMode || "both";
       const hasWeightItems = (order.items || []).some(item => isWeightCartLine(item));
       const billingReady = billingPrinterEnabled && Boolean(billingPrinter);
       const kitchenReady = kitchenPrinterEnabled && Boolean(kitchenPrinter);
@@ -8023,7 +8311,7 @@
         receiptJson: receiptBitmapPayload(order, customerOptions.logoDataUrl || "", receiptPaperWidthPx(customerPrinter))
       };
       const customerReceiptText = receiptText(order, false, !(canPrintReceiptLogo(customerPrintOptions) || canPrintReceiptBitmap(customerPrintOptions)), customerColumns);
-      if (customerEnabled) {
+      if ((mode === "both" || mode === "billing") && customerEnabled) {
         jobs.push({
           label: "billing",
           address: customerPrinter || "",
@@ -8031,8 +8319,11 @@
           options: customerPrintOptions
         });
       }
-      if (kitchenPrinterEnabled && !hasWeightItems && !samePrinter) {
-        if (kitchenPrinter) {
+      const wantKitchen = mode === "both" || mode === "kitchen";
+      if (wantKitchen && !hasWeightItems) {
+        const kitchenAddress = kitchenReady ? kitchenPrinter : (mode === "kitchen" ? (billingPrinter || "") : "");
+        const canKitchen = kitchenReady || (mode === "kitchen" && Boolean(kitchenAddress || billingReady));
+        if (canKitchen && kitchenAddress && (mode === "kitchen" || !samePrinter || !customerEnabled)) {
           const kitchenOptions = {
             logoDataUrl: "",
             logoPosition: ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above",
@@ -8045,13 +8336,33 @@
           const useLogoHeader = canPrintReceiptLogo(kitchenOptions);
           jobs.push({
             label: "kitchen",
-            address: kitchenPrinter,
-            text: kitchenTokenText(order, !useLogoHeader, receiptTextColumns(kitchenPrinter)),
-            options: { ...kitchenOptions, order, paperWidth: receiptPaperWidthPx(kitchenPrinter) }
+            address: kitchenAddress,
+            text: kitchenTokenText(order, !useLogoHeader, receiptTextColumns(kitchenAddress)),
+            options: { ...kitchenOptions, order, paperWidth: receiptPaperWidthPx(kitchenAddress) }
+          });
+        } else if (wantKitchen && mode === "kitchen" && samePrinter && customerEnabled) {
+          const kitchenOptions = {
+            logoDataUrl: "",
+            logoPosition: "above",
+            logoSize: receiptLogoSizeValue(settings.receiptLogoSize),
+            headerName: order.canteen || settings.canteenName || "SHAD KITCHEN",
+            companyName: "KITCHEN TOKEN",
+            receiptLanguage: "english",
+            receiptJson: ""
+          };
+          jobs.push({
+            label: "kitchen",
+            address: customerPrinter || kitchenPrinter || "",
+            text: kitchenTokenText(order, true, receiptTextColumns(customerPrinter || kitchenPrinter)),
+            options: { ...kitchenOptions, order, paperWidth: receiptPaperWidthPx(customerPrinter || kitchenPrinter) }
           });
         }
       }
-      if (!jobs.length) return "No printer enabled";
+      if (!jobs.length) {
+        if (mode === "kitchen") return kitchenPrinterEnabled ? "Select Kitchen Printer" : "Enable Kitchen Printer in settings";
+        if (mode === "billing") return "Enable Billing Printer in settings";
+        return "No printer enabled";
+      }
       applySelectedPrinterToBridge();
       const results = [];
       jobs.forEach((job, index) => {
@@ -8072,6 +8383,7 @@
       const icons = {
         dashboard: "house",
         billing: "shoppingCart",
+        dinein: "layoutGrid",
         held: "clipboardList",
         report: "chartNoAxesColumn",
         finance: "wallet",
@@ -8112,6 +8424,7 @@
       return ({
         held: "Orders",
         bulk: "Orders",
+        dinein: "Dine In",
         report: "Reports",
         finance: "Finance",
         store: "Store",
@@ -8134,6 +8447,7 @@
       return ({
         held: "Held orders and quick return to billing.",
         bulk: "Bulk quantity order entry.",
+        dinein: "Restaurant table orders — kitchen first, bill at counter.",
         report: "Date wise, item wise and payment reports.",
         finance: "Date wise finance, expenses and profit/loss.",
         store: "Purchases, today used entries and stock balance.",
@@ -8507,8 +8821,14 @@
 
     function reportPageHtml() {
       const range = reportRange();
-      const rows = rangedOrders();
-      const todayRows = todayOrders();
+      const reportMode = scopedLocalGet("AXEN_REPORT_MODE") || "all";
+      const allRows = rangedOrders();
+      const rows = reportMode === "dinein"
+        ? allRows.filter(order => String(order.orderType || "").toLowerCase() === "dinein" || Number(order.tableNo || 0) > 0)
+        : allRows;
+      const todayRows = reportMode === "dinein"
+        ? todayOrders().filter(order => String(order.orderType || "").toLowerCase() === "dinein" || Number(order.tableNo || 0) > 0)
+        : todayOrders();
       const filteredExpenses = rangedExpenses();
       const expenseTotal = filteredExpenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
       const totals = rows.reduce((sum, order) => {
@@ -8556,12 +8876,26 @@
       });
       const userRows = [...userGroups.entries()].sort((a, b) => b[1].total - a[1].total).map(([cashier, item]) => `
         <tr><td>${esc(cashier)}</td><td>${item.bills}</td><td>${money(item.cash)}</td><td>${money(item.online)}</td><td>${money(item.credit)}</td><td>${money(item.total)}</td></tr>`).join("");
-      const userRowsCompact = [...userGroups.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 4).map(([cashier, item]) => `
-        <tr><td><span class="user-mini-icon">${lucideIcon("user", 16)}</span>${esc(cashier)}</td><td>${item.bills}</td><td>${money(item.total)}</td></tr>`).join("");
-      const itemRowsCompact = [...totals.items.entries()].sort((a, b) => b[1].amount - a[1].amount).slice(0, 4).map(([name, item]) => `
-        <tr><td>${esc(name)}</td><td>${item.qty}</td><td>${money(item.amount)}</td></tr>`).join("");
+      const tableGroups = new Map();
+      rows.filter(order => Number(order.tableNo || 0) > 0).forEach(order => {
+        const key = `Table ${order.tableNo}`;
+        const current = tableGroups.get(key) || { bills: 0, total: 0 };
+        current.bills += 1;
+        current.total += Number(order.total || 0);
+        tableGroups.set(key, current);
+      });
+      const tableRows = [...tableGroups.entries()].sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true })).map(([table, item]) => `
+        <tr><td>${esc(table)}</td><td>${item.bills}</td><td>${money(item.total)}</td></tr>`).join("");
+      const billRows = rows.slice().reverse().slice(0, 40).map(order => `
+        <tr>
+          <td>${esc(order.tokenNumber || order.id || "-")}</td>
+          <td>${order.tableNo ? `T${order.tableNo}` : "-"}</td>
+          <td>${esc(order.cashier || "-")}</td>
+          <td>${esc(order.payment || "Cash")}</td>
+          <td>${money(order.total)}</td>
+        </tr>`).join("");
       const overviewGroups = new Map();
-      orders.forEach(order => {
+      (reportMode === "dinein" ? orders.filter(order => String(order.orderType || "").toLowerCase() === "dinein" || Number(order.tableNo || 0) > 0) : orders).forEach(order => {
         const key = dateInputValue(orderDate(order)) || "Unknown";
         const current = overviewGroups.get(key) || { amount: 0 };
         current.amount += Number(order.total || 0);
@@ -8589,20 +8923,23 @@
         return `<circle cx="${x}" cy="${y}" r="3.4" fill="#2563EB"/><text x="${x}" y="${Math.max(16, y - 9)}" text-anchor="middle" font-size="8">${shortMoney(item.amount)}</text><text x="${x}" y="130" text-anchor="middle" font-size="8">${shortDate(date)}</text>`;
       }).join("");
       const shopName = settings.canteenName || user?.canteen?.name || "This shop";
-      const reportScope = hasAdminAccess()
+      const reportScope = reportMode === "dinein"
+        ? `${shopName} · Dine In table bills`
+        : hasAdminAccess()
         ? `${shopName} · all bills in this login`
         : `${shopName} · ${user?.name || "Your"} bills only`;
       const consumptionCost = Math.round(totals.total * 0.48);
       const net = totals.total - consumptionCost - expenseTotal;
-      const profitLossHtml = canViewProfitLoss()
-        ? `<div class="work-card"><h3>Profit/Loss Report</h3><div class="option-row"><span>Total Sale</span><strong>${money(totals.total)}</strong></div><div class="option-row"><span>Consumption Cost</span><strong>${money(consumptionCost)}</strong></div><div class="option-row"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div><div class="option-row"><span>${net >= 0 ? "Net Profit" : "Net Loss"}</span><strong>${money(Math.abs(net))}</strong></div></div>`
-        : `<div class="work-card"><h3>Profit/Loss Report</h3><div class="muted">Admin or Super Admin approval is required to view Profit/Loss reports.</div></div>${adminUnlockHtml()}`;
       return `
         <div class="report-modern-page">
           <div class="report-hero">
             <span class="orders-hero-icon"><svg viewBox="0 0 24 24"><path d="M5 20V10"/><path d="M12 20V4"/><path d="M19 20v-7"/><path d="M3 20h18"/></svg></span>
-            <div><h2>Reports</h2><p>${esc(reportScope)}</p></div>
+            <div><h2>${reportMode === "dinein" ? "Dine In Reports" : "Reports"}</h2><p>${esc(reportScope)}</p></div>
             <span class="orders-fade-icon"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v5h5"/><path d="M8 15h8"/></svg></span>
+          </div>
+          <div class="report-modern-actions" style="grid-template-columns:1fr 1fr;margin-bottom:4px">
+            <button data-report-mode="all" type="button" style="${reportMode === "all" ? "background:#0B5FE8;color:#fff" : ""}">All Sales</button>
+            <button data-report-mode="dinein" type="button" style="${reportMode === "dinein" ? "background:#0B5FE8;color:#fff" : ""}">Dine In</button>
           </div>
           <p class="report-scope-note">${esc(displayDateLabel(range.from))} to ${esc(displayDateLabel(range.to))} · ${rows.length} bills · ${money(totals.total)}</p>
           <div class="work-card report-modern-filter">
@@ -8610,9 +8947,9 @@
             <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
             <div class="report-modern-actions"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button><button data-report-range="year" type="button">Year</button></div>
             <div class="report-modern-actions report-share-actions">
-              <button class="secondary" id="shareReportImage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="m8 14 2.5-2.5L13 14l2-2 3 4"/><circle cx="9" cy="9" r="1"/></svg>Share Image</button>
-              <button class="secondary" id="downloadReportImage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>Download Image</button>
-              <button class="secondary" id="shareReportPdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M14 3v4h4"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>Share PDF</button>
+              <button class="secondary" id="shareReportImage" type="button">Share Image</button>
+              <button class="secondary" id="downloadReportImage" type="button">Download Image</button>
+              <button class="secondary" id="shareReportPdf" type="button">Share PDF</button>
             </div>
             <div class="status" id="reportShareStatus"></div>
           </div>
@@ -8620,15 +8957,16 @@
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><path d="M4 18l5-5 4 3 7-8"/><path d="M14 8h6v6"/></svg></i><span>Today Sale</span></div><strong>${money(todayTotal)}</strong><small>${todayRows.length} bills today</small></div>
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon purple"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg></i><span>Range Sale</span></div><strong>${money(totals.total)}</strong><small>${displayDateLabel(range.from)} - ${displayDateLabel(range.to)}</small></div>
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon purple"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg></i><span>Total Bills</span></div><strong>${rows.length}</strong><small>Selected dates</small></div>
-            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon green"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4"/><path d="M18 10v4"/></svg></i><span>Cash</span></div><strong>${money(totals.cash)}</strong><small>This shop / login</small></div>
-            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18"/><path d="M12 3c-3 3-3 15 0 18"/></svg></i><span>Online</span></div><strong>${money(totals.online)}</strong><small>This shop / login</small></div>
-            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon orange"><svg viewBox="0 0 24 24"><path d="M4 8h16v11H4z"/><path d="M8 8V6h8v2"/><path d="M8 13h8"/></svg></i><span>Credit</span></div><strong>${money(totals.credit)}</strong><small>Pending in range</small></div>
-            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon red"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M12 3a9 9 0 0 1 9 9h-9z"/></svg></i><span>Profit/Loss</span></div><strong>${canViewProfitLoss() ? money(Math.abs(net)) : "Locked"}</strong><small>${canViewProfitLoss() ? (net >= 0 ? "Profit" : "Loss") : "Locked by admin"}</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon green"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/></svg></i><span>Cash</span></div><strong>${money(totals.cash)}</strong><small>Collected</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/></svg></i><span>Online</span></div><strong>${money(totals.online)}</strong><small>Collected</small></div>
+            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon orange"><svg viewBox="0 0 24 24"><path d="M4 8h16v11H4z"/><path d="M8 8V6h8v2"/></svg></i><span>Credit</span></div><strong>${money(totals.credit)}</strong><small>Pending</small></div>
           </div>
-          <div class="work-card report-card-compact report-span-all"><div class="report-card-title"><h3>Last 7 Days Sale</h3><span class="muted">This login only</span></div><div class="sales-line-chart"><svg viewBox="0 0 320 140" preserveAspectRatio="none"><path d="M32 24H304M32 52H304M32 80H304M32 108H304" stroke="#E8ECF3" stroke-width="1"/><text x="7" y="27" font-size="8">${chartAxis[0]}</text><text x="7" y="55" font-size="8">${chartAxis[1]}</text><text x="7" y="83" font-size="8">${chartAxis[2]}</text><text x="12" y="111" font-size="8">${chartAxis[3]}</text><polyline points="36,132 ${chartPoints} 304,132" fill="#2563EB18" stroke="none"/><polyline points="${chartPoints}" fill="none" stroke="#2563EB" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>${chartDots}</svg></div></div>
+          <div class="work-card report-card-compact report-span-all"><div class="report-card-title"><h3>Last 7 Days Sale</h3></div><div class="sales-line-chart"><svg viewBox="0 0 320 140" preserveAspectRatio="none"><path d="M32 24H304M32 52H304M32 80H304M32 108H304" stroke="#E8ECF3" stroke-width="1"/><text x="7" y="27" font-size="8">${chartAxis[0]}</text><text x="7" y="55" font-size="8">${chartAxis[1]}</text><text x="7" y="83" font-size="8">${chartAxis[2]}</text><text x="12" y="111" font-size="8">${chartAxis[3]}</text><polyline points="36,132 ${chartPoints} 304,132" fill="#2563EB18" stroke="none"/><polyline points="${chartPoints}" fill="none" stroke="#2563EB" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>${chartDots}</svg></div></div>
+          ${reportMode === "dinein" ? `<div class="work-card report-card-compact"><h3>Table Wise</h3><table class="data-table report-mini-table"><thead><tr><th>Table</th><th>Bills</th><th>Sale</th></tr></thead><tbody>${tableRows || `<tr><td colspan="3" class="report-empty">No dine-in bills in this range</td></tr>`}</tbody></table></div>` : ""}
           <div class="work-card report-card-compact"><h3>Date Wise</h3><table class="data-table report-mini-table"><thead><tr><th>Date</th><th>Bills</th><th>Sale</th><th>Cash</th><th>Online</th></tr></thead><tbody>${dateRows || `<tr><td colspan="5" class="report-empty">No sales in this date range</td></tr>`}</tbody></table></div>
           <div class="work-card report-card-compact"><h3>Item Wise</h3><table class="data-table report-mini-table"><thead><tr><th>Item</th><th>Qty</th><th>Sale</th></tr></thead><tbody>${itemRows || `<tr><td colspan="3" class="report-empty">No item sales in this date range</td></tr>`}</tbody></table></div>
           <div class="work-card report-card-compact report-span-all"><h3>${hasAdminAccess() ? "User Wise" : "Your Sales"}</h3><table class="data-table report-mini-table"><thead><tr><th>User</th><th>Bills</th><th>Cash</th><th>Online</th><th>Credit</th><th>Sale</th></tr></thead><tbody>${userRows || `<tr><td colspan="6" class="report-empty">No user sales in this date range</td></tr>`}</tbody></table></div>
+          ${reportMode === "dinein" ? `<div class="work-card report-card-compact report-span-all"><h3>Dine In Bills</h3><table class="data-table report-mini-table"><thead><tr><th>Token</th><th>Table</th><th>Cashier</th><th>Pay</th><th>Amount</th></tr></thead><tbody>${billRows || `<tr><td colspan="5" class="report-empty">No dine-in bills</td></tr>`}</tbody></table></div>` : ""}
         </div>`;
     }
 
@@ -9258,6 +9596,7 @@
       const page = $("optionPage");
       if (!page) return;
       const html = activePosSection === "held" ? ordersPageHtml()
+        : activePosSection === "dinein" ? dineInPageHtml()
         : activePosSection === "bulk" ? bulkOrderPageHtml()
         : activePosSection === "report" ? reportPageHtml()
         : activePosSection === "finance" ? financePageHtml()
@@ -9288,8 +9627,25 @@
         </div>`;
     }
 
-    function setPosSection(section) {
-      activePosSection = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
+    function setPosSection(section, options = {}) {
+      const next = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
+      if (activeTableNo && next !== "billing") {
+        saveActiveTableFromCart();
+        if (next === "dinein") {
+          activeTableNo = null;
+          cart = [];
+          cartDiscount = 0;
+          selectedSubItems = {};
+        }
+      }
+      if (next === "billing" && !options.keepTable && activeTableNo) {
+        saveActiveTableFromCart();
+        activeTableNo = null;
+        cart = [];
+        cartDiscount = 0;
+        selectedSubItems = {};
+      }
+      activePosSection = next;
       if (["report", "finance"].includes(activePosSection)) resetReportRangeToToday();
       if (activePosSection === "bulk" && !["All", "Tiffin", "Snacks", "Drinks"].includes(activeCategory)) activeCategory = "All";
       closeOptionsModal();
@@ -9306,6 +9662,7 @@
         openedFromCategoryHome = false;
         itemSearch = "";
         if ($("itemSearch")) $("itemSearch").value = "";
+        renderCart();
         renderProducts();
         setTimeout(maybeOpenDailyChickenPrices, 0);
       } else {
@@ -9327,6 +9684,10 @@
       if ($("reportFromDate")) $("reportFromDate").addEventListener("change", event => { scopedLocalSet("AXEN_REPORT_FROM", event.target.value); renderOptionPage(); });
       if ($("reportToDate")) $("reportToDate").addEventListener("change", event => { scopedLocalSet("AXEN_REPORT_TO", event.target.value); renderOptionPage(); });
       document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => setReportQuickRange(btn.dataset.reportRange)));
+      document.querySelectorAll("[data-report-mode]").forEach(btn => btn.addEventListener("click", () => {
+        scopedLocalSet("AXEN_REPORT_MODE", btn.dataset.reportMode || "all");
+        renderOptionPage();
+      }));
       if ($("shareReportImage")) $("shareReportImage").addEventListener("click", shareReportImage);
       if ($("downloadReportImage")) $("downloadReportImage").addEventListener("click", downloadReportImage);
       if ($("shareReportPdf")) $("shareReportPdf").addEventListener("click", shareReportPdf);
@@ -9347,6 +9708,7 @@
       if ($("bulkProceedPayment")) $("bulkProceedPayment").addEventListener("click", openBulkConfirmModal);
       if ($("bulkClearDraft")) $("bulkClearDraft").addEventListener("click", clearBulkDraft);
       if ($("bulkViewCart")) $("bulkViewCart").addEventListener("click", openBulkCartView);
+      document.querySelectorAll("[data-open-table]").forEach(btn => btn.addEventListener("click", () => openDineTable(btn.dataset.openTable)));
       if ($("saveTodayPrices")) $("saveTodayPrices").addEventListener("click", () => {
         if (saveChickenPricesFromInputs($("optionPage"))) {
           $("posMessage").textContent = "Today chicken prices saved";
@@ -9551,7 +9913,7 @@
     }
 
     function ensureUserNavKeys() {
-      const keys = ["billing", "bulk", "report", "delivery"];
+      const keys = ["billing", "dinein", "report", "delivery"];
       document.querySelectorAll("#userNav button").forEach((btn, index) => {
         btn.dataset.nav = keys[index] || "billing";
       });
@@ -10116,6 +10478,7 @@
                 ${hasAdminAccess() ? `<button class="drawer-item" id="adminPanelBtn" type="button"><span>${drawerIcon("admin")}</span><strong>Admin Panel</strong><span class="drawer-arrow">${lucideIcon("chevronRight", 18)}</span></button>` : ""}
                 ${drawerItem("dashboard", "Dashboard", "H", activeSection)}
                 ${drawerItem("billing", "New Billing", "B", activeSection)}
+                ${drawerItem("dinein", "Dine In", "D", activeSection)}
                 ${drawerItem("held", "Orders", "O", activeSection)}
                 ${drawerItem("report", "Reports", "R", activeSection)}
                 ${drawerItem("finance", "Finance", "F", activeSection)}
@@ -10366,6 +10729,8 @@
       const orderTotal = Math.max(0, orderSubtotal - cartDiscount);
       const creditInput = $("creditNameInput");
       const creditName = selectedPayment === "Credit" ? String((creditInput && creditInput.value) || "Credit Customer").trim() : "";
+      const tableNo = activeTableNo ? Number(activeTableNo) : "";
+      const isDineInBill = Boolean(tableNo);
       payment = selectedPayment;
       const payload = {
         id: Date.now(),
@@ -10383,6 +10748,8 @@
         subtotal: orderSubtotal,
         discount: cartDiscount,
         total: orderTotal,
+        orderType: isDineInBill ? "dinein" : "counter",
+        tableNo: tableNo || "",
         items: cart.map(item => ({
           id: item.id,
           lineId: item.lineId,
@@ -10407,17 +10774,27 @@
         return;
       }
       if (selectedPayment === "Cancel") payload.total = 0;
-      setPaymentStatus("Print started...", "status ok");
-      receipt(payload).catch(() => {
+      setPaymentStatus(isDineInBill ? "Sending bill to counter..." : "Print started...", "status ok");
+      receipt(payload, isDineInBill ? "billing" : "both").catch(() => {
         $("posMessage").textContent = "Order saved. Printer not connected.";
         $("posMessage").className = "status error";
       });
       payment = "";
       if (activePosSection === "bulk") setBulkDraft([]);
-      clearCartState();
       closePaymentModal();
       closeOptionsModal();
-      if (!$("posView").classList.contains("hidden")) setPosSection("billing");
+      if (isDineInBill) {
+        clearDineTable(tableNo);
+        activeTableNo = null;
+        cart = [];
+        cartDiscount = 0;
+        selectedSubItems = {};
+        renderCart();
+        setPosSection("dinein");
+      } else {
+        clearCartState();
+        if (!$("posView").classList.contains("hidden")) setPosSection("billing");
+      }
 
       setTimeout(() => (async () => {
         try {
@@ -10426,13 +10803,13 @@
           serverOnline = true;
           orders.push(saved.order || payload);
           updateSyncStatus();
-          $("posMessage").textContent = "Order saved and print started";
+          $("posMessage").textContent = isDineInBill ? `Table ${tableNo} bill completed` : "Order saved and print started";
           $("posMessage").className = "status ok";
         } catch {
           serverOnline = false;
           setPendingOrders([...pendingOrders(), payload]);
           orders.push(payload);
-          $("posMessage").textContent = "Offline saved. Print started. Auto sync pending.";
+          $("posMessage").textContent = isDineInBill ? `Table ${tableNo} bill saved offline` : "Offline saved. Print started. Auto sync pending.";
           $("posMessage").className = "status ok";
         } finally {
           renderAdmin();
@@ -10441,6 +10818,64 @@
           orderSubmitting = false;
         }
       })(), 0);
+    }
+
+    function sendTableOrderToKitchen() {
+      if (subscriptionState?.expired || subscriptionDaysRemaining() < 0) {
+        showSubscriptionGate({ expired: true, force: true });
+        return;
+      }
+      if (!activeTableNo) {
+        $("posMessage").textContent = "Open a table from Dine In first.";
+        $("posMessage").className = "status error";
+        return;
+      }
+      if (!cart.length) {
+        $("posMessage").textContent = "Add items before sending to kitchen.";
+        $("posMessage").className = "status error";
+        return;
+      }
+      saveActiveTableFromCart();
+      const payload = buildCartOrderPayload({
+        payment: "Pending",
+        orderType: "dinein",
+        tableNo: activeTableNo
+      });
+      receipt(payload, "kitchen").then(result => {
+        const tables = dineTables();
+        const index = tables.findIndex(row => Number(row.tableNo) === Number(activeTableNo));
+        if (index >= 0) {
+          tables[index].kitchenRounds = Number(tables[index].kitchenRounds || 0) + 1;
+          tables[index].lastKitchenAt = new Date().toISOString();
+          setDineTables(tables);
+        }
+        if (!isPrintSuccess(result) && result && result !== "Printer not connected") {
+          $("posMessage").textContent = result;
+          $("posMessage").className = "status error";
+        } else if (isPrintSuccess(result) || !window.AxenPrinter) {
+          $("posMessage").textContent = `Table ${activeTableNo} order sent to kitchen`;
+          $("posMessage").className = "status ok";
+        }
+      });
+    }
+
+    function generateTableBillFlow() {
+      if (subscriptionState?.expired || subscriptionDaysRemaining() < 0) {
+        showSubscriptionGate({ expired: true, force: true });
+        return;
+      }
+      if (!activeTableNo) {
+        $("posMessage").textContent = "Open a table from Dine In first.";
+        $("posMessage").className = "status error";
+        return;
+      }
+      if (!cart.length) {
+        $("posMessage").textContent = "Add items before generating bill.";
+        $("posMessage").className = "status error";
+        return;
+      }
+      saveActiveTableFromCart();
+      placeOrderFlow();
     }
 
     function dashboardStats() {
@@ -11465,7 +11900,16 @@
     });
     $("viewCartBtn").addEventListener("click", openCartViewModal);
     $("clearCart").addEventListener("click", clearActiveCartState);
-    $("placeOrder").addEventListener("click", placeOrderFlow);
+    document.querySelector(".cart-top-actions")?.addEventListener("click", event => {
+      if (!event.target.closest("#backToTablesBtn")) return;
+      closeActiveDineTableSession({ clearCart: true });
+      setPosSection("dinein");
+    });
+    $("cartCheckoutActions").addEventListener("click", event => {
+      if (event.target.closest("#placeOrder")) return placeOrderFlow();
+      if (event.target.closest("#addTableOrder")) return sendTableOrderToKitchen();
+      if (event.target.closest("#generateTableBill")) return generateTableBillFlow();
+    });
     $("homeCategoryBtn").addEventListener("click", () => {
       closeOptionsModal();
       if (activePosSection !== "billing") setPosSection("billing");
