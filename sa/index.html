@@ -630,8 +630,16 @@
     .today-price-status { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 10px; align-items: center; color: var(--muted); font-size: 11px; font-weight: 900; }
     .today-price-badge { border-radius: 999px; padding: 5px 9px; background: #fff7ed; color: #b45309; white-space: nowrap; }
     .today-price-badge.updated { background: #ecfdf3; color: #166534; }
-    #posView.chicken-mode .cart-sheet { left: 50%; right: auto; bottom: 0; top: auto; width: min(480px, 100%); transform: translateX(-50%); }
+    #posView.chicken-mode .cart-sheet { left: 50% !important; right: auto !important; bottom: 84px !important; top: auto !important; width: min(480px, calc(100% - 20px)) !important; transform: translateX(-50%) !important; }
     #posView.chicken-mode .cart-list { max-height: 122px; }
+    html.pos-layout-tablet #posView.chicken-mode .cart-sheet {
+      left: auto !important;
+      right: auto !important;
+      bottom: auto !important;
+      top: auto !important;
+      width: auto !important;
+      transform: none !important;
+    }
     .payment-actions button.primary-choice { background: var(--green); border-color: var(--green); color: white; }
     .payment-actions button.selected { background: #ecfdf3; border-color: var(--green); color: #166534; box-shadow: 0 10px 22px #2f7d2633; }
     .payment-actions button:disabled { opacity: .62; pointer-events: none; }
@@ -1121,7 +1129,7 @@
       background: white;
     }
 
-    .bottom-nav.user-nav { bottom: 254px; }
+    .bottom-nav.user-nav { bottom: 0; }
     .bottom-nav.user-nav { grid-template-columns: repeat(4, 1fr); }
     .bottom-nav button { min-height: 56px; border: 0; background: white; color: var(--muted); font-size: 11px; font-weight: 500; }
     .bottom-nav button span, .admin-tabs button span { display: inline-grid; place-items: center; margin-right: 6px; font-size: 15px; line-height: 1; }
@@ -3132,8 +3140,8 @@
     .notif-dot::after { content: none; }
     .notif-dot.online::after { background: #16a34a; }
     .notif-dot.offline::after { background: #ef4444; }
-    #posView .content { padding: 28px 336px 90px 20px; }
-    #posView.option-mode .content { padding-right: 20px; }
+    #posView .content { padding: 14px 14px 300px 14px; }
+    #posView.option-mode .content { padding-right: 14px; padding-bottom: 90px; }
     #posView.option-mode .cart-sheet { display: none; }
     .search-row { display: none; }
     .search-box { display: flex; align-items: center; gap: 10px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; padding: 0 14px; color: #667085; box-shadow: 0 10px 24px #11182708; }
@@ -3209,7 +3217,7 @@
     #posView .item-card .mini-qty { display: none; }
     #posView .count-badge { top: 10px; right: 12px; }
     #posView .remove-badge { top: 10px; left: 12px; }
-    #posView .cart-sheet { position: fixed; z-index: 6; top: 150px; left: calc(50% + 188px); bottom: 96px; width: 336px; transform: none; border: 1px solid #e8edf4; border-radius: 20px; background: #fffffff5; box-shadow: 0 18px 44px #11182712; overflow: hidden; }
+    #posView .cart-sheet { position: fixed; z-index: 6; top: auto; left: 50%; right: auto; bottom: 84px; width: min(480px, calc(100% - 20px)); max-height: none; transform: translateX(-50%); border: 1px solid #e8edf4; border-radius: 20px; background: #fffffff5; box-shadow: 0 -10px 26px #1118271f; overflow: hidden; }
     #posView .cart-inner { padding: 16px; height: 100%; display: flex; flex-direction: column; }
     .cart-title-wrap { display: grid; gap: 4px; }
     .cart-icon { display: none; }
@@ -5165,6 +5173,31 @@
       justify-content: center !important;
       gap: 8px !important;
     }
+    html.pos-layout-compact #posView.chicken-mode .cart-sheet {
+      left: 50% !important;
+      right: auto !important;
+      top: auto !important;
+      bottom: 74px !important;
+      width: min(480px, calc(100% - 20px)) !important;
+      transform: translateX(-50%) !important;
+    }
+    html.native-app.pos-layout-compact #posView.chicken-mode .cart-sheet {
+      bottom: calc(74px + var(--app-safe-bottom)) !important;
+    }
+    html.pos-layout-compact #posView .cart-list {
+      display: none !important;
+    }
+    html.pos-layout-compact #posView .cart-summary {
+      display: none !important;
+    }
+    html.pos-layout-compact #posView .bottom-nav,
+    html.pos-layout-compact #posView .bottom-nav.user-nav {
+      left: 50% !important;
+      right: auto !important;
+      transform: translateX(-50%) !important;
+      width: min(480px, calc(100% - 20px)) !important;
+      bottom: 10px !important;
+    }
     html.pos-layout-compact #posView .cart-inner > .status,
     html.pos-layout-compact #posView #posMessage {
       margin-top: 8px !important;
@@ -5344,7 +5377,7 @@
         return defaults;
       }
     })();
-    const appBuild = "3.66";
+    const appBuild = "3.67";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const productUnitOverridesKey = "AXEN_PRODUCT_UNIT_OVERRIDES";
@@ -5460,8 +5493,9 @@
       const width = window.innerWidth || document.documentElement.clientWidth || 0;
       const height = window.innerHeight || document.documentElement.clientHeight || 0;
       const isLandscape = width > height;
+      // Desk side-cart only on real tablet landscape. Phone + tablet portrait use mobile shell.
       const isTabletLandscape = isLandscape && width >= 900 && height >= 540;
-      const compact = !isTabletLandscape && (Boolean(window.Capacitor) || Math.min(width, height) <= 760);
+      const compact = !isTabletLandscape;
       document.documentElement.classList.toggle("pos-layout-compact", compact);
       document.documentElement.classList.toggle("pos-layout-tablet", isTabletLandscape);
       applyNativeSafeArea();
@@ -7157,7 +7191,30 @@
     }
 
     function orderTokenNumber(order = {}) {
+      if (order.tokenNumber != null && String(order.tokenNumber).trim() !== "") {
+        const num = Number(String(order.tokenNumber).replace(/\D/g, ""));
+        if (Number.isFinite(num) && num > 0) return String(num).padStart(4, "0").slice(-4);
+      }
       return String(order.id || Date.now()).slice(-4).padStart(4, "0");
+    }
+
+    function dailyTokenStorageKey(date = new Date()) {
+      return scopedStorageKey(`AXEN_DAILY_TOKEN_${dateInputValue(date)}`);
+    }
+
+    function nextDailyTokenNumber(at = new Date()) {
+      const storageKey = dailyTokenStorageKey(at);
+      let last = Number(localStorage.getItem(storageKey) || 1000);
+      const dayKey = dateInputValue(at);
+      const fromOrders = (Array.isArray(orders) ? orders : [])
+        .filter(order => dateInputValue(orderDate(order)) === dayKey)
+        .map(order => Number(String(order.tokenNumber || "").replace(/\D/g, "")))
+        .filter(num => Number.isFinite(num) && num >= 1001 && num <= 9999);
+      if (fromOrders.length) last = Math.max(last, ...fromOrders);
+      if (!Number.isFinite(last) || last < 1000) last = 1000;
+      const next = last >= 9999 ? 1001 : last + 1;
+      localStorage.setItem(storageKey, String(next));
+      return String(next).padStart(4, "0");
     }
 
     function kitchenTokenText(order = {}, includeHeader = true, columns = receiptTextColumns(kitchenPrinter)) {
@@ -10313,7 +10370,9 @@
       const payload = {
         id: Date.now(),
         clientOrderId: "mobile-" + Date.now() + "-" + Math.random().toString(16).slice(2),
+        tokenNumber: nextDailyTokenNumber(),
         time: new Date().toLocaleString(),
+        createdAt: new Date().toISOString(),
         canteen: settings.canteenName,
         cashier: user.name,
         cashierMobile: user.mobile || "",
