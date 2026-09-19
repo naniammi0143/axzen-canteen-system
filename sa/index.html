@@ -5344,7 +5344,7 @@
         return defaults;
       }
     })();
-    const appBuild = "3.64";
+    const appBuild = "3.66";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const productUnitOverridesKey = "AXEN_PRODUCT_UNIT_OVERRIDES";
@@ -5409,6 +5409,7 @@
     let adminTab = "dashboard";
     let activePosSection = "billing";
     let showingCategoryHome = false;
+    let openedFromCategoryHome = false;
     let serverOnline = navigator.onLine;
     let adminUnlocked = false;
     let adminAccessToken = "";
@@ -5678,36 +5679,108 @@
       return ({ Tiffin: "Tiffins", Lunch: "Rice", "Half Items": singleItemsCategory })[category] || category;
     }
 
+    function normalizeSaleUnit(value = "") {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      const lower = raw.toLowerCase().replace(/\./g, "");
+      if (["kg", "kgs", "kilogram", "kilograms"].includes(lower)) return "Kgs";
+      if (["gram", "grams", "gm", "gms"].includes(lower)) return "Grams";
+      if (["ltr", "ltrs", "liter", "litre", "liters", "litres"].includes(lower)) return "Ltrs";
+      if (["ml", "milliliter", "millilitre", "milliliters", "millilitres"].includes(lower)) return "ML";
+      if (["piece", "pieces", "pc", "pcs", "nos", "no", "number"].includes(lower)) return "Pieces";
+      if (["plate", "plates"].includes(lower)) return "Plate";
+      if (["item", "items"].includes(lower)) return "Item";
+      if (["cup", "cups"].includes(lower)) return "Cup";
+      if (["glass", "glasses"].includes(lower)) return "Glass";
+      if (["bottle", "bottles"].includes(lower)) return "Bottle";
+      if (["packet", "packets", "pkt"].includes(lower)) return "Packet";
+      if (["box", "boxes"].includes(lower)) return "Box";
+      if (["dozen", "dozens"].includes(lower)) return "Dozen";
+      return raw;
+    }
+
+    function isWeightSaleUnit(unitValue = "") {
+      const unit = normalizeSaleUnit(unitValue).toLowerCase();
+      return ["kgs", "grams"].includes(unit);
+    }
+
+    function isCountSaleUnit(unitValue = "") {
+      const unit = normalizeSaleUnit(unitValue).toLowerCase();
+      return ["pieces", "plate", "item", "cup", "glass", "bottle", "packet", "box", "dozen", "bundle", "set", "pair", "sachet", "tin"].includes(unit);
+    }
+
+    function isVolumeSaleUnit(unitValue = "") {
+      const unit = normalizeSaleUnit(unitValue).toLowerCase();
+      return ["ltrs", "ml"].includes(unit);
+    }
+
+    function billingTypeForUnit(unitValue = "") {
+      return isWeightSaleUnit(unitValue) ? "weight" : "quantity";
+    }
+
+    function shortUnitLabel(unitValue = "") {
+      const unit = normalizeSaleUnit(unitValue) || "Item";
+      const lower = unit.toLowerCase();
+      if (lower === "kgs") return "kg";
+      if (lower === "grams") return "g";
+      if (lower === "ltrs") return "ltr";
+      if (lower === "pieces") return "pcs";
+      if (lower === "plate") return "plate";
+      return lower;
+    }
+
     function itemSaleUnit(item = {}) {
-      const saved = String(item.unit || item.saleUnit || item.weightUnit || "").trim();
+      // Prefer explicit sale unit. weightUnit is only for weight cart lines.
+      const saved = normalizeSaleUnit(item.unit || item.saleUnit || "");
       if (saved) return saved;
+      if (item.weightUnit) return normalizeSaleUnit(item.weightUnit);
       const name = String(item.name || "").toLowerCase();
       const category = String(item.category || "").toLowerCase();
-      if (name.includes("egg")) return "Pieces";
+      if (name.includes("egg") || name.includes("anda")) return "Pieces";
       if (name.includes("oil") || name.includes("milk") || name.includes("juice") || category.includes("juice")) return "Ltrs";
       if (name.includes("water") || name.includes("bottle")) return "Bottle";
       if (name.includes("tea") || name.includes("coffee")) return "Cup";
       if (category.includes("tiffin") || category.includes("meal") || category.includes("biryani") || category.includes("breakfast")) return "Plate";
-      return "";
+      if (isChickenCategory(category) || ["chicken", "meat", "mutton", "fish"].some(keyword => name.includes(keyword))) return "Kgs";
+      return "Plate";
+    }
+
+    function lineSaleUnit(item = {}) {
+      const saleUnit = normalizeSaleUnit(item.unit || item.saleUnit || "");
+      if (saleUnit) return saleUnit;
+      if (item.weightUnit) return normalizeSaleUnit(item.weightUnit) || "Kgs";
+      return itemSaleUnit(item) || "Plate";
+    }
+
+    function isWeightCartLine(item = {}) {
+      const saleUnit = normalizeSaleUnit(item.unit || item.saleUnit || "");
+      if (isCountSaleUnit(saleUnit) || isVolumeSaleUnit(saleUnit)) return false;
+      if (item.weightUnit) return true;
+      if (isWeightSaleUnit(saleUnit)) return true;
+      if (item.billingType === "weight" && !saleUnit) return true;
+      const qty = Number(item.qty || 0);
+      return Math.abs(qty - Math.round(qty)) >= 0.001 && isWeightSaleUnit(lineSaleUnit(item));
     }
 
     function formatQtyUnit(qtyValue, unitValue = "") {
       const qty = Number(qtyValue || 0);
-      const rawUnit = String(unitValue || "").trim();
-      const unit = rawUnit || "Item";
+      const unit = normalizeSaleUnit(unitValue) || "Plate";
       const lower = unit.toLowerCase();
       const isWhole = Math.abs(qty - Math.round(qty)) < 0.001;
-      if (["kg", "kgs", "kilogram", "kilograms"].includes(lower)) {
+      if (lower === "kgs") {
         return `${isWhole ? String(Math.round(qty)) : qty.toFixed(3)} Kg`;
       }
-      if (["ltr", "ltrs", "liter", "litre", "liters", "litres"].includes(lower)) {
+      if (lower === "ltrs") {
         return `${isWhole ? String(Math.round(qty)) : qty.toFixed(3)} Ltr`;
       }
-      if (["ml", "milliliter", "millilitre", "milliliters", "millilitres"].includes(lower)) {
+      if (lower === "ml") {
         return `${isWhole ? String(Math.round(qty)) : qty.toFixed(3)} ML`;
       }
-      if (["gram", "grams", "gm", "gms"].includes(lower)) {
+      if (lower === "grams") {
         return `${isWhole ? String(Math.round(qty)) : qty.toFixed(3)} Grams`;
+      }
+      if (lower === "pieces") {
+        return `${isWhole ? String(Math.round(qty)) : qty.toFixed(3)} Pcs`;
       }
       return `${isWhole ? String(Math.round(qty)) : qty.toFixed(3)} ${unit}`;
     }
@@ -5765,17 +5838,25 @@
 
     function isChickenProduct(item) {
       const name = String(item?.name || "").toLowerCase();
-      const unit = itemSaleUnit(item).toLowerCase();
-      if (name.includes("egg")) return false;
-      if (["piece", "pieces", "pcs", "pc", "plate", "plates", "item", "items", "nos", "no", "dozen", "packet", "packets", "box", "boxes"].includes(unit)) {
-        return false;
-      }
+      const unit = itemSaleUnit(item);
+      if (name.includes("egg") || name.includes("anda")) return false;
+      if (isCountSaleUnit(unit) || isVolumeSaleUnit(unit)) return false;
+      if (isWeightSaleUnit(unit)) return true;
       if (item?.billingType === "weight") return true;
       return isChickenCategory(item?.category) || ["chicken", "meat", "meet", "mutton", "fish", "seafood"].some(keyword => name.includes(keyword));
     }
 
     function isEggProduct(item) {
-      return String(item?.name || "").toLowerCase().includes("egg");
+      const name = String(item?.name || "").toLowerCase();
+      return name.includes("egg") || name.includes("anda");
+    }
+
+    function isUnitSaleProduct(item) {
+      if (!item) return false;
+      if (isChickenProduct(item)) return false;
+      if (isEggProduct(item)) return true;
+      const unit = itemSaleUnit(item);
+      return isVolumeSaleUnit(unit) || ["pieces", "dozen"].includes(normalizeSaleUnit(unit).toLowerCase());
     }
 
     function isChickenShopCanteen() {
@@ -5980,6 +6061,64 @@
       document.documentElement.classList.toggle("auth-open", view === "loginView" || view === "setupView");
       window.scrollTo(0, 0);
     }
+
+    let lastNativeBackAt = 0;
+    function mountHasContent(id) {
+      const node = $(id);
+      return Boolean(node && String(node.innerHTML || "").trim());
+    }
+    function viewIsOpen(id) {
+      const node = $(id);
+      return Boolean(node && !node.classList.contains("hidden"));
+    }
+    // Android system back: close overlays / go previous screen. false = leave app (native minimizes).
+    function handleNativeBack() {
+      if (mountHasContent("paymentModalMount")) {
+        closePaymentModal();
+        return true;
+      }
+      if (mountHasContent("optionsModalMount")) {
+        closeOptionsModal();
+        return true;
+      }
+      const gate = $("subscriptionGate");
+      if (gate && !gate.classList.contains("hidden")) {
+        const expired = Boolean($("posView")?.classList.contains("subscription-expired"));
+        if (!expired) gate.classList.add("hidden");
+        return true;
+      }
+      if (viewIsOpen("adminView")) {
+        openBillingFromAdmin();
+        return true;
+      }
+      if (viewIsOpen("setupView")) return true;
+      if (viewIsOpen("loginView")) return false;
+      if (viewIsOpen("posView")) {
+        if (activePosSection !== "billing") {
+          setPosSection("billing");
+          return true;
+        }
+        if (!showingCategoryHome && openedFromCategoryHome) {
+          showingCategoryHome = true;
+          openedFromCategoryHome = false;
+          renderProducts();
+          return true;
+        }
+        const now = Date.now();
+        if (now - lastNativeBackAt < 1800) {
+          lastNativeBackAt = 0;
+          return false;
+        }
+        lastNativeBackAt = now;
+        if ($("posMessage")) {
+          $("posMessage").textContent = "Press back again to exit";
+          $("posMessage").className = "status";
+        }
+        return true;
+      }
+      return false;
+    }
+    window.AxenNativeBack = handleNativeBack;
 
     function setSession(nextUser, token) {
       user = nextUser;
@@ -6398,6 +6537,8 @@
           qty: kg,
           unitPrice: todayPrice,
           enteredAmount: amount,
+          unit: "Kgs",
+          billingType: "weight",
           weightUnit: "Kg"
         });
         renderCart();
@@ -6465,8 +6606,9 @@
           return;
         }
         const lineId = `${product.id}:${unit}:${Date.now()}`;
+        const { weightUnit, ...productRest } = product;
         cart.push({
-          ...product,
+          ...productRest,
           lineId,
           parentId: Number(product.id),
           optionName: `${qty} ${unit}`,
@@ -6476,6 +6618,8 @@
           unitPrice: rate || (amount / qty),
           enteredAmount: amount,
           unit,
+          billingType: billingTypeForUnit(unit),
+          weightUnit: "",
           qty
         });
         renderCart();
@@ -6576,10 +6720,11 @@
         openChickenSaleModal(product);
         return;
       }
-      if (!option && isEggProduct(product)) {
+      if (!option && isUnitSaleProduct(product)) {
         openUnitSaleModal({ ...product, unit: itemSaleUnit(product) || "Pieces" });
         return;
       }
+      const saleUnit = itemSaleUnit(product) || "Plate";
       const lineId = cartLineId(product, option);
       const existing = cart.find(item => item.lineId === lineId);
       if (existing) existing.qty += 1;
@@ -6591,6 +6736,9 @@
         name: option && option.name ? `${product.name} - ${option.name}` : product.name,
         nameTe: option && option.name ? `${product.nameTe || suggestTeluguName(product.name)} - ${option.nameTe || suggestTeluguName(option.name)}` : (product.nameTe || suggestTeluguName(product.name)),
         price: option && option.name ? Number(option.price || 0) : Number(product.price || 0),
+        unit: saleUnit,
+        billingType: billingTypeForUnit(saleUnit),
+        weightUnit: "",
         qty: 1
       });
       renderCart();
@@ -6643,7 +6791,7 @@
           <span class="cart-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
           <div class="cart-row-main">
             <strong>${esc(localizedName(item))}</strong>
-            <small>${item.weightUnit ? `${esc(formatQtyUnit(item.qty, item.weightUnit))}` : `${esc(formatQtyUnit(item.qty, itemSaleUnit(item)))}`}</small>
+            <small>${esc(formatQtyUnit(item.qty, lineSaleUnit(item)))}</small>
           </div>
           <div class="cart-row-actions">
             <div class="qty">
@@ -6680,7 +6828,7 @@
             <div class="cart-page-list">
               ${cart.map(item => `<div class="cart-page-row">
                 <span class="cart-page-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
-                <div><h3>${esc(localizedName(item))}</h3><p>${esc(item.weightUnit ? formatQtyUnit(item.qty, item.weightUnit) : itemSaleUnit(item) || item.category || item.optionName || "Item")}</p><span class="price">${item.weightUnit ? money(cartLineTotal(item)) : money(item.price)}</span></div>
+                <div><h3>${esc(localizedName(item))}</h3><p>${esc(formatQtyUnit(item.qty, lineSaleUnit(item)))}</p><span class="price">${isWeightCartLine(item) ? money(cartLineTotal(item)) : money(item.price)}</span></div>
               <div class="orders-qty"><button data-cart-page-qty="-1" data-id="${esc(item.lineId)}" type="button">-</button><input data-cart-page-input="${esc(item.lineId)}" type="number" min="0" inputmode="numeric" value="${item.qty}"><button data-cart-page-qty="1" data-id="${esc(item.lineId)}" type="button">+</button></div>
                 <strong class="cart-page-total">${money(cartLineTotal(item))}</strong>
                 <button class="cart-page-remove" data-cart-page-remove="${esc(item.lineId)}" type="button" aria-label="Remove item"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M8 7l1 13h6l1-13"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
@@ -6923,25 +7071,27 @@
       const doubleHeight = "\x1D\x21\x10";
       const receiptStart = "\n";
       const receiptEnd = "\n\n";
-      const hasWeightItems = (order.items || []).some(item => item.weightUnit || Number(item.qty || 0) % 1 !== 0);
+      const hasWeightItems = (order.items || []).some(item => isWeightCartLine(item));
       const weightText = item => {
-        return formatQtyUnit(item.qty, item.weightUnit || "Kg").toUpperCase();
+        return formatQtyUnit(item.qty, lineSaleUnit(item)).toUpperCase();
       };
       const meatNameLines = item => wrapText(printItemName(item), 15).slice(0, 2);
       const meatItemLine = item => {
         const names = meatNameLines(item);
         const itemAmount = cartLineTotal(item);
+        const unit = lineSaleUnit(item);
+        const rate = Number(item.unitPrice || item.price || 0);
         return [
           boldOn + doubleHeight + leftRight(names[0] || "ITEM", weightText(item)) + normalSize,
           ...(names.slice(1).map(name => boldOn + pad(name, width) + boldOff)),
-          boldOff + leftRight(`Rs ${Number(item.unitPrice || item.price || 0).toFixed(2)}/kg`, amountText(itemAmount))
+          boldOff + leftRight(`Rs ${rate.toFixed(2)}/${shortUnitLabel(unit)}`, amountText(itemAmount))
         ].join("\n");
       };
       const itemLine = (index, item) => {
         const qty = Number(item.qty || 0);
         const rate = Number(item.price || 0);
-        const amount = qty * rate;
-        const unit = itemSaleUnit(item);
+        const amount = cartLineTotal(item);
+        const unit = lineSaleUnit(item);
         const nameLines = wrapText(printItemName(item), 21);
         const firstName = `${index} ${nameLines[0] || "Item"}`.slice(0, width);
         const extraNames = nameLines.slice(1).map(name => `   ${name}`.slice(0, width));
@@ -6952,6 +7102,7 @@
         const numberLine = `${" ".repeat(qtyAmtGap)}${pad(qtyText, qtyWidth, true)}${pad(amount.toFixed(2), amtWidth, true)}`.slice(0, width);
         return [firstName, ...extraNames, numberLine].join("\n");
       };
+      const formatOrderItemLine = (item, index) => isWeightCartLine(item) ? meatItemLine(item) : itemLine(index + 1, item);
       const total = Number(order.total || 0);
       const subtotal = Number(order.subtotal || total);
       const discount = Number(order.discount || 0);
@@ -6967,7 +7118,7 @@
         boldOff + center("axzen infotech")
       ] : [escInit + receiptStart + normalFont + normalSize + boldOn + alignCenter];
       if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
-      if (hasWeightItems) {
+      if (hasWeightItems && (order.items || []).every(item => isWeightCartLine(item))) {
         return [
           ...header,
           alignLeft + line,
@@ -6994,7 +7145,7 @@
         line,
         `# ITEM NAME${" ".repeat(Math.max(1, width - "# ITEM NAME".length - "QTY     AMT".length))}QTY     AMT`,
         line,
-        ...(order.items || []).map((item, index) => itemLine(index + 1, item)),
+        ...(order.items || []).map((item, index) => formatOrderItemLine(item, index)),
         line,
         leftRight("SUBTOTAL", amountText(subtotal)),
         leftRight("DISCOUNT", amountText(discount)),
@@ -7018,6 +7169,14 @@
         const text = cleanText(value).slice(0, width);
         const left = Math.max(0, Math.floor((width - text.length) / 2));
         return `${" ".repeat(left)}${text}`.padEnd(width);
+      };
+      // Double-width text fits in half the columns. Space-pad for that width only
+      // (do not mix with ESC align on the same line — that double-shifts).
+      const centerWide = value => {
+        const cols = Math.max(8, Math.floor(width / 2));
+        const text = cleanText(value).slice(0, cols);
+        const left = Math.max(0, Math.floor((cols - text.length) / 2));
+        return `${" ".repeat(left)}${text}`;
       };
       const pad = (value, size, alignRight = false) => {
         const text = cleanText(value);
@@ -7055,12 +7214,13 @@
       const timeText = billDate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
       const headerName = order.canteen || settings.canteenName || "SHAD KITCHEN";
       const tokenNo = orderTokenNumber(order);
+      const tokenLabel = `TOKEN ${tokenNo}`;
       const itemRows = (order.items || []).flatMap(item => {
         const nameLines = wrapText(printableKitchenItemName(item), 22).slice(0, 2);
         const qty = Number(item.qty || 0);
         const note = cleanText(item.optionName || item.billingNote || item.note || "").toUpperCase();
         const firstName = nameLines[0] || "ITEM";
-        const qtyText = `QTY:${qty}`;
+        const qtyText = formatQtyUnit(qty, lineSaleUnit(item)).toUpperCase();
         return [
           boldOn + doubleHeight + leftRight(firstName, qtyText) + normalSize,
           ...nameLines.slice(1).map(name => boldOn + doubleHeight + pad(name, width) + normalSize),
@@ -7074,12 +7234,13 @@
       ] : [escInit + alignCenter + boldOn];
       return [
         ...header,
-        tokenSize + center(`TOKEN ${tokenNo}`) + normalSize,
+        // Left align + half-width pad so double-size TOKEN sits in the paper middle.
+        alignLeft + boldOn + tokenSize + centerWide(tokenLabel) + normalSize + boldOff,
         line,
         alignLeft + leftRight(`DATE: ${dateText}`, `TIME: ${timeText}`),
         `CASHIER  : ${cleanText(order.cashier || user?.name || "-")}`.slice(0, width),
         thick,
-        boldOn + center("ITEMS") + boldOff,
+        alignCenter + boldOn + center("ITEMS") + boldOff,
         line,
         ...(itemRows.length ? itemRows : [boldOn + doubleHeight + leftRight("ITEM", "QTY:1") + normalSize, line]),
         alignCenter + boldOn + center("KITCHEN COPY"),
@@ -7090,7 +7251,7 @@
 
     async function receipt(order) {
       const options = receiptPrintOptions(order);
-      const hasWeightItems = (order.items || []).some(item => item.weightUnit || Number(item.qty || 0) % 1 !== 0);
+      const hasWeightItems = (order.items || []).some(item => isWeightCartLine(item));
       if (hasWeightItems) options.receiptJson = "";
       const useLogoHeader = hasWeightItems ? false : (canPrintReceiptLogo(options) || canPrintReceiptBitmap(options));
       const text = receiptText(order, false, !useLogoHeader);
@@ -7160,8 +7321,8 @@
           qty: Number(item.qty || 0),
           price: Number(item.unitPrice || item.price || 0),
           amount: cartLineTotal(item),
-          unit: itemSaleUnit(item),
-          weightUnit: item.weightUnit || ""
+          unit: lineSaleUnit(item),
+          weightUnit: isWeightCartLine(item) ? (item.weightUnit || lineSaleUnit(item)) : ""
         }))
       });
     }
@@ -7791,7 +7952,7 @@
 
     function printOrderToEnabledPrinters(order, customerText, customerOptions = {}) {
       const jobs = [];
-      const hasWeightItems = (order.items || []).some(item => item.weightUnit || Number(item.qty || 0) % 1 !== 0);
+      const hasWeightItems = (order.items || []).some(item => isWeightCartLine(item));
       const billingReady = billingPrinterEnabled && Boolean(billingPrinter);
       const kitchenReady = kitchenPrinterEnabled && Boolean(kitchenPrinter);
       const customerPrinter = billingReady ? billingPrinter : (hasWeightItems && kitchenReady ? kitchenPrinter : billingPrinter);
@@ -9085,6 +9246,7 @@
       if (billingMode) {
         activeCategory = defaultBillingCategory();
         showingCategoryHome = false;
+        openedFromCategoryHome = false;
         itemSearch = "";
         if ($("itemSearch")) $("itemSearch").value = "";
         renderProducts();
@@ -9347,9 +9509,13 @@
 
     async function persistProductFromPos(product) {
       const { _editing, ...cleanProduct } = product;
+      const unit = normalizeSaleUnit(cleanProduct.unit || itemSaleUnit(cleanProduct) || "Plate") || "Plate";
+      cleanProduct.unit = unit;
+      cleanProduct.billingType = billingTypeForUnit(unit);
+      if (!isWeightSaleUnit(unit)) cleanProduct.weightUnit = "";
       if (cleanProduct.unit) saveProductUnitOverride(cleanProduct, cleanProduct.unit);
       const saved = await adminApi("/products", { method: "POST", body: JSON.stringify(cleanProduct) });
-      const serverProducts = Array.isArray(saved.products) ? saved.products.map(item => Number(item.id) === Number(cleanProduct.id) && !item.unit ? { ...item, unit: cleanProduct.unit } : item) : null;
+      const serverProducts = Array.isArray(saved.products) ? saved.products.map(item => Number(item.id) === Number(cleanProduct.id) && !item.unit ? { ...item, unit: cleanProduct.unit, billingType: cleanProduct.billingType } : item) : null;
       products = applyProductUnitOverrides(serverProducts || products.map(item => Number(item.id) === Number(cleanProduct.id) ? cleanProduct : item));
       writeJson(productCacheKey, products);
       renderProducts();
@@ -9596,7 +9762,7 @@
         halfPrice,
         category: $("newItemCategory").value,
         unit,
-        billingType: ["kgs", "kg", "grams", "gram"].includes(String(unit).toLowerCase()) ? "weight" : "quantity",
+        billingType: billingTypeForUnit(unit),
         image,
         hidden: false,
         sortOrder: existing ? existing.sortOrder : products.length + 1,
@@ -10168,9 +10334,11 @@
           optionName: item.optionName || "",
           price: item.price,
           qty: item.qty,
+          unit: lineSaleUnit(item),
+          billingType: isWeightCartLine(item) ? "weight" : "quantity",
           unitPrice: item.unitPrice || item.price,
           enteredAmount: item.enteredAmount || cartLineTotal(item),
-          weightUnit: item.weightUnit || ""
+          weightUnit: isWeightCartLine(item) ? (item.weightUnit || "Kg") : ""
         }))
       };
       if (selectedPayment === "Split" && Math.round((payload.paymentBreakup.cash + payload.paymentBreakup.online) * 100) !== Math.round(payload.total * 100)) {
@@ -11183,6 +11351,7 @@
       if (categoryCard) {
         activeCategory = categoryCard.dataset.categoryCard;
         showingCategoryHome = false;
+        openedFromCategoryHome = true;
         renderProducts();
         setTimeout(maybeOpenDailyChickenPrices, 0);
         return;
@@ -11242,6 +11411,7 @@
       closeOptionsModal();
       if (activePosSection !== "billing") setPosSection("billing");
       showingCategoryHome = true;
+      openedFromCategoryHome = false;
       renderProducts();
     });
     $("profileBtn").addEventListener("click", openMainMenu);

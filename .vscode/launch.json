@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Preview Axzen SA",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/preview-sa.js",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
+    }
+  ]
+}

@@ -34,7 +34,7 @@ const featureCatalog = [
   { id: "metaAds", label: "Meta Ads", collection: "metaAds", defaultEnabled: false },
   { id: "creatives", label: "Creatives", collection: "creatives", defaultEnabled: false },
   { id: "analytics", label: "Analytics", collection: "analytics", defaultEnabled: false },
-  { id: "conversations", label: "Conversations", collection: "conversations", defaultEnabled: false },
+  { id: "conversations", label: "Inbox", collection: "conversations", defaultEnabled: true },
   { id: "tasks", label: "Tasks & Follow-ups", collection: "tasks", defaultEnabled: true },
   { id: "calendar", label: "Calendar", collection: "calendar", defaultEnabled: true },
   { id: "employees", label: "Employees", collection: "employees", defaultEnabled: false },
@@ -44,7 +44,7 @@ const featureCatalog = [
   { id: "deals", label: "Deals", collection: "deals", defaultEnabled: true },
   { id: "subscriptions", label: "Subscriptions", collection: "subscriptions", defaultEnabled: false },
   { id: "payments", label: "Payments", collection: "payments", defaultEnabled: false },
-  { id: "supportTickets", label: "Support Tickets", collection: "supportTickets", defaultEnabled: false },
+  { id: "supportTickets", label: "Support Tickets", collection: "supportTickets", defaultEnabled: true },
   { id: "reports", label: "Reports", collection: "reports", defaultEnabled: true },
   { id: "automations", label: "Automations", collection: "automations", defaultEnabled: false },
   { id: "aiAssistant", label: "AI Assistant", collection: "aiAssistant", defaultEnabled: false },
@@ -54,6 +54,9 @@ const featureCatalog = [
 ];
 const allFeatureIds = featureCatalog.map((feature) => feature.id);
 const defaultFeatureIds = featureCatalog.filter((feature) => feature.defaultEnabled).map((feature) => feature.id);
+const clientFeatureIds = [
+  "dashboard", "leads", "customers", "tasks", "conversations", "supportTickets", "reports", "settings"
+];
 const crmCollections = [...new Set(featureCatalog.map((feature) => feature.collection).filter(Boolean).concat("notes", "integrationEvents"))];
 
 if (!mongoUri) {
@@ -89,6 +92,7 @@ const tenantSchema = new mongoose.Schema({
   plan: { type: String, default: "Starter" },
   status: { type: String, default: "active", enum: ["trial", "active", "suspended"] },
   features: { type: [String], default: defaultFeatureIds },
+  workspaceType: { type: String, default: "client", enum: ["infotech", "client"] },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -156,6 +160,7 @@ function publicTenant(tenant) {
     plan: tenant.plan,
     status: tenant.status,
     features: tenant.features || defaultFeatureIds,
+    workspaceType: tenant.workspaceType || (tenant.plan === "Platform" ? "infotech" : "client"),
     createdAt: tenant.createdAt
   };
 }
@@ -250,12 +255,14 @@ async function ensurePlatformAdmin() {
       normalizedName,
       plan: "Platform",
       status: "active",
+      workspaceType: "infotech",
       features: allFeatureIds
     });
-  } else if (!tenant.features?.length) {
+  } else {
     tenant.features = allFeatureIds;
     tenant.plan = tenant.plan || "Platform";
     tenant.status = tenant.status || "active";
+    tenant.workspaceType = "infotech";
     await tenant.save();
   }
 
@@ -292,17 +299,29 @@ app.get("/api/features", (req, res) => {
 
 app.post("/api/auth/login", requireDb, async (req, res) => {
   const company = titleCase(req.body.companyName) || "Personal CRM";
-  const username = titleCase(req.body.username);
+  const loginId = String(req.body.loginId || "").trim();
+  const loginDigits = cleanPhone(loginId);
+  const usernameRaw = String(req.body.username || (loginDigits.length >= 8 && loginDigits === loginId.replace(/\D/g, "") ? "" : loginId)).trim();
+  const username = titleCase(usernameRaw);
   const normalizedUsername = username.toLowerCase();
-  const phone = cleanPhone(req.body.phone);
+  const phone = cleanPhone(req.body.phone || (loginDigits.length >= 8 ? loginId : ""));
   const password = String(req.body.password || "");
 
-  if (!normalizedUsername || phone.length < 8 || password.length < 6) {
-    return res.status(400).json({ success: false, message: "Username, valid phone number, minimum 6 character password kavali." });
+  if ((!normalizedUsername && phone.length < 8) || password.length < 6) {
+    return res.status(400).json({ success: false, message: "Username or phone, and minimum 6 character password kavali." });
   }
 
   await ensurePlatformAdmin();
-  let user = await User.findOne({ normalizedUsername, phone });
+  let user = null;
+  if (normalizedUsername && phone.length >= 8) {
+    user = await User.findOne({ normalizedUsername, phone });
+  }
+  if (!user && phone.length >= 8) {
+    user = await User.findOne({ phone, active: { $ne: false } });
+  }
+  if (!user && normalizedUsername) {
+    user = await User.findOne({ normalizedUsername, active: { $ne: false } });
+  }
   let tenant;
 
   if (user) {
@@ -321,7 +340,79 @@ app.post("/api/auth/login", requireDb, async (req, res) => {
   }
 
   const token = jwt.sign({ userId: String(user._id), tenantId: String(tenant._id) }, jwtSecret, { expiresIn: "7d" });
-  res.json({ success: true, token, tenant: publicTenant(tenant), user: publicUser(user) });
+  res.json({ success: true, token, tenant: publicTenant(tenant), user: publicUser(user), company });
+});
+
+function metricNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+}
+
+function campaignInsightRow(row = {}, channelOverride = "") {
+  return {
+    id: String(row.id || row._id || ""),
+    name: row.name || "Campaign",
+    channel: channelOverride || row.channel || "Meta Ads",
+    status: row.status || "Draft",
+    budget: metricNumber(row.budget),
+    reach: metricNumber(row.reach),
+    impressions: metricNumber(row.impressions),
+    clicks: metricNumber(row.clicks),
+    leads: metricNumber(row.leads),
+    sent: metricNumber(row.sent || row.recipients),
+    delivered: metricNumber(row.delivered),
+    read: metricNumber(row.read),
+    source: row.insightsSource || "manual"
+  };
+}
+
+async function loadAdsInsights(tenantId) {
+  const meta = await getIntegration(tenantId, "meta");
+  const whatsapp = await getIntegration(tenantId, "whatsapp");
+  const apiReady = Boolean(
+    (meta?.accessToken && (meta.adAccountId || meta.leadFormId)) ||
+    (whatsapp?.accessToken && whatsapp.phoneNumberId) ||
+    process.env.META_ADS_ACCESS_TOKEN ||
+    process.env.WHATSAPP_INSIGHTS_TOKEN
+  );
+
+  // Later: use Graph API here (campaign insights + WhatsApp analytics) and write reach back to campaigns.
+  // if (apiReady) { ...fetch Meta ads insights... }
+
+  const campaigns = (await models.campaigns.find({ tenantId }).sort({ createdAt: -1 }).limit(100))
+    .map(publicRecord)
+    .map((row) => campaignInsightRow(row));
+  const whatsappCampaigns = (await models.whatsappCampaigns.find({ tenantId }).sort({ createdAt: -1 }).limit(100))
+    .map(publicRecord)
+    .map((row) => campaignInsightRow(row, "WhatsApp"));
+  const all = [...campaigns, ...whatsappCampaigns];
+  const sum = (list, key) => list.reduce((total, item) => total + metricNumber(item[key]), 0);
+  const match = (name) => all.filter((item) => String(item.channel).toLowerCase().includes(name));
+  const metaRows = all.filter((item) => /meta|facebook|ads/i.test(item.channel) && !/instagram|whatsapp/i.test(item.channel));
+
+  return {
+    apiReady,
+    apiMessage: apiReady
+      ? "Tokens saved. Add Graph insights fetch inside GET /api/ads/insights to show live reach."
+      : "API not connected yet. Reach numbers use campaign fields until Meta / WhatsApp insights API is added.",
+    totals: {
+      whatsappReach: sum(match("whatsapp"), "reach") || sum(match("whatsapp"), "delivered") || sum(match("whatsapp"), "sent"),
+      instagramReach: sum(match("instagram"), "reach"),
+      adsReach: sum(metaRows, "reach"),
+      impressions: sum(all, "impressions"),
+      clicks: sum(all, "clicks"),
+      leads: sum(all, "leads"),
+      sent: sum(all, "sent"),
+      delivered: sum(all, "delivered"),
+      read: sum(all, "read")
+    },
+    campaigns: all
+  };
+}
+
+app.get("/api/ads/insights", requireDb, auth, async (req, res) => {
+  const insights = await loadAdsInsights(req.tenantId);
+  res.json({ success: true, ...insights });
 });
 
 app.get("/api/bootstrap", requireDb, auth, async (req, res) => {
@@ -473,6 +564,8 @@ app.post("/api/webhooks/meta", requireDb, async (req, res) => {
     for (const change of changes) {
       const phoneNumberId = change.value?.metadata?.phone_number_id;
       const leadgenId = change.value?.leadgen_id;
+      const inboundMessages = change.value?.messages || [];
+      const contacts = change.value?.contacts || [];
       const integration = phoneNumberId
         ? await models.integrations.findOne({ provider: "whatsapp", phoneNumberId })
         : await models.integrations.findOne({ provider: "meta", leadFormId: change.value?.form_id });
@@ -489,10 +582,124 @@ app.post("/api/webhooks/meta", requireDb, async (req, res) => {
             notes: "Imported from Meta leadgen webhook"
           });
         }
+        for (const message of inboundMessages) {
+          const phone = cleanPhone(message.from);
+          const name = contacts.find((item) => cleanPhone(item.wa_id) === phone)?.profile?.name || phone;
+          const text = message.text?.body || message.button?.text || message.type || "";
+          const existing = await models.conversations.findOne({ tenantId: integration.tenantId, phone });
+          const entryMessage = { direction: "in", body: text, at: new Date(), channel: "WhatsApp" };
+          if (existing) {
+            const messages = Array.isArray(existing.messages) ? existing.messages : [];
+            messages.push(entryMessage);
+            existing.messages = messages;
+            existing.name = existing.name || name;
+            existing.lastMessage = text;
+            existing.status = "Open";
+            existing.channel = "WhatsApp";
+            existing.updatedAt = new Date();
+            await existing.save();
+          } else {
+            await models.conversations.create({
+              tenantId: integration.tenantId,
+              createdBy: integration.createdBy,
+              name,
+              phone,
+              channel: "WhatsApp",
+              status: "Open",
+              lastMessage: text,
+              messages: [entryMessage],
+              createdAt: new Date()
+            });
+          }
+        }
       }
     }
   }
   res.json({ success: true });
+});
+
+app.get("/api/inbox", requireDb, auth, async (req, res) => {
+  const isAdmin = req.user.role === "Platform Admin";
+  const query = isAdmin ? {} : { tenantId: req.tenantId };
+  const rows = await models.conversations.find(query).sort({ updatedAt: -1, createdAt: -1 }).limit(200);
+  const tenantIds = [...new Set(rows.map((row) => String(row.tenantId)))];
+  const tenants = await Tenant.find({ _id: { $in: tenantIds } });
+  const tenantMap = Object.fromEntries(tenants.map((tenant) => [String(tenant._id), tenant.name]));
+  res.json({
+    success: true,
+    conversations: rows.map((row) => ({
+      ...publicRecord(row),
+      workspaceName: tenantMap[String(row.tenantId)] || "Workspace"
+    }))
+  });
+});
+
+app.post("/api/conversations/:recordId/reply", requireDb, auth, async (req, res) => {
+  const body = String(req.body.body || req.body.message || "").trim();
+  if (!body) return res.status(400).json({ success: false, message: "Reply message is required" });
+  const isAdmin = req.user.role === "Platform Admin";
+  const conversation = await models.conversations.findOne(
+    isAdmin ? { _id: req.params.recordId } : { _id: req.params.recordId, tenantId: req.tenantId }
+  );
+  if (!conversation) return res.status(404).json({ success: false, message: "Conversation not found" });
+  const messages = Array.isArray(conversation.messages) ? conversation.messages : [];
+  messages.push({
+    direction: "out",
+    body,
+    at: new Date(),
+    by: req.user.displayName || req.user.username,
+    channel: conversation.channel || "WhatsApp"
+  });
+  conversation.messages = messages;
+  conversation.lastMessage = body;
+  conversation.status = "Waiting";
+  conversation.updatedAt = new Date();
+  await conversation.save();
+
+  let delivery = { sent: false };
+  const integration = await models.integrations.findOne({ tenantId: conversation.tenantId, provider: "whatsapp" });
+  if (integration?.phoneNumberId && integration?.accessToken && conversation.phone) {
+    const response = await fetch(`https://graph.facebook.com/v20.0/${integration.phoneNumberId}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${integration.accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        to: cleanPhone(conversation.phone),
+        type: "text",
+        text: { preview_url: false, body }
+      })
+    });
+    const data = await response.json().catch(() => ({}));
+    delivery = { sent: response.ok, status: response.status, data };
+    await createIntegrationEvent(conversation.tenantId, req.user._id, "whatsapp", "inbox_reply", {
+      ok: response.ok,
+      conversationId: String(conversation._id),
+      to: conversation.phone
+    });
+  }
+  res.json({ success: true, record: publicRecord(conversation), delivery });
+});
+
+app.patch("/api/:collection/:recordId", requireDb, auth, async (req, res) => {
+  const collection = req.params.collection;
+  if (!crmCollections.includes(collection)) {
+    return res.status(404).json({ success: false, message: "Unknown CRM module" });
+  }
+  const tenant = await ensureModuleEnabled(req, res, collection);
+  if (!tenant) return;
+  const isAdmin = req.user.role === "Platform Admin";
+  const payload = { ...req.body, updatedAt: new Date() };
+  delete payload.id;
+  delete payload._id;
+  delete payload.tenantId;
+  delete payload.createdBy;
+  const record = await models[collection].findOneAndUpdate(
+    isAdmin ? { _id: req.params.recordId } : { _id: req.params.recordId, tenantId: req.tenantId },
+    payload,
+    { new: true }
+  );
+  if (!record) return res.status(404).json({ success: false, message: "Record not found" });
+  res.json({ success: true, record: publicRecord(record) });
 });
 
 app.post("/api/:collection", requireDb, auth, async (req, res) => {
@@ -565,7 +772,8 @@ app.post("/api/admin/tenants", requireDb, auth, requirePlatformAdmin, async (req
       normalizedName,
       plan: req.body.plan || "Starter",
       status: req.body.status || "trial",
-      features: normalizeFeatures(req.body.features)
+      workspaceType: "client",
+      features: normalizeFeatures(req.body.features || clientFeatureIds)
     });
   } else {
     tenant.plan = req.body.plan || tenant.plan;

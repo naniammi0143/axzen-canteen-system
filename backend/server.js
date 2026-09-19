@@ -1246,7 +1246,12 @@ async function saveMenuItem(payload) {
     halfPrice: Number(payload.halfPrice || payload.singlePrice || payload.halfItemPrice || 0),
     category: payload.category || "Snacks",
     unit: String(payload.unit || payload.saleUnit || "Plate").trim() || "Plate",
-    billingType: payload.billingType === "weight" ? "weight" : "quantity",
+    billingType: (() => {
+      const unit = String(payload.unit || payload.saleUnit || "").trim();
+      if (["kgs", "kg", "grams", "gram"].includes(unit.toLowerCase())) return "weight";
+      if (unit) return "quantity";
+      return payload.billingType === "weight" ? "weight" : "quantity";
+    })(),
     image: payload.image || "",
     subItems: normalizeSubItems(payload.subItems),
     sortOrder: payload.sortOrder !== undefined && payload.sortOrder !== "" ? Number(payload.sortOrder) : Number(payload.id || nextId(current)),
