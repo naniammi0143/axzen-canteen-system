@@ -336,6 +336,8 @@
     </main>
   </section>
 
+  <link rel="stylesheet" href="/mobile/dine-in.css">
+  <script src="/mobile/dine-in.js"></script>
   <script>
     const isLocalHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
     const apiHost = isLocalHost ? "localhost" : window.location.hostname;
@@ -421,6 +423,12 @@
     }
 
     function render() {
+      window.DineIn.close();
+      if (tab === "dinein") {
+        $("pageTitle").textContent = "Dine In — Tables & Kitchen";
+        window.DineIn.mount($("page"), { api, admin: session?.role === "admin", getMenu: () => api("/products"), isActive: () => tab === "dinein" });
+        return;
+      }
       document.querySelectorAll("[data-tab]").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
       const titles = { dashboard: "Dashboard", sales: "Sales", menu: "Menu Management", stock: "Inventory / Stock", finance: "Finance", users: "Users", reports: "Reports", whatsapp: "WhatsApp Reports", settings: "Settings" };
       $("pageTitle").textContent = titles[tab] || "Dashboard";
@@ -1367,6 +1375,10 @@
       localStorage.removeItem("AXEN_ADMIN_TOKEN");
       location.reload();
     });
+    const dineNav = document.createElement("button");
+    dineNav.dataset.tab = "dinein";
+    dineNav.textContent = "Dine In / Tables / Kitchen";
+    document.querySelector('[data-tab="reports"]').after(dineNav);
     document.querySelectorAll("[data-tab]").forEach(btn => btn.addEventListener("click", () => { tab = btn.dataset.tab; pageMessage(""); render(); }));
     if (session && ["admin", "store_keeper", "inventory", "manager"].includes(session.role)) {
       if (session.role !== "admin") tab = "stock";

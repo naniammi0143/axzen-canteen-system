@@ -13,15 +13,30 @@ android {
         applicationId "com.axzenhospitality.canteenclean"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 364
-        versionName "3.64"
-        setProperty("archivesBaseName", "Axzen-POS-v3.64")
+        versionCode 365
+        versionName "3.65"
+        setProperty("archivesBaseName", "Axzen-DineIn")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
+    }
+    flavorDimensions "application"
+    productFlavors {
+        pos { dimension "application" }
+        employee {
+            dimension "application"
+            applicationId "com.axenhospitality.employee"
+            versionCode 114
+            versionName "1.14"
+        }
+    }
+    sourceSets {
+        main.assets.srcDirs = []
+        pos.assets.srcDirs = ["$buildDir/generated/posAssets"]
+        employee.assets.srcDirs = ["$buildDir/generated/employeeAssets"]
     }
     signingConfigs {
         release {
@@ -63,6 +78,25 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+
+// Each APK packages its own web app; never overwrite POS assets to build Employee.
+[pos: [web: 'sa', id: 'com.axzenhospitality.canteenclean', title: 'Axzen POS'],
+ employee: [web: 'employee-web', id: 'com.axenhospitality.employee', title: 'Axzen Employee']].each { flavor, config ->
+    def taskName = "prepare${flavor.capitalize()}WebAssets"
+    tasks.register(taskName, Sync) {
+        from(rootProject.file("../${config.web}")) { into 'public' }
+        into("$buildDir/generated/${flavor}Assets")
+        doLast {
+            new File(destinationDir, 'capacitor.config.json').text = groovy.json.JsonOutput.toJson([
+                appId: config.id, appName: config.title, webDir: config.web, server: [cleartext: true]
+            ])
+            new File(destinationDir, 'capacitor.plugins.json').text = '[]'
+        }
+    }
+    tasks.configureEach { task ->
+        if (task.name.startsWith("merge${flavor.capitalize()}") && task.name.endsWith('Assets')) task.dependsOn(taskName)
+    }
+}
 
 try {
     def servicesJSON = file('google-services.json')

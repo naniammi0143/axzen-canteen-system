@@ -321,6 +321,8 @@ let memory = {
 };
 
 const orderSchema = new mongoose.Schema({
+  orderType: String, tableId: String, tableName: String, dineSessionId: String,
+  kitchenTickets: [mongoose.Schema.Types.Mixed],
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   id: { type: Number, index: true },
   clientOrderId: { type: String, sparse: true, index: true },
@@ -340,6 +342,8 @@ const orderSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "orders" });
 
 const saleSchema = new mongoose.Schema({
+  orderType: String, tableId: String, tableName: String, dineSessionId: String,
+  kitchenTickets: [mongoose.Schema.Types.Mixed],
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   orderId: Number,
   clientOrderId: { type: String, sparse: true, index: true },
@@ -1803,14 +1807,17 @@ function normalizePaymentBreakup(value, payment, total) {
     }
     return { cash, online, credit };
   }
-  if (payment === "Online") return { cash: 0, online: total, credit: 0 };
+  if (payment === "Online" || payment === "Card") return { cash: 0, online: total, credit: 0 };
   if (payment === "Credit") return { cash: 0, online: 0, credit: total };
   if (payment === "Cancel") return { cash: 0, online: 0, credit: 0 };
   return { cash: total, online: 0, credit: 0 };
 }
 
-async function saveOrder(payload) {
+async function saveOrder(payload, dineIn = false) {
   const order = makeOrder(payload);
+  if (dineIn) {
+    for (const key of ["orderType", "tableId", "tableName", "dineSessionId", "kitchenTickets"]) order[key] = payload[key];
+  }
 
   if (!mongoReady) {
     const exists = memory.orders.find(row =>
@@ -3283,6 +3290,10 @@ app.post("/addresses", requireDatabase, requireAdmin, async (req, res) => {
     res.status(400).json({ success: false, message: error.message });
   }
 });
+
+require("./dine-in").registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth,
+  requireAdmin, requireSuperAdmin, MarketingCanteen, allMenuItems, getSettings,
+  saveOrder: payload => saveOrder(payload, true) });
 
 app.post("/orders", requireDatabase, requireCanteenAuth, async (req, res) => {
   try {

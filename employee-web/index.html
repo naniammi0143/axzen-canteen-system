@@ -1714,6 +1714,29 @@
           <div class="section-head"><h2>${isCustomer ? "Customer Printers" : "Demo Printers"}</h2>${pill(`${printers.length} allotted`)}</div>
           <div class="list">${printers.length ? printers.map(row => `<article class="row"><div><h3>${esc(row.serialNumber || "-")}</h3><p>${esc(row.model || "Thermal Printer")} | ${esc(row.status || "Allotted")}</p></div>${pill(row.allottedToName || item.submittedByName || "Employee")}</article>`).join("") : `<div class="empty">No printers allotted yet.</div>`}</div>
         </section>`;
+      if (isManager() && item.activatedCanteenId) {
+        const control = document.createElement("section");
+        control.className = "panel";
+        control.innerHTML = '<h2>Dine In entitlement</h2><p data-dine-status>Checking restaurant approval…</p><button class="btn" type="button" data-dine-toggle disabled>Loading…</button>';
+        $("page").prepend(control);
+        const status = control.querySelector("[data-dine-status]");
+        const toggle = control.querySelector("[data-dine-toggle]");
+        let enabled = false;
+        const refresh = async () => {
+          const access = await api(`/marketing-api/canteens/${item.id}/dine-in`);
+          enabled = access.enabled === true;
+          status.textContent = enabled ? "Approved: restaurant can use tables and kitchen orders." : access.requested ? "Restaurant requested an upgrade. Approval pending." : "Not approved: POS shows Upgrade Plan.";
+          toggle.textContent = enabled ? "Disable Dine In" : "Approve Dine In";
+          toggle.disabled = false;
+        };
+        toggle.onclick = async () => {
+          if (!confirm(`${enabled ? "Disable" : "Approve"} Dine In for ${item.canteenName}?`)) return;
+          toggle.disabled = true;
+          try { await api(`/marketing-api/canteens/${item.id}/dine-in`, { method: "POST", body: JSON.stringify({ enabled: !enabled }) }); await refresh(); }
+          catch (e) { status.textContent = e.message; toggle.disabled = false; }
+        };
+        refresh().catch(e => { status.textContent = e.message; });
+      }
       document.querySelectorAll("[data-info]").forEach(btn => btn.addEventListener("click", () => openInfoSheet(item, btn.dataset.info)));
       document.querySelectorAll("[data-timeline]").forEach(btn => btn.addEventListener("click", () => openTimelineSheet(rows[Number(btn.dataset.timeline)])));
       document.querySelector("[data-action='editActivity']")?.addEventListener("click", () => openActivitySheet(item));

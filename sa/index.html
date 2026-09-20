@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>axzen Infotech POS</title>
+  <link rel="stylesheet" href="dine-in.css">
+  <script src="dine-in.js"></script>
   <link rel="icon" href="assets/axzenPOS.png?v=2" type="image/png">
   <link rel="apple-touch-icon" href="assets/axzenPOS.png?v=2">
   <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
@@ -6966,6 +6968,7 @@
         escInit + receiptStart + normalFont + normalSize + boldOn + alignCenter + center(headerName.toUpperCase()),
         boldOff + center("axzen infotech")
       ] : [escInit + receiptStart + normalFont + normalSize + boldOn + alignCenter];
+      if (order.orderType === "Dine In") header.push(alignLeft + `DINE IN - TABLE: ${cleanText(order.tableName)}`);
       if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
       if (hasWeightItems) {
         return [
@@ -9039,6 +9042,26 @@
     function renderOptionPage() {
       const page = $("optionPage");
       if (!page) return;
+      if (activePosSection === "dinein") {
+        window.DineIn.mount(page, {
+          api, adminApi, admin: hasAdminAccess(),
+          getMenu: () => api("/products"),
+          isActive: () => activePosSection === "dinein" && Boolean(user),
+          printKot: (table, ticket, copy) => {
+            if (!kitchenPrinterEnabled || !kitchenPrinter) return "Select and enable a Kitchen Printer in Settings; ticket remains visible in Kitchen.";
+            const text = ["\x1B\x40", copy ? "COPY KITCHEN TICKET" : "KITCHEN ORDER", `TABLE: ${table.name}`, `KOT: ${ticket.number} / ${ticket.id.slice(-6)}`, new Date(ticket.createdAt).toLocaleString(), `Waiter: ${ticket.waiter || "-"}`, "--------------------------------", ...ticket.items.flatMap(i => [`${i.qty} x ${i.name}`, ...(i.note ? [`NOTE: ${i.note}`] : [])]), "--------------------------------", "\n\n"].join("\n");
+            return printToAddress(kitchenPrinter, text, { waitForResult: true });
+          },
+          printBill: order => {
+            if (!billingPrinterEnabled || !billingPrinter) throw new Error("Select Billing Printer in Settings");
+            const text = receiptText(order, true, true);
+            const result = printToAddress(billingPrinter, text, { waitForResult: true });
+            if (!isPrintSuccess(result)) throw new Error(result || "Printer not connected");
+            loadAdminData().catch(() => {});
+          }
+        });
+        return;
+      }
       const html = activePosSection === "held" ? ordersPageHtml()
         : activePosSection === "bulk" ? bulkOrderPageHtml()
         : activePosSection === "report" ? reportPageHtml()
@@ -9057,6 +9080,13 @@
         : activePosSection === "subscription" ? planRechargeHtml()
         : simpleAdminPageHtml(activePosSection);
       page.innerHTML = html;
+      if (activePosSection === "report") {
+        const tablesButton = document.createElement("button");
+        tablesButton.className = "page-action";
+        tablesButton.textContent = "Dine In — Table-wise Bills";
+        tablesButton.onclick = () => setPosSection("dinein");
+        page.prepend(tablesButton);
+      }
       bindOptionPageActions();
     }
 
@@ -9071,6 +9101,8 @@
     }
 
     function setPosSection(section) {
+      if (section === "bulk") section = "dinein";
+      window.DineIn.close();
       activePosSection = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
       if (["report", "finance"].includes(activePosSection)) resetReportRangeToToday();
       if (activePosSection === "bulk" && !["All", "Tiffin", "Snacks", "Drinks"].includes(activeCategory)) activeCategory = "All";
@@ -9332,9 +9364,10 @@
     }
 
     function ensureUserNavKeys() {
-      const keys = ["billing", "bulk", "report", "delivery"];
+      const keys = ["billing", "dinein", "report", "delivery"];
       document.querySelectorAll("#userNav button").forEach((btn, index) => {
         btn.dataset.nav = keys[index] || "billing";
+        if (index === 1) btn.querySelector("b").textContent = "Dine In";
       });
     }
 
