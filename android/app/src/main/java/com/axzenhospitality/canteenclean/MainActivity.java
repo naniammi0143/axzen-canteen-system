@@ -22,6 +22,7 @@ import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebView;
 import androidx.core.app.ActivityCompat;
+import androidx.activity.OnBackPressedCallback;
 import androidx.core.content.FileProvider;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -55,6 +56,14 @@ public class MainActivity extends BridgeActivity {
         getBridge().getWebView().addJavascriptInterface(new ShareBridge(), "AxenShare");
         getBridge().getWebView().addJavascriptInterface(new SafeAreaBridge(), "AxenSafe");
         applyWebViewSafeInsets();
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                getBridge().getWebView().evaluateJavascript(
+                    "(function(){return typeof window.handlePosBack==='function' ? window.handlePosBack() : false;})()",
+                    handled -> { if (!"true".equals(handled)) moveTaskToBack(true); }
+                );
+            }
+        });
     }
 
     @Override

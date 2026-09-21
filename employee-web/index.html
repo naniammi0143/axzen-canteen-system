@@ -1917,6 +1917,7 @@
               <label class="field">Pending Amount <input id="pendingAmount" type="number" min="0" value="0"></label>
               <label class="field">Payment Mode <select id="paymentMode"><option>UPI</option><option>Cash</option><option>Bank Transfer</option><option>Payment Link</option><option>Trial</option></select></label>
               <label class="field">Start Date <input id="planStartDate" type="date" value="${today()}"></label>
+              <label class="field full"><span><input id="dineInRequested" type="checkbox"> Request Dine In (tables and kitchen orders)</span><small>Manager approval is required to enable Dine In.</small></label>
               <label class="field full">Customer POS Items <textarea id="menuSetupItems" placeholder="Tea - 10&#10;Meals - 80&#10;Dosa - 45"></textarea></label>
               <label class="field full">Address <textarea id="address" placeholder="Full shop address"></textarea></label>
               <label class="field full">Notes <textarea id="notes" placeholder="Menu setup, printer, follow-up notes"></textarea></label>
@@ -1947,6 +1948,7 @@
         ownerName: $("ownerName").value.trim(),
         ownerMobile: $("ownerMobile").value.trim(),
         businessCategory: $("businessCategory").value,
+        dineInRequested: $("dineInRequested").checked,
         city: $("city").value.trim(),
         state: $("state").value.trim(),
         counters: Number($("counters").value || 1),
@@ -1993,7 +1995,7 @@
             <button class="btn small soft" type="button" data-canteen="${row.id}">Details</button>
           </div>
         </article>`).join("") : `<div class="empty">No pending approvals.</div>`}</section>`;
-      document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => approveCanteen(btn.dataset.approve)));
+      document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => openApprovalReviewSheet(btn.dataset.approve)));
       document.querySelectorAll("[data-review]").forEach(btn => btn.addEventListener("click", () => openApprovalReviewSheet(btn.dataset.review)));
       document.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", () => openRejectSheet(btn.dataset.reject)));
       document.querySelectorAll("[data-extend]").forEach(btn => btn.addEventListener("click", () => openExtendSheet(btn.dataset.extend)));
@@ -2007,6 +2009,7 @@
         const planType = overrides.planType || row.planType || (Number(row.requestedPaidAmount ?? row.paidAmount ?? 0) > 0 ? "Paid" : "Trial");
         await api(`/marketing-api/canteens/${id}/approve`, { method: "POST", body: JSON.stringify({
           status: planType === "Trial" ? "Trial" : "Active",
+          dineInEnabled: overrides.dineInEnabled,
           planType,
           selectedPlan: overrides.selectedPlan || row.selectedPlan || "Starter",
           trialDays: Number(overrides.demoDays || row.requestedDemoDays || row.demoDays || 7),
@@ -2026,8 +2029,13 @@
       }
     }
 
-    function openApprovalReviewSheet(id) {
+    async function openApprovalReviewSheet(id) {
       const item = (data.canteens || []).find(row => Number(row.id) === Number(id)) || {};
+      let dineInEnabled = item.dineInRequested === true;
+      if (item.activatedCanteenId) {
+        try { dineInEnabled = (await api(`/marketing-api/canteens/${id}/dine-in`)).enabled === true; }
+        catch (error) { toast(error.message, "error"); return; }
+      }
       const paymentRequested = item.paymentApprovalStatus === "Pending" || Number(item.requestedPaidAmount || 0) > 0;
       $("sheetCard").innerHTML = `
         <div class="section-head"><h2>Review Approval</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
@@ -2040,10 +2048,12 @@
         <label class="field">Payment Mode <select id="reviewPaymentMode"><option>${esc(item.requestedPaymentMode || item.paymentMode || "UPI")}</option><option>UPI</option><option>Cash</option><option>Bank Transfer</option><option>Payment Link</option><option>Trial</option></select></label>
         <label class="field">Plan Months <input id="reviewPlanMonths" type="number" min="1" value="1"></label>
         <label class="field">Employee Commission <input id="reviewCommission" type="number" min="0" value="${Number(item.commissionAmount || 0)}"></label>
+        <label class="field"><span><input id="reviewDineIn" type="checkbox" ${dineInEnabled ? "checked" : ""}> Approve Dine In — tables and kitchen orders</span><small>${item.dineInRequested ? "Requested by customer." : "Not requested by customer."} Unchecked customers see Upgrade Plan.</small></label>
         <button class="btn green" id="reviewApproveBtn" type="button">Approve & Activate</button>`;
       $("sheet").classList.remove("hidden");
       $("closeSheetBtn").addEventListener("click", closeSheet);
       $("reviewApproveBtn").addEventListener("click", () => approveCanteen(id, {
+        dineInEnabled: $("reviewDineIn").checked,
         selectedPlan: formValue("reviewPlan"),
         planType: formValue("reviewPlanType"),
         demoDays: Number(formValue("reviewDemoDays") || 7),
@@ -2549,6 +2559,11 @@
       route = stack.pop() || (route === "canteenDetail" ? "canteens" : "dashboard");
       render();
     });
+    window.handlePosBack = () => {
+      if (!$("sheet").classList.contains("hidden")) { closeSheet(); return true; }
+      if (route !== "dashboard" || stack.length) { $("backBtn").click(); return true; }
+      return false;
+    };
     $("notifyBtn").addEventListener("click", openNotifications);
     $("sheet").addEventListener("click", event => {
       if (event.target.id === "sheet") closeSheet();

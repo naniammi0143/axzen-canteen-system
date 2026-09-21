@@ -4,12 +4,22 @@ window.DineIn = (() => {
   const money = v => `₹${Number(v || 0).toFixed(2)}`;
   const id = () => crypto.randomUUID ? crypto.randomUUID() : `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   let dispose = () => {};
+  let back = () => false;
   function mount(root, options) {
     dispose();
     let stopped = false, busy = false, access = null, selected = "", mode = options.mode || "tables", menu = [], bills = [], draft = [], requestId = id(), message = "", error = false;
     let draftRevision = null, pendingSend = false;
     const api = (path, body, admin = false) => (admin ? options.adminApi || options.api : options.api)(path, body === undefined ? {} : { method: "POST", body: JSON.stringify(body), timeoutMs: 15000 });
     const active = () => !stopped && root.isConnected && (!options.isActive || options.isActive());
+    back = () => {
+      if (!active()) return false;
+      if (busy || pendingSend) { message = "Please wait for the current order to finish."; render(); return true; }
+      if (selected || mode !== "tables") {
+        if (draft.length && !confirm("Discard unsent items and return to tables?")) return true;
+        selected = ""; mode = "tables"; draft = []; requestId = id(); draftRevision = null; render(); return true;
+      }
+      return false;
+    };
     const table = () => access?.tables.find(t => t.tableId === selected);
     const summary = row => {
       const items = (row?.session?.tickets || []).filter(t => t.status !== "cancelled").flatMap(t => t.items);
@@ -135,5 +145,5 @@ window.DineIn = (() => {
     dispose = () => { stopped = true; clearInterval(timer); root.removeEventListener("click", click); };
     return dispose;
   }
-  return { mount, close: () => dispose() };
+  return { mount, close: () => dispose(), back: () => back() };
 })();

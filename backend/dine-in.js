@@ -72,15 +72,16 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
     if (!customer?.activatedCanteenId) fail("Approve and activate this customer first");
     res.json(await config(customer.activatedCanteenId));
   }));
+  async function setApproval(canteenId, enabled, actor) {
+    if (typeof enabled !== "boolean") fail("Enabled must be true or false");
+    if (!enabled && await Table.exists({ canteenId, status: { $in: ["occupied", "closing"] } })) fail("Settle all open tables before disabling Dine In", 409);
+    await Audit.create({ canteenId, actor, enabled });
+    await Config.updateOne({ _id: canteenId }, { $set: { enabled, requested: false, actor } }, { upsert: true });
+  }
   app.post("/marketing-api/canteens/:id/dine-in", requireDatabase, requireSuperAdmin, wrap(async (req, res) => {
     const customer = await MarketingCanteen.findOne({ id: Number(req.params.id) }).lean();
     if (!customer?.activatedCanteenId) fail("Approve and activate this customer first");
-    if (typeof req.body.enabled !== "boolean") fail("Enabled must be true or false");
-    const canteenId = customer.activatedCanteenId;
-    if (!req.body.enabled && await Table.exists({ canteenId, status: { $in: ["occupied", "closing"] } })) fail("Settle all open tables before disabling Dine In", 409);
-    // Record the decision before applying it; failure never silently grants access.
-    await Audit.create({ canteenId, actor: req.marketingUser.employeeId, enabled: req.body.enabled });
-    await Config.updateOne({ _id: canteenId }, { $set: { enabled: req.body.enabled, requested: false, actor: req.marketingUser.employeeId } }, { upsert: true });
+    await setApproval(customer.activatedCanteenId, req.body.enabled, req.marketingUser.employeeId);
     res.json({ success: true, enabled: req.body.enabled });
   }));
   app.post("/dine-in/tables", requireDatabase, requireAdmin, wrap(async (req, res) => {
@@ -176,6 +177,6 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
     await VoidSession.updateOne({ _id: row.session.id }, { $setOnInsert: { canteenId: cid(req), tableName: row.name, session: row.session, actor: req.authUser.name } }, { upsert: true });
     res.json({ table: await update(row, { status: "cleaning", lastBill: { cancelledSession: row.session }, session: null }) });
   }));
-  return { Config, Table };
+  return { Config, Table, setApproval };
 }
 module.exports = { registerDineIn, priceItems, totals, number };

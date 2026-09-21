@@ -507,12 +507,13 @@ const marketingUserSchema = new mongoose.Schema({
   bankIfsc: String,
   bankUpi: String,
   password: String,
-  role: { type: String, enum: ["marketing", "super_admin"], default: "marketing" },
+  role: { type: String, enum: ["marketing", "manager", "super_admin"], default: "marketing" },
   active: { type: Boolean, default: true },
   target: Number
 }, { timestamps: true, collection: "marketing_users" });
 
 const marketingCanteenSchema = new mongoose.Schema({
+  dineInRequested: { type: Boolean, default: false },
   id: { type: Number, index: true },
   canteenName: String,
   businessCategory: String,
@@ -1128,14 +1129,18 @@ async function allMenuItems(canteenId = DEFAULT_CANTEEN_ID, options = {}) {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   const byOrder = (a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0);
   const includeHidden = options.includeHidden === true;
+  const config = await getSettings(targetCanteenId);
+  const restaurant = shopKindFromCategory(config.businessCategory, config.posMode) === "canteen";
+  const normalizeBilling = row => restaurant && row.billingType === "weight" && !["kg", "kgs", "kilogram", "kilograms", "g", "gram", "grams"].includes(String(row.unit || row.saleUnit || row.weightUnit || "").trim().toLowerCase())
+    ? { ...row, billingType: "quantity", unit: row.unit || "Plate" } : row;
   if (!mongoReady) {
     return memory.menuItems
       .filter(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId)
       .filter(item => includeHidden || item.hidden !== true)
-      .sort(byOrder);
+      .sort(byOrder).map(normalizeBilling);
   }
   const query = includeHidden ? { canteenId: targetCanteenId } : { canteenId: targetCanteenId, hidden: { $ne: true } };
-  return (await MenuItem.find(query).lean()).sort(byOrder);
+  return (await MenuItem.find(query).lean()).sort(byOrder).map(normalizeBilling);
 }
 
 async function globalItemSuggestions(search = "", canteenId = DEFAULT_CANTEEN_ID) {
@@ -2591,6 +2596,7 @@ function normalizeMarketingCanteen(payload, user) {
   const planStartDate = String(payload.planStartDate || new Date().toISOString().slice(0, 10));
   const businessCategory = String(payload.businessCategory || payload.category || payload.businessType || "Canteen").trim() || "Canteen";
   return {
+    dineInRequested: payload.dineInRequested === true,
     id: Number(payload.id || Date.now()),
     canteenName: String(payload.canteenName || "").trim(),
     businessCategory,
@@ -2719,7 +2725,7 @@ async function activateApprovedCanteen(canteen, actor) {
     if (!name) continue;
     const category = String(item.category || inferMenuCategory(name, canteen.businessCategory)).trim() || "Snacks";
     const eggItem = name.toLowerCase().includes("egg");
-    const billingType = String(item.billingType || "").toLowerCase() === "weight" || (!eggItem && isChickenLikeItem({ name, category }))
+    const billingType = String(item.billingType || "").toLowerCase() === "weight" || (shopKindFromCategory(canteen.businessCategory) === "chicken" && !eggItem && isChickenLikeItem({ name, category }))
       ? "weight"
       : "quantity";
     const nextItem = {
@@ -2728,6 +2734,7 @@ async function activateApprovedCanteen(canteen, actor) {
       price: Number(item.price || 0),
       category,
       billingType,
+      unit: String(item.unit || (billingType === "weight" ? "Kgs" : "Plate")),
       image: String(item.image || ""),
       sortOrder: 1000 + index
     };
@@ -3291,7 +3298,7 @@ app.post("/addresses", requireDatabase, requireAdmin, async (req, res) => {
   }
 });
 
-require("./dine-in").registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth,
+const dineService = require("./dine-in").registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth,
   requireAdmin, requireSuperAdmin, MarketingCanteen, allMenuItems, getSettings,
   saveOrder: payload => saveOrder(payload, true) });
 
@@ -3545,6 +3552,7 @@ app.post("/marketing-api/canteens", requireDatabase, requireMarketingAuth, async
 
 app.post("/marketing-api/canteens/:id/approve", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
+    if (Object.prototype.hasOwnProperty.call(req.body, "dineInEnabled") && typeof req.body.dineInEnabled !== "boolean") throw new Error("Dine In approval must be true or false");
     const before = (await allMarketingCanteens()).find(item => Number(item.id) === Number(req.params.id)) || {};
     const paidAmount = Object.prototype.hasOwnProperty.call(req.body, "paidAmount")
       ? Number(req.body.paidAmount || 0)
@@ -3573,6 +3581,9 @@ app.post("/marketing-api/canteens/:id/approve", requireDatabase, requireSuperAdm
       online: true
     }, req.marketingUser);
     const canteen = await activateApprovedCanteen(approved, req.marketingUser);
+    if (typeof req.body.dineInEnabled === "boolean") {
+      await dineService.setApproval(canteen.activatedCanteenId, req.body.dineInEnabled, req.marketingUser.employeeId);
+    }
     await addMarketingActivity({ type: "approved", text: `${canteen.canteenName} approved and activated`, actor: req.marketingUser.name, canteenId: canteen.id });
     res.json({ success: true, canteen });
   } catch (error) {

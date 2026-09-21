@@ -5767,7 +5767,10 @@
 
     function isChickenProduct(item) {
       const name = String(item?.name || "").toLowerCase();
-      const unit = itemSaleUnit(item).toLowerCase();
+      const unit = String(item?.unit || item?.saleUnit || item?.weightUnit || "").trim().toLowerCase();
+      if (["kg", "kgs", "kilogram", "kilograms", "g", "gram", "grams"].includes(unit)) return true;
+      if (item?.billingType === "quantity") return false;
+      if (!isChickenShopCanteen()) return false;
       if (name.includes("egg")) return false;
       if (["piece", "pieces", "pcs", "pc", "plate", "plates", "item", "items", "nos", "no", "dozen", "packet", "packets", "box", "boxes"].includes(unit)) {
         return false;
@@ -5837,12 +5840,24 @@
     }
 
     function shouldShowChickenCategory() {
-      return isChickenShopCanteen() || shopBillingProducts().some(isChickenProduct);
+      return isChickenShopCanteen();
     }
 
     function defaultBillingCategory() {
       return shouldShowChickenCategory() ? chickenCategory : "All";
     }
+
+    window.handlePosBack = function () {
+      if (["loginView", "setupView"].some(id => $(id) && !$(id).classList.contains("hidden"))) return false;
+      if ($("paymentModalMount")?.children.length) { closePaymentModal(); return true; }
+      if ($("optionsModalMount")?.children.length) { closeOptionsModal(); return true; }
+      if (activePosSection === "dinein" && window.DineIn.back()) return true;
+      if ($("adminView") && !$("adminView").classList.contains("hidden")) { show("posView"); setPosSection("billing"); return true; }
+      if (activePosSection !== "billing") { setPosSection("billing"); return true; }
+      if (itemSearch) { itemSearch = ""; $("itemSearch").value = ""; renderProducts(); return true; }
+      if (!showingCategoryHome) { showingCategoryHome = true; renderProducts(); return true; }
+      return false;
+    };
 
     function chickenPriceRows() {
       const saved = readJson(chickenPricesKey, []);
@@ -11272,6 +11287,7 @@
     $("clearCart").addEventListener("click", clearActiveCartState);
     $("placeOrder").addEventListener("click", placeOrderFlow);
     $("homeCategoryBtn").addEventListener("click", () => {
+      if (activePosSection === "dinein" && window.DineIn.back()) return;
       closeOptionsModal();
       if (activePosSection !== "billing") setPosSection("billing");
       showingCategoryHome = true;

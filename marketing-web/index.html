@@ -932,6 +932,7 @@
     function actionButtons(item) {
       if (user.role !== "super_admin") return "";
       return `
+        ${item.status === "Pending Approval" && !item.activatedCanteenId ? `<label><input type="checkbox" id="approve-dine-${item.id}" ${item.dineInRequested ? "checked" : ""}> Approve Dine In</label>` : ""}
         ${item.status === "Pending Approval" ? `<button class="secondary" data-approve="${item.id}" type="button">Approve</button><button class="danger" data-reject="${item.id}" type="button">Reject</button>` : ""}
         <button class="secondary" data-extend-trial="${item.id}" type="button">Extend Trial</button>
         <button class="ghost" data-plan="${item.id}" type="button">Plan</button>
@@ -940,7 +941,7 @@
         <button class="${item.status === "Blocked" ? "secondary" : "danger"}" data-block="${item.id}" data-blocked="${item.status !== "Blocked"}" type="button">${item.status === "Blocked" ? "Unblock" : "Block"}</button>`;
     }
     function bindTableActions() {
-      document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => updateAction(`/marketing-api/canteens/${btn.dataset.approve}/approve`, { status: "Active" }, "Canteen activated. Login ID and temporary password generated.")));
+      document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => updateAction(`/marketing-api/canteens/${btn.dataset.approve}/approve`, { status: "Active", dineInEnabled: document.getElementById(`approve-dine-${btn.dataset.approve}`)?.checked }, "Canteen activated. Login ID and temporary password generated.")));
       document.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", () => {
         const reason = prompt("Reject reason");
         if (reason) updateAction(`/marketing-api/canteens/${btn.dataset.reject}/reject`, { reason }, "Canteen rejected");
@@ -1051,6 +1052,7 @@
         <label>Paid amount <input id="paidAmount" type="number" min="0" value="0"></label>
         <label>Pending amount <input id="pendingAmount" type="number" min="0" value="0"></label>
         <label class="wide">Documents/images <input id="documents" placeholder="File names or links"></label>
+        <label class="full"><input id="dineInRequested" type="checkbox"> Request Dine In (requires approval)</label>
         <label class="full">Notes <textarea id="notes"></textarea></label>
         <button class="primary" type="submit">Save Lead & Submit</button>
       </form></section>`;
@@ -1074,6 +1076,7 @@
       const submitButton = event.submitter;
       const fields = ["canteenName", "businessCategory", "ownerName", "ownerMobile", "alternateMobile", "address", "city", "state", "counters", "printersRequired", "printerModel", "printerSerialNumber", "selectedPlan", "planType", "planStartDate", "planExpiryDate", "paymentMode", "paidAmount", "pendingAmount", "documents", "notes"];
       const body = Object.fromEntries(fields.map(id => [id, $(id).value]));
+      body.dineInRequested = $("dineInRequested").checked;
       try {
         if (submitButton) submitButton.disabled = true;
         status("Submitting canteen for approval...");

@@ -1,14 +1,22 @@
 # Axzen Dine In — implementation and test build
 
-Base repository: naniammi0143/axzen-canteen-system, main commit aeadaf896d1992932d197ec3b2821f4bbda59ef9.
-Built 20 September 2026. Local changes only; no GitHub push or live deployment was performed.
+Base repository: naniammi0143/axzen-canteen-system, main commit d3920fd7dff254886675b8cbc0b0cdf7bd1d5700.
+Updated 20 September 2026. Source updates do not deploy the running backend.
+
+## Back, restaurant units and initial approval fixes
+
+- Android Back closes popups, returns from a Dine In table with confirmation for unsent items, then returns to billing/categories. At the root it backgrounds the app without clearing the cart. Employee Back closes sheets and follows its navigation stack.
+- Cooked restaurant dishes no longer become weight items just because their names contain Chicken/Mutton/Fish. Explicit kg units and meat-shop billing remain supported. Legacy restaurant weight flags with plate/missing units are normalized when menus are read.
+- Registration includes Request Dine In. Approval review includes Approve Dine In, applied through the existing audited entitlement service. Existing access is loaded before reviewing an activated customer. Disabling with open tables is rejected.
+- SWAD KITCHEN was inspected through authenticated live APIs: its settings were Canteen/canteen and cooked chicken dishes had missing unit/billing fields. No live menu edits or test orders were submitted.
+- Ten isolated backend/UI/regression tests pass. Physical-device navigation and printing still require device validation.
 
 ## Important before installation
 
 These are newly built, debug-signed APKs, NOT production-signed updates:
 
-- POS 3.65 / 365 — com.axzenhospitality.canteenclean
-- Employee 1.14 / 114 — com.axenhospitality.employee
+- POS 3.66 / 366 — com.axzenhospitality.canteenclean
+- Employee 1.15 / 115 — com.axenhospitality.employee
 
 Their signing certificate differs from the repository's POS 3.53 release and Employee 1.13 debug APKs. Android will not install these over those existing apps. Test on a spare device/profile, or rebuild with the original authorized signing key for an in-place update. Do not uninstall a working app before syncing/backing up offline data. Original signing keys are not included or recovered.
 
@@ -27,6 +35,7 @@ Required changed/new runtime files:
 5. sa/dine-in.css
 6. admin-web/index.html
 7. employee-web/index.html
+8. marketing-web/index.html
 
 Copy these paths into the existing project, preserving the directory structure. Restart the Node service using your existing service manager. Preserve the existing environment/database configuration; use a configured JWT_SECRET in production. No new backend npm dependency is required. Do not replace your .env or database.
 

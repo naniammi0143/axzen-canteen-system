@@ -43,7 +43,7 @@ function fixture() {
   const mongoose = { Schema, models, model };
   const MarketingCanteen = model("MarketingCanteen");
   MarketingCanteen.rows.push({ id: 1, activatedCanteenId: "A" });
-  registerDineIn({ app: { get: (p, ...f) => routes[`GET ${p}`] = f, post: (p, ...f) => routes[`POST ${p}`] = f }, mongoose,
+  const service = registerDineIn({ app: { get: (p, ...f) => routes[`GET ${p}`] = f, post: (p, ...f) => routes[`POST ${p}`] = f }, mongoose,
     requireDatabase: next, requireCanteenAuth: next, requireAdmin: admin, requireSuperAdmin: manager, MarketingCanteen,
     allMenuItems: async () => menu, getSettings: async () => ({ canteenName: "Test Restaurant" }), saveOrder: async bill => { if (failSave) throw new Error("Simulated database outage"); if (!ledger.has(bill.clientOrderId)) ledger.set(bill.clientOrderId, clone(bill)); return clone(ledger.get(bill.clientOrderId)); }
   });
@@ -55,8 +55,21 @@ function fixture() {
     let index = 0; const run = () => fns[index++]?.(req, res, run); await run();
     return { status, data };
   }
-  return { call, models, ledger, outage: v => failSave = v };
+  return { call, models, ledger, service, outage: v => failSave = v };
 }
+test("onboarding approval uses the same audited entitlement and open-table protection", async () => {
+  const f = fixture();
+  await f.service.setApproval('A', true, 'MANAGER');
+  assert.equal((await f.call('GET', '/dine-in')).data.enabled, true);
+  assert.equal(f.models.DineApprovalAudit.rows[0].actor, 'MANAGER');
+  await assert.rejects(f.service.setApproval('A', 'true', 'MANAGER'));
+  f.models.DineTable.rows.push({ canteenId: 'A', status: 'occupied' });
+  await assert.rejects(f.service.setApproval('A', false, 'MANAGER'));
+  assert.equal((await f.call('GET', '/dine-in')).data.enabled, true);
+  f.models.DineTable.rows[0].status = 'available';
+  await f.service.setApproval('A', false, 'MANAGER');
+  assert.equal((await f.call('GET', '/dine-in')).data.enabled, false);
+});
 test("server menu price wins; hidden, invalid, fractional and weight items rejected", () => {
   assert.equal(priceItems([{ id: 1, qty: 2, price: 1 }], menu)[0].price, 100);
   for (const qty of [0, -1, 1.5, Infinity, "no"]) assert.throws(() => priceItems([{ id: 1, qty }], menu));
