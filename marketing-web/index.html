@@ -932,6 +932,7 @@
     function actionButtons(item) {
       if (user.role !== "super_admin") return "";
       return `
+        ${item.activatedCanteenId ? `<button class="primary" data-dine-approval="${item.id}" type="button">Dine In Approval</button>` : ""}
         ${item.status === "Pending Approval" && !item.activatedCanteenId ? `<label><input type="checkbox" id="approve-dine-${item.id}" ${item.dineInRequested ? "checked" : ""}> Approve Dine In</label>` : ""}
         ${item.status === "Pending Approval" ? `<button class="secondary" data-approve="${item.id}" type="button">Approve</button><button class="danger" data-reject="${item.id}" type="button">Reject</button>` : ""}
         <button class="secondary" data-extend-trial="${item.id}" type="button">Extend Trial</button>
@@ -941,6 +942,7 @@
         <button class="${item.status === "Blocked" ? "secondary" : "danger"}" data-block="${item.id}" data-blocked="${item.status !== "Blocked"}" type="button">${item.status === "Blocked" ? "Unblock" : "Block"}</button>`;
     }
     function bindTableActions() {
+      document.querySelectorAll("[data-dine-approval]").forEach(btn => btn.addEventListener("click", () => openDineApproval(btn.dataset.dineApproval)));
       document.querySelectorAll("[data-approve]").forEach(btn => btn.addEventListener("click", () => updateAction(`/marketing-api/canteens/${btn.dataset.approve}/approve`, { status: "Active", dineInEnabled: document.getElementById(`approve-dine-${btn.dataset.approve}`)?.checked }, "Canteen activated. Login ID and temporary password generated.")));
       document.querySelectorAll("[data-reject]").forEach(btn => btn.addEventListener("click", () => {
         const reason = prompt("Reject reason");
@@ -1016,6 +1018,33 @@
         status(error.message || "Update failed", "error");
       }
     }
+    async function openDineApproval(id) {
+      const item = state.canteens.find(row => String(row.id) === String(id));
+      if (!item) return;
+      const dialog = document.createElement("dialog");
+      dialog.style.cssText = "width:min(480px,90vw);border:0;border-radius:18px;padding:24px;color:#102a43";
+      dialog.innerHTML = `<h2>Dine In Approval</h2><p>${esc(item.canteenName)}</p><p data-status>Loading current approval…</p><label><input type="checkbox" data-enabled disabled> Enable tables, kitchen orders and table bills</label><div class="row-actions" style="margin-top:20px"><button class="primary" data-save disabled>Save Approval</button><button class="secondary" data-close>Close</button></div>`;
+      document.body.appendChild(dialog);
+      dialog.addEventListener("close", () => dialog.remove());
+      dialog.querySelector("[data-close]").onclick = () => dialog.close();
+      dialog.showModal();
+      const check = dialog.querySelector("[data-enabled]"), save = dialog.querySelector("[data-save]"), message = dialog.querySelector("[data-status]");
+      try {
+        const access = await api(`/marketing-api/canteens/${id}/dine-in`);
+        check.checked = access.enabled === true;
+        message.textContent = access.enabled ? "Approved. This restaurant can use Dine In." : "Not approved. Check Enable and press Save Approval.";
+        check.disabled = false; save.disabled = false;
+      } catch (error) { message.textContent = error.message; }
+      save.onclick = async () => {
+        check.disabled = true; save.disabled = true;
+        try {
+          await api(`/marketing-api/canteens/${id}/dine-in`, { method: "POST", body: JSON.stringify({ enabled: check.checked }) });
+          message.textContent = check.checked ? "Approved successfully. Reopen Dine In in the POS app to load tables." : "Dine In disabled. POS will show Upgrade Plan.";
+        } catch (error) { message.textContent = error.message; }
+        finally { check.disabled = false; save.disabled = false; }
+      };
+    }
+
     function renderDashboard() {
       if (user.role === "super_admin") {
         $("page").innerHTML = `${cardsHtml(state.summary.cards)}<div class="grid-2"><section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section><section class="panel"><h2>Recent Enquiries</h2>${enquiriesHtml(state.enquiries || [], 4)}</section></div><div class="grid-2"><section class="panel"><h2>Recent Activities</h2>${activitiesHtml(8)}</section><section class="panel"><h2>Recent Payments</h2>${paymentsTable((state.payments || []).slice(0, 6))}</section></div><div class="grid-2"><section class="panel"><h2>Open Support Tickets</h2>${supportTicketsHtml(state.supportTickets || [])}</section><section class="panel"><h2>Approval Queue</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section></div>`;
