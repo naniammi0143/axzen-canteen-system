@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "test": "node --test backend/dine-in.test.js scripts/*.test.cjs",
     "start": "node backend/server.js",
     "dev": "node backend/server.js",
     "preview:all": "node scripts/dev-preview.js",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@react-native-community/cli": "^20.2.0",
     "@types/react": "^19.2.17",
+    "jsdom": "^30.1.1",
     "typescript": "^7.0.2"
   }
 }

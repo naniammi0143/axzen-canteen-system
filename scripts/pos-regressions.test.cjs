@@ -9,6 +9,24 @@ function declaration(name) {
   const end = source.indexOf('\n    function ', start + 1);
   return source.slice(start, end);
 }
+test('phone and tablet layouts match browser and APK, including portrait and rotation', () => {
+  for (const native of [false, true]) {
+    const classes = new Set();
+    const ctx = vm.createContext({
+      window: { innerWidth: 390, innerHeight: 844, Capacitor: native ? {} : undefined },
+      document: { documentElement: { classList: { toggle(name, on) { on ? classes.add(name) : classes.delete(name); } } } },
+      applyNativeSafeArea() {}
+    });
+    vm.runInContext(declaration('applyPosLayoutMode').split('    window.addEventListener')[0], ctx);
+    for (const [width, height, tablet] of [[390, 844, false], [844, 390, false], [768, 1024, false], [1024, 768, true], [820, 1180, false], [1180, 820, true], [1280, 800, true], [1024, 1366, false], [1366, 1024, true], [768, 1024, false], [360, 800, false]]) {
+      ctx.window.innerWidth = width;
+      ctx.window.innerHeight = height;
+      ctx.applyPosLayoutMode();
+      assert.equal(classes.has('pos-layout-tablet'), tablet, `${native ? 'APK' : 'browser'} ${width}x${height}`);
+      assert.equal(classes.has('pos-layout-compact'), !tablet);
+    }
+  }
+});
 test('restaurant cooked meat dishes use quantity; explicit weights and meat shops remain supported', () => {
   const ctx = vm.createContext({ settings: { businessCategory: 'Restaurant' }, user: {} });
   vm.runInContext(['isChickenCategory', 'isChickenProduct', 'isChickenShopCanteen'].map(declaration).join('\n'), ctx);

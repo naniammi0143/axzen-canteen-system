@@ -39,6 +39,18 @@ password: 1234
 
 ## Local Run
 
+### APK-free mobile and tablet preview
+
+From the project root, run `npm.cmd run preview:all` on Windows (or `npm run preview:all` elsewhere).
+
+- App with live reload: `http://localhost:4173/`
+- Phone/tablet screen selector and rotation: `http://localhost:4173/__devices`
+- Phone or tablet on the same Wi-Fi: use the local-network URL printed by the preview server.
+
+The preview serves the same `sa/` source used by the Android app. Tablets use the compact mobile layout in portrait and show Current Order beside the menu only in landscape; phones use the compact layout. The screen selector changes the app viewport without rebuilding an APK. Native Bluetooth printing and Android permissions still need device testing. The backend uses the database configured in `backend/.env`, so preview data changes affect that database.
+
+Run existing regression tests with `npm.cmd test`. No APK build, Android sync, or Git push is needed for preview.
+
 ```bash
 cd backend
 npm install

@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Axzen — Device Preview</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px system-ui, sans-serif; color: #e2e8f0; background: #101827; }
+  header { padding: 16px 24px; background: #1e293b; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  h1 { font-size: 18px; margin: 0 auto 0 0; }
+  select, button, a { font: inherit; padding: 10px 14px; border: 1px solid #64748b; border-radius: 8px; color: inherit; background: #334155; }
+  a { text-decoration: none; }
+  p { margin: 12px 24px; color: #cbd5e1; }
+  main { padding: 16px 24px 32px; overflow: auto; }
+  iframe { display: block; background: white; border: 0; border-radius: 12px; }
+  #stage { margin: 0 auto; }
+</style>
+<header>
+  <h1>Axzen POS · Local preview</h1>
+  <label for="device">Screen</label>
+  <select id="device">
+    <option value="1366,768">PC / Laptop · 1366 × 768</option>
+    <option value="1920,1080">PC Full HD · 1920 × 1080</option>
+    <option value="390,844">Phone · 390 × 844</option>
+    <option value="360,800">Small phone · 360 × 800</option>
+    <option value="768,1024">Tablet · 768 × 1024</option>
+    <option value="820,1180">Large tablet · 820 × 1180</option>
+    <option value="1280,800">Tablet landscape · 1280 × 800</option>
+  </select>
+  <button id="rotate" type="button">Rotate</button>
+  <a href="/" target="_blank" rel="noopener">Open app</a>
+</header>
+<p id="size" aria-live="polite"></p>
+<p>Same app used by the APK. Browser preview does not emulate native Bluetooth printing or Android permissions.</p>
+<main><div id="stage"><iframe id="app" title="Axzen POS device preview" src="/"></iframe></div></main>
+<script>
+  const device = document.getElementById('device');
+  const frame = document.getElementById('app');
+  const requestedDevice = new URLSearchParams(location.search).get('device');
+  device.value = requestedDevice === 'pc' ? '1366,768' : '390,844';
+  let rotated = false;
+  function resize() {
+    let [width, height] = device.value.split(',').map(Number);
+    if (rotated) [width, height] = [height, width];
+    frame.style.width = width + 'px';
+    frame.style.height = height + 'px';
+    document.getElementById('stage').style.width = width + 'px';
+    document.getElementById('size').textContent = width + ' × ' + height + ' CSS pixels · scroll to view the full screen';
+  }
+  device.addEventListener('change', () => { rotated = false; resize(); });
+  document.getElementById('rotate').addEventListener('click', () => { rotated = !rotated; resize(); });
+  resize();
+</script>
+</html>

@@ -125,6 +125,10 @@ function localIpAddresses() {
 
 const server = http.createServer((req, res) => {
   const parsed = url.parse(req.url || "/", true);
+  if (parsed.pathname === "/__devices") {
+    sendFile(res, path.join(__dirname, "device-preview.html"));
+    return;
+  }
   if (parsed.pathname === "/__live_reload") {
     res.writeHead(200, {
       "Content-Type": "text/event-stream",
