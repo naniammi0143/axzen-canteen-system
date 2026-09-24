@@ -2736,7 +2736,7 @@
     .report-modern-filter input { min-height: 44px; border: 1px solid #E8ECF3; border-radius: 12px; padding: 0 12px; font-weight: 850; }
     .report-modern-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; grid-column: 1 / -1; }
     .report-modern-actions button { min-height: 38px; border: 1px solid #E8ECF3; border-radius: 10px; background: #fff; color: #0B5FE8; font-weight: 900; }
-    .report-modern-actions button:first-child { background: #0B5FE8; color: #fff; }
+    .report-modern-actions button[aria-pressed="true"], .quick-ranges button[aria-pressed="true"] { background: #0B5FE8; color: #fff; }
     .report-kpi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
     .report-kpi-card { border: 1px solid #E8ECF3; border-radius: 16px; background: #fff; padding: 14px; box-shadow: 0 8px 18px #1018280d; }
     .report-kpi-card span { display: block; color: #6B7280; font-size: 11px; font-weight: 950; text-transform: uppercase; }
@@ -5298,7 +5298,7 @@
         <button class="icon-btn menu-trigger" id="logoutPos" type="button" aria-label="Open menu"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/></svg></button>
         <div class="title-block">
           <div>
-            <strong><span id="posCanteen">AXZEN INFOTECH</span></strong>
+            <strong><span id="posCanteen">Your Company</span></strong>
             <span class="shift-line"><span class="connection-pill online" id="connectionPill"><b id="syncStatus">ONLINE</b></span></span>
           </div>
         </div>
@@ -5416,7 +5416,7 @@
         return defaults;
       }
     })();
-    const appBuild = "3.64";
+    const appBuild = "3.67";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const productUnitOverridesKey = "AXEN_PRODUCT_UNIT_OVERRIDES";
@@ -6064,7 +6064,7 @@
       settings.receiptLanguage = languageMode(settings.receiptLanguage);
       settings.receiptLogoPosition = ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above";
       $("loginCanteen").textContent = settings.canteenName;
-      $("posCanteen").textContent = brandDisplayText();
+      $("posCanteen").textContent = settings.canteenName || user?.canteen?.name || "Your Company";
       $("adminCanteen").textContent = settings.canteenName;
     }
 
@@ -8150,7 +8150,23 @@
       return { from, to };
     }
 
+    function reportQuickButtons(longLabels = false) {
+      const selected = scopedLocalGet("AXEN_REPORT_PRESET") || "today";
+      const actual = reportRange();
+      const now = new Date();
+      return ["today", "week", "month", "year"].map((range, index) => {
+        const start = new Date(now);
+        if (range === "week") start.setDate(now.getDate() - 6);
+        if (range === "month") start.setDate(1);
+        if (range === "year") { start.setMonth(0); start.setDate(1); }
+        const active = selected === range && actual.from === dateInputValue(start) && actual.to === dateInputValue(now);
+        const label = (longLabels ? ["Today", "Weekly", "Monthly", "Yearly"] : ["Today", "Week", "Month", "Year"])[index];
+        return `<button data-report-range="${range}" aria-pressed="${active}" type="button">${label}</button>`;
+      }).join("");
+    }
+
     function resetReportRangeToToday() {
+      scopedLocalSet("AXEN_REPORT_PRESET", "today");
       const today = dateInputValue(new Date());
       scopedLocalSet("AXEN_REPORT_FROM", today);
       scopedLocalSet("AXEN_REPORT_TO", today);
@@ -8236,7 +8252,7 @@
           <div class="muted">${esc(range.from)} to ${esc(range.to)}</div>
           <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
           <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
-          <div class="quick-ranges"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Weekly</button><button data-report-range="month" type="button">Monthly</button><button data-report-range="year" type="button">Yearly</button></div>
+          <div class="quick-ranges">${reportQuickButtons(true)}</div>
         </div>
         <div class="work-grid">
           <div class="work-card metric-card"><span>Sales</span><strong>${money(sales)}</strong></div>
@@ -8501,7 +8517,7 @@
           <div class="work-card report-modern-filter">
             <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
             <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
-            <div class="report-modern-actions"><button data-report-range="today" type="button">Today</button><button data-report-range="week" type="button">Week</button><button data-report-range="month" type="button">Month</button><button data-report-range="year" type="button">Year</button></div>
+            <div class="report-modern-actions">${reportQuickButtons()}</div>
             <div class="report-modern-actions report-share-actions">
               <button class="secondary" id="shareReportImage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="m8 14 2.5-2.5L13 14l2-2 3 4"/><circle cx="9" cy="9" r="1"/></svg>Share Image</button>
               <button class="secondary" id="downloadReportImage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>Download Image</button>
@@ -9459,6 +9475,7 @@
     }
 
     function setReportQuickRange(range) {
+      scopedLocalSet("AXEN_REPORT_PRESET", range);
       const now = new Date();
       const start = new Date(now);
       if (range === "week") start.setDate(now.getDate() - 6);

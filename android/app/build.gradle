@@ -13,8 +13,8 @@ android {
         applicationId "com.axzenhospitality.canteenclean"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 366
-        versionName "3.66"
+        versionCode 367
+        versionName "3.67"
         setProperty("archivesBaseName", "Axzen-DineIn")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -95,6 +95,7 @@ apply from: 'capacitor.build.gradle'
     }
     tasks.configureEach { task ->
         if (task.name.startsWith("merge${flavor.capitalize()}") && task.name.endsWith('Assets')) task.dependsOn(taskName)
+        if (task.name.toLowerCase().contains(flavor.toLowerCase()) && task.name.toLowerCase().contains('lint')) task.dependsOn(taskName)
     }
 }
 

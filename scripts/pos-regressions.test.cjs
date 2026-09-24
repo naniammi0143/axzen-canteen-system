@@ -27,6 +27,25 @@ test('phone and tablet layouts match browser and APK, including portrait and rot
     }
   }
 });
+test('report presets highlight the selected range and clear for custom dates', () => {
+  const saved = {};
+  const ctx = vm.createContext({
+    scopedLocalGet: key => saved[key], scopedLocalSet: (key, value) => { saved[key] = value; },
+    dateInputValue: date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+    renderOptionPage() {}
+  });
+  vm.runInContext(['reportRange', 'reportQuickButtons', 'setReportQuickRange', 'resetReportRangeToToday'].map(declaration).join('\n'), ctx);
+  for (const range of ['today', 'week', 'month', 'year']) {
+    ctx.setReportQuickRange(range);
+    const html = ctx.reportQuickButtons();
+    assert.equal((html.match(/aria-pressed="true"/g) || []).length, 1);
+    assert.ok(html.includes(`data-report-range="${range}" aria-pressed="true"`));
+  }
+  saved.AXEN_REPORT_FROM = '2020-01-01';
+  assert.equal(ctx.reportQuickButtons().includes('aria-pressed="true"'), false);
+  ctx.resetReportRangeToToday();
+  assert.ok(ctx.reportQuickButtons().includes('data-report-range="today" aria-pressed="true"'));
+});
 test('restaurant cooked meat dishes use quantity; explicit weights and meat shops remain supported', () => {
   const ctx = vm.createContext({ settings: { businessCategory: 'Restaurant' }, user: {} });
   vm.runInContext(['isChickenCategory', 'isChickenProduct', 'isChickenShopCanteen'].map(declaration).join('\n'), ctx);
