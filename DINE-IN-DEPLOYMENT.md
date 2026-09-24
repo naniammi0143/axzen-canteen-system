@@ -9,7 +9,7 @@ Updated 20 September 2026. Source updates do not deploy the running backend.
 - Cooked restaurant dishes no longer become weight items just because their names contain Chicken/Mutton/Fish. Explicit kg units and meat-shop billing remain supported. Legacy restaurant weight flags with plate/missing units are normalized when menus are read.
 - Registration includes Request Dine In. Approval review includes Approve Dine In, applied through the existing audited entitlement service. Existing access is loaded before reviewing an activated customer. Disabling with open tables is rejected.
 - SWAD KITCHEN was inspected through authenticated live APIs: its settings were Canteen/canteen and cooked chicken dishes had missing unit/billing fields. No live menu edits or test orders were submitted.
-- Ten isolated backend/UI/regression tests pass. Physical-device navigation and printing still require device validation.
+- Eleven isolated backend/UI/regression tests pass. Restaurant Chicken Fried Rice categories keep the restaurant layout; cooked egg dishes do not use raw-egg piece billing. Physical-device navigation and printing still require device validation.
 
 ## Important before installation
 

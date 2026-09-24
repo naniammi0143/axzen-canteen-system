@@ -39,6 +39,19 @@ test('Back closes modal before navigation, preserves Dine In interception, and r
   assert.equal(ctx.showingCategoryHome, true);
   assert.equal(ctx.window.handlePosBack(), false);
 });
+test('restaurant chicken categories and egg dishes do not open raw-meat or raw-egg billing', () => {
+  const ctx = vm.createContext({ settings: { businessCategory: 'Canteen', posMode: 'canteen' }, user: {} });
+  vm.runInContext(['isChickenCategory', 'isEggProduct', 'isChickenShopCanteen', 'itemSaleUnit'].map(declaration).join('\n'), ctx);
+  assert.equal(ctx.isChickenCategory('Chicken Fried Rice'), false);
+  for (const name of ['Egg Fried Rice', 'Egg Curry', 'Egg Burji']) {
+    assert.equal(ctx.isEggProduct({ name }), false);
+    assert.notEqual(ctx.itemSaleUnit({ name }), 'Pieces');
+  }
+  assert.equal(ctx.isEggProduct({ name: 'Eggs' }), true);
+  assert.equal(ctx.isEggProduct({ name: 'Country Eggs' }), true);
+  ctx.settings = { businessCategory: 'Chicken Shop' };
+  assert.equal(ctx.isChickenCategory('Chicken'), true);
+});
 test('legacy restaurant menu weight flags are repaired for plates without changing genuine kg items or other tenants', async () => {
   const menu = [
     { id: 1, canteenId: 'A', name: 'Chicken Curry', billingType: 'weight', unit: 'Plate' },

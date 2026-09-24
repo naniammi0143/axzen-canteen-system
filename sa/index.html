@@ -5685,7 +5685,7 @@
       if (saved) return saved;
       const name = String(item.name || "").toLowerCase();
       const category = String(item.category || "").toLowerCase();
-      if (name.includes("egg")) return "Pieces";
+      if (isEggProduct(item)) return "Pieces";
       if (name.includes("oil") || name.includes("milk") || name.includes("juice") || category.includes("juice")) return "Ltrs";
       if (name.includes("water") || name.includes("bottle")) return "Bottle";
       if (name.includes("tea") || name.includes("coffee")) return "Cup";
@@ -5761,6 +5761,7 @@
     }
 
     function isChickenCategory(category) {
+      if (!isChickenShopCanteen()) return false;
       const text = String(category || "").trim().toLowerCase();
       return ["chicken", "meat", "meet", "mutton", "fish", "seafood"].some(keyword => text.includes(keyword));
     }
@@ -5780,7 +5781,8 @@
     }
 
     function isEggProduct(item) {
-      return String(item?.name || "").toLowerCase().includes("egg");
+      const name = String(item?.name || "").trim().toLowerCase();
+      return /^(?:(?:farm|country|brown|white)\s+)?eggs?(?:\s+tray)?$/.test(name);
     }
 
     function isChickenShopCanteen() {
