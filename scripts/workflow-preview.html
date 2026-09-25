@@ -1,0 +1,31 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Axzen workflow preview</title>
+<link rel="stylesheet" href="/dine-in.css"><link rel="stylesheet" href="/catalog-import.css">
+<style>body{margin:0;background:#eef3f9;font:14px system-ui;color:#172b4d}.preview-head{padding:18px 24px;background:white;display:flex;gap:12px;align-items:center;flex-wrap:wrap}.preview-head p{margin:0;flex:1}.preview-head button,.preview-head a{padding:12px;border:1px solid #cbd5e1;background:white;border-radius:10px;color:#1d4ed8;cursor:pointer}.preview-note{padding:0 24px;color:#64748b}</style>
+<div class="preview-head"><p><b>Workflow preview</b><br>Sample restaurant · no live orders or payments</p><button id="catalog">Try catalog review</button><button id="access">Turn Dine In OFF</button><a id="realPos" href="/">Open real POS</a></div>
+<p class="preview-note">Click a table to open its popup. Use Add food, Current bill, Kitchen tickets and Table settings. Catalog demo accepts CSV with name,price,category,unit columns; PDF/photo reading requires the configured AI service in the real POS.</p><div id="root"></div>
+<script src="/dine-in.js"></script><script src="/catalog-import.js"></script>
+<script>
+document.getElementById("realPos").href = "/?api=" + encodeURIComponent("http://" + location.hostname + ":5001");
+const state={enabled:true,tables:Array.from({length:8},(_,i)=>({tableId:'t'+i,name:String(i+1).padStart(2,'0'),zone:i<4?'Main Hall':'Garden',seats:4,status:'available',active:true,revision:0}))};
+const menu=[{id:1,name:'Veg Biryani',price:180},{id:2,name:'Paneer Butter Masala',price:220},{id:3,name:'Butter Naan',price:45},{id:4,name:'Fresh Lime Soda',price:60}]; const bills=[];
+async function api(path,opts={}){
+ const body=opts.body?JSON.parse(opts.body):{}; const table=state.tables.find(t=>path.includes('/'+t.tableId+'/'));
+ if(path==='/dine-in')return structuredClone(state);
+ if(path==='/orders')return bills;
+ if(path==='/dine-in/request'){state.requested=true;return {};}
+ if(path==='/dine-in/tables'){let t=state.tables.find(t=>t.tableId===body.tableId);if(!t){t={tableId:'t'+Date.now(),revision:0,status:'available'};state.tables.push(t);}Object.assign(t,body);return {};}
+ if(path.endsWith('/tickets')){const ticket={id:body.requestId,number:(table.session?.tickets.length||0)+1,status:'new',createdAt:new Date().toISOString(),waiter:'Preview',items:body.items};table.session ||= {id:'s'+Date.now(),guests:body.guests,tickets:[]};table.session.tickets.push(ticket);table.status='occupied';table.revision++;return {table,ticket};}
+ if(path.includes('/tickets/')){const ticket=table.session.tickets.find(t=>path.endsWith(t.id));ticket.status=body.status;return {};}
+ if(path.endsWith('/settle')){const items=table.session.tickets.filter(t=>t.status!=='cancelled').flatMap(t=>t.items);const order={id:bills.length+1,clientOrderId:table.session.id,tableId:table.tableId,tableName:table.name,orderType:'Dine In',items,total:items.reduce((s,i)=>s+i.qty*i.price,0)-Number(body.discount||0),payment:body.payment,time:new Date().toLocaleString()};bills.push(order);table.session=null;table.status='cleaning';table.lastBill=order;return {order};}
+ if(path.endsWith('/state')){table.status=body.status;table.reservation=body.reservation;return {};}
+ if(path.endsWith('/close-empty')){table.session=null;table.status='cleaning';return {};}
+ if(path==='/catalog/import/preview'){const res=await fetch('/__demo/catalog',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const json=await res.json();if(!res.ok)throw Error(json.message);return json;}
+ if(path.startsWith('/catalog/import/images'))return {images:[]};
+ if(path==='/catalog/all-items')return menu.map(i=>({...i,active:true}));
+ if(path==='/products'){menu.push({...body,id:Date.now()});return {};}
+ throw Error('Preview action not available');
+}
+const mount=()=>DineIn.mount(document.getElementById('root'),{api,adminApi:api,admin:true,getMenu:async()=>menu});mount();
+document.getElementById('access').onclick=()=>{state.enabled=!state.enabled;document.getElementById('access').textContent=state.enabled?'Turn Dine In OFF':'Turn Dine In ON';mount();};
+document.getElementById('catalog').onclick=()=>CatalogImport.open({api,onSaved:async()=>{}});
+</script></html>

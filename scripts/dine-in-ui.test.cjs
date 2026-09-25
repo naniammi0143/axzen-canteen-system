@@ -41,6 +41,24 @@ test('unapproved restaurant gets Upgrade Plan and cannot see tables', async () =
   try { await tick(); assert.match(f.root.textContent, /Upgrade Plan/); assert.equal(f.root.querySelector('[data-di="select"]'), null); await f.click('request'); assert.equal(f.state.requested, true); }
   finally { f.close(); }
 });
+test('table actions open a dialog, preserve inputs between panels, and close to the floor', async () => {
+  const f = setup();
+  try {
+    await tick();
+    assert.equal(f.root.querySelector('#di-name'), null);
+    await f.click('new-table');
+    assert.ok(f.root.querySelector('dialog #di-name'));
+    await f.click('close-popup');
+    await f.click('select');
+    assert.ok(f.root.querySelector('dialog'));
+    f.root.querySelector('#di-guests').value = '3';
+    f.root.querySelector('[data-di="panel"][data-value="bill"]').click();
+    assert.equal(f.root.querySelector('.di-dialog-content').dataset.panel, 'bill');
+    assert.equal(f.root.querySelector('#di-guests').value, '3');
+    await f.click('close-popup');
+    assert.equal(f.root.querySelector('dialog'), null);
+  } finally { f.close(); }
+});
 test('table → portion → kitchen → served → payment → report → cleaning', async () => {
   const f = setup();
   try {

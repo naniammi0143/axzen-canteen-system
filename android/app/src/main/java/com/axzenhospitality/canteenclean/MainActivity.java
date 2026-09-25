@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -34,9 +35,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.io.ByteArrayInputStream;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -55,7 +60,9 @@ public class MainActivity extends BridgeActivity {
         getBridge().getWebView().addJavascriptInterface(new ThermalPrinterBridge(), "AxenPrinter");
         getBridge().getWebView().addJavascriptInterface(new ShareBridge(), "AxenShare");
         getBridge().getWebView().addJavascriptInterface(new SafeAreaBridge(), "AxenSafe");
+        getBridge().getWebView().addJavascriptInterface(new AppUpdateBridge(), "AxzenUpdater");
         applyWebViewSafeInsets();
+        restoreInstalledRelease();
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
                 getBridge().getWebView().evaluateJavascript(
@@ -64,6 +71,103 @@ public class MainActivity extends BridgeActivity {
                 );
             }
         });
+    }
+
+    private static final String UPDATE_PREFS = "axzen_app_updates";
+
+    private void restoreInstalledRelease() {
+        SharedPreferences prefs = getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE);
+        String activePath = prefs.getString("activePath", "");
+        if (prefs.getBoolean("pendingHealth", false)) {
+            activePath = prefs.getString("previousPath", "");
+            prefs.edit().putString("activePath", activePath).putString("activeVersion", prefs.getString("previousVersion", "bundled")).putBoolean("pendingHealth", false).apply();
+        }
+        if (!activePath.isEmpty() && new File(activePath, "index.html").isFile()) getBridge().setServerBasePath(activePath);
+    }
+
+    public class AppUpdateBridge {
+        @JavascriptInterface
+        public synchronized String installBundle(String base64, String version, String expectedSha256) {
+            try {
+                String safeVersion = version == null ? "" : version.replaceAll("[^A-Za-z0-9._-]", "");
+                if (safeVersion.isEmpty() || base64 == null || base64.isEmpty()) throw new Exception("Invalid release bundle");
+                byte[] zipBytes = Base64.decode(base64, Base64.DEFAULT);
+                String actualSha = sha256(zipBytes);
+                if (expectedSha256 == null || !actualSha.equalsIgnoreCase(expectedSha256.trim())) throw new Exception("Release checksum failed");
+                File releases = new File(getFilesDir(), "pos-releases");
+                File target = new File(releases, safeVersion + "-" + actualSha.substring(0, 12));
+                File staging = new File(releases, ".staging-" + System.currentTimeMillis());
+                if (!staging.mkdirs()) throw new Exception("Update storage unavailable");
+                unzip(zipBytes, staging);
+                if (!new File(staging, "index.html").isFile()) throw new Exception("Release index.html missing");
+                if (target.exists()) deleteTree(target);
+                if (!staging.renameTo(target)) throw new Exception("Could not activate release files");
+                SharedPreferences prefs = getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE);
+                prefs.edit()
+                    .putString("previousPath", prefs.getString("activePath", ""))
+                    .putString("previousVersion", prefs.getString("activeVersion", "bundled"))
+                    .putString("activePath", target.getAbsolutePath())
+                    .putString("activeVersion", safeVersion)
+                    .putString("activeSha256", actualSha)
+                    .putBoolean("pendingHealth", true).apply();
+                runOnUiThread(() -> getBridge().setServerBasePath(target.getAbsolutePath()));
+                return "{\"success\":true,\"version\":\"" + jsonEscape(safeVersion) + "\"}";
+            } catch (Exception error) {
+                return "{\"success\":false,\"message\":\"" + jsonEscape(error.getMessage()) + "\"}";
+            }
+        }
+
+        @JavascriptInterface public String current() {
+            SharedPreferences prefs = getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE);
+            return "{\"version\":\"" + jsonEscape(prefs.getString("activeVersion", "bundled")) + "\",\"sha256\":\"" + jsonEscape(prefs.getString("activeSha256", "")) + "\"}";
+        }
+
+        @JavascriptInterface public void markHealthy() {
+            getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE).edit().putBoolean("pendingHealth", false).apply();
+        }
+
+        @JavascriptInterface public void rollback() {
+            SharedPreferences prefs = getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE);
+            String previous = prefs.getString("previousPath", "");
+            String version = prefs.getString("previousVersion", "bundled");
+            prefs.edit().putString("activePath", previous).putString("activeVersion", version).putBoolean("pendingHealth", false).apply();
+            runOnUiThread(() -> { if (previous.isEmpty()) getBridge().setServerAssetPath("public"); else getBridge().setServerBasePath(previous); });
+        }
+
+        private void unzip(byte[] zipBytes, File destination) throws Exception {
+            String root = destination.getCanonicalPath() + File.separator;
+            try (ZipInputStream input = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+                ZipEntry entry;
+                byte[] buffer = new byte[8192];
+                while ((entry = input.getNextEntry()) != null) {
+                    File outputFile = new File(destination, entry.getName());
+                    String outputPath = outputFile.getCanonicalPath();
+                    if (!outputPath.startsWith(root)) throw new Exception("Unsafe release path");
+                    if (entry.isDirectory()) { outputFile.mkdirs(); continue; }
+                    File parent = outputFile.getParentFile();
+                    if (parent != null && !parent.exists()) parent.mkdirs();
+                    try (FileOutputStream output = new FileOutputStream(outputFile)) {
+                        int read; while ((read = input.read(buffer)) > 0) output.write(buffer, 0, read);
+                    }
+                }
+            }
+        }
+
+        private String sha256(byte[] bytes) throws Exception {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(bytes);
+            StringBuilder value = new StringBuilder();
+            for (byte item : digest) value.append(String.format(java.util.Locale.US, "%02x", item));
+            return value.toString();
+        }
+
+        private void deleteTree(File file) {
+            if (file.isDirectory()) { File[] children = file.listFiles(); if (children != null) for (File child : children) deleteTree(child); }
+            file.delete();
+        }
+
+        private String jsonEscape(String value) {
+            return value == null ? "" : value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
+        }
     }
 
     @Override
@@ -508,7 +612,7 @@ public class MainActivity extends BridgeActivity {
             subPaint.setTextSize(19);
 
             String title = cleanHeaderText(headerName, "SHAD KITCHEN").toUpperCase();
-            String subtitle = cleanHeaderText(companyName, "axzen infotech");
+            String subtitle = cleanHeaderText(companyName, "");
 
             if ("left".equals(position) || "right".equals(position)) {
                 int logoSize = Math.min(sideLogoSize, height - 10);
@@ -636,13 +740,13 @@ public class MainActivity extends BridgeActivity {
             linePaint.setColor(Color.BLACK);
             linePaint.setStrokeWidth(2);
 
-            Bitmap header = receiptHeaderBitmap(data.optString("logoDataUrl", ""), data.optString("logoPosition", "above"), data.optString("headerName", "SHAD KITCHEN"), data.optString("companyName", "axzen infotech"), data.optInt("logoSize", 100));
+            Bitmap header = receiptHeaderBitmap(data.optString("logoDataUrl", ""), data.optString("logoPosition", "above"), data.optString("headerName", "SHAD KITCHEN"), data.optString("companyName", ""), data.optInt("logoSize", 100));
             if (header != null) {
                 canvas.drawBitmap(header, 0, y, null);
                 y += header.getHeight();
             } else {
                 canvas.drawText(cleanHeaderText(data.optString("headerName", ""), "SHAD KITCHEN").toUpperCase(), width / 2, y + 30, title);
-                canvas.drawText(cleanHeaderText(data.optString("companyName", ""), "axzen infotech"), width / 2, y + 60, sub);
+                canvas.drawText(cleanHeaderText(data.optString("companyName", ""), ""), width / 2, y + 60, sub);
                 y += 70;
             }
 
@@ -702,7 +806,9 @@ public class MainActivity extends BridgeActivity {
             y = drawAmountRow(canvas, receiptPaint(27, true, Paint.Align.LEFT), receiptPaint(27, true, Paint.Align.RIGHT), "TOTAL", data.optDouble("total", 0), y, width);
             y = drawLine(canvas, linePaint, y, width);
             canvas.drawText("THANK YOU! VISIT AGAIN", width / 2, y + 34, footer);
-            y += 46 + (footerFeedLines * 24);
+            canvas.drawText("Powered by", width / 2, y + 60, receiptPaint(16, false, Paint.Align.CENTER));
+            canvas.drawText("Axzen POS System", width / 2, y + 84, receiptPaint(20, false, Paint.Align.CENTER));
+            y += 92 + (footerFeedLines * 24);
 
             return cropReceiptBitmap(bitmap, width, Math.min(height, y));
         }
@@ -813,9 +919,8 @@ public class MainActivity extends BridgeActivity {
         }
 
         private void finishReceipt(OutputStream targetOutput) throws Exception {
-            // Cheap 58mm printers cut at the print head. Feed blank lines first so
-            // "THANK YOU" clears the blade, then cut and wait before closing BT.
-            writeChunked(targetOutput, new byte[]{0x0A, 0x0A, 0x0A, 0x0A, 0x0A, 0x0A});
+            // Minimal tear-off feed after the receipt footer; avoid six blank lines.
+            writeChunked(targetOutput, new byte[]{0x0A, 0x0A});
             writeChunked(targetOutput, FEED_AND_CUT);
             targetOutput.flush();
             Thread.sleep(280);

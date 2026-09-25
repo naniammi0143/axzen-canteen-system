@@ -125,6 +125,22 @@ function localIpAddresses() {
 
 const server = http.createServer((req, res) => {
   const parsed = url.parse(req.url || "/", true);
+  if (parsed.pathname === "/__workflow-preview") {
+    sendFile(res, path.join(__dirname, "workflow-preview.html")); return;
+  }
+  if (parsed.pathname === "/__demo/catalog" && req.method === "POST") {
+    let data = "";
+    req.on("data", chunk => { data += chunk; if (data.length > 8 * 1024 * 1024) req.destroy(); });
+    req.on("end", () => {
+      try {
+        const body = JSON.parse(data);
+        if (!/\.csv$/i.test(body.filename)) throw Error("Demo supports CSV. Open the real POS for AI PDF/photo import after setup.");
+        const {csvRows, normalizeItems} = require("../backend/catalog-import");
+        const text = Buffer.from(String(body.data).split(",")[1] || "", "base64").toString("utf8");
+        res.writeHead(200, {"Content-Type":"application/json"}); res.end(JSON.stringify({items:normalizeItems(csvRows(text)),method:"CSV preview"}));
+      } catch(e) {res.writeHead(400, {"Content-Type":"application/json"});res.end(JSON.stringify({message:e.message}));}
+    }); return;
+  }
   if (parsed.pathname === "/__devices") {
     sendFile(res, path.join(__dirname, "device-preview.html"));
     return;

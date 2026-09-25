@@ -39,6 +39,16 @@ password: 1234
 
 ## Local Run
 
+### Catalog import and Dine In preview
+
+In POS: Add Item → Upload catalog. CSV columns: `name,price,category,unit` (up to 100 items / 5 MB). For Grok PDF/JPG/PNG extraction, set `CATALOG_AI_PROVIDER=grok` and `XAI_API_KEY` in `backend/.env` (default model `grok-4.7`). Alternatively use `CATALOG_AI_PROVIDER=openai` and `OPENAI_API_KEY` (default `gpt-4.1-mini`, also supports WebP). `CATALOG_AI_MODEL` overrides the selected provider model. No AI key is included. Grok PDF uploads are deleted after extraction, with a one-hour expiration as fallback. Keys remain on the backend. Files are sent for extraction with `store: false`. AI extraction needs human review, especially unclear prices. Image suggestions use Wikimedia Commons with license/source credits; choose another suggestion, paste an image URL, or leave the image empty.
+
+Uploaded names are normalized and matched against the existing catalog before image lookup. Matching catalog images are reused. Already-added menu items start unchecked; unmatched names are marked New item. Nothing is added during extraction. Edit/remove items, check the review box, then Proceed. Existing active names are skipped. On a partial failure, added rows remain marked and can be excluded from a retry. Imported items can also be edited in the usual Add/Edit Item screen.
+
+The local preview server exposes `/__workflow-preview`: an isolated sample restaurant with table/order/bill/settings dialogs and CSV import. It does not create live bills or payments; image search and AI extraction are available through the real POS backend. A sample CSV is at `scripts/sample-catalog.csv`.
+
+For a backend preview without scheduled WhatsApp reports, set `DISABLE_REPORT_SCHEDULER=1` before starting the backend. This does not disable manually requested reports.
+
 ### APK-free mobile and tablet preview
 
 From the project root, run `npm.cmd run preview:all` on Windows (or `npm run preview:all` elsewhere).
@@ -111,3 +121,7 @@ GET /whatsapp/logs
 5. Stock/finance: add stock and expenses in admin, then check dashboard totals and low stock.
 6. Offline mobile: login once online, disconnect internet, login again with cached credentials, place order, reconnect, and wait for sync.
 7. WhatsApp: set admin WhatsApp number, keep Meta env vars valid, click `Send Test WhatsApp Report`, then check `whatsapp_logs`.
+
+Receipt settings: Admin Settings or Printer Settings ? Receipt second line / Area. The preview and bill use this line below the restaurant name. The footer is Powered by / Axzen POS System. Android tear-off feed was reduced from six lines to two; this native change requires a future APK build and physical printer verification.
+
+Grok API references: https://docs.x.ai/developers/model-capabilities/files/chat-with-files and https://docs.x.ai/developers/model-capabilities/text/structured-outputs .

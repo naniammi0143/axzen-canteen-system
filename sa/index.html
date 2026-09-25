@@ -6,6 +6,11 @@
   <title>axzen Infotech POS</title>
   <link rel="stylesheet" href="dine-in.css">
   <script src="dine-in.js"></script>
+  <script src="catalog-import.js"></script>
+  <link rel="stylesheet" href="catalog-import.css">
+  <link rel="stylesheet" href="help-center.css">
+  <script src="help-center.js"></script>
+  <script src="app-updater.js"></script>
   <link rel="icon" href="assets/axzenPOS.png?v=2" type="image/png">
   <link rel="apple-touch-icon" href="assets/axzenPOS.png?v=2">
   <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
@@ -5243,6 +5248,13 @@
       height: 18px !important;
       margin: 0 !important;
     }
+
+    @media(min-width:761px){
+      #posView .report-modern-actions.report-share-actions { display:flex !important; flex-wrap:wrap; justify-content:flex-start; gap:8px !important; }
+      #posView .report-modern-actions.report-share-actions button { flex:0 0 auto !important; width:auto !important; min-height:36px !important; height:36px !important; padding:0 12px !important; font-size:12px !important; }
+      #posView .report-modern-actions.report-share-actions svg { width:16px !important; height:16px !important; flex:0 0 16px !important; }
+    }
+    .recent-reprint {display:block;margin-top:8px;padding:6px 12px;border:1px solid #bfdbfe;border-radius:8px;background:#eff6ff;color:#1d4ed8;font-weight:700;min-height:34px;cursor:pointer}
   </style>
 </head>
 <body>
@@ -7022,7 +7034,7 @@
       const boldOff = "\x1B\x45\x00";
       const doubleHeight = "\x1D\x21\x10";
       const receiptStart = "\n";
-      const receiptEnd = "\n\n";
+      const receiptEnd = "\n";
       const hasWeightItems = (order.items || []).some(item => item.weightUnit || Number(item.qty || 0) % 1 !== 0);
       const weightText = item => {
         return formatQtyUnit(item.qty, item.weightUnit || "Kg").toUpperCase();
@@ -7064,7 +7076,7 @@
       const cashierLabel = cleanText(order.cashier || user?.name || "-");
       const header = includeHeader ? [
         escInit + receiptStart + normalFont + normalSize + boldOn + alignCenter + center(headerName.toUpperCase()),
-        boldOff + center("axzen infotech")
+        boldOff + center(order.receiptArea ?? settings.receiptArea ?? "")
       ] : [escInit + receiptStart + normalFont + normalSize + boldOn + alignCenter];
       if (order.orderType === "Dine In") header.push(alignLeft + `DINE IN - TABLE: ${cleanText(order.tableName)}`);
       if (copy) header.splice(1, 0, center("COPY RECEIPT NOT ORIGINAL"));
@@ -7083,7 +7095,7 @@
           line,
           boldOn + leftRight("TOTAL", `Rs ${Number(total || 0).toFixed(2)}`),
           boldOff + thick,
-          alignCenter + center("THANK YOU! VISIT AGAIN") + receiptEnd
+          alignCenter + center("THANK YOU! VISIT AGAIN") + "\n" + boldOff + normalSize + "\x1B\x4D\x01" + alignCenter + "Powered by\n" + normalFont + "Axzen POS System" + alignLeft + receiptEnd
         ].join("\n");
       }
       return [
@@ -7102,7 +7114,7 @@
         line,
         leftRight("TOTAL", `Rs ${Number(total || 0).toFixed(2)}`),
         thick,
-        center("THANK YOU! VISIT AGAIN") + receiptEnd
+        center("THANK YOU! VISIT AGAIN") + "\n" + boldOff + normalSize + "\x1B\x4D\x01" + alignCenter + "Powered by\n" + normalFont + "Axzen POS System" + alignLeft + receiptEnd
       ].join("\n");
     }
 
@@ -7220,7 +7232,7 @@
         logoPosition: ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above",
         logoSize: receiptLogoSizeValue(settings.receiptLogoSize),
         headerName: order.canteen || settings.canteenName || "SHAD KITCHEN",
-        companyName: "axzen infotech",
+        companyName: settings.receiptArea || "",
         receiptLanguage: languageMode(settings.receiptLanguage),
         receiptJson: receiptBitmapPayload(order, logoDataUrl, receiptPaperWidthPx())
       };
@@ -7241,7 +7253,7 @@
       const billDate = new Date(order.createdAt || order.syncedAt || Number(order.id) || Date.now());
       return JSON.stringify({
         headerName: order.canteen || settings.canteenName || "SHAD KITCHEN",
-        companyName: "axzen infotech",
+        companyName: settings.receiptArea || "",
         logoDataUrl,
         paperWidth,
         logoPosition: ["above", "left", "right"].includes(settings.receiptLogoPosition) ? settings.receiptLogoPosition : "above",
@@ -7284,10 +7296,10 @@
       };
     }
 
-    function receiptPreviewHtml() {
-      const order = sampleReceiptOrder();
-      const bodyText = receiptText(order, false, true).replace(/\x1B[\s\S]?|\x1D[\s\S]?/g, "").trim();
-      return `<div class="receipt-preview-wrap"><pre>${esc(bodyText)}</pre></div>`;
+    function receiptPreviewHtml(area = settings.receiptArea || "") {
+      const order = { ...sampleReceiptOrder(), receiptArea: area };
+      const bodyText = receiptText(order, false, true).replace(/\x1B[@2]|\x1B[aME3][\s\S]|\x1D![\s\S]/g, "").trimEnd();
+      return `<div class="receipt-preview-wrap"><pre>${esc(bodyText.split("Powered by")[0].trimEnd())}</pre><div style="text-align:center;margin-top:4px;line-height:1.3"><small style="font-size:10px;font-weight:400">Powered by</small><div style="font-size:12px">Axzen POS System</div></div></div>`;
     }
 
     function wakePrinter() {
@@ -7444,7 +7456,7 @@
       if (!hasAdminAccess()) {
         return `<div class="option-card"><h3>Last 5 Bills</h3><div class="muted">Admin access required for copy receipts.</div></div>`;
       }
-      const recent = orders.slice().reverse().slice(0, 5);
+      const recent = orders.slice().sort((a,b) => orderDate(b) - orderDate(a)).slice(0, 5);
       const rows = recent.map(order => `
         <div class="bill-row">
           <div class="bill-action">
@@ -9040,6 +9052,7 @@
       const pairedPrinters = getPairedPrinters();
       return `
         ${sectionHeader("printer")}
+        ${hasAdminAccess() ? `<div class="work-card"><h3>Receipt print settings</h3><label>Second line / Area<input id="printerReceiptArea" maxlength="100" value="${esc(settings.receiptArea || "")}" placeholder="Area / locality"></label><button id="saveReceiptArea" class="page-action" type="button">Save receipt settings</button><p id="receiptAreaStatus" role="status"></p><div id="printerReceiptPreview">${receiptPreviewHtml()}</div><p class="muted">Compact footer and minimal tear-off feed.</p></div>` : ""}
         <div class="work-grid printer-settings-grid">
           ${printerSettingsHtml(pairedPrinters)}
         </div>
@@ -9105,7 +9118,7 @@
         return `<div class="work-card item-manager-card">
           <div class="item-manager-top">
             <span class="item-manager-thumb ${imageStyle ? "" : "initials"}" style="${imageStyle}">${imageStyle ? "" : esc(String(item.name || "I").slice(0, 1))}</span>
-            <div><h3>${esc(localizedName(item, "both"))}</h3><span class="muted">${esc(item.category || "-")} | ${esc(itemSaleUnit(item) || "Plate")} | ${subs.length ? `${subs.length} sub items` : "Empty"} | ${hidden ? "Hidden" : "Visible"}</span></div>
+            <div><h3>${esc(localizedName(item, "both"))}</h3>${item.imageCredit?.source && /^https:\/\//i.test(item.imageCredit.source) ? `<a href="${esc(item.imageCredit.source)}" target="_blank" rel="noopener">Photo: ${esc(item.imageCredit.author)} ? ${esc(item.imageCredit.license)}</a>` : ""}<span class="muted">${esc(item.category || "-")} | ${esc(itemSaleUnit(item) || "Plate")} | ${subs.length ? `${subs.length} sub items` : "Empty"} | ${hidden ? "Hidden" : "Visible"}</span></div>
             <button class="ghost-action" data-edit-item="${item.id}" type="button">${editing ? "Done" : "Edit"}</button>
             <button class="ghost-action ${hidden ? "" : "danger-lite"}" data-hide-item="${item.id}" type="button">${hidden ? "Show" : "Hide"}</button>
           </div>
@@ -9139,7 +9152,7 @@
       return `
         ${sectionHeader(section)}
         <div class="work-card item-add-card">
-          <h3>Add Item</h3>
+          <h3>Add Item</h3><button class="page-action" id="uploadCatalogBtn" type="button">Upload catalog ? Review items</button>
           <p class="muted">Search the full item list. Already added names stay in this login only and will not duplicate.</p>
           <input id="newItemName" placeholder="Search all software items">
           <div class="item-suggest-box" id="itemSuggestionBox"></div>
@@ -9184,6 +9197,10 @@
             loadAdminData().catch(() => {});
           }
         });
+        return;
+      }
+      if (activePosSection === "help") {
+        window.HelpCenter.mount(page, { api, user, settings });
         return;
       }
       const html = activePosSection === "held" ? ordersPageHtml()
@@ -9252,6 +9269,16 @@
     }
 
     function bindOptionPageActions() {
+      if ($("printerReceiptArea")) $("printerReceiptArea").oninput = event => { $("printerReceiptPreview").innerHTML = receiptPreviewHtml(event.target.value); };
+      if ($("saveReceiptArea")) $("saveReceiptArea").onclick = async () => {
+        const button = $("saveReceiptArea"); button.disabled = true;
+        try {
+          const data = await adminApi("/settings", {method:"POST",body:JSON.stringify({receiptArea:$("printerReceiptArea").value.trim()})});
+          applySettings(data.settings); $("receiptAreaStatus").textContent = "Receipt settings saved";
+        } catch (error) { $("receiptAreaStatus").textContent = error.message; }
+        finally { button.disabled = false; }
+      };
+      if ($("uploadCatalogBtn")) $("uploadCatalogBtn").onclick = () => window.CatalogImport.open({ api: adminApi, onSaved: async () => { await loadProducts(); await loadCatalogItems(); renderOptionPage(); } });
       bindPrinterSettingsControls();
       if ($("menuTestPrint")) $("menuTestPrint").addEventListener("click", testPrint);
       if ($("testBillingPrinter")) $("testBillingPrinter").addEventListener("click", () => testSinglePrinter("billing"));
@@ -10076,6 +10103,7 @@
                 ${drawerItem("printer", "Printer Settings", "P", activeSection)}
                 ${drawerItem("counter", "User", "U", activeSection)}
                 ${drawerItem("settings", "Settings", "G", activeSection)}
+                ${drawerItem("help", "Help Center", "?", activeSection)}
               </section>
             </div>
             <div class="drawer-footer">
@@ -10134,7 +10162,7 @@
     }
 
     async function printCopyBill(orderId) {
-      const order = orders.find(row => String(row.id || row.clientOrderId) === String(orderId));
+      const order = orders.find(row => (String(row.id) === String(orderId) || String(row.clientOrderId) === String(orderId)));
       if (!order) {
         $("posMessage").textContent = "Bill not found";
         $("posMessage").className = "status error";
@@ -10142,12 +10170,26 @@
       }
       if (window.AxenPrinter && (typeof window.AxenPrinter.printToPrinterAsync === "function" || typeof window.AxenPrinter.printAsync === "function" || typeof window.AxenPrinter.print === "function")) {
         const options = receiptPrintOptions(order);
-        const result = printToEnabledPrinters(receiptText(order, true, !canPrintReceiptLogo(options) && !canPrintReceiptBitmap(options)), options);
+        const printer = billingPrinter || selectedPrinter;
+        if (!printer) { showSyncFlash("Select a billing printer in Printer Settings", "error"); return; }
+        const result = printToAddress(printer, receiptText(order, true, !canPrintReceiptLogo(options) && !canPrintReceiptBitmap(options)), options);
+        showSyncFlash(result || "Reprint requested");
         $("posMessage").textContent = result || "Copy receipt sent";
         $("posMessage").className = result === "Print queued" || result === "Print sent" || result === "Print queued to 2 printers" ? "status ok" : "status error";
       } else {
-        console.log(receiptText(order, true));
-        $("posMessage").textContent = "Copy receipt ready only inside Android APK printer mode.";
+        const receipt = window.open("", "_blank", "width=420,height=680");
+        if (!receipt) { showSyncFlash("Allow popups to reprint this receipt", "error"); return; }
+        receipt.document.title = "Reprint receipt";
+        const pre = receipt.document.createElement("pre");
+        pre.textContent = receiptText(order, true);
+        pre.style.cssText = "white-space:pre-wrap;font:13px monospace;max-width:80mm;margin:12px auto";
+        receipt.document.body.append(pre);
+        const printButton = receipt.document.createElement("button");
+        printButton.textContent = "Print receipt";
+        printButton.onclick = () => receipt.print();
+        receipt.document.body.prepend(printButton);
+        const style = receipt.document.createElement("style"); style.textContent = "@media print { button {display:none} }"; receipt.document.head.append(style);
+        $("posMessage").textContent = "Copy receipt opened for printing.";
         $("posMessage").className = "status";
       }
     }
@@ -10423,7 +10465,7 @@
     function dashboardAdminHtml(stats) {
       const total = Math.max(1, stats.total);
       const expenseTotal = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-      const recent = orders.slice().reverse().slice(0, 5);
+      const recent = orders.slice().sort((a,b) => orderDate(b) - orderDate(a)).slice(0, 5);
       const top = [...orders.reduce((map, order) => {
         (order.items || []).forEach(item => {
           const row = map.get(item.name) || { name: item.name, qty: 0, total: 0 };
@@ -10458,7 +10500,7 @@
           </div>
           <div class="panel">
             <div class="admin-card-head"><h2>Recent Sales</h2><button class="admin-link" data-admin-jump="sales" type="button">View All</button></div>
-            ${recent.map(order => `<div class="admin-sale-row"><span class="row-icon">${lucideIcon("shoppingCart", 18)}</span><div><strong>${esc(order.time || "-")}</strong><div class="muted">${esc((order.items || []).map(item => `${item.name} x ${item.qty}`).join(", "))}</div></div><div><strong>${money(order.total)}</strong><span class="payment-pill ${String(order.payment || "").toLowerCase()}">${esc(order.payment || "Cash")}</span></div></div>`).join("") || `<div class="muted">No recent sales</div>`}
+            ${recent.map(order => `<div class="admin-sale-row"><span class="row-icon">${lucideIcon("shoppingCart", 18)}</span><div><strong>${esc(order.time || "-")}</strong><div class="muted">${esc((order.items || []).map(item => `${item.name} x ${item.qty}`).join(", "))}</div></div><div><strong>${money(order.total)}</strong><span class="payment-pill ${String(order.payment || "").toLowerCase()}">${esc(order.payment || "Cash")}</span><button class="recent-reprint" data-reprint-recent="${esc(order.clientOrderId || order.id)}" type="button">Reprint</button></div></div>`).join("") || `<div class="muted">No recent sales</div>`}
           </div>
         </div>
         <div class="admin-grid-2">
@@ -10523,7 +10565,7 @@
           ? `Your plan ends in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"}. Recharge to avoid interruption.`
           : "";
       const planTone = months => Number(months) === 3 ? "green" : Number(months) === 6 ? "violet" : Number(months) === 9 ? "orange" : Number(months) === 12 ? "red" : "";
-      const planBadge = months => Number(months) === 12 ? "Best Value" : Number(months) >= 6 ? "Recommended" : "";
+      const planBadge = months => Number(months) === 12 ? "Annual" : "";
       const calendarIcon = '<svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>';
       return `
         <div class="subscription-hero">
@@ -10541,7 +10583,7 @@
         </div>
         <div class="panel">
           <div class="subscription-headline">
-            <div><h2>Recharge</h2><p>Tap a duration to pay. Amount is sent to Cashfree.</p></div>
+            <div><h2>Recharge</h2><p>Choose how long to renew. Each card shows the total amount payable for that duration.</p></div>
             <span class="cashfree-badge">Powered by <strong>Cashfree</strong></span>
           </div>
           <div class="plan-grid">
@@ -10550,14 +10592,14 @@
                 <span class="plan-card-icon">${calendarIcon}</span>
                 <strong>${esc(item.label || `${item.months} Months`)}</strong>
                 ${planBadge(item.months) ? `<em class="plan-save-pill">${esc(planBadge(item.months))}</em>` : ""}
-                <span>${money(item.amount)}</span>
+                <span>${money(item.amount)}</span><small>Total payable ? ${esc(item.months)} months</small>
                 <small>${money(monthlyPrice)} × ${esc(item.months)} month${Number(item.months) > 1 ? "s" : ""}</small>
               </button>
             `).join("")}
           </div>
           <div class="subscription-strip">
             <h3 class="payment-method-title">How payment works</h3>
-            <p>Select a plan above. Cashfree opens next — UPI, Google Pay, PhonePe, Paytm and cards are supported there.</p>
+            <p>These are duration options for your current plan, not different feature packages. Dine In needs separate sales-team approval. Your plan is renewed after payment is verified. Select a duration above. Cashfree opens next — UPI, Google Pay, PhonePe, Paytm and cards are supported there.</p>
           </div>
           <div class="status" id="subscriptionStatus">${subscriptionState ? "Select a plan to continue." : "Loading plan details..."}</div>
         </div>`;
@@ -10788,6 +10830,8 @@
               <option value="left" ${logoPosition === "left" ? "selected" : ""}>Left of name</option>
               <option value="right" ${logoPosition === "right" ? "selected" : ""}>Right of name</option>
             </select></label>
+            <label>Receipt second line / Area<input id="receiptAreaInput" maxlength="100" value="${esc(settings.receiptArea || "")}" placeholder="Area / locality, e.g. Madhapur, Hyderabad"></label>
+            <p class="muted">Footer: Powered by / Axzen POS System. Compact paper feed after the footer.</p>
             <label>Receipt logo size <span class="range-row"><input id="receiptLogoSizeInput" type="range" min="60" max="160" step="5" value="${logoSize}"><strong id="receiptLogoSizeValue">${logoSize}%</strong></span></label>
             <label>Server URL <input id="apiInput" value="${esc(API)}"></label>
             <button class="primary">Save Settings</button>
@@ -10936,6 +10980,7 @@
     }
 
     function bindAdminPageActions() {
+      document.querySelectorAll("[data-reprint-recent]").forEach(btn => btn.onclick = () => printCopyBill(btn.dataset.reprintRecent));
       if ($("adminGoBilling")) $("adminGoBilling").addEventListener("click", openBillingFromAdmin);
       if ($("settingsForm")) $("settingsForm").addEventListener("submit", saveSettings);
       bindReceiptPreviewControls();
@@ -10993,6 +11038,7 @@
         if (event?.target?.id === "receiptLogoFileInput" && event.target.files?.[0]) {
           receiptLogoDataUrl = await fileToDataUrl(event.target.files[0]);
         }
+        settings.receiptArea = $("receiptAreaInput")?.value.trim() || "";
         settings.canteenName = $("canteenNameInput")?.value.trim() || settings.canteenName || "Main Canteen";
         settings.logoUrl = $("logoUrlInput")?.value.trim() || settings.logoUrl || "";
         settings.menuLanguage = $("menuLanguageInput")?.value || settings.menuLanguage;
@@ -11002,7 +11048,7 @@
         if ($("receiptLogoSizeValue")) $("receiptLogoSizeValue").textContent = `${settings.receiptLogoSize}%`;
         $("receiptPreviewBox").innerHTML = receiptPreviewHtml();
       };
-      ["canteenNameInput", "logoUrlInput", "menuLanguageInput", "receiptLanguageInput", "receiptLogoPositionInput", "receiptLogoSizeInput", "receiptLogoFileInput"].forEach(id => {
+      ["receiptAreaInput", "canteenNameInput", "logoUrlInput", "menuLanguageInput", "receiptLanguageInput", "receiptLogoPositionInput", "receiptLogoSizeInput", "receiptLogoFileInput"].forEach(id => {
         const input = $(id);
         if (!input) return;
         input.addEventListener("input", update);
@@ -11144,6 +11190,7 @@
       const nextApi = $("apiInput") ? $("apiInput").value.trim().replace(/\/$/, "") : "";
       if (nextApi) localStorage.setItem("AXEN_API_URL", nextApi);
       const nextSettings = {
+        receiptArea: $("receiptAreaInput") ? $("receiptAreaInput").value.trim() : settings.receiptArea,
         canteenName: $("canteenNameInput") ? $("canteenNameInput").value.trim() || "Main Canteen" : settings.canteenName,
         logoUrl: $("logoUrlInput")?.value.trim() || settings.logoUrl || "",
         menuLanguage: $("menuLanguageInput") ? $("menuLanguageInput").value : settings.menuLanguage,
@@ -11287,6 +11334,7 @@
       updateSyncStatus();
       setPosSection("billing");
       await loadSettings().catch(() => applySettings(settings));
+      window.AxzenAppUpdater?.check({ apiBase: API, token: localStorage.getItem(tokenKey) }).catch(() => {});
       if (isChickenShopCanteen()) activeCategory = chickenCategory;
       loadProducts().catch(() => renderProducts());
       loadSubscriptionStatus({ silent: true }).catch(() => {});
@@ -11420,6 +11468,7 @@
     window.setInterval(refreshLiveData, 3000);
     window.setInterval(checkServerConnection, 30000);
 
+    window.AxzenAppUpdater?.markHealthy();
     user = readJson(sessionKey, null);
     if (user) enterApp();
     else {

@@ -8,6 +8,8 @@ const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
 const { Server } = require("socket.io");
 const { sendWhatsAppText } = require("./whatsappService");
+const { HELP_PROBLEMS, normalizeHelpSubmission, normalizeHelpStatus } = require("./help-center");
+const { normalizeCashPlanActivation } = require("./cash-plan");
 
 dotenv.config({ path: path.join(__dirname, ".env") });
 dotenv.config();
@@ -35,6 +37,8 @@ if (!VERIFY_TOKEN) {
 }
 
 app.use(cors());
+require("./catalog-import").register(app, requireAdmin);
+
 app.use(express.json({
   limit: "1mb",
   verify: (req, res, buf) => {
@@ -119,6 +123,7 @@ const defaultSettings = {
   logoUrl: "",
   receiptLogoPosition: "above",
   receiptLogoSize: 100,
+  receiptArea: "",
   menuLanguage: "english",
   receiptLanguage: "english",
   businessCategory: "Canteen",
@@ -394,6 +399,7 @@ const menuItemSchema = new mongoose.Schema({
   unit: String,
   billingType: { type: String, enum: ["quantity", "weight"], default: "quantity" },
   image: String,
+  imageCredit: { source: String, license: String, author: String, licenseUrl: String },
   nameTe: String,
   subItems: [{ name: String, nameTe: String, price: Number }],
   sortOrder: Number,
@@ -457,6 +463,7 @@ const reportSettingSchema = new mongoose.Schema({
   logoUrl: String,
   receiptLogoPosition: String,
   receiptLogoSize: Number,
+  receiptArea: String,
   menuLanguage: String,
   receiptLanguage: String,
   businessCategory: String,
@@ -586,6 +593,8 @@ const marketingPaymentSchema = new mongoose.Schema({
   amount: Number,
   pendingAmount: Number,
   paymentMode: String,
+  paymentReference: String,
+  notes: String,
   collectedBy: String,
   collectedByName: String
 }, { timestamps: true, collection: "marketing_payments" });
@@ -613,10 +622,18 @@ const subscriptionOrderSchema = new mongoose.Schema({
 
 const marketingSupportTicketSchema = new mongoose.Schema({
   id: Number,
+  canteenId: { type: String, index: true },
   title: String,
   status: { type: String, index: true },
   canteenName: String,
-  priority: String
+  customerName: String,
+  phone: String,
+  problemType: String,
+  message: String,
+  submittedByLogin: String,
+  priority: String,
+  resolvedAt: Date,
+  resolvedBy: String
 }, { timestamps: true, collection: "marketing_support_tickets" });
 
 const enquirySchema = new mongoose.Schema({
@@ -1259,6 +1276,7 @@ async function saveMenuItem(payload) {
     unit: String(payload.unit || payload.saleUnit || "Plate").trim() || "Plate",
     billingType: payload.billingType === "weight" ? "weight" : "quantity",
     image: payload.image || "",
+    imageCredit: payload.imageCredit && typeof payload.imageCredit === "object" ? { source: String(payload.imageCredit.source || "").slice(0,1000), license: String(payload.imageCredit.license || "").slice(0,100), author: String(payload.imageCredit.author || "").slice(0,500), licenseUrl: String(payload.imageCredit.licenseUrl || "").slice(0,1000) } : undefined,
     subItems: normalizeSubItems(payload.subItems),
     sortOrder: payload.sortOrder !== undefined && payload.sortOrder !== "" ? Number(payload.sortOrder) : Number(payload.id || nextId(current)),
     hidden: payload.hidden === true || payload.hidden === "true"
@@ -1453,7 +1471,8 @@ async function sanitizeMenuForBusinessCategory(canteenId, businessCategory, posM
 async function allCatalogItemsForCanteen(canteenId = DEFAULT_CANTEEN_ID, search = "") {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   const query = String(search || "").trim().toLowerCase();
-  const currentNames = new Set((await allMenuItems(targetCanteenId, { includeHidden: true })).map(item => String(item.name || "").trim().toLowerCase()));
+  const currentItems = await allMenuItems(targetCanteenId, { includeHidden: true });
+  const currentNames = new Set(currentItems.map(item => String(item.name || "").trim().toLowerCase()));
   const rows = [];
   const push = item => {
     const name = String(item?.name || "").replace(/\s+/g, " ").trim();
@@ -1464,12 +1483,14 @@ async function allCatalogItemsForCanteen(canteenId = DEFAULT_CANTEEN_ID, search 
       name,
       nameTe: String(item.nameTe || item.teluguName || "").trim(),
       image: String(item.image || "").trim(),
+      imageCredit: item.imageCredit,
       category: String(item.category || inferMenuCategory(name)).trim() || "Snacks",
       billingType: item.billingType === "weight" ? "weight" : "quantity",
       unit: String(item.unit || "").trim(),
       active: currentNames.has(name.toLowerCase())
     });
   };
+  currentItems.forEach(push);
   defaultCatalogItems.forEach(push);
   if (!mongoReady) {
     memory.globalCatalogItems.forEach(push);
@@ -1483,8 +1504,8 @@ async function allCatalogItemsForCanteen(canteenId = DEFAULT_CANTEEN_ID, search 
     if (!current || (!current.image && item.image) || (current.active && !item.active)) unique.set(key, { ...item, active: currentNames.has(key) });
   });
   return [...unique.values()]
-    .sort((a, b) => Number(a.active) - Number(b.active) || a.name.localeCompare(b.name))
-    .slice(0, 400);
+    .sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name))
+    .slice(0, Math.max(400, currentItems.length));
 }
 
 async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen", businessCategory = "Canteen") {
@@ -1669,6 +1690,7 @@ async function saveSettings(payload, canteenId = DEFAULT_CANTEEN_ID) {
   if (Object.prototype.hasOwnProperty.call(next, "autoReport")) {
     next.autoReport = next.autoReport === true || next.autoReport === "true";
   }
+  if (Object.prototype.hasOwnProperty.call(next, "receiptArea")) next.receiptArea = String(next.receiptArea || "").replace(/[\r\n\x00-\x1f]/g, " ").trim().slice(0, 100);
   if (next.reportTime) next.reportTime = parseReportTime(next.reportTime);
   if (Object.prototype.hasOwnProperty.call(next, "receiptLogoSize")) {
     next.receiptLogoSize = Math.max(60, Math.min(160, Number(next.receiptLogoSize || 100)));
@@ -2188,6 +2210,8 @@ async function addMarketingPayment(payment) {
     amount: Number(payment.amount || 0),
     pendingAmount: Number(payment.pendingAmount || 0),
     paymentMode: payment.paymentMode || "UPI",
+    paymentReference: payment.paymentReference || "",
+    notes: payment.notes || "",
     collectedBy: payment.collectedBy || "",
     collectedByName: payment.collectedByName || "",
     createdAt: new Date().toISOString(),
@@ -2204,6 +2228,12 @@ async function addMarketingPayment(payment) {
 async function allMarketingSupportTickets() {
   if (!mongoReady) return memory.supportTickets;
   return MarketingSupportTicket.find({}).sort({ createdAt: -1 }).limit(200).lean();
+}
+
+async function helpTicketsForCanteen(canteenId) {
+  const target = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!mongoReady) return memory.supportTickets.filter(item => normalizeCanteenId(item.canteenId) === target).sort(byNewest);
+  return MarketingSupportTicket.find({ canteenId: target }).sort({ createdAt: -1 }).limit(100).lean();
 }
 
 async function allEnquiries() {
@@ -2820,7 +2850,7 @@ function marketingSummary(canteens, users, activities, payments = [], supportTic
       pendingPayments,
       printersAssigned,
       printersAvailable,
-      openSupportTickets: supportTickets.filter(item => item.status === "Open").length,
+      openSupportTickets: supportTickets.filter(item => ["Open", "Pending"].includes(item.status)).length,
       totalEnquiries: enquiries.length,
       newEnquiries: enquiries.filter(item => ["new", "New"].includes(String(item.status || "New"))).length,
       pendingInstallations: canteens.filter(item => ["Active", "Trial"].includes(item.status) && Number(item.printersAssigned || 0) < Number(item.printersRequired || 0)).length
@@ -3411,6 +3441,30 @@ app.post("/api/enquiry", requireDatabase, async (req, res) => {
   }
 });
 
+app.get("/help/problems", requireCanteenAuth, (req, res) => {
+  res.json({ success: true, problems: HELP_PROBLEMS, supportPhone: SALES_CONTACT_PHONE });
+});
+
+app.get("/help/tickets", requireCanteenAuth, async (req, res) => {
+  res.json({ success: true, tickets: await helpTicketsForCanteen(req.authUser.canteenId) });
+});
+
+app.post("/help/tickets", requireDatabase, requireCanteenAuth, async (req, res) => {
+  try {
+    const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
+    const appSettings = await getSettings(canteenId);
+    const ticket = normalizeHelpSubmission(req.body, {
+      canteenId,
+      canteenName: appSettings.canteenName || req.authUser.canteenName,
+      submittedByLogin: req.authUser.loginId || req.authUser.mobile || req.authUser.name
+    });
+    const saved = await MarketingSupportTicket.create({ id: Date.now(), ...ticket });
+    res.status(201).json({ success: true, message: "Help request submitted.", ticket: saved });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 app.post("/marketing-api/login", requireDatabase, async (req, res) => {
   const employeeId = String(req.body.employeeId || "").trim();
   const password = String(req.body.password || "");
@@ -3464,7 +3518,25 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     : payments.filter(item => visibleIds.has(Number(item.canteenId)));
   const visibleSupportTickets = isAdmin
     ? supportTickets
-    : supportTickets.filter(item => canteens.some(canteen => canteen.canteenName === item.canteenName));
+    : supportTickets.filter(item => canteens.some(canteen =>
+        normalizeCanteenId(canteen.activatedCanteenId) === normalizeCanteenId(item.canteenId) ||
+        canteen.canteenName === item.canteenName
+      ));
+  const enrichedSupportTickets = visibleSupportTickets.map(ticket => {
+    const canteen = allCanteens.find(item =>
+      normalizeCanteenId(item.activatedCanteenId) === normalizeCanteenId(ticket.canteenId) ||
+      item.canteenName === ticket.canteenName
+    );
+    return { ...ticket, canteen: canteen ? {
+      activatedCanteenId: canteen.activatedCanteenId,
+      canteenName: canteen.canteenName,
+      businessCategory: canteen.businessCategory,
+      ownerName: canteen.ownerName,
+      ownerMobile: canteen.ownerMobile,
+      city: canteen.city,
+      address: canteen.address
+    } : null };
+  });
   const visibleEnquiries = isAdmin ? enquiries : [];
   const visiblePrinters = isAdmin
     ? printers
@@ -3478,12 +3550,31 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     users: visibleUsers.map(publicMarketingUser),
     printers: visiblePrinters,
     payments: visiblePayments,
-    supportTickets: visibleSupportTickets,
+    supportTickets: enrichedSupportTickets,
     enquiries: visibleEnquiries,
     websitePlans: isAdmin ? websitePlans : [],
     activities: isAdmin ? activities : [],
     summary: marketingSummary(canteens, visibleUsers, isAdmin ? activities : [], visiblePayments, visibleSupportTickets, visibleEnquiries, visiblePrinters)
   });
+});
+
+app.post("/marketing-api/help-tickets/:id/status", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const status = normalizeHelpStatus(req.body.status);
+    const identifier = String(req.params.id || "").trim();
+    const query = mongoose.isValidObjectId(identifier) ? { _id: identifier } : { id: Number(identifier) };
+    const ticket = await MarketingSupportTicket.findOneAndUpdate(query, {
+      $set: {
+        status,
+        resolvedAt: status === "Solved" ? new Date() : null,
+        resolvedBy: status === "Solved" ? (req.marketingUser.name || req.marketingUser.employeeId) : ""
+      }
+    }, { new: true }).lean();
+    if (!ticket) return res.status(404).json({ success: false, message: "Help request not found" });
+    res.json({ success: true, ticket });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 });
 
 app.post("/marketing-api/website-plans", requireDatabase, requireSuperAdmin, async (req, res) => {
@@ -3752,6 +3843,53 @@ app.post("/marketing-api/canteens/:id/payment", requireDatabase, requireSuperAdm
   }
 });
 
+app.post("/marketing-api/canteens/:id/activate-cash-plan", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const before = (await allMarketingCanteens()).find(item => Number(item.id) === Number(req.params.id));
+    if (!before) return res.status(404).json({ success: false, message: "Canteen not found" });
+    const plans = await allWebsitePlans({ activeOnly: true });
+    const cash = normalizeCashPlanActivation(req.body, plans);
+    const todayDate = new Date().toISOString().slice(0, 10);
+    const startFrom = before.planExpiryDate && !isPastDate(before.planExpiryDate) ? before.planExpiryDate : todayDate;
+    const expiryDate = addMonthsDate(cash.months, startFrom);
+    let canteen = await updateMarketingCanteen(before.id, {
+      status: "Active",
+      selectedPlan: cash.planName,
+      planType: "Paid",
+      planStartDate: todayDate,
+      planExpiryDate: expiryDate,
+      paidAmount: Number(before.paidAmount || 0) + cash.amount,
+      pendingAmount: 0,
+      paymentMode: "Cash",
+      paymentApprovalStatus: "Approved",
+      blocked: false,
+      online: true
+    }, req.marketingUser);
+    if (!canteen.activatedCanteenId) canteen = await activateApprovedCanteen(canteen, req.marketingUser);
+    if (canteen.activatedCanteenId) {
+      await Canteen.findOneAndUpdate(
+        { canteenId: normalizeCanteenId(canteen.activatedCanteenId) },
+        { $set: { active: true, paymentStatus: "paid", paymentReference: cash.cashReference || "Cash", plan: cash.planName } }
+      );
+    }
+    const payment = await addMarketingPayment({
+      canteenId: canteen.id,
+      canteenName: canteen.canteenName,
+      amount: cash.amount,
+      pendingAmount: 0,
+      paymentMode: "Cash",
+      paymentReference: cash.cashReference,
+      notes: cash.notes,
+      collectedBy: req.marketingUser.employeeId,
+      collectedByName: req.marketingUser.name
+    });
+    await addMarketingActivity({ type: "cash_plan", text: `${canteen.canteenName} ${cash.planName} plan activated for ${cash.months} months by cash`, actor: req.marketingUser.name, canteenId: canteen.id });
+    res.json({ success: true, message: "Cash received and plan activated.", canteen, payment });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
 app.post("/marketing-api/canteens/:id/plan", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const before = (await allMarketingCanteens()).find(item => Number(item.id) === Number(req.params.id)) || {};
@@ -3845,7 +3983,7 @@ async function initializeApp(options = {}) {
 }
 
 if (require.main === module) {
-  initializeApp({ scheduler: true }).finally(() => {
+  initializeApp({ scheduler: process.env.DISABLE_REPORT_SCHEDULER !== "1" }).finally(() => {
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`axzen Hospitality Backend running on http://localhost:${PORT}`);
     });

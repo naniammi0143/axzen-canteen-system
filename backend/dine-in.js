@@ -47,7 +47,7 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
   const role = (req, roles) => { if (!roles.includes(req.authUser.role)) fail("Your role cannot perform this action", 403); };
   const cashRoles = ["admin", "manager", "cashier", "billing", "user"];
   async function config(id) { return await Config.findById(id).lean() || { enabled: false, requested: false }; }
-  async function gated(req) { if (!(await config(cid(req))).enabled) fail("Dine In approval required. Upgrade Plan.", 403); }
+  async function gated(req) { if (!(await config(cid(req))).enabled) fail("Dine In is OFF. Please contact sales team: 8790568446.", 403); }
   async function table(req) {
     const row = await Table.findOne({ canteenId: cid(req), tableId: req.params.tableId }).lean();
     if (!row) fail("Table not found", 404);

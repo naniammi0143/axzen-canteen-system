@@ -8,12 +8,13 @@ window.DineIn = (() => {
   function mount(root, options) {
     dispose();
     let stopped = false, busy = false, access = null, selected = "", mode = options.mode || "tables", menu = [], bills = [], draft = [], requestId = id(), message = "", error = false;
-    let draftRevision = null, pendingSend = false;
+    let draftRevision = null, pendingSend = false, panel = "order", addingTable = false, fieldValues = {}, fieldScope = null;
     const api = (path, body, admin = false) => (admin ? options.adminApi || options.api : options.api)(path, body === undefined ? {} : { method: "POST", body: JSON.stringify(body), timeoutMs: 15000 });
     const active = () => !stopped && root.isConnected && (!options.isActive || options.isActive());
     back = () => {
       if (!active()) return false;
       if (busy || pendingSend) { message = "Please wait for the current order to finish."; render(); return true; }
+      if (addingTable) { addingTable = false; render(); return true; }
       if (selected || mode !== "tables") {
         if (draft.length && !confirm("Discard unsent items and return to tables?")) return true;
         selected = ""; mode = "tables"; draft = []; requestId = id(); draftRevision = null; render(); return true;
@@ -29,10 +30,13 @@ window.DineIn = (() => {
     const ticketHtml = (row, ticket) => `<article class="di-ticket"><div class="di-row"><strong>Table ${esc(row.name)} · KOT ${ticket.number}</strong><span class="di-pill">${esc(ticket.status)}</span></div><small>${esc(new Date(ticket.createdAt).toLocaleString())} · ${esc(ticket.waiter)}</small>${ticket.items.map(i => `<p><b>${i.qty} × ${esc(i.name)}</b>${i.note ? `<br><small>${esc(i.note)}</small>` : ""}</p>`).join("")}<div class="di-row">${{ new: "preparing", preparing: "ready", ready: "served" }[ticket.status] ? button("ticket", `Mark ${{ new: "preparing", preparing: "ready", ready: "served" }[ticket.status]}`, `${row.tableId}|${ticket.id}|${{ new: "preparing", preparing: "ready", ready: "served" }[ticket.status]}`) : ""}${button("print-kot", "Reprint KOT", `${row.tableId}|${ticket.id}`, "soft")}${options.admin && !["served", "cancelled"].includes(ticket.status) ? button("cancel", "Cancel ticket", `${row.tableId}|${ticket.id}`, "soft") : ""}</div>${ticket.reason ? `<p>Cancelled: ${esc(ticket.reason)}</p>` : ""}</article>`;
     function render() {
       if (!active()) return;
+      const scope = addingTable ? "new-table" : selected;
+      if (fieldScope !== scope) { fieldValues = {}; fieldScope = scope; }
+      else root.querySelectorAll(".di-dialog input, .di-dialog select").forEach(input => { if (input.id) fieldValues[input.id] = input.value; });
       const row = table();
       let html = "";
       if (!access) html = "Connecting to restaurant…";
-      else if (!access.enabled) html = `<section class="di-empty"><h2>Upgrade Plan</h2><p>Unlock table service, kitchen tickets and table-wise bills.</p><p>Dine In requires manager approval for this restaurant.</p>${button("request", access.requested ? "Approval requested — check again" : "Request Dine In approval")}</section>`;
+      else if (!access.enabled) html = `<section class="di-empty"><h2>Please contact sales team</h2><p>Dine In is OFF for this restaurant.</p><p>Unlock table service, kitchen tickets and table-wise bills.</p><p>Contact sales to activate table service: <a href="tel:8790568446">8790568446</a></p><p>Upgrade Plan / activation requires manager approval.</p>${button("request", access.requested ? "Approval requested — check again" : "Request Dine In approval")}</section>`;
       else if (mode === "kitchen") html = `<h2>Kitchen · Live tickets</h2><p>Updates every 5 seconds. New → Preparing → Ready → Served.</p><div class="di-grid">${access.tables.flatMap(t => (t.session?.tickets || []).filter(k => !["served", "cancelled"].includes(k.status)).map(k => ticketHtml(t, k))).join("") || "No pending kitchen tickets"}</div>`;
       else if (mode === "reports") {
         const dineBills = bills.filter(b => b.orderType === "Dine In");
@@ -49,12 +53,25 @@ window.DineIn = (() => {
         if (["reserved", "cleaning"].includes(row.status)) html += button("available", row.status === "cleaning" ? "Mark cleaned / available" : "Release reservation");
         if (row.status === "closing") html += `<p>Bill is being saved. Retry safely with the same bill ID.</p>${button("settle", "Recover bill")}`;
         if (row.lastBill?.clientOrderId) html += button("last-bill", "Reprint last bill", "", "soft");
-        if (options.admin && ["available", "disabled"].includes(row.status)) html += `<hr><h3>Admin table controls</h3>${tableForm(row)}${button("save-table", "Save table")}${button("disable", row.active ? "Disable table" : "Enable table", "", "soft")}`;
-        html += `<h3>Kitchen tickets</h3><div class="di-grid">${(row.session?.tickets || []).map(t => ticketHtml(row, t)).join("")}</div>`;
+        if (options.admin && ["available", "disabled"].includes(row.status)) html += `<section class="di-settings-panel"><h3>Table settings</h3>${tableForm(row)}${button("save-table", "Save table")}${button("disable", row.active ? "Disable table" : "Enable table", "", "soft")}</section>`;
+        html += `<section class="di-tickets-panel"><h3>Kitchen tickets</h3><div class="di-grid">${(row.session?.tickets || []).map(t => ticketHtml(row, t)).join("") || "No kitchen tickets yet"}</div></section>`;
       } else {
-        html = `<h2>Restaurant floor</h2><p>Available · Reserved · Occupied · Cleaning · Disabled</p><div class="di-grid">${access.tables.filter(t => t.active || options.admin).map(t => `<button class="di-table ${esc(t.status)}" data-di="select" data-value="${esc(t.tableId)}"><span>${esc(t.zone)}</span><h2>Table ${esc(t.name)}</h2><b>${esc(t.status)}</b><p>${t.seats} seats · ${money(summary(t).total)}</p></button>`).join("") || '<p>No tables yet. Ask your restaurant admin to add tables.</p>'}</div>${options.admin ? `<section class="di-card"><h3>Admin · Add table</h3>${tableForm()}${button("save-table", "Add table")}</section>` : ""}`;
+        html = `<h2>Restaurant floor</h2><p>Available · Reserved · Occupied · Cleaning · Disabled</p><div class="di-grid">${access.tables.filter(t => t.active || options.admin).map(t => `<button class="di-table ${esc(t.status)}" data-di="select" data-value="${esc(t.tableId)}"><span>${esc(t.zone)}</span><h2>Table ${esc(t.name)}</h2><b>${esc(t.status)}</b><p>${t.seats} seats · ${money(summary(t).total)}</p></button>`).join("") || '<p>No tables yet. Ask your restaurant admin to add tables.</p>'}</div>${options.admin ? `<p>${button("new-table", "+ Add table")}</p>` : ""}`;
+      }
+      const hasPopup = access?.enabled && (row || mode !== "tables" || addingTable);
+      if (hasPopup) {
+        const title = addingTable ? "Add a table" : row ? `Table ${esc(row.name)}` : mode === "kitchen" ? "Kitchen" : "Table reports";
+        if (addingTable) html = `${tableForm()}${button("save-table", "Create table")}`;
+        const tabs = row ? `<div class="di-panel-tabs">${["order", "bill", "tickets", ...(options.admin ? ["settings"] : [])].map(key => `<button class="di-btn ${panel === key ? "" : "soft"}" data-di="panel" data-value="${key}" aria-pressed="${panel === key}">${{order:"Add food",bill:"Current bill",tickets:"Kitchen tickets",settings:"Table settings"}[key]}</button>`).join("")}</div>` : "";
+        html = `<div class="di-floor-backdrop" aria-hidden="true">${access.tables.filter(t => t.active || options.admin).map(t => `<div class="di-table ${esc(t.status)}"><span>${esc(t.zone)}</span><h2>Table ${esc(t.name)}</h2><b>${esc(t.status)}</b></div>`).join("")}</div><dialog class="di-dialog" aria-label="${title}"><div class="di-dialog-head"><div><small>RESTAURANT SERVICE</small><h2>${title}</h2></div>${button("close-popup", "Close", "", "soft")}</div>${tabs}<p role="status" class="di-message ${error ? "error" : ""}">${esc(message)}</p><div class="di-dialog-content" data-panel="${panel}">${html}</div></dialog>`;
       }
       root.innerHTML = `<div class="di"><header><span class="di-eyebrow">AXZEN · RESTAURANT SERVICE</span><h1>Dine In</h1><nav>${button("tables", "Tables")}${button("kitchen", "Kitchen", "", "soft")}${button("reports", "Table reports", "", "soft")}${button("refresh", "Refresh", "", "soft")}</nav></header><p role="status" class="di-message ${error ? "error" : ""}">${esc(message)}</p>${html}</div>`;
+      const dialog = root.querySelector(".di-dialog");
+      root.querySelectorAll(".di-dialog input, .di-dialog select").forEach(input => { if (Object.hasOwn(fieldValues, input.id)) input.value = fieldValues[input.id]; });
+      if (dialog) {
+        if (dialog.showModal) dialog.showModal(); else dialog.setAttribute("open", "");
+        dialog.addEventListener("cancel", event => { event.preventDefault(); back(); });
+      }
       root.querySelectorAll("button").forEach(b => b.disabled = busy);
     }
     function tableForm(t = {}) { return `<div class="di-row"><label>Table number / name<input id="di-name" maxlength="40" value="${esc(t.name)}"></label><label>Area / floor<input id="di-zone" maxlength="40" value="${esc(t.zone || "Main Hall")}"></label><label>Seats<input id="di-seats" type="number" min="1" max="100" value="${t.seats || 4}"></label></div>`; }
@@ -79,14 +96,17 @@ window.DineIn = (() => {
       const btn = event.target.closest("[data-di]");
       if (!btn || busy) return;
       const action = btn.dataset.di, value = btn.dataset.value, row = table();
+      if (action === "close-popup") { back(); return; }
+      if (action === "panel") { panel = value; render(); return; }
+      if (action === "new-table") { addingTable = true; render(); return; }
       busy = true; error = false; message = "";
       root.querySelectorAll("button").forEach(b => b.disabled = true);
       try {
         if (pendingSend && !["send", "refresh"].includes(action)) throw new Error("Previous order confirmation is pending. Refresh or retry Send before changing items.");
-        if (["tables", "kitchen", "reports"].includes(action)) { mode = action; selected = ""; }
+        if (["tables", "kitchen", "reports"].includes(action)) { if (draft.length && !confirm("Discard unsent items?")) return; draft = []; draftRevision = null; requestId = id(); mode = action; selected = ""; addingTable = false; }
         if (action === "select") {
           if (draft.length && selected !== value && !confirm("Discard unsent items?")) return;
-          selected = value; draft = []; requestId = id(); draftRevision = null;
+          selected = value; panel = "order"; draft = []; requestId = id(); draftRevision = null;
         }
         if (action === "back") { if (draft.length && !confirm("Discard unsent items?")) return; selected = ""; draft = []; requestId = id(); draftRevision = null; }
         if (action === "request") { await api("/dine-in/request", {}); message = "Approval requested. Contact your account manager."; }
@@ -130,6 +150,7 @@ window.DineIn = (() => {
           if (!options.printBill) throw new Error("Open this bill in POS APK to print");
           options.printBill(action === "last-bill" ? row.lastBill : bills.find(b => b.clientOrderId === value)); message = "Reprint requested. Verify printer output.";
         }
+        if (action === "save-table") addingTable = false;
         await refresh(false);
       } catch (e) {
         if (e.status >= 400 && e.status < 500) pendingSend = false;
@@ -141,7 +162,7 @@ window.DineIn = (() => {
     }
     root.addEventListener("click", click);
     render(); refresh().catch(e => { message = e.message; error = true; render(); });
-    const timer = setInterval(() => { if (!active()) return clearInterval(timer); if (!busy && !selected && mode !== "reports") refresh().catch(e => { message = `Connection lost: ${e.message}. Refresh before ordering.`; error = true; render(); }); }, 5000);
+    const timer = setInterval(() => { if (!active()) return clearInterval(timer); if (!busy && !selected && !addingTable && mode !== "reports") refresh().catch(e => { message = `Connection lost: ${e.message}. Refresh before ordering.`; error = true; render(); }); }, 5000);
     dispose = () => { stopped = true; clearInterval(timer); root.removeEventListener("click", click); };
     return dispose;
   }
