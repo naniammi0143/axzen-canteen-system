@@ -517,6 +517,7 @@ const marketingUserSchema = new mongoose.Schema({
   bankUpi: String,
   password: String,
   role: { type: String, enum: ["marketing", "manager", "super_admin"], default: "marketing" },
+  department: { type: String, default: "Marketing" },
   active: { type: Boolean, default: true },
   target: Number
 }, { timestamps: true, collection: "marketing_users" });
@@ -579,6 +580,7 @@ const marketingCanteenSchema = new mongoose.Schema({
   ,appReleaseVersion: String
   ,appInstalledVersion: String
   ,appInstalledAt: String
+  ,posTrialReason: String
 }, { timestamps: true, collection: "marketing_canteens" });
 
 const marketingActivitySchema = new mongoose.Schema({
@@ -798,6 +800,7 @@ function publicMarketingUser(user) {
     bankIfsc: user.bankIfsc || "",
     bankUpi: user.bankUpi || "",
     role: user.role,
+    department: user.department || "Marketing",
     active: user.active !== false,
     target: Number(user.target || 0)
   };
@@ -823,10 +826,23 @@ function requireMarketingAuth(req, res, next) {
       return res.status(401).json({ success: false, message: "Invalid or expired login token" });
     }
     req.marketingUser = user;
+    if (String(user.department || "") === "Help Center") {
+      const path = String(req.path || "");
+      const allowed = path === "/marketing-api/me" || path === "/marketing-api/dashboard" || path.startsWith("/marketing-api/help-tickets");
+      if (!allowed) return res.status(403).json({ success: false, message: "Help Center access only" });
+    }
     return next();
   } catch {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
   }
+}
+
+function requireHelpDesk(req, res, next) {
+  return requireMarketingAuth(req, res, () => {
+    const role = req.marketingUser.role;
+    if (role === "super_admin" || role === "manager" || req.marketingUser.department === "Help Center") return next();
+    return res.status(403).json({ success: false, message: "Help Center access required" });
+  });
 }
 
 function requireSuperAdmin(req, res, next) {
@@ -2137,11 +2153,16 @@ async function saveMarketingUser(payload, actor) {
     bankUpi: String(payload.bankUpi ?? existingEmployee.bankUpi ?? "").trim(),
     password: String(payload.password ?? existingEmployee.password ?? "1234"),
     role: payload.role ? (["super_admin", "manager"].includes(payload.role) ? payload.role : "marketing") : (existingEmployee.role || "marketing"),
+    department: ["Marketing", "Sales", "Operations", "Help Center"].includes(payload.department) ? payload.department : (existingEmployee.department || "Marketing"),
     active: payload.active !== undefined ? payload.active !== false : existingEmployee.active !== false,
     target: Number(payload.target ?? existingEmployee.target ?? 0),
     updatedAt: new Date().toISOString()
   };
 
+  if (employee.department === "Help Center") {
+    employee.role = "marketing";
+    if (String(employee.mobile || "").replace(/\D/g, "").length < 10) throw new Error("Help Center employees need a phone number for login.");
+  }
   if (!employee.employeeId || !employee.name) throw new Error("Employee ID and name are required");
   if (!/^[A-Z0-9_-]{3,24}$/.test(employee.employeeId)) throw new Error("Employee ID must be 3-24 letters or numbers");
   if (employee.aadhaarNumber && !/^\d{12}$/.test(employee.aadhaarNumber)) throw new Error("Aadhaar number must be 12 digits");
@@ -3515,14 +3536,16 @@ app.get("/app-update/bundles/:id", requireDatabase, requireCanteenAuth, async (r
 });
 
 app.post("/marketing-api/login", requireDatabase, async (req, res) => {
-  const employeeId = String(req.body.employeeId || "").trim();
+  const employeeId = String(req.body.employeeId || req.body.mobile || "").trim();
   const password = String(req.body.password || "");
-  const user = (await allMarketingUsers()).find(item =>
-    item.active !== false &&
-    String(item.employeeId) === employeeId &&
-    String(item.password) === password
-  );
-  if (!user) return res.status(401).json({ success: false, message: "Invalid employee ID or password" });
+  const loginDigits = employeeId.replace(/\D/g, "");
+  const user = (await allMarketingUsers()).find(item => {
+    if (item.active === false || String(item.password) !== password) return false;
+    if (String(item.employeeId).toLowerCase() === employeeId.toLowerCase()) return true;
+    const mobileDigits = String(item.mobile || "").replace(/\D/g, "");
+    return loginDigits.length >= 10 && mobileDigits.length >= 10 && (mobileDigits === loginDigits || mobileDigits.endsWith(loginDigits) || loginDigits.endsWith(mobileDigits));
+  });
+  if (!user) return res.status(401).json({ success: false, message: "Invalid employee ID, phone or password" });
   res.json({ success: true, user: publicMarketingUser(user), token: signMarketingToken(user) });
 });
 
@@ -3566,7 +3589,8 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   const visiblePayments = isAdmin
     ? payments
     : payments.filter(item => visibleIds.has(Number(item.canteenId)));
-  const visibleSupportTickets = isAdmin
+  const helpDesk = req.marketingUser.department === "Help Center";
+  const visibleSupportTickets = (isAdmin || helpDesk)
     ? supportTickets
     : supportTickets.filter(item => canteens.some(canteen =>
         normalizeCanteenId(canteen.activatedCanteenId) === normalizeCanteenId(item.canteenId) ||
@@ -3594,22 +3618,23 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
         item.allottedTo === req.marketingUser.employeeId ||
         visibleIds.has(Number(item.marketingCanteenId))
       );
+  const deskOnly = helpDesk && !isAdmin;
   res.json({
     success: true,
-    canteens,
-    users: visibleUsers.map(publicMarketingUser),
-    printers: visiblePrinters,
-    payments: visiblePayments,
+    canteens: deskOnly ? [] : canteens,
+    users: (deskOnly ? visibleUsers.filter(item => item.employeeId === req.marketingUser.employeeId) : visibleUsers).map(publicMarketingUser),
+    printers: deskOnly ? [] : visiblePrinters,
+    payments: deskOnly ? [] : visiblePayments,
     supportTickets: enrichedSupportTickets,
-    enquiries: visibleEnquiries,
-    websitePlans: isAdmin ? websitePlans : [],
-    appReleases: isAdmin ? appReleases : [],
-    activities: isAdmin ? activities : [],
-    summary: marketingSummary(canteens, visibleUsers, isAdmin ? activities : [], visiblePayments, visibleSupportTickets, visibleEnquiries, visiblePrinters)
+    enquiries: deskOnly ? [] : visibleEnquiries,
+    websitePlans: isAdmin && !deskOnly ? websitePlans : [],
+    appReleases: isAdmin && !deskOnly ? appReleases : [],
+    activities: isAdmin && !deskOnly ? activities : [],
+    summary: marketingSummary(deskOnly ? [] : canteens, deskOnly ? [] : visibleUsers, isAdmin && !deskOnly ? activities : [], deskOnly ? [] : visiblePayments, visibleSupportTickets, deskOnly ? [] : visibleEnquiries, deskOnly ? [] : visiblePrinters)
   });
 });
 
-app.post("/marketing-api/help-tickets/:id/status", requireDatabase, requireSuperAdmin, async (req, res) => {
+app.post("/marketing-api/help-tickets/:id/status", requireDatabase, requireHelpDesk, async (req, res) => {
   try {
     const status = normalizeHelpStatus(req.body.status);
     const identifier = String(req.params.id || "").trim();
@@ -3977,13 +4002,17 @@ app.post("/marketing-api/canteens/:id/plan", requireDatabase, requireSuperAdmin,
   try {
     const before = (await allMarketingCanteens()).find(item => Number(item.id) === Number(req.params.id)) || {};
     const status = req.body.status || "Trial";
+    const trialDays = Number(req.body.trialDays || 0);
+    const reason = String(req.body.reason || "").trim().slice(0, 300);
+    if (status === "Trial" && trialDays > 0 && reason.length < 3) throw new Error("Enter a reason for this trial.");
     const planExpiryDate = planExpiryFromPayload(req.body, before);
     const canteen = await updateMarketingCanteen(req.params.id, {
       status,
       planType: req.body.planType || status,
       selectedPlan: req.body.selectedPlan || "Professional",
-      planStartDate: req.body.planStartDate || before.planStartDate || new Date().toISOString().slice(0, 10),
+      planStartDate: trialDays > 0 ? new Date().toISOString().slice(0, 10) : (req.body.planStartDate || before.planStartDate || new Date().toISOString().slice(0, 10)),
       planExpiryDate,
+      ...(reason ? { posTrialReason: reason } : {}),
       blocked: status === "Blocked",
       online: status !== "Expired" && status !== "Blocked"
     }, req.marketingUser);
@@ -3993,7 +4022,7 @@ app.post("/marketing-api/canteens/:id/plan", requireDatabase, requireSuperAdmin,
         { $set: { active: status !== "Expired" && status !== "Blocked", plan: canteen.selectedPlan || "Professional" } }
       );
     }
-    await addMarketingActivity({ type: "plan", text: `${canteen.canteenName} plan updated`, actor: req.marketingUser.name, canteenId: canteen.id });
+    await addMarketingActivity({ type: "plan", text: `${canteen.canteenName} plan updated${trialDays > 0 ? ` · ${trialDays} day trial` : ""}${reason ? ` · ${reason}` : ""}`, actor: req.marketingUser.name, canteenId: canteen.id });
     res.json({ success: true, canteen });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });

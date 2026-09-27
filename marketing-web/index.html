@@ -406,10 +406,10 @@
         <h1>axzen Marketing</h1>
         <p>Organization onboarding and approval console</p>
       </div>
-      <label>Employee ID <input id="employeeId" autocomplete="username" required></label>
+      <label>Employee ID or phone <input id="employeeId" autocomplete="username" required></label>
       <label>Password <input id="password" type="password" autocomplete="current-password" required></label>
       <button class="primary" type="submit">Login</button>
-      <div class="status" id="loginStatus">Enter your employee login details.</div>
+      <div class="status" id="loginStatus">Help Center staff can sign in with their phone number.</div>
     </form>
   </section>
 
@@ -559,7 +559,15 @@
       $("pageSub").textContent = sub || "Track organization onboarding, payments and approvals.";
       document.querySelectorAll("#nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
     }
+    function isHelpDeskUser() {
+      return user?.department === "Help Center";
+    }
     function renderNav() {
+      if (isHelpDeskUser()) {
+        tab = "helpcenter";
+        $("nav").innerHTML = "";
+        return;
+      }
       const tabs = user.role === "super_admin" ? superTabs : user.role === "manager" ? [...marketingTabs, ["helpcenter", "Help Center"]] : marketingTabs;
       $("nav").innerHTML = tabs.map(([id, label]) => `<button data-tab="${id}" type="button">${navIcon(id)}<span>${label}</span><small>${shortTabs[id] || label}</small></button>`).join("");
       document.querySelectorAll("#nav button").forEach(btn => btn.addEventListener("click", () => {
@@ -853,6 +861,7 @@
       const cards = rows.map(item => `<article class="employee-card">
         <div><h3>${esc(item.name)}</h3><span class="muted">${esc(item.employeeId)} | ${item.role === "super_admin" ? "Super Admin" : "Marketing"}</span></div>
         <div class="doc-row">
+          <div class="fact"><span>Department</span><strong>${esc(item.department || "Marketing")}</strong></div>
           <div class="fact"><span>Mobile</span><strong>${esc(item.mobile || "-")}</strong></div>
           <div class="fact"><span>Target</span><strong>${Number(item.target || 0)}</strong></div>
           <div class="fact"><span>Aadhaar</span><strong>${esc(item.aadhaarNumber || "-")}</strong></div>
@@ -991,13 +1000,16 @@
         const item = state.canteens.find(row => Number(row.id) === Number(btn.dataset.extendTrial));
         const trialDays = prompt("Trial extend days", "7");
         if (trialDays === null) return;
+        const reason = prompt("Reason for this trial");
+        if (!reason || reason.trim().length < 3) return alert("Enter a reason for this trial.");
         updateAction(`/marketing-api/canteens/${item.id}/plan`, {
           status: "Trial",
           planType: "Trial",
           selectedPlan: item.selectedPlan || "Starter",
           planStartDate: today(),
           planExpiryDate: "",
-          trialDays
+          trialDays,
+          reason: reason.trim()
         }, "Trial extended and canteen unblocked");
       }));
       document.querySelectorAll("[data-payment]").forEach(btn => btn.addEventListener("click", () => {
@@ -1023,7 +1035,10 @@
         if (statusValue.toLowerCase() === "trial") {
           const trialDays = prompt("Trial days", "7");
           if (trialDays === null) return;
+          const reason = prompt("Reason for this trial");
+          if (!reason || reason.trim().length < 3) return alert("Enter a reason for this trial.");
           body.trialDays = trialDays;
+          body.reason = reason.trim();
           body.planExpiryDate = "";
         }
         updateAction(`/marketing-api/canteens/${item.id}/plan`, body, "Plan updated");
@@ -1061,26 +1076,36 @@
       if (!item) return;
       const dialog = document.createElement("dialog");
       dialog.style.cssText = "width:min(480px,90vw);border:0;border-radius:18px;padding:24px;color:#102a43";
-      dialog.innerHTML = `<h2>Dine In Approval</h2><p>${esc(item.canteenName)}</p><p data-status>Loading current approval…</p><label><input type="checkbox" data-enabled disabled> Enable tables, kitchen orders and table bills</label><div class="row-actions" style="margin-top:20px"><button class="primary" data-save disabled>Save Approval</button><button class="secondary" data-close>Close</button></div>`;
+      dialog.className = "service-dialog";
+      dialog.innerHTML = `<h2>Dine In</h2><p>${esc(item.canteenName)}</p><p data-status>Loading current approval…</p><div class="row-actions"><button class="primary" data-enable type="button">Enable</button><button class="danger" data-disable type="button">Disable</button><button class="secondary" data-close type="button">Close</button></div>`;
       document.body.appendChild(dialog);
       dialog.addEventListener("close", () => dialog.remove());
       dialog.querySelector("[data-close]").onclick = () => dialog.close();
       dialog.showModal();
-      const check = dialog.querySelector("[data-enabled]"), save = dialog.querySelector("[data-save]"), message = dialog.querySelector("[data-status]");
+      const message = dialog.querySelector("[data-status]");
+      const paint = enabled => {
+        message.textContent = enabled ? "Enabled. This organization can use tables, kitchen orders and table bills." : "Restricted. Dine In is off until you enable it.";
+        const pill = document.getElementById("dineStatusPill");
+        if (pill) { pill.textContent = enabled ? "Enabled" : "Restricted"; pill.className = `pill ${enabled ? "green" : "orange"}`; }
+      };
       try {
         const access = await api(`/marketing-api/canteens/${id}/dine-in`);
-        check.checked = access.enabled === true;
-        message.textContent = access.enabled ? "Approved. This restaurant can use Dine In." : "Not approved. Check Enable and press Save Approval.";
-        check.disabled = false; save.disabled = false;
+        paint(access.enabled === true);
       } catch (error) { message.textContent = error.message; }
-      save.onclick = async () => {
-        check.disabled = true; save.disabled = true;
+      const save = async enabled => {
+        dialog.querySelector("[data-enable]").disabled = true;
+        dialog.querySelector("[data-disable]").disabled = true;
         try {
-          await api(`/marketing-api/canteens/${id}/dine-in`, { method: "POST", body: JSON.stringify({ enabled: check.checked }) });
-          message.textContent = check.checked ? "Approved successfully. Reopen Dine In in the POS app to load tables." : "Dine In disabled. POS will show Upgrade Plan.";
+          await api(`/marketing-api/canteens/${id}/dine-in`, { method: "POST", body: JSON.stringify({ enabled }) });
+          paint(enabled);
         } catch (error) { message.textContent = error.message; }
-        finally { check.disabled = false; save.disabled = false; }
+        finally {
+          dialog.querySelector("[data-enable]").disabled = false;
+          dialog.querySelector("[data-disable]").disabled = false;
+        }
       };
+      dialog.querySelector("[data-enable]").onclick = () => save(true);
+      dialog.querySelector("[data-disable]").onclick = () => save(false);
     }
 
     function renderCanteenDetail() {
@@ -1179,12 +1204,20 @@
         <label>Mobile <input id="newEmployeeMobile" inputmode="tel"></label>
         <label>Password <input id="newEmployeePassword" type="password" required></label>
         <label>Role <select id="newEmployeeRole"><option value="marketing">Marketing</option><option value="super_admin">Super Admin</option></select></label>
+        <label>Department <select id="newEmployeeDepartment"><option value="Marketing">Marketing</option><option value="Sales">Sales</option><option value="Operations">Operations</option><option value="Help Center">Help Center</option></select></label>
+        <p class="muted" id="helpDeptNote" hidden>This phone number opens only the Help Center ticketing desk. No other console pages are available.</p>
         <label>Monthly target <input id="newEmployeeTarget" type="number" min="0" value="20"></label>
         <label>Aadhaar card number <input id="newEmployeeAadhaar" inputmode="numeric" maxlength="12"></label>
         <label>PAN card number <input id="newEmployeePan" maxlength="10"></label>
         <button class="primary" type="submit">Save Employee</button>
       </form></section><section class="panel"><h2>Employees</h2>${employeeHtml(state.users || [])}</section>`;
       $("employeeForm").addEventListener("submit", submitEmployee);
+      $("newEmployeeDepartment").addEventListener("change", () => {
+        const help = $("newEmployeeDepartment").value === "Help Center";
+        if (help) $("newEmployeeRole").value = "marketing";
+        $("newEmployeeRole").disabled = help;
+        $("helpDeptNote").hidden = !help;
+      });
     }
     async function submitEmployee(event) {
       event.preventDefault();
@@ -1194,7 +1227,8 @@
         name: $("newEmployeeName").value,
         mobile: $("newEmployeeMobile").value,
         password: $("newEmployeePassword").value,
-        role: $("newEmployeeRole").value,
+        role: $("newEmployeeDepartment").value === "Help Center" ? "marketing" : $("newEmployeeRole").value,
+        department: $("newEmployeeDepartment").value,
         target: $("newEmployeeTarget").value,
         aadhaarNumber: $("newEmployeeAadhaar").value,
         panNumber: $("newEmployeePan").value
@@ -1249,6 +1283,7 @@
       $("printerStatusFilter")?.addEventListener("change", applyPrinterFilter);
     }
     function render() {
+      if (isHelpDeskUser()) tab = "helpcenter";
       const titles = {
         dashboard: [user.role === "super_admin" ? "Dashboard" : "My Dashboard", user.role === "super_admin" ? "Live canteen onboarding and revenue overview." : "Today targets, leads, follow-ups and sales workflow."],
         approvals: ["Approval Queue", "Approve or reject submitted canteens."],
@@ -1262,7 +1297,7 @@
         printers: ["Printer Inventory", "Assign and track printer installation."],
         performance: ["Marketing Performance", "Employee-wise registration and collection results."],
         activities: ["Recent Activities", "Audit trail for onboarding actions."],
-        helpcenter: ["Help Center", "Review POS customer problems and update their status."],
+        helpcenter: ["Help Center", "Ticketing desk for organization requests submitted from Help."],
         appreleases: ["App Updates", "Upload versioned POS bundles and publish them to selected canteens."],
         add: ["Add Lead", "Create customer record and submit canteen activation."],
         my: ["Leads & Visits", "Your leads, visits and activation status."],
@@ -1316,10 +1351,14 @@
     }
     async function enterApp(nextUser) {
       user = nextUser;
+      document.body.classList.toggle("help-only", user.department === "Help Center");
+      if (user.department === "Help Center") tab = "helpcenter";
       $("loginView").classList.add("hidden");
       $("appView").classList.remove("hidden");
       $("profileName").textContent = user.name;
-      $("profileRole").textContent = user.role === "super_admin" ? "Super Admin" : "Marketing Employee";
+      const brand = document.querySelector(".side-brand span");
+      if (brand) brand.textContent = user.department === "Help Center" ? "Help Center" : "Marketing Operations";
+      $("profileRole").textContent = user.department === "Help Center" ? "Help Center" : (user.role === "super_admin" ? "Super Admin" : "Marketing Employee");
       $("roleChip").textContent = $("profileRole").textContent;
       $("avatar").textContent = String(user.name || "A").slice(0, 1).toUpperCase();
       renderNav();
@@ -1343,6 +1382,7 @@
     function logoutMarketing() {
       token = "";
       user = null;
+      document.body.classList.remove("help-only");
       localStorage.removeItem(tokenKey);
       $("topMenu").classList.add("hidden");
       $("appView").classList.add("hidden");
