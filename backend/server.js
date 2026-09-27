@@ -581,6 +581,7 @@ const marketingCanteenSchema = new mongoose.Schema({
   ,appInstalledVersion: String
   ,appInstalledAt: String
   ,posTrialReason: String
+  ,takeawayEnabled: { type: Boolean, default: true }
 }, { timestamps: true, collection: "marketing_canteens" });
 
 const marketingActivitySchema = new mongoose.Schema({
@@ -638,6 +639,9 @@ const marketingSupportTicketSchema = new mongoose.Schema({
   message: String,
   submittedByLogin: String,
   priority: String,
+  assignedTo: String,
+  tags: [String],
+  comments: [{ author: String, text: String, createdAt: String }],
   resolvedAt: Date,
   resolvedBy: String
 }, { timestamps: true, collection: "marketing_support_tickets" });
@@ -2338,6 +2342,7 @@ async function subscriptionStatusForCanteen(canteenId) {
     expired: isPastDate(expiryDate),
     daysRemaining,
     expiresSoon: daysRemaining !== null && daysRemaining >= 0 && daysRemaining <= 2,
+    takeawayEnabled: marketing?.takeawayEnabled !== false,
     durations
   };
 }
@@ -3636,16 +3641,30 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
 
 app.post("/marketing-api/help-tickets/:id/status", requireDatabase, requireHelpDesk, async (req, res) => {
   try {
-    const status = normalizeHelpStatus(req.body.status);
     const identifier = String(req.params.id || "").trim();
     const query = mongoose.isValidObjectId(identifier) ? { _id: identifier } : { id: Number(identifier) };
-    const ticket = await MarketingSupportTicket.findOneAndUpdate(query, {
-      $set: {
-        status,
-        resolvedAt: status === "Solved" ? new Date() : null,
-        resolvedBy: status === "Solved" ? (req.marketingUser.name || req.marketingUser.employeeId) : ""
-      }
-    }, { new: true }).lean();
+    const patch = {};
+    if (req.body.status) {
+      const status = normalizeHelpStatus(req.body.status);
+      patch.status = status;
+      const closed = ["Solved", "Resolved", "Closed"].includes(status);
+      patch.resolvedAt = closed ? new Date() : null;
+      patch.resolvedBy = closed ? (req.marketingUser.name || req.marketingUser.employeeId) : "";
+    }
+    if (req.body.priority) {
+      const priority = String(req.body.priority || "").trim();
+      if (!["Low", "Medium", "High", "Normal"].includes(priority)) throw new Error("Priority must be Low, Medium or High.");
+      patch.priority = priority;
+    }
+    if (Object.prototype.hasOwnProperty.call(req.body, "assignedTo")) patch.assignedTo = String(req.body.assignedTo || "").trim().slice(0, 80);
+    const update = {};
+    if (Object.keys(patch).length) update.$set = patch;
+    const note = String(req.body.note || "").trim().slice(0, 500);
+    if (note) update.$push = { comments: { author: req.marketingUser.name || req.marketingUser.employeeId, text: note, createdAt: new Date().toISOString() } };
+    const tag = String(req.body.tag || "").trim().slice(0, 30);
+    if (tag) update.$addToSet = { tags: tag };
+    if (!Object.keys(update).length) throw new Error("Nothing to update.");
+    const ticket = await MarketingSupportTicket.findOneAndUpdate(query, update, { new: true }).lean();
     if (!ticket) return res.status(404).json({ success: false, message: "Help request not found" });
     res.json({ success: true, ticket });
   } catch (error) {
@@ -3993,6 +4012,22 @@ app.post("/marketing-api/canteens/:id/activate-cash-plan", requireDatabase, requ
     });
     await addMarketingActivity({ type: "cash_plan", text: `${canteen.canteenName} ${cash.planName} plan activated for ${cash.months} months by cash`, actor: req.marketingUser.name, canteenId: canteen.id });
     res.json({ success: true, message: "Cash received and plan activated.", canteen, payment });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.get("/marketing-api/canteens/:id/takeaway", requireDatabase, requireSuperAdmin, async (req, res) => {
+  const customer = await MarketingCanteen.findOne({ id: Number(req.params.id) }).lean();
+  if (!customer) return res.status(404).json({ success: false, message: "Organization not found" });
+  res.json({ success: true, enabled: customer.takeawayEnabled !== false });
+});
+
+app.post("/marketing-api/canteens/:id/takeaway", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    if (typeof req.body.enabled !== "boolean") throw new Error("Enabled must be true or false");
+    const canteen = await updateMarketingCanteen(req.params.id, { takeawayEnabled: req.body.enabled }, req.marketingUser);
+    res.json({ success: true, enabled: canteen.takeawayEnabled !== false });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }

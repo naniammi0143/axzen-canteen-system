@@ -591,7 +591,7 @@
         printers: '<path d="M6 9V3h12v6"/><path d="M6 17H4a2 2 0 0 1-2-2v-4h20v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/>',
         performance: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
         activities: '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/><path d="M12 7v5l3 2"/>',
-        helpcenter: '<path d="M9.1 9a3 3 0 1 1 5.4 1.8c-1.5 1-2.5 1.7-2.5 3.2"/><path d="M12 18h.01"/><circle cx="12" cy="12" r="9"/>',
+        helpcenter: '<path d="M4 13a8 8 0 0 1 16 0"/><path d="M4 14v3a2 2 0 0 0 2 2h1v-7H6a2 2 0 0 0-2 2Z"/><path d="M20 14v3a2 2 0 0 1-2 2h-1v-7h1a2 2 0 0 1 2 2Z"/><path d="M18 19a4 4 0 0 1-4 2h-2"/>',
         appreleases: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
         my: '<path d="M4 10h16l-2-5H6l-2 5Z"/><path d="M6 10v9h12v-9"/>'
       };
@@ -1077,14 +1077,16 @@
       const dialog = document.createElement("dialog");
       dialog.style.cssText = "width:min(480px,90vw);border:0;border-radius:18px;padding:24px;color:#102a43";
       dialog.className = "service-dialog";
-      dialog.innerHTML = `<h2>Dine In</h2><p>${esc(item.canteenName)}</p><p data-status>Loading current approval…</p><div class="row-actions"><button class="primary" data-enable type="button">Enable</button><button class="danger" data-disable type="button">Disable</button><button class="secondary" data-close type="button">Close</button></div>`;
+      dialog.innerHTML = `<h2>Dine In</h2><p>${esc(item.canteenName)}</p><p>Status: <strong data-state>Loading…</strong></p><p data-status>Loading current approval…</p><div class="row-actions"><button class="service-enable" data-enable type="button">Enable</button><button class="service-disable" data-disable type="button">Disable</button><button class="service-close" data-close type="button">Close</button></div>`;
       document.body.appendChild(dialog);
       dialog.addEventListener("close", () => dialog.remove());
       dialog.querySelector("[data-close]").onclick = () => dialog.close();
       dialog.showModal();
       const message = dialog.querySelector("[data-status]");
       const paint = enabled => {
-        message.textContent = enabled ? "Enabled. This organization can use tables, kitchen orders and table bills." : "Restricted. Dine In is off until you enable it.";
+        message.textContent = enabled ? "Tables, kitchen orders and table bills are on." : "Dine In is off until you enable it.";
+        const stateLabel = dialog.querySelector("[data-state]");
+        if (stateLabel) stateLabel.textContent = enabled ? "Enabled" : "Restricted";
         const pill = document.getElementById("dineStatusPill");
         if (pill) { pill.textContent = enabled ? "Enabled" : "Restricted"; pill.className = `pill ${enabled ? "green" : "orange"}`; }
       };
@@ -1116,7 +1118,7 @@
       window.CanteenDetail.bind({
         canteen, plans: state.websitePlans || [], api,
         onBack: () => { tab = "canteens"; selectedCanteenId = null; render(); },
-        onUpdated: async () => { await refresh(); render(); status("Cash recorded and plan activated."); },
+        onUpdated: async () => { await refresh(); render(); status("Service controls saved."); },
         onDineIn: openDineApproval,
         onBlock: item => updateAction(`/marketing-api/canteens/${item.id}/block`, { blocked: item.status !== "Blocked" }, "Block status updated")
       });
@@ -1284,6 +1286,7 @@
     }
     function render() {
       if (isHelpDeskUser()) tab = "helpcenter";
+      document.body.classList.toggle("is-help-desk", tab === "helpcenter");
       const titles = {
         dashboard: [user.role === "super_admin" ? "Dashboard" : "My Dashboard", user.role === "super_admin" ? "Live canteen onboarding and revenue overview." : "Today targets, leads, follow-ups and sales workflow."],
         approvals: ["Approval Queue", "Approve or reject submitted canteens."],

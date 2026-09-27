@@ -38,7 +38,9 @@ function normalizeHelpSubmission(body = {}, context = {}) {
 
 function normalizeHelpStatus(value) {
   const status = clean(value, 20);
-  if (!['Pending', 'Solved'].includes(status)) throw new Error('Status must be Pending or Solved.');
+  if (!['Pending', 'Open', 'In Progress', 'Solved', 'Resolved', 'Reopened', 'Closed'].includes(status)) {
+    throw new Error('Status must be Pending or Solved.');
+  }
   return status;
 }
 

@@ -235,18 +235,21 @@
       gap: 12px;
     }
     .title-mark {
-      width: 92px;
-      height: 38px;
-      border-radius: 8px;
+      width: 40px;
+      height: 40px;
+      flex: 0 0 40px;
+      border-radius: 12px;
       display: grid;
       place-items: center;
-      background: #fff;
-      color: var(--brand);
-      border: 1px solid var(--line);
-      font-weight: 950;
+      background: #e8f1ff;
+      color: #2563eb;
+      border: 0;
       overflow: hidden;
-      box-shadow: 0 8px 18px rgba(15,23,42,.07);
     }
+    .title-mark.tone-green { background: #e8f8ef; color: #16a34a; }
+    .title-mark.tone-orange { background: #fff4e8; color: #ea580c; }
+    .title-mark.tone-violet { background: #f3e8ff; color: #7c3aed; }
+    .title-mark.tone-blue { background: #e8f1ff; color: #2563eb; }
     .title-text { min-width: 0; }
     .title-text h1 {
       font-size: 22px;
@@ -1153,7 +1156,21 @@
     function setPage(title, sub) {
       $("pageTitle").textContent = title;
       $("pageSub").textContent = sub || (isManager() ? "Manager control center" : "Employee sales workflow");
-      $("titleMark").innerHTML = lucideIcon(isManager() ? "users" : "user", 22);
+      const marks = {
+        dashboard: ["house", "tone-blue"],
+        canteens: ["building2", "tone-blue"],
+        add: ["userPlus", "tone-green"],
+        payments: ["creditCard", "tone-green"],
+        approvals: ["shield", "tone-orange"],
+        plans: ["fileText", "tone-violet"],
+        team: ["users", "tone-blue"],
+        profile: ["user", "tone-blue"],
+        canteenDetail: ["building2", "tone-blue"],
+        reports: ["chartNoAxesColumn", "tone-violet"]
+      };
+      const [markIcon, markTone] = marks[route] || ["user", "tone-blue"];
+      $("titleMark").className = `title-mark ${markTone}`;
+      $("titleMark").innerHTML = lucideIcon(markIcon, 20);
       const detail = ["canteenDetail", "profile"].includes(route);
       $("appScreen").classList.toggle("detail-mode", detail);
       $("titleMark").classList.toggle("hidden", detail);

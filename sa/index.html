@@ -9533,6 +9533,7 @@
     function setPosSection(section) {
       const openAdd = section === "add";
       if (section === "add") section = "edit";
+      if (section === "delivery" && subscriptionState?.takeawayEnabled === false) section = "billing";
       if (section === "bulk") section = "dinein";
       window.DineIn.close();
       activePosSection = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
@@ -10987,6 +10988,8 @@
         if (!silent && $("subscriptionStatus")) $("subscriptionStatus").textContent = "Loading plan details...";
         const data = await api("/subscription/status", { timeoutMs: 9000 });
         subscriptionState = data;
+        document.querySelectorAll('[data-nav="delivery"]').forEach(button => { button.hidden = data.takeawayEnabled === false; });
+        if (data.takeawayEnabled === false && activePosSection === "delivery") setPosSection("billing");
         if (!keepGate) applySubscriptionGate();
         return data;
       } catch (error) {
