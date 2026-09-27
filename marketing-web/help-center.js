@@ -54,12 +54,12 @@ window.MarketingHelpCenter = (() => {
     const tags = Array.isArray(row.tags) ? row.tags : [];
     return `<aside class="desk-detail" id="helpTicketDetail">
       <header class="desk-detail-head">
-        <div><p>Ticket Details</p><h3>${esc(row.problemType || row.title || 'Help request')}</h3><strong>#${esc(numberOf(row))}</strong></div>
+        <div><p>Ticket details</p><h3>${esc(row.problemType || row.title || 'Help request')}</h3><strong>#${esc(numberOf(row))}</strong></div>
         <span class="tag status-${esc(status).toLowerCase().replace(' ', '-')}">${esc(status)}</span>
       </header>
       <div class="desk-meta">
-        <span>Created ${day(row.createdAt)}, ${clock(row.createdAt)}</span>
-        <span>Updated ${day(row.updatedAt || row.createdAt)}, ${clock(row.updatedAt || row.createdAt)}</span>
+        <div><span>Created</span><strong>${day(row.createdAt)}</strong><small>${clock(row.createdAt)}</small></div>
+        <div><span>Updated</span><strong>${day(row.updatedAt || row.createdAt)}</strong><small>${clock(row.updatedAt || row.createdAt)}</small></div>
       </div>
       <div class="desk-chips">
         <span class="tag cat">${esc(row.problemType || 'General')}</span>
@@ -92,7 +92,7 @@ window.MarketingHelpCenter = (() => {
     return `<tr class="${id === selectedId ? 'is-selected' : ''}" data-help-card data-view="${esc(id)}" data-search="${esc(`${numberOf(row)} ${row.canteenName} ${row.customerName} ${row.phone} ${row.problemType} ${row.title} ${row.message}`.toLowerCase())}" data-status="${esc(status)}" data-type="${esc(row.problemType || '')}" data-priority="${esc(priority)}" data-created="${esc(String(row.createdAt || '').slice(0, 10))}">
       <td><input type="checkbox" data-check aria-label="Select ticket"></td>
       <td><strong>#${esc(numberOf(row))}</strong></td>
-      <td><strong>${esc(row.problemType || row.title || 'Help request')}</strong><small>${esc(row.canteenName || row.message || '')}</small></td>
+      <td class="subject"><strong>${esc(row.problemType || row.title || 'Help request')}</strong><small>${esc(row.canteenName || '-')} · ${esc(row.customerName || '-')}</small></td>
       <td><span class="tag cat">${esc(row.problemType || 'General')}</span></td>
       <td><span class="tag pri-${esc(priority).toLowerCase()}">${esc(priority)}</span></td>
       <td><span class="tag status-${esc(status).toLowerCase().replace(' ', '-')}">${esc(status)}</span></td>
@@ -156,14 +156,45 @@ window.MarketingHelpCenter = (() => {
       card.classList.toggle('hidden', hide);
       if (!hide) visible += 1;
     });
+    const selectedCard = document.querySelector(`[data-help-card][data-view="${CSS.escape(selectedId)}"]`);
+    if (!selectedCard || selectedCard.classList.contains('hidden')) {
+      const next = document.querySelector('[data-help-card]:not(.hidden)');
+      selectedId = next?.dataset.view || '';
+      paintDetail();
+    }
     const foot = document.querySelector('.desk-foot');
     if (foot) foot.textContent = `Showing ${visible ? 1 : 0}–${visible} of ${rows.length}`;
+    pulse(document.querySelector('.desk-table-wrap'));
+  }
+
+  function pulse(node) {
+    if (!node) return;
+    node.classList.remove('is-refresh');
+    void node.offsetWidth;
+    node.classList.add('is-refresh');
+  }
+
+  function toast(message, type) {
+    const root = document.querySelector('.desk');
+    if (!root || !message) return;
+    let node = document.getElementById('deskToast');
+    if (!node) {
+      node = document.createElement('div');
+      node.id = 'deskToast';
+      root.appendChild(node);
+    }
+    node.textContent = message;
+    node.className = `desk-toast show ${type === 'error' ? 'error' : 'ok'}`;
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => node.classList.remove('show'), 2400);
   }
 
   function paintDetail() {
     const selected = rows.find(row => ticketId(row) === selectedId) || null;
     const pane = document.getElementById('helpTicketDetail');
     if (pane) pane.outerHTML = detail(selected);
+    const next = document.getElementById('helpTicketDetail');
+    pulse(next);
     document.querySelectorAll('[data-help-card]').forEach(card => card.classList.toggle('is-selected', card.dataset.view === selectedId));
   }
 
@@ -172,16 +203,19 @@ window.MarketingHelpCenter = (() => {
     const post = async (id, body, message) => {
       await api(`/marketing-api/help-tickets/${encodeURIComponent(id)}/status`, { method: 'POST', body: JSON.stringify(body) });
       notify(message);
+      toast(message, 'ok');
       await refresh();
     };
-    document.getElementById('helpApply')?.addEventListener('click', applyFilters);
-    document.getElementById('helpSearch')?.addEventListener('keydown', event => { if (event.key === 'Enter') applyFilters(); });
+    const say = (message, type) => { notify(message, type); toast(message, type); };
+    document.getElementById('helpApply')?.addEventListener('click', () => { applyFilters(); say('Filters applied.'); });
+    document.getElementById('helpSearch')?.addEventListener('keydown', event => { if (event.key === 'Enter') { applyFilters(); say('Filters applied.'); } });
     document.getElementById('helpReset')?.addEventListener('click', () => {
       ['helpSearch','helpFrom','helpTo'].forEach(id => { const field = document.getElementById(id); if (field) field.value = ''; });
       ['helpTypeFilter','helpStatusFilter','helpPriorityFilter'].forEach(id => { const field = document.getElementById(id); if (field) field.value = ''; });
       activeTab = '';
       document.querySelectorAll('[data-tab]').forEach(button => button.classList.toggle('active', button.dataset.tab === ''));
       applyFilters();
+      say('Filters cleared.');
     });
     root?.addEventListener('click', async event => {
       const tab = event.target.closest('[data-tab]');
@@ -191,47 +225,51 @@ window.MarketingHelpCenter = (() => {
         if (status) status.value = activeTab;
         root.querySelectorAll('[data-tab]').forEach(button => button.classList.toggle('active', button === tab));
         applyFilters();
+        say(activeTab ? `Showing ${activeTab} tickets.` : 'Showing all tickets.');
         return;
       }
       const statusButton = event.target.closest('[data-help-status]');
       if (statusButton && root.contains(statusButton)) {
         statusButton.disabled = true;
+        statusButton.classList.add('is-busy');
         try { await post(statusButton.dataset.helpStatus, { status: statusButton.dataset.next }, `Ticket marked ${statusButton.dataset.next === 'Solved' ? 'Resolved' : statusButton.dataset.next}.`); }
-        catch (error) { notify(error.message, 'error'); statusButton.disabled = false; }
+        catch (error) { say(error.message, 'error'); statusButton.disabled = false; statusButton.classList.remove('is-busy'); }
         return;
       }
       const noteButton = event.target.closest('[data-add-note]');
       if (noteButton && root.contains(noteButton)) {
-        const note = document.getElementById('helpNote')?.value.trim();
-        if (!note) { notify('Type a note first.', 'error'); return; }
+        const field = document.getElementById('helpNote');
+        const note = field?.value.trim();
+        if (!note) { field?.classList.add('is-shake'); setTimeout(() => field?.classList.remove('is-shake'), 420); say('Type a note first.', 'error'); return; }
+        noteButton.classList.add('is-busy');
         try { await post(noteButton.dataset.addNote, { note }, 'Note added.'); }
-        catch (error) { notify(error.message, 'error'); }
+        catch (error) { say(error.message, 'error'); noteButton.classList.remove('is-busy'); }
         return;
       }
       const assign = event.target.closest('[data-assign]');
       if (assign) {
         const name = window.prompt('Assign this ticket to');
         if (name === null) return;
-        try { await post(assign.dataset.assign, { assignedTo: name.trim() }, 'Ticket assigned.'); } catch (error) { notify(error.message, 'error'); }
+        try { await post(assign.dataset.assign, { assignedTo: name.trim() }, 'Ticket assigned.'); } catch (error) { say(error.message, 'error'); }
         return;
       }
       const priority = event.target.closest('[data-set-priority]');
       if (priority) {
         const next = window.prompt('Priority: High, Medium or Low', 'Medium');
         if (!next) return;
-        try { await post(priority.dataset.setPriority, { priority: next.trim() }, 'Priority updated.'); } catch (error) { notify(error.message, 'error'); }
+        try { await post(priority.dataset.setPriority, { priority: next.trim() }, 'Priority updated.'); } catch (error) { say(error.message, 'error'); }
         return;
       }
       const tag = event.target.closest('[data-tag]');
       if (tag) {
         const value = window.prompt('Tag');
         if (!value) return;
-        try { await post(tag.dataset.tag, { tag: value.trim() }, 'Tag added.'); } catch (error) { notify(error.message, 'error'); }
+        try { await post(tag.dataset.tag, { tag: value.trim() }, 'Tag added.'); } catch (error) { say(error.message, 'error'); }
         return;
       }
       const progress = event.target.closest('[data-progress]');
       if (progress) {
-        try { await post(progress.dataset.progress, { status: 'In Progress' }, 'Ticket marked In Progress.'); } catch (error) { notify(error.message, 'error'); }
+        try { await post(progress.dataset.progress, { status: 'In Progress' }, 'Ticket marked In Progress.'); } catch (error) { say(error.message, 'error'); }
         return;
       }
       if (event.target.closest('[data-print]')) { window.print(); return; }
