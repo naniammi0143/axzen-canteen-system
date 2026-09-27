@@ -172,6 +172,28 @@
     }
 
     input:focus, select:focus { border-color: var(--blue); box-shadow: 0 0 0 4px #007aff1c; background: white; }
+    .password-field { position: relative; display: block; }
+    .password-field input { padding-right: 46px; }
+    .password-eye {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      transform: translateY(-50%);
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: #667085;
+      padding: 0;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    .password-eye svg { width: 18px; height: 18px; }
+    .password-eye.is-showing { color: #0f172a; }
 
     .primary, .secondary, .danger {
       min-height: 46px;
@@ -229,33 +251,53 @@
       z-index: 80;
       display: grid;
       place-items: center;
-      padding: 22px;
-      background: rgba(17, 24, 39, .18);
-      pointer-events: none;
-    }
-    .subscription-gate.hidden { display: none; }
-    .subscription-gate-card {
-      width: min(420px, 100%);
-      border: 1px solid #fecaca;
-      border-radius: 8px;
-      background: #fff;
-      color: #111827;
-      box-shadow: 0 28px 80px rgba(15, 23, 42, .26);
-      padding: 18px;
-      display: grid;
-      gap: 12px;
+      padding: 24px;
+      background: rgba(15, 23, 42, .46);
       pointer-events: auto;
     }
-    .subscription-gate-card strong {
-      color: #dc2626;
-      font-size: 20px;
-      line-height: 26px;
-      font-weight: 950;
+    .subscription-gate.hidden { display: none; }
+    .subscription-sheet, .subscription-panel {
+      width: min(720px, 100%);
+      max-height: min(860px, calc(100dvh - 32px));
+      overflow: auto;
+      display: grid;
+      gap: 16px;
+      border: 1px solid #e6e8ec;
+      border-radius: 20px;
+      background: #fff;
+      color: #172033;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, .28);
+      padding: 22px;
     }
-    .subscription-gate-card p { margin: 0; color: #4b5563; font-weight: 750; }
-    .subscription-gate-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-    .subscription-gate-actions .primary { padding: 0 16px; }
-    .subscription-gate-actions .secondary { padding: 0 16px; background: #fff5f5; color: #dc2626; border-color: #fecaca; }
+    .subscription-panel { margin: 0 auto; box-shadow: none; }
+    .sub-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+    .sub-kicker { margin: 0; color: #667085; font-size: 11px; font-weight: 800; letter-spacing: .14em; }
+    .sub-head h2, .subscription-panel h2 { margin: 4px 0 0; color: #172033; font-size: 26px; line-height: 1.15; font-weight: 750; }
+    .sub-head p, .sub-note { margin: 6px 0 0; color: #4b5563; font-size: 14px; font-weight: 650; line-height: 1.45; }
+    .sub-chip { flex: 0 0 auto; min-height: 28px; border-radius: 999px; padding: 6px 10px; background: #e8f6ea; color: #166534; font-size: 12px; font-weight: 800; }
+    .sub-chip.warn { background: #fff6df; color: #b45309; }
+    .sub-chip.expired { background: #fef2f2; color: #b91c1c; }
+    .sub-plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; }
+    .sub-plan {
+      display: grid;
+      gap: 4px;
+      min-height: 108px;
+      align-content: start;
+      border: 1px solid #e6e8ec;
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px;
+      text-align: left;
+      color: #172033;
+    }
+    .sub-plan strong { font-size: 14px; font-weight: 750; }
+    .sub-plan b { font-size: 18px; font-weight: 750; color: #12351a; }
+    .sub-plan small { color: #667085; font-size: 12px; font-weight: 650; }
+    .sub-plan.selected { border-color: #4f9a55; background: #f3faf4; box-shadow: inset 0 0 0 1px #4f9a55; }
+    .sub-pay { min-height: 48px; border: 0; border-radius: 12px; background: #4f9a55; color: #fff; font-size: 16px; font-weight: 750; }
+    .sub-pay:disabled { opacity: .6; }
+    .sub-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .sub-actions .secondary { min-height: 46px; padding: 0 16px; }
 
     .topbar {
       position: sticky;
@@ -500,9 +542,18 @@
       font-weight: 800;
     }
     .cart-top-actions .cart-view-btn {
+      width: 36px;
+      min-width: 36px;
+      height: 36px;
+      padding: 0;
       border: 1px solid #e5eaf0;
+      border-radius: 10px;
       background: white;
       color: #0f172a;
+    }
+    .cart-top-actions .cart-view-btn svg {
+      width: 18px;
+      height: 18px;
     }
     .cart-top-actions #clearCart {
       color: var(--red);
@@ -1117,6 +1168,90 @@
     #clearCart svg { width: 15px; height: 15px; stroke: currentColor; }
     .cart-view-list { display: grid; gap: 10px; max-height: 58vh; overflow-y: auto; }
     .cart-view-row { display: flex; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 12px; padding: 10px; font-weight: 850; }
+    .order-review {
+      width: min(640px, calc(100vw - 32px));
+      max-height: min(720px, calc(100dvh - 32px));
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid #e8edf4;
+      border-radius: 18px;
+      background: #fff;
+      box-shadow: 0 24px 80px #11182740;
+    }
+    .order-review-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid #eef2f6;
+    }
+    .order-review-head h2 { margin: 0; font-size: 18px; line-height: 1.2; color: #111827; font-weight: 850; }
+    .order-review-head p { margin: 2px 0 0; color: #6b7280; font-size: 13px; font-weight: 700; }
+    .order-review-close {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #e5eaf0;
+      border-radius: 10px;
+      background: #fff;
+      color: #111827;
+      font-size: 22px;
+      line-height: 1;
+    }
+    .order-review-cols,
+    .order-review-row {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) 112px 88px 32px;
+      gap: 8px;
+      align-items: center;
+    }
+    .order-review-cols {
+      padding: 8px 16px;
+      color: #6b7280;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .order-review-list { overflow-y: auto; padding: 0 16px 8px; }
+    .order-review-row { padding: 10px 0; border-top: 1px solid #eef2f6; }
+    .order-review-no { color: #6b7280; font-size: 13px; font-weight: 800; }
+    .order-review-item { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .order-review-thumb { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 8px; background: #eef2f7 center / cover; }
+    .order-review-item strong { display: block; color: #111827; font-size: 15px; line-height: 1.25; font-weight: 800; white-space: normal; overflow-wrap: anywhere; }
+    .order-review-item small { display: block; margin-top: 2px; color: #6b7280; font-size: 12px; font-weight: 700; }
+    .order-review-qty {
+      display: grid;
+      grid-template-columns: 28px 36px 28px;
+      height: 32px;
+      border: 1px solid #e5eaf0;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .order-review-qty button { border: 0; background: #f8fafc; color: #111827; font-size: 16px; font-weight: 800; }
+    .order-review-qty input { width: 100%; border: 0; background: #fff; text-align: center; font-size: 13px; font-weight: 800; }
+    .order-review-amt { text-align: right; color: #111827; font-size: 14px; font-weight: 850; }
+    .order-review-remove { width: 32px; height: 32px; border: 0; border-radius: 8px; background: #fef2f2; color: #dc2626; font-size: 18px; line-height: 1; }
+    .order-review-empty { padding: 28px 16px; color: #6b7280; text-align: center; font-weight: 750; }
+    .order-review-summary { display: grid; gap: 6px; margin: 0 16px; padding: 12px 0; border-top: 1px solid #eef2f6; }
+    .order-review-summary div { display: flex; justify-content: space-between; gap: 12px; color: #4b5563; font-size: 13px; font-weight: 750; }
+    .order-review-summary .discount strong { color: #16a34a; }
+    .order-review-summary .final { margin-top: 4px; padding-top: 8px; border-top: 1px dashed #e5eaf0; color: #111827; font-size: 16px; font-weight: 850; }
+    .order-review-summary .final strong { font-size: 18px; }
+    .order-review-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 0 16px 16px; }
+    .order-review-clear { min-height: 42px; padding: 0 14px; border: 1px solid #fecaca; border-radius: 12px; background: #fff; color: #dc2626; font-weight: 800; }
+    .order-review-pay { min-height: 42px; padding: 0 16px; border: 0; border-radius: 12px; background: #16a34a; color: #fff; font-weight: 850; }
+    .order-review-pay:disabled { opacity: .5; }
+    @media (max-width: 640px) {
+      .order-review-cols { display: none; }
+      .order-review-row { grid-template-columns: 22px minmax(0, 1fr) 32px; grid-template-areas: "no item remove" "qty qty amt"; }
+      .order-review-no { grid-area: no; }
+      .order-review-item { grid-area: item; }
+      .order-review-remove { grid-area: remove; }
+      .order-review-qty { grid-area: qty; width: 112px; }
+      .order-review-amt { grid-area: amt; }
+    }
 
     .bottom-nav {
       position: fixed;
@@ -1633,6 +1768,8 @@
       font-size: 12px;
       font-weight: 800;
     }
+    .sales-list { max-height: 560px; overflow: auto; }
+    .sales-filter { margin-bottom: 12px; }
     .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
     .panel-head h2 { margin: 0; }
     .stack { display: grid; gap: 10px; }
@@ -2105,10 +2242,30 @@
     .item-add-card {
       color: var(--ink);
     }
-    .item-manager-card {
-      display: grid;
-      gap: 12px;
+    .item-manager-card.is-editing {
+      border-color: #f97316;
+      background: #fff7ed;
+      box-shadow: inset 0 0 0 1px #f97316;
     }
+    .item-update-btn {
+      border-color: #ea580c !important;
+      background: #f97316 !important;
+      color: #fff !important;
+    }
+    .item-manager-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .item-manager-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .add-item-dialog {
+      width: min(460px, calc(100vw - 24px));
+      max-height: min(720px, calc(100dvh - 24px));
+      border: 0;
+      border-radius: 18px;
+      padding: 0;
+      box-shadow: 0 24px 70px #0f172a40;
+    }
+    .add-item-dialog::backdrop { background: rgba(15, 23, 42, .46); }
+    .add-item-sheet { display: grid; gap: 10px; padding: 18px; overflow: auto; }
+    .add-item-sheet h2 { margin: 4px 0 0; font-size: 22px; }
+    .add-item-close { width: 36px; height: 36px; border: 1px solid #e5eaf0; border-radius: 10px; background: #fff; font-size: 22px; line-height: 1; }
     .item-manager-top {
       display: grid;
       grid-template-columns: 58px minmax(0, 1fr) auto auto;
@@ -3228,10 +3385,15 @@
     #posView .cart-summary-chip { background: #f4f7fb; color: #6b7280; }
     #posView #cartTotal { font-size: 22px; }
     #posView .row-between strong:first-child { font-size: 16px; }
-    #posView .cart-list { flex: 1 1 auto; max-height: none; gap: 12px; margin: 10px 0 12px; overflow-y: auto; }
-    #posView .cart-row { grid-template-columns: 18px 58px minmax(0, 1fr) auto; gap: 10px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+    #posView .cart-list { flex: 1 1 auto; align-content: start; max-height: none; gap: 8px; margin: 8px 0; overflow-y: auto; }
+    #posView .cart-row { grid-template-columns: 18px 48px minmax(0, 1fr); grid-template-areas: "index thumb name" "index thumb actions"; gap: 4px 8px; align-items: center; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+    #posView .cart-index { grid-area: index; }
+    #posView .cart-row .cart-thumb { grid-area: thumb; }
+    #posView .cart-row-main { grid-area: name; }
+    #posView .cart-row-actions { grid-area: actions; width: 100%; justify-content: space-between; }
+    #posView .cart-row-main strong { white-space: normal; overflow: visible; text-overflow: unset; line-height: 1.25; overflow-wrap: anywhere; }
     #posView .cart-row .qty { width: 84px; }
-    .cart-thumb { width: 58px; height: 58px; border-radius: 10px; background: #eef2f7 center / cover; }
+    .cart-thumb { width: 48px; height: 48px; border-radius: 10px; background: #eef2f7 center / cover; }
     .cart-summary { display: grid; gap: 10px; padding: 12px 0; border-bottom: 1px dashed #cbd5e1; }
     .cart-summary .green { color: #16a34a; }
     #posView .place { min-height: 60px; margin-top: 14px; background: linear-gradient(180deg, #2fc152, #20a83d); box-shadow: 0 12px 26px #22c55e30; font-size: 18px; }
@@ -3296,7 +3458,7 @@
       display: block;
     }
 
-    @media (min-width: 761px) and (max-width: 1024px) and (orientation: landscape) {
+    @media (min-width: 761px) and (max-width: 1024px) and (min-height: 540px) and (orientation: landscape) {
       .app {
         max-width: 100%;
       }
@@ -4247,7 +4409,7 @@
       justify-content: center;
       gap: 8px;
     }
-    @media (min-width: 761px) and (max-width: 1024px) and (orientation: landscape) {
+    @media (min-width: 761px) and (max-width: 1024px) and (min-height: 540px) and (orientation: landscape) {
       .app { max-width: 100% !important; }
       #posView .topbar {
         margin: 12px 12px 0 !important;
@@ -4366,7 +4528,7 @@
         max-height: 10vh !important;
       }
     }
-    @media (min-width: 761px) and (max-width: 1024px) and (orientation: landscape) {
+    @media (min-width: 761px) and (max-width: 1024px) and (min-height: 540px) and (orientation: landscape) {
       #posView:not(.hidden) {
         display: grid !important;
         grid-template-columns: minmax(0, 1fr) 340px !important;
@@ -4621,7 +4783,7 @@
     html.pos-layout-compact .report-card-title h3 {
       font-size: 14px !important;
     }
-    @media (min-width: 900px) and (orientation: landscape) {
+    @media (min-width: 900px) and (min-height: 540px) and (orientation: landscape) {
       html.pos-layout-compact #posView:not(.hidden) {
         display: grid !important;
         grid-template-columns: minmax(0, 1fr) 360px !important;
@@ -4683,9 +4845,10 @@
       html.pos-layout-compact #posView .cart-list {
         display: grid !important;
         flex: 1 1 auto !important;
+        align-content: start !important;
         max-height: none !important;
         overflow-y: auto !important;
-        gap: 12px !important;
+        gap: 8px !important;
       }
       html.pos-layout-compact #posView .cart-summary {
         display: grid !important;
@@ -4803,6 +4966,8 @@
       #posView .cart-list {
         display: grid !important;
         flex: 1 1 auto !important;
+        align-content: start !important;
+        gap: 8px !important;
         max-height: none !important;
         overflow-y: auto !important;
       }
@@ -4822,7 +4987,7 @@
         font-size: 15px !important;
       }
       #posView .menu-grid {
-        grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)) !important;
+        grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)) !important;
         gap: 12px !important;
       }
       #posView .item-card {
@@ -4957,6 +5122,8 @@
     html.pos-layout-tablet #posView .cart-list {
       display: grid !important;
       flex: 1 1 auto !important;
+      align-content: start !important;
+      gap: 8px !important;
       max-height: none !important;
       overflow-y: auto !important;
     }
@@ -4968,7 +5135,7 @@
       font-size: 15px !important;
     }
     html.pos-layout-tablet #posView .menu-grid {
-      grid-template-columns: repeat(auto-fill, minmax(168px, 1fr)) !important;
+      grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)) !important;
       gap: 12px !important;
     }
     html.pos-layout-tablet #posView .item-card {
@@ -5165,6 +5332,19 @@
       align-items: center !important;
       justify-content: center !important;
     }
+    #posView .cart-top-actions .cart-view-btn {
+      width: 36px !important;
+      min-width: 36px !important;
+      max-width: 36px !important;
+      padding: 0 !important;
+      border-radius: 10px !important;
+      font-size: 0 !important;
+      gap: 0 !important;
+    }
+    #posView .cart-top-actions .cart-view-btn svg {
+      width: 18px !important;
+      height: 18px !important;
+    }
     html.pos-layout-compact #posView #cartTotal {
       font-size: 24px !important;
       line-height: 1.1 !important;
@@ -5180,6 +5360,78 @@
       margin-top: 8px !important;
       padding-bottom: 2px !important;
       line-height: 1.35 !important;
+    }
+    @media (orientation: landscape) and (max-height: 520px) {
+      html.pos-layout-compact #posView:not(.hidden) {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) min(280px, 38vw) !important;
+        grid-template-rows: auto minmax(0, 1fr) auto !important;
+        grid-template-areas: "topbar topbar" "content cart" "nav nav" !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        overflow: hidden !important;
+        column-gap: 8px !important;
+      }
+      html.pos-layout-compact #posView.option-mode:not(.hidden) {
+        grid-template-columns: minmax(0, 1fr) !important;
+        grid-template-areas: "topbar" "content" "nav" !important;
+      }
+      html.pos-layout-compact #posView .topbar {
+        grid-area: topbar !important;
+        position: relative !important;
+        top: auto !important;
+        min-height: 52px !important;
+        margin: 6px 8px 0 !important;
+        padding: 6px 10px !important;
+      }
+      html.pos-layout-compact #posView .content,
+      html.pos-layout-compact #posView.option-mode .content {
+        grid-area: content !important;
+        min-height: 0 !important;
+        padding: 8px 4px 8px 10px !important;
+        overflow: auto !important;
+      }
+      html.pos-layout-compact #posView .tabs { padding: 6px 0 !important; }
+      html.pos-layout-compact #posView .menu-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+        gap: 8px !important;
+      }
+      html.pos-layout-compact #posView .item-card {
+        min-height: 0 !important;
+        grid-template-rows: 64px auto !important;
+        padding: 6px !important;
+      }
+      html.pos-layout-compact #posView .item-icon { height: 64px !important; }
+      html.pos-layout-compact #posView .cart-sheet,
+      html.native-app.pos-layout-compact #posView .cart-sheet {
+        grid-area: cart !important;
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        width: auto !important;
+        max-height: none !important;
+        height: auto !important;
+        margin: 6px 8px 0 0 !important;
+        transform: none !important;
+        align-self: start !important;
+      }
+      html.pos-layout-compact #posView .bottom-nav,
+      html.pos-layout-compact #posView .bottom-nav.user-nav,
+      html.native-app.pos-layout-compact #posView .bottom-nav,
+      html.native-app.pos-layout-compact #posView .bottom-nav.user-nav {
+        grid-area: nav !important;
+        position: relative !important;
+        top: auto !important;
+        right: auto !important;
+        bottom: auto !important;
+        left: auto !important;
+        width: calc(100% - 16px) !important;
+        height: 48px !important;
+        margin: 4px 8px 6px !important;
+        transform: none !important;
+      }
     }
 
     .weekly-sales-card { min-width: 0; }
@@ -5271,7 +5523,12 @@
         <h1>Sign in</h1>
         <p id="loginCanteen">Main Canteen</p>
         <label>Mobile number / Restaurant ID <input id="mobileInput" autocomplete="username" required></label>
-        <label>Password <input id="passwordInput" type="password" autocomplete="current-password" required></label>
+        <label>Password
+          <span class="password-field">
+            <input id="passwordInput" type="password" autocomplete="current-password" required>
+            <button class="password-eye" id="passwordEye" type="button" aria-label="Hold to show password" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+          </span>
+        </label>
         <div class="login-links">
           <button type="button" id="forgotPasswordBtn">Forgot Password?</button>
           <button type="button" id="signupBtn">Sign Up</button>
@@ -5347,7 +5604,7 @@
             <span class="cart-summary-chip">Summary</span>
           </div>
           <div class="cart-top-actions">
-            <button class="cart-view-btn" id="viewCartBtn" type="button" aria-label="View cart"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>View</button>
+            <button class="cart-view-btn" id="viewCartBtn" type="button" aria-label="View order"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
             <button id="clearCart" type="button"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5"/><path d="M14 11v5"/></svg>Clear</button>
           </div>
           <div class="cart-list" id="cartList"></div>
@@ -5428,7 +5685,7 @@
         return defaults;
       }
     })();
-    const appBuild = "3.67";
+    const appBuild = "3.68";
     const appBuildKey = "AXEN_APP_BUILD";
     const productCacheKey = "AXEN_PRODUCTS";
     const productUnitOverridesKey = "AXEN_PRODUCT_UNIT_OVERRIDES";
@@ -5513,6 +5770,8 @@
     let itemSuggestions = [];
     let catalogItems = [];
     let subscriptionState = null;
+    let subscriptionCheckoutOpen = false;
+    let selectedRechargeMonths = 1;
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(2);
@@ -6036,6 +6295,7 @@
     async function api(path, options = {}) {
       const { timeoutMs, authToken, ...fetchOptions } = options;
       const token = authToken || localStorage.getItem(tokenKey);
+      const appVersion = installedAppVersion();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), Number(timeoutMs || 3500));
       const response = await fetch(API + path, {
@@ -6044,6 +6304,7 @@
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(appVersion ? { "X-Axzen-App-Version": appVersion } : {}),
           ...(fetchOptions.headers || {})
         }
       }).finally(() => clearTimeout(timeout));
@@ -6058,6 +6319,16 @@
         throw error;
       }
       return response.json();
+    }
+
+    function installedAppVersion() {
+      try {
+        if (window.AxzenUpdater && typeof window.AxzenUpdater.current === "function") {
+          const current = JSON.parse(window.AxzenUpdater.current() || "{}");
+          return String(current.version || "Bundled APK").slice(0, 40);
+        }
+      } catch {}
+      return "";
     }
 
     function adminApi(path, options = {}) {
@@ -6774,72 +7045,61 @@
       const subtotal = cart.reduce((sum, item) => sum + cartLineTotal(item), 0);
       const total = Math.max(0, subtotal - cartDiscount);
       const qty = cart.reduce((sum, item) => sum + Number(item.qty || 0), 0);
-      const cartPaymentOptions = [
-        ["Cash", "Cash", "Cash payment", `<svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M7 11h5"/><path d="M7 14h3"/></svg>`],
-        ["Online", "Online", "UPI / GPay", `<svg viewBox="0 0 24 24"><path d="M4 7h16v10H4z"/><path d="M4 10h16"/><path d="M7 14h3"/></svg>`],
-        ["Split", "Split", "Cash + Online", `<svg viewBox="0 0 24 24"><path d="M7 4h10v16H7z"/><path d="M11 8h4"/><path d="M9 13h6"/><path d="M9 17h4"/></svg>`],
-        ["Credit", "Credit", "Pending amount", `<svg viewBox="0 0 24 24"><path d="M5 6h14v11H5z"/><path d="M8 10h8"/><path d="M8 14h5"/></svg>`]
-      ];
+      const rows = cart.map((item, index) => {
+        const unit = item.weightUnit
+          ? formatQtyUnit(item.qty, item.weightUnit)
+          : [itemSaleUnit(item), item.optionName].filter(Boolean).join(" · ");
+        const rate = item.weightUnit ? "" : money(item.price);
+        const detail = [unit, rate].filter(Boolean).join(" · ");
+        return `<div class="order-review-row">
+          <span class="order-review-no">${index + 1}</span>
+          <div class="order-review-item">
+            <span class="order-review-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
+            <div><strong>${esc(localizedName(item))}</strong>${detail ? `<small>${esc(detail)}</small>` : ""}</div>
+          </div>
+          <div class="order-review-qty">
+            <button data-cart-page-qty="-1" data-id="${esc(item.lineId)}" type="button" aria-label="Decrease">−</button>
+            <input data-cart-page-input="${esc(item.lineId)}" type="number" min="0" inputmode="numeric" value="${item.qty}" aria-label="Quantity">
+            <button data-cart-page-qty="1" data-id="${esc(item.lineId)}" type="button" aria-label="Increase">+</button>
+          </div>
+          <strong class="order-review-amt">${money(cartLineTotal(item))}</strong>
+          <button class="order-review-remove" data-cart-page-remove="${esc(item.lineId)}" type="button" aria-label="Remove item">×</button>
+        </div>`;
+      }).join("");
       $("optionsModalMount").innerHTML = `
-        <div class="modal-backdrop cart-page-backdrop">
-          <div class="cart-page-modal">
-            <div class="cart-page-header">
-              <button class="cart-page-back" id="closeCartView" type="button">&lt;</button>
-              <span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M6 7h15l-2 9H8L6 7Z"/><path d="M6 7 5 3H3"/><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/></svg></span>
-              <div><h2>Your Cart</h2><p>Review your items</p></div>
-            </div>
-            <div class="cart-page-alert"><span><strong>${cart.length}</strong> items • <strong>${qty}</strong> qty in your cart</span><button id="cartPageClear" type="button">Clear Cart</button></div>
-            <div class="cart-page-list">
-              ${cart.map(item => `<div class="cart-page-row">
-                <span class="cart-page-thumb" style="${item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : ""}"></span>
-                <div><h3>${esc(localizedName(item))}</h3><p>${esc(item.weightUnit ? formatQtyUnit(item.qty, item.weightUnit) : itemSaleUnit(item) || item.category || item.optionName || "Item")}</p><span class="price">${item.weightUnit ? money(cartLineTotal(item)) : money(item.price)}</span></div>
-              <div class="orders-qty"><button data-cart-page-qty="-1" data-id="${esc(item.lineId)}" type="button">-</button><input data-cart-page-input="${esc(item.lineId)}" type="number" min="0" inputmode="numeric" value="${item.qty}"><button data-cart-page-qty="1" data-id="${esc(item.lineId)}" type="button">+</button></div>
-                <strong class="cart-page-total">${money(cartLineTotal(item))}</strong>
-                <button class="cart-page-remove" data-cart-page-remove="${esc(item.lineId)}" type="button" aria-label="Remove item"><svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M9 7V5h6v2"/><path d="M8 7l1 13h6l1-13"/><path d="M10 11v5"/><path d="M14 11v5"/></svg></button>
-              </div>`).join("") || `<div class="work-card">Cart empty</div>`}
-            </div>
-            <div class="cart-page-card">
-              <h3>Order Summary</h3>
-              <div class="cart-summary-line"><span>Total Items</span><strong>${cart.length}</strong></div>
-              <div class="cart-summary-line"><span>Total Quantity</span><strong>${qty}</strong></div>
-              <div class="cart-summary-line"><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
-              <div class="cart-summary-line"><span>Discount</span><strong style="color:#16A34A">${money(cartDiscount)}</strong></div>
-              <div class="cart-summary-line"><span>Delivery Charge</span><strong>${money(0)}</strong></div>
-              <div class="cart-summary-line final"><span>Total Amount</span><strong>${money(total)}</strong></div>
-            </div>
-            <div class="cart-page-card">
-              <h3>Payment Method</h3>
-              <div class="cart-payment-options">
-                ${cartPaymentOptions.map(([mode, title, subtitle, icon]) => `
-                  <button class="cart-payment-option ${cartPaymentMode === mode ? "active" : ""}" data-cart-pay="${mode}" type="button">
-                    <span class="cart-page-icon">${icon}</span>
-                    <div><strong>${title}</strong><p class="muted">${subtitle}</p></div>
-                    <span class="cart-radio"></span>
-                  </button>
-                `).join("")}
+        <div class="modal-backdrop center-modal" id="cartViewBackdrop">
+          <div class="order-review" role="dialog" aria-modal="true" aria-labelledby="orderReviewTitle">
+            <div class="order-review-head">
+              <div>
+                <h2 id="orderReviewTitle">Current Order</h2>
+                <p>${cart.length} items · ${qty} qty</p>
               </div>
+              <button class="order-review-close" id="closeCartView" type="button" aria-label="Close">×</button>
             </div>
-            <div class="cart-page-card cart-page-notes"><span class="cart-page-icon"><svg viewBox="0 0 24 24"><path d="M5 4h10l4 4v12H5z"/><path d="M15 4v5h5"/><path d="M8 14h8"/></svg></span><div><strong>Order Notes (Optional)</strong><p class="muted">Add any special instructions...</p></div></div>
-            <div class="cart-page-footer">
-              <span class="orders-bar-icon"><svg viewBox="0 0 24 24"><path d="M6 7h15l-2 9H8L6 7Z"/><path d="M6 7 5 3H3"/></svg></span>
-              <div><strong>${cart.length} Items</strong><span>${qty} Quantity</span></div>
-              <div><strong>${money(total)}</strong><span>Total Amount</span></div>
-              <button class="cart-place-order" id="cartPagePlaceOrder" type="button">${cartPaymentMode} Pay &gt;</button>
+            <div class="order-review-cols"><span>#</span><span>Item</span><span>Qty</span><span>Amount</span><span></span></div>
+            <div class="order-review-list">
+              ${rows || `<div class="order-review-empty">No items in this order.</div>`}
+            </div>
+            <div class="order-review-summary">
+              <div><span>Subtotal</span><strong>${money(subtotal)}</strong></div>
+              <div class="discount"><span>Discount</span><strong>- ${money(cartDiscount)}</strong></div>
+              <div><span>GST (0%)</span><strong>${money(0)}</strong></div>
+              <div class="final"><span>Total Amount</span><strong>${money(total)}</strong></div>
+            </div>
+            <div class="order-review-actions">
+              <button class="order-review-clear" id="cartPageClear" type="button">Clear</button>
+              <button class="order-review-pay" id="cartPagePlaceOrder" type="button" ${cart.length ? "" : "disabled"}>Proceed to Payment</button>
             </div>
           </div>
         </div>`;
       $("closeCartView").addEventListener("click", closeOptionsModal);
+      $("cartViewBackdrop").addEventListener("click", event => {
+        if (event.target === event.currentTarget) closeOptionsModal();
+      });
       $("cartPageClear").addEventListener("click", () => {
         clearActiveCartState();
         openCartViewModal();
       });
-      document.querySelectorAll("[data-cart-pay]").forEach(btn => btn.addEventListener("click", async () => {
-        if (orderSubmitting) return;
-        cartPaymentMode = btn.dataset.cartPay || "Cash";
-        btn.classList.add("selected");
-        document.querySelectorAll("[data-cart-pay]").forEach(item => item.disabled = true);
-        setTimeout(() => completeOrder(cartPaymentMode), 90);
-      }));
       document.querySelectorAll("[data-cart-page-qty]").forEach(btn => btn.addEventListener("click", () => {
         changeQty(btn.dataset.id, Number(btn.dataset.cartPageQty));
         if (activePosSection === "bulk") setBulkDraft(cart.map(item => ({ ...item })));
@@ -6858,7 +7118,7 @@
         openCartViewModal();
       }));
       $("cartPagePlaceOrder").addEventListener("click", () => {
-        completeOrder(cartPaymentMode);
+        placeOrderFlow();
       });
     }
 
@@ -8172,9 +8432,40 @@
         if (range === "month") start.setDate(1);
         if (range === "year") { start.setMonth(0); start.setDate(1); }
         const active = selected === range && actual.from === dateInputValue(start) && actual.to === dateInputValue(now);
-        const label = (longLabels ? ["Today", "Weekly", "Monthly", "Yearly"] : ["Today", "Week", "Month", "Year"])[index];
+        const label = (longLabels ? ["Today", "1 Week", "1 Month", "1 Year"] : ["Today", "Week", "Month", "Year"])[index];
         return `<button data-report-range="${range}" aria-pressed="${active}" type="button">${label}</button>`;
       }).join("");
+    }
+
+    function isTableBill(order) {
+      return order?.orderType === "Dine In" || Boolean(order?.tableName || order?.tableId);
+    }
+
+    function tableWiseGroups(rows) {
+      const groups = new Map();
+      rows.filter(isTableBill).forEach(order => {
+        const name = String(order.tableName || order.tableId || "Table");
+        const current = groups.get(name) || { bills: 0, total: 0 };
+        current.bills += 1;
+        current.total += Number(order.total || 0);
+        groups.set(name, current);
+      });
+      return [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    }
+
+    function tableWiseSectionHtml(rows) {
+      const groups = tableWiseGroups(rows);
+      if (!groups.length) return "";
+      const bills = groups.reduce((sum, [, item]) => sum + item.bills, 0);
+      const total = groups.reduce((sum, [, item]) => sum + item.total, 0);
+      return `
+        <div class="work-card report-card-compact">
+          <h3>Table wise</h3>
+          <p class="muted">${bills} table bills · ${money(total)} included in the total</p>
+          <table class="data-table report-mini-table"><thead><tr><th>Table</th><th>Bills</th><th>Sale</th></tr></thead><tbody>
+            ${groups.map(([name, item]) => `<tr><td>Table ${esc(name)}</td><td>${item.bills}</td><td>${money(item.total)}</td></tr>`).join("")}
+          </tbody></table>
+        </div>`;
     }
 
     function resetReportRangeToToday() {
@@ -8518,6 +8809,18 @@
       const profitLossHtml = canViewProfitLoss()
         ? `<div class="work-card"><h3>Profit/Loss Report</h3><div class="option-row"><span>Total Sale</span><strong>${money(totals.total)}</strong></div><div class="option-row"><span>Consumption Cost</span><strong>${money(consumptionCost)}</strong></div><div class="option-row"><span>Expenses</span><strong>${money(expenseTotal)}</strong></div><div class="option-row"><span>${net >= 0 ? "Net Profit" : "Net Loss"}</span><strong>${money(Math.abs(net))}</strong></div></div>`
         : `<div class="work-card"><h3>Profit/Loss Report</h3><div class="muted">Admin or Super Admin approval is required to view Profit/Loss reports.</div></div>${adminUnlockHtml()}`;
+      const tableBills = rows.filter(isTableBill);
+      const tableSale = tableBills.reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const counterBills = rows.length - tableBills.length;
+      const counterSale = totals.total - tableSale;
+      const billRows = rows.slice().sort((a, b) => orderDate(b) - orderDate(a)).map(order => `
+        <tr>
+          <td>${esc(order.time || displayDateLabel(dateInputValue(orderDate(order))))}</td>
+          <td>${isTableBill(order) ? `Table ${esc(order.tableName || order.tableId || "")}` : "Counter"}</td>
+          <td>${esc(order.payment || "-")}</td>
+          <td>${esc(order.cashier || "-")}</td>
+          <td>${money(order.total)}</td>
+        </tr>`).join("");
       return `
         <div class="report-modern-page">
           <div class="report-hero">
@@ -8529,7 +8832,7 @@
           <div class="work-card report-modern-filter">
             <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
             <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
-            <div class="report-modern-actions">${reportQuickButtons()}</div>
+            <div class="report-modern-actions">${reportQuickButtons(true)}</div>
             <div class="report-modern-actions report-share-actions">
               <button class="secondary" id="shareReportImage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v14H4z"/><path d="m8 14 2.5-2.5L13 14l2-2 3 4"/><circle cx="9" cy="9" r="1"/></svg>Share Image</button>
               <button class="secondary" id="downloadReportImage" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>Download Image</button>
@@ -8546,6 +8849,12 @@
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon orange"><svg viewBox="0 0 24 24"><path d="M4 8h16v11H4z"/><path d="M8 8V6h8v2"/><path d="M8 13h8"/></svg></i><span>Credit</span></div><strong>${money(totals.credit)}</strong><small>Pending in range</small></div>
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon red"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9v9z"/><path d="M12 3a9 9 0 0 1 9 9h-9z"/></svg></i><span>Profit/Loss</span></div><strong>${canViewProfitLoss() ? money(Math.abs(net)) : "Locked"}</strong><small>${canViewProfitLoss() ? (net >= 0 ? "Profit" : "Loss") : "Locked by admin"}</small></div>
           </div>
+          <div class="work-card report-card-compact">
+            <h3>Total bills</h3>
+            <p class="muted">Counter ${counterBills} · ${money(counterSale)}${tableBills.length ? ` · Tables ${tableBills.length} · ${money(tableSale)}` : ""} · Combined ${rows.length} bills · ${money(totals.total)}</p>
+            <div class="sales-list"><table class="data-table report-mini-table"><thead><tr><th>Time</th><th>Source</th><th>Payment</th><th>Cashier</th><th>Amount</th></tr></thead><tbody>${billRows || `<tr><td colspan="5" class="report-empty">No bills in this date range</td></tr>`}</tbody></table></div>
+          </div>
+          ${tableWiseSectionHtml(rows)}
           ${weeklySalesChartHtml(chartData)}
           <div class="work-card report-card-compact"><h3>Date Wise</h3><table class="data-table report-mini-table"><thead><tr><th>Date</th><th>Bills</th><th>Sale</th><th>Cash</th><th>Online</th></tr></thead><tbody>${dateRows || `<tr><td colspan="5" class="report-empty">No sales in this date range</td></tr>`}</tbody></table></div>
           <div class="work-card report-card-compact"><h3>Item Wise</h3><table class="data-table report-mini-table"><thead><tr><th>Item</th><th>Qty</th><th>Sale</th></tr></thead><tbody>${itemRows || `<tr><td colspan="3" class="report-empty">No item sales in this date range</td></tr>`}</tbody></table></div>
@@ -9115,11 +9424,11 @@
         const hidden = isItemHidden(item);
         const editing = item._editing === true;
         const imageStyle = item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : "";
-        return `<div class="work-card item-manager-card">
+        return `<div class="work-card item-manager-card${editing ? " is-editing" : ""}">
           <div class="item-manager-top">
             <span class="item-manager-thumb ${imageStyle ? "" : "initials"}" style="${imageStyle}">${imageStyle ? "" : esc(String(item.name || "I").slice(0, 1))}</span>
             <div><h3>${esc(localizedName(item, "both"))}</h3>${item.imageCredit?.source && /^https:\/\//i.test(item.imageCredit.source) ? `<a href="${esc(item.imageCredit.source)}" target="_blank" rel="noopener">Photo: ${esc(item.imageCredit.author)} ? ${esc(item.imageCredit.license)}</a>` : ""}<span class="muted">${esc(item.category || "-")} | ${esc(itemSaleUnit(item) || "Plate")} | ${subs.length ? `${subs.length} sub items` : "Empty"} | ${hidden ? "Hidden" : "Visible"}</span></div>
-            <button class="ghost-action" data-edit-item="${item.id}" type="button">${editing ? "Done" : "Edit"}</button>
+            <button class="ghost-action${editing ? " item-update-btn" : ""}" data-edit-item="${item.id}" type="button">${editing ? "Update" : "Edit"}</button>
             <button class="ghost-action ${hidden ? "" : "danger-lite"}" data-hide-item="${item.id}" type="button">${hidden ? "Show" : "Hide"}</button>
           </div>
           ${editing ? `<div class="item-edit-grid">
@@ -9139,37 +9448,16 @@
           </div>` : ""}
         </div>`;
       }).join("");
-      const query = String($("newItemName")?.value || "").trim().toLowerCase();
-      const catalogRows = catalogItems
-        .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
-        .slice(0, 60);
-      const catalogHtml = catalogRows.map(item => `
-        <button class="catalog-pick-card ${item.active ? "in-menu" : ""}" data-catalog-name="${esc(item.name)}" type="button" ${item.active ? "disabled" : ""}>
-          <strong>${esc(item.name || "Item")}</strong>
-          <small>${esc(item.category || "Item")}${item.active ? " · Already added" : ""}</small>
-        </button>`).join("");
-      const selectedCategory = isChickenShopCanteen() ? chickenCategory : "Tiffin";
       return `
         ${sectionHeader(section)}
-        <div class="work-card item-add-card">
-          <h3>Add Item</h3><button class="page-action" id="uploadCatalogBtn" type="button">Upload catalog ? Review items</button>
-          <p class="muted">Search the full item list. Already added names stay in this login only and will not duplicate.</p>
-          <input id="newItemName" placeholder="Search all software items">
-          <div class="item-suggest-box" id="itemSuggestionBox"></div>
-          <div class="catalog-pick-head"><h4>All items</h4><span>${catalogItems.filter(item => item.active).length} already in this login</span></div>
-          <div class="catalog-pick-grid" id="catalogPickGrid">${catalogHtml || `<div class="muted">Type 2 letters or wait for the list to load.</div>`}</div>
-          <input id="newItemNameTe" placeholder="Telugu print name">
-          <select id="newItemCategory">${categoryOrder.filter(item => item !== "All" && !isSingleItemsCategory(item)).map(item => `<option value="${esc(item)}" ${item === selectedCategory ? "selected" : ""}>${esc(categoryLabel(item))}</option>`).join("")}</select>
-          <select id="newItemUnit">${itemUnitOptionsHtml(isChickenShopCanteen() ? "Kgs" : "Plate")}</select>
-          <input id="newItemPrice" type="number" min="0" placeholder="Price">
-          <input id="newItemHalfPrice" type="number" min="0" placeholder="Half item price">
-          <input id="newItemImage" placeholder="Image URL (optional)">
-          <input id="newItemSubName" placeholder="Sub item optional">
-          <input id="newItemSubPrice" type="number" min="0" placeholder="Sub item price optional">
-          <button class="page-action" id="saveNewItem" type="button">Add Item</button>
+        <div class="work-header compact item-manager-head">
+          <div><h2>Edit Items</h2><p>${managedProducts.length} items in ${esc(settings.canteenName || "this shop")}</p></div>
+          <div class="item-manager-actions">
+            <button class="page-action" id="openAddItemBtn" type="button">Add Item</button>
+            <button class="page-action" id="uploadCatalogBtn" type="button">Upload menu card</button>
+          </div>
         </div>
-        <div class="work-header compact"><div><h2>This Login Items</h2><p>${managedProducts.length} items in ${esc(settings.canteenName || "this shop")}</p></div></div>
-        ${rows || `<div class="work-card">No items in this login yet. Pick from the list above.</div>`}`;
+        ${rows || `<div class="work-card">No items yet. Use Add Item, or upload a menu card and confirm the list.</div>`}`;
     }
 
     function simpleAdminPageHtml(section) {
@@ -9243,6 +9531,8 @@
     }
 
     function setPosSection(section) {
+      const openAdd = section === "add";
+      if (section === "add") section = "edit";
       if (section === "bulk") section = "dinein";
       window.DineIn.close();
       activePosSection = section === "dashboard" || section === "billing" || section === "menu" ? "billing" : section;
@@ -9265,6 +9555,7 @@
         setTimeout(maybeOpenDailyChickenPrices, 0);
       } else {
         renderOptionPage();
+        if (openAdd) openAddItemDialog();
       }
     }
 
@@ -9278,7 +9569,8 @@
         } catch (error) { $("receiptAreaStatus").textContent = error.message; }
         finally { button.disabled = false; }
       };
-      if ($("uploadCatalogBtn")) $("uploadCatalogBtn").onclick = () => window.CatalogImport.open({ api: adminApi, onSaved: async () => { await loadProducts(); await loadCatalogItems(); renderOptionPage(); } });
+      if ($("uploadCatalogBtn")) $("uploadCatalogBtn").onclick = openCatalogImport;
+      if ($("openAddItemBtn")) $("openAddItemBtn").onclick = openAddItemDialog;
       bindPrinterSettingsControls();
       if ($("menuTestPrint")) $("menuTestPrint").addEventListener("click", testPrint);
       if ($("testBillingPrinter")) $("testBillingPrinter").addEventListener("click", () => testSinglePrinter("billing"));
@@ -9341,7 +9633,7 @@
       if ($("refreshSubscriptionStatus")) $("refreshSubscriptionStatus").addEventListener("click", () => {
         loadSubscriptionStatus().then(() => { if (activePosSection === "subscription") renderOptionPage(); }).catch(() => {});
       });
-      document.querySelectorAll("[data-recharge-months]").forEach(btn => btn.addEventListener("click", () => startPlanRecharge(btn.dataset.rechargeMonths)));
+      bindPlanChoices($("optionPage"));
       document.querySelectorAll("[data-restore-held]").forEach(btn => btn.addEventListener("click", () => restoreHeldOrder(btn.dataset.restoreHeld)));
       document.querySelectorAll("[data-copy-bill]").forEach(btn => btn.addEventListener("click", () => printCopyBill(btn.dataset.copyBill)));
       document.querySelectorAll("[data-delete-held]").forEach(btn => btn.addEventListener("click", () => deleteHeldOrder(btn.dataset.deleteHeld)));
@@ -9513,7 +9805,8 @@
       }
       scopedLocalSet("AXEN_REPORT_FROM", dateInputValue(start));
       scopedLocalSet("AXEN_REPORT_TO", dateInputValue(now));
-      renderOptionPage();
+      if (typeof $ === "function" && $("adminView") && !$("adminView").classList.contains("hidden")) renderAdmin();
+      else renderOptionPage();
     }
 
     function ensureUserNavKeys() {
@@ -9721,6 +10014,63 @@
       await persistProductFromPos({ ...item, name, nameTe, image, category, unit, price: Number(value || item.price || 0), halfPrice, _editing: false });
     }
 
+    function refreshItemManager() {
+      if (!$("adminView").classList.contains("hidden") && adminTab === "menu") renderAdmin();
+      else renderOptionPage();
+      requestAnimationFrame(() => document.querySelector(".item-manager-card.is-editing")?.scrollIntoView({ block: "center", behavior: "smooth" }));
+    }
+
+    function openCatalogImport() {
+      window.CatalogImport.open({
+        api: adminApi,
+        onSaved: async () => {
+          await loadProducts();
+          await loadCatalogItems();
+          refreshItemManager();
+        }
+      });
+    }
+
+    function openAddItemDialog() {
+      if ($("addItemDialog")) return;
+      const selectedCategory = isChickenShopCanteen() ? chickenCategory : "Tiffin";
+      const dialog = document.createElement("dialog");
+      dialog.id = "addItemDialog";
+      dialog.className = "add-item-dialog";
+      dialog.innerHTML = `
+        <form class="add-item-sheet" id="addItemForm">
+          <div class="sub-head">
+            <div><p class="sub-kicker">MENU</p><h2>Add Item</h2></div>
+            <button class="add-item-close" id="closeAddItem" type="button" aria-label="Close">×</button>
+          </div>
+          <input id="newItemName" placeholder="Item name" autocomplete="off">
+          <div class="item-suggest-box" id="itemSuggestionBox"></div>
+          <input id="newItemNameTe" placeholder="Telugu print name">
+          <select id="newItemCategory">${categoryOrder.filter(item => item !== "All" && !isSingleItemsCategory(item)).map(item => `<option value="${esc(item)}" ${item === selectedCategory ? "selected" : ""}>${esc(categoryLabel(item))}</option>`).join("")}</select>
+          <select id="newItemUnit">${itemUnitOptionsHtml(isChickenShopCanteen() ? "Kgs" : "Plate")}</select>
+          <input id="newItemPrice" type="number" min="0" placeholder="Price">
+          <input id="newItemHalfPrice" type="number" min="0" placeholder="Half item price">
+          <input id="newItemImage" placeholder="Image URL (optional)">
+          <input id="newItemSubName" placeholder="Sub item optional">
+          <input id="newItemSubPrice" type="number" min="0" placeholder="Sub item price optional">
+          <button class="page-action" id="saveNewItem" type="submit">Add Item</button>
+          <div class="status" id="addItemStatus"></div>
+        </form>`;
+      const close = () => { dialog.close(); dialog.remove(); };
+      dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
+      dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
+      document.body.append(dialog);
+      $("closeAddItem").addEventListener("click", close);
+      $("addItemForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        if (await saveNewItemFromPos()) close();
+      });
+      bindTeluguNameSuggestions();
+      bindItemSuggestionSearch();
+      dialog.showModal();
+      $("newItemName")?.focus();
+    }
+
     async function toggleItemEdit(id) {
       const item = products.find(row => Number(row.id) === Number(id));
       if (!item) return;
@@ -9735,8 +10085,8 @@
         await persistProductFromPos({ ...item, name, nameTe, price, halfPrice, image, category, unit, _editing: false });
         return;
       }
-      products = products.map(row => Number(row.id) === Number(id) ? { ...row, _editing: true } : row);
-      renderOptionPage();
+      products = products.map(row => Number(row.id) === Number(id) ? { ...row, _editing: true } : { ...row, _editing: false });
+      refreshItemManager();
     }
 
     async function toggleItemHidden(id) {
@@ -9759,15 +10109,21 @@
       const nameTe = $("newItemNameTe").value.trim() || suggestTeluguName(name);
       const price = Number($("newItemPrice").value || 0);
       if (!name || price <= 0) {
-        $("posMessage").textContent = "Item name and price required";
-        $("posMessage").className = "status error";
-        return;
+        const status = $("addItemStatus") || $("posMessage");
+        if (status) {
+          status.textContent = "Item name and price required";
+          status.className = "status error";
+        }
+        return false;
       }
       const existing = products.find(item => String(item.name || "").trim().toLowerCase() === name.toLowerCase());
       if (existing && !isItemHidden(existing)) {
-        $("posMessage").textContent = "This item is already in this login. Duplicates are not added.";
-        $("posMessage").className = "status error";
-        return;
+        const status = $("addItemStatus") || $("posMessage");
+        if (status) {
+          status.textContent = "This item is already in this login. Duplicates are not added.";
+          status.className = "status error";
+        }
+        return false;
       }
       const subName = $("newItemSubName").value.trim();
       const subPrice = Number($("newItemSubPrice").value || price);
@@ -9789,6 +10145,7 @@
         subItems: subName ? [{ name: subName, nameTe: suggestTeluguName(subName), price: subPrice }] : (existing?.subItems || [])
       };
       await persistProductFromPos(product);
+      return true;
     }
 
     async function saveExpenseFromPos() {
@@ -10457,7 +10814,7 @@
       ).join("");
       tabs.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
         adminTab = btn.dataset.adminTab;
-        if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
+        if (["reports", "finance", "sales"].includes(adminTab)) resetReportRangeToToday();
         renderAdmin();
       }));
     }
@@ -10545,9 +10902,14 @@
         </form></div>`;
     }
 
-    function planRechargeHtml() {
+    function subscriptionDurations() {
       const state = subscriptionState || {};
-      const durations = state.durations || [1, 3, 6, 9, 12].map(months => ({ months, label: `${months} Month${months > 1 ? "s" : ""}`, amount: 999 * months }));
+      return state.durations || [1, 3, 6, 9, 12].map(months => ({ months, label: `${months} Month${months > 1 ? "s" : ""}`, amount: 999 * months }));
+    }
+
+    function subscriptionSummary() {
+      const state = subscriptionState || {};
+      const durations = subscriptionDurations();
       const monthlyPrice = Number(state.monthlyPrice || durations[0]?.amount || 999);
       const daysRemaining = subscriptionDaysRemaining();
       const expired = Boolean(state.expired || daysRemaining < 0);
@@ -10559,58 +10921,73 @@
           : daysRemaining === 0
             ? "Expires today"
             : `${daysRemaining} day${daysRemaining === 1 ? "" : "s"} left`;
-      const warning = expired
-        ? "Upgrade now to keep billing, reports and printing active."
-        : daysRemaining !== null && daysRemaining <= 2
-          ? `Your plan ends in ${daysRemaining} day${daysRemaining === 1 ? "" : "s"}. Recharge to avoid interruption.`
-          : "";
-      const planTone = months => Number(months) === 3 ? "green" : Number(months) === 6 ? "violet" : Number(months) === 9 ? "orange" : Number(months) === 12 ? "red" : "";
-      const planBadge = months => Number(months) === 12 ? "Annual" : "";
-      const calendarIcon = '<svg viewBox="0 0 24 24"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>';
-      return `
-        <div class="subscription-hero">
-          <div class="subscription-hero-top">
-            <div>
-              <p>Current plan</p>
-              <h2>${esc(state.planName || "Professional")}</h2>
-            </div>
-            <span class="subscription-chip ${chipClass}">${esc(chipText)}</span>
-          </div>
-          <div class="subscription-meta">
-            <span class="payment-pill">${expired ? "Inactive" : esc(state.planType || "Paid")}${state.expiryDate ? ` · Expiry ${esc(state.expiryDate)}` : ""}</span>
-          </div>
-          ${warning ? `<p>${esc(warning)}</p>` : ""}
-        </div>
-        <div class="panel">
-          <div class="subscription-headline">
-            <div><h2>Recharge</h2><p>Choose how long to renew. Each card shows the total amount payable for that duration.</p></div>
-            <span class="cashfree-badge">Powered by <strong>Cashfree</strong></span>
-          </div>
-          <div class="plan-grid">
-            ${durations.map(item => `
-              <button class="plan-card ${planTone(item.months)}" data-recharge-months="${item.months}" type="button">
-                <span class="plan-card-icon">${calendarIcon}</span>
-                <strong>${esc(item.label || `${item.months} Months`)}</strong>
-                ${planBadge(item.months) ? `<em class="plan-save-pill">${esc(planBadge(item.months))}</em>` : ""}
-                <span>${money(item.amount)}</span><small>Total payable ? ${esc(item.months)} months</small>
-                <small>${money(monthlyPrice)} × ${esc(item.months)} month${Number(item.months) > 1 ? "s" : ""}</small>
-              </button>
-            `).join("")}
-          </div>
-          <div class="subscription-strip">
-            <h3 class="payment-method-title">How payment works</h3>
-            <p>These are duration options for your current plan, not different feature packages. Dine In needs separate sales-team approval. Your plan is renewed after payment is verified. Select a duration above. Cashfree opens next — UPI, Google Pay, PhonePe, Paytm and cards are supported there.</p>
-          </div>
-          <div class="status" id="subscriptionStatus">${subscriptionState ? "Select a plan to continue." : "Loading plan details..."}</div>
-        </div>`;
+      const detail = expired
+        ? `Expired${state.expiryDate ? ` on ${state.expiryDate}` : ""}. Renew on this screen. Billing stays paused until payment is confirmed.`
+        : state.expiryDate
+          ? `Active until ${state.expiryDate}. Choose a duration and pay here.`
+          : "Choose a duration and pay here. The plan renews after payment is confirmed.";
+      return { state, durations, monthlyPrice, daysRemaining, expired, chipClass, chipText, detail };
     }
 
-    async function loadSubscriptionStatus({ silent = false } = {}) {
+    function subscriptionPlansHtml() {
+      const { durations, monthlyPrice } = subscriptionSummary();
+      const selected = durations.some(item => Number(item.months) === Number(selectedRechargeMonths))
+        ? Number(selectedRechargeMonths)
+        : Number(durations[0]?.months || 1);
+      selectedRechargeMonths = selected;
+      return durations.map(item => `
+        <button class="sub-plan ${Number(item.months) === selected ? "selected" : ""}" data-recharge-months="${item.months}" type="button">
+          <strong>${esc(item.label || `${item.months} Months`)}</strong>
+          <b>${money(item.amount)}</b>
+          <small>${money(monthlyPrice)} / month</small>
+        </button>
+      `).join("");
+    }
+
+    function subscriptionPayLabel() {
+      const selected = subscriptionDurations().find(item => Number(item.months) === Number(selectedRechargeMonths));
+      return selected ? `Pay ${money(selected.amount)}` : "Pay now";
+    }
+
+    function subscriptionStatusNode() {
+      return document.querySelector("#subscriptionGate:not(.hidden) #subscriptionStatus") || $("subscriptionStatus");
+    }
+
+    function bindPlanChoices(root) {
+      if (!root) return;
+      root.querySelectorAll("[data-recharge-months]").forEach(btn => btn.addEventListener("click", () => {
+        selectedRechargeMonths = Number(btn.dataset.rechargeMonths);
+        root.querySelectorAll("[data-recharge-months]").forEach(item => item.classList.toggle("selected", Number(item.dataset.rechargeMonths) === Number(selectedRechargeMonths)));
+        root.querySelectorAll("[data-plan-pay]").forEach(pay => { pay.textContent = subscriptionPayLabel(); });
+      }));
+      root.querySelectorAll("[data-plan-pay]").forEach(pay => pay.addEventListener("click", () => startPlanRecharge(selectedRechargeMonths)));
+    }
+
+    function planRechargeHtml() {
+      const { state, chipClass, chipText, detail } = subscriptionSummary();
+      return `
+        <section class="subscription-panel">
+          <div class="sub-head">
+            <div>
+              <p class="sub-kicker">SUBSCRIPTION</p>
+              <h2>${esc(state.planName || "Professional")}</h2>
+              <p>${esc(detail)}</p>
+            </div>
+            <span class="sub-chip ${chipClass}">${esc(chipText)}</span>
+          </div>
+          <div class="sub-plans">${subscriptionPlansHtml()}</div>
+          <button class="sub-pay" id="planPayBtn" data-plan-pay type="button">${subscriptionPayLabel()}</button>
+          <p class="sub-note">Cashfree opens next for UPI, Google Pay, PhonePe, Paytm or card. This screen stays open until the payment is confirmed.</p>
+          <div class="status" id="subscriptionStatus">${subscriptionState ? "Select a duration, then pay." : "Loading plan details..."}</div>
+        </section>`;
+    }
+
+    async function loadSubscriptionStatus({ silent = false, keepGate = false } = {}) {
       try {
         if (!silent && $("subscriptionStatus")) $("subscriptionStatus").textContent = "Loading plan details...";
         const data = await api("/subscription/status", { timeoutMs: 9000 });
         subscriptionState = data;
-        applySubscriptionGate();
+        if (!keepGate) applySubscriptionGate();
         return data;
       } catch (error) {
         if ($("subscriptionStatus")) {
@@ -10643,43 +11020,90 @@
       return `AXEN_SUBSCRIPTION_NOTICE_${user?.canteenId || "STORE"}_${date}_${days}`;
     }
 
+    function renderSubscriptionCheckout() {
+      const gate = $("subscriptionGate");
+      if (!gate) return;
+      const { state, chipClass, chipText, detail, expired } = subscriptionSummary();
+      gate.innerHTML = `
+        <section class="subscription-sheet" role="dialog" aria-modal="true" aria-labelledby="subscriptionSheetTitle">
+          <div class="sub-head">
+            <div>
+              <p class="sub-kicker">SUBSCRIPTION</p>
+              <h2 id="subscriptionSheetTitle">${esc(state.planName || "Professional")}</h2>
+              <p>${esc(detail)}</p>
+            </div>
+            <span class="sub-chip ${chipClass}">${esc(chipText)}</span>
+          </div>
+          <div class="sub-plans">${subscriptionPlansHtml()}</div>
+          <button class="sub-pay" id="gatePayBtn" data-plan-pay type="button">${subscriptionPayLabel()}</button>
+          <p class="sub-note">Payment stays on this screen. Cashfree opens for UPI, Google Pay, PhonePe, Paytm or card, then this plan is renewed here.</p>
+          <div class="status" id="subscriptionStatus">${subscriptionState ? "Select a duration, then pay." : "Loading plan details..."}</div>
+          ${expired ? "" : `<div class="sub-actions"><button class="secondary" id="gateCloseBtn" type="button">Not now</button></div>`}
+        </section>`;
+      gate.classList.remove("hidden");
+      $("posView")?.classList.toggle("subscription-expired", expired);
+      bindPlanChoices(gate);
+      $("gateCloseBtn")?.addEventListener("click", () => {
+        subscriptionCheckoutOpen = false;
+        gate.classList.add("hidden");
+      });
+    }
+
+    async function openSubscriptionCheckout() {
+      const firstOpen = !subscriptionCheckoutOpen;
+      subscriptionCheckoutOpen = true;
+      renderSubscriptionCheckout();
+      if (!firstOpen || subscriptionState?.durations) return;
+      try {
+        await loadSubscriptionStatus({ silent: true, keepGate: true });
+      } catch {}
+      if (subscriptionCheckoutOpen) renderSubscriptionCheckout();
+    }
+
     function showSubscriptionGate({ expired = false, force = false } = {}) {
       const gate = $("subscriptionGate");
       if (!gate) return;
+      if (expired) {
+        openSubscriptionCheckout();
+        return;
+      }
       const days = subscriptionDaysRemaining();
-      if (!expired && (days === null || days > 2 || days < 0)) {
+      if (days === null || days > 2 || days < 0) {
         gate.classList.add("hidden");
         $("posView")?.classList.remove("subscription-expired");
         return;
       }
-      const key = subscriptionGateKey(expired ? "expired" : days);
+      const key = subscriptionGateKey(days);
       const count = Number(localStorage.getItem(key) || 0);
-      if (!force && !expired && count >= 5) return;
+      if (!force && count >= 5) return;
       localStorage.setItem(key, String(count + 1));
-      $("posView")?.classList.toggle("subscription-expired", expired);
+      $("posView")?.classList.remove("subscription-expired");
       gate.innerHTML = `
-        <div class="subscription-gate-card">
-          <strong>${expired ? "Expired" : `Will expire in ${days} day${days === 1 ? "" : "s"}`}</strong>
-          <p>${esc(subscriptionNoticeText(expired, days))}</p>
-          <div class="subscription-gate-actions">
-            <button class="primary" id="gateUpgradeBtn" type="button">Upgrade</button>
-            ${expired ? "" : `<button class="secondary" id="gateCloseBtn" type="button">Remind Later</button>`}
+        <section class="subscription-sheet" role="dialog" aria-modal="true">
+          <div class="sub-head">
+            <div>
+              <p class="sub-kicker">SUBSCRIPTION</p>
+              <h2>Renews in ${days} day${days === 1 ? "" : "s"}</h2>
+              <p>${esc(subscriptionNoticeText(false, days))}</p>
+            </div>
+            <span class="sub-chip warn">${days} day${days === 1 ? "" : "s"} left</span>
           </div>
-        </div>`;
+          <div class="sub-actions">
+            <button class="sub-pay" id="gateUpgradeBtn" type="button">Renew now</button>
+            <button class="secondary" id="gateCloseBtn" type="button">Remind later</button>
+          </div>
+        </section>`;
       gate.classList.remove("hidden");
-      $("gateUpgradeBtn")?.addEventListener("click", () => {
-        gate.classList.add("hidden");
-        $("posView")?.classList.remove("subscription-expired");
-        openSubscriptionFromBilling();
-      });
+      $("gateUpgradeBtn")?.addEventListener("click", () => openSubscriptionCheckout());
       $("gateCloseBtn")?.addEventListener("click", () => gate.classList.add("hidden"));
     }
 
     function applySubscriptionGate() {
+      if (subscriptionCheckoutOpen) return;
       const expired = Boolean(subscriptionState?.expired || subscriptionDaysRemaining() < 0);
       const days = subscriptionDaysRemaining();
       if (expired) {
-        showSubscriptionGate({ expired: true, force: true });
+        openSubscriptionCheckout();
         return;
       }
       $("posView")?.classList.remove("subscription-expired");
@@ -10709,8 +11133,8 @@
     }
 
     async function startPlanRecharge(months) {
-      const statusNode = $("subscriptionStatus");
-      const buttons = document.querySelectorAll("[data-recharge-months]");
+      const statusNode = subscriptionStatusNode();
+      const buttons = document.querySelectorAll("[data-recharge-months], [data-plan-pay]");
       const selected = (subscriptionState?.durations || []).find(item => Number(item.months) === Number(months));
       buttons.forEach(btn => {
         btn.disabled = true;
@@ -10756,7 +11180,7 @@
     }
 
     async function verifyPlanRecharge(orderId) {
-      const statusNode = $("subscriptionStatus");
+      const statusNode = subscriptionStatusNode();
       if (statusNode) {
         statusNode.textContent = "Verifying payment...";
         statusNode.className = "status";
@@ -10768,12 +11192,19 @@
       });
       localStorage.removeItem(pendingCashfreeOrderKey);
       subscriptionState = result.subscription || subscriptionState;
+      subscriptionCheckoutOpen = false;
       $("subscriptionGate")?.classList.add("hidden");
       $("posView")?.classList.remove("subscription-expired");
+      const confirmed = `Payment confirmed. Subscription active until ${subscriptionState?.expiryDate || result.order?.newExpiryDate || "-"}.`;
       if (statusNode) {
-        statusNode.textContent = `Payment confirmed. Subscription activated. New expiry: ${subscriptionState?.expiryDate || result.order?.newExpiryDate || "-"}`;
+        statusNode.textContent = confirmed;
         statusNode.className = "status ok";
       }
+      if ($("posMessage")) {
+        $("posMessage").textContent = confirmed;
+        $("posMessage").className = "status ok";
+      }
+      if (activePosSection === "subscription") renderOptionPage();
       if (!$("adminView").classList.contains("hidden")) renderAdmin();
     }
 
@@ -10914,6 +11345,41 @@
         </div>`;
     }
 
+    function salesAdminHtml() {
+      const range = reportRange();
+      const rows = rangedOrders().slice().sort((a, b) => orderDate(b) - orderDate(a));
+      const total = rows.reduce((sum, order) => sum + Number(order.total || 0), 0);
+      const tableBills = rows.filter(isTableBill);
+      const tableSale = tableBills.reduce((sum, order) => sum + Number(order.total || 0), 0);
+      return `
+        <div class="panel sales-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Sales</h2>
+              <p class="muted">${esc(displayDateLabel(range.from))} to ${esc(displayDateLabel(range.to))} · ${rows.length} bills · ${money(total)}</p>
+            </div>
+            ${rows.length ? `<button class="mini-danger" id="deleteShownBills" type="button">Delete shown</button>` : ""}
+          </div>
+          <div class="report-modern-filter sales-filter">
+            <label>From Date <input id="reportFromDate" type="date" value="${esc(range.from)}"></label>
+            <label>To Date <input id="reportToDate" type="date" value="${esc(range.to)}"></label>
+            <div class="report-modern-actions">${reportQuickButtons(true)}</div>
+          </div>
+          <p class="muted">Counter ${rows.length - tableBills.length} · ${money(total - tableSale)}${tableBills.length ? ` · Tables ${tableBills.length} · ${money(tableSale)}` : ""} · Combined ${rows.length} bills · ${money(total)}</p>
+          ${tableWiseSectionHtml(rows)}
+          <div class="sales-list">
+            ${rows.map(order => {
+              const orderId = order.clientOrderId || order.id;
+              const source = isTableBill(order) ? `Table ${esc(order.tableName || order.tableId || "")}` : "Counter";
+              return `<div class="order-line with-action">
+                <div><strong>${esc(order.canteen || settings.canteenName)} - ${money(order.total)}</strong><span class="muted">${esc(order.time || "")} | ${source} | ${esc(order.payment || "-")} | ${esc(order.cashier || "-")}</span></div>
+                <button class="mini-danger" data-delete-bill="${esc(orderId)}" type="button">Delete</button>
+              </div>`;
+            }).join("") || `<div class="muted">No bills in this date range. Choose a date, 1 Week, or 1 Year.</div>`}
+          </div>
+        </div>`;
+    }
+
     function renderAdmin() {
       const stats = dashboardStats();
       const page = $("adminPage");
@@ -10923,22 +11389,9 @@
       if (adminTab === "dashboard") {
         page.innerHTML = dashboardAdminHtml(stats);
       } else if (adminTab === "sales") {
-        page.innerHTML = `<div class="panel">
-          <div class="panel-head">
-            <h2>All Sales</h2>
-            ${orders.length ? `<button class="mini-danger" id="deleteAllBills" type="button">Delete All</button>` : ""}
-          </div>
-          ${orders.slice().reverse().map(order => {
-            const orderId = order.clientOrderId || order.id;
-            return `
-              <div class="order-line with-action">
-                <div><strong>${order.canteen || settings.canteenName} - ${money(order.total)}</strong><span class="muted">${order.time} | ${order.payment} | ${order.cashier || "-"}</span></div>
-                <button class="mini-danger" data-delete-bill="${orderId}" type="button">Delete</button>
-              </div>`;
-          }).join("") || `<div class="muted">No orders</div>`}
-        </div>`;
+        page.innerHTML = salesAdminHtml();
         document.querySelectorAll("[data-delete-bill]").forEach(btn => btn.addEventListener("click", () => deleteBill(btn.dataset.deleteBill)));
-        if ($("deleteAllBills")) $("deleteAllBills").addEventListener("click", deleteAllBills);
+        if ($("deleteShownBills")) $("deleteShownBills").addEventListener("click", deleteShownBills);
       } else if (adminTab === "menu") {
         page.innerHTML = itemManagerPageHtml("edit");
       } else if (adminTab === "stock") {
@@ -10984,9 +11437,13 @@
       if ($("adminGoBilling")) $("adminGoBilling").addEventListener("click", openBillingFromAdmin);
       if ($("settingsForm")) $("settingsForm").addEventListener("submit", saveSettings);
       bindReceiptPreviewControls();
+      if ($("uploadCatalogBtn")) $("uploadCatalogBtn").onclick = openCatalogImport;
+      if ($("openAddItemBtn")) $("openAddItemBtn").onclick = openAddItemDialog;
       if ($("saveNewItem")) $("saveNewItem").addEventListener("click", saveNewItemFromPos);
       bindTeluguNameSuggestions();
       bindItemSuggestionSearch();
+      document.querySelectorAll("[data-edit-item]").forEach(btn => btn.addEventListener("click", () => toggleItemEdit(btn.dataset.editItem)));
+      document.querySelectorAll("[data-hide-item]").forEach(btn => btn.addEventListener("click", () => toggleItemHidden(btn.dataset.hideItem)));
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
       if ($("adminSaveStock")) $("adminSaveStock").addEventListener("click", saveAdminStock);
       if ($("adminSaveUsedStock")) $("adminSaveUsedStock").addEventListener("click", saveAdminUsedStock);
@@ -11001,10 +11458,10 @@
       if ($("downloadReportImage")) $("downloadReportImage").addEventListener("click", downloadReportImage);
       if ($("shareReportPdf")) $("shareReportPdf").addEventListener("click", shareReportPdf);
       if ($("refreshSubscriptionStatus")) $("refreshSubscriptionStatus").addEventListener("click", openPlanRecharge);
-      document.querySelectorAll("[data-recharge-months]").forEach(btn => btn.addEventListener("click", () => startPlanRecharge(btn.dataset.rechargeMonths)));
+      bindPlanChoices($("adminPage"));
       document.querySelectorAll("[data-admin-jump]").forEach(btn => btn.addEventListener("click", () => {
         adminTab = btn.dataset.adminJump;
-        if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
+        if (["reports", "finance", "sales"].includes(adminTab)) resetReportRangeToToday();
         renderAdmin();
       }));
       document.querySelectorAll("[data-go-store]").forEach(btn => btn.addEventListener("click", () => {
@@ -11017,7 +11474,7 @@
         if (action === "logout") return logout();
         if (action === "plan") return openPlanRecharge();
         adminTab = action;
-        if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
+        if (["reports", "finance", "sales"].includes(adminTab)) resetReportRangeToToday();
         renderAdmin();
       }));
       if ($("deliveryRegisterBtn")) $("deliveryRegisterBtn").addEventListener("click", () => {
@@ -11026,10 +11483,7 @@
           $("deliveryRegisterStatus").className = "status";
         }
       });
-      document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => {
-        setReportQuickRange(btn.dataset.reportRange);
-        renderAdmin();
-      }));
+      document.querySelectorAll("[data-report-range]").forEach(btn => btn.addEventListener("click", () => setReportQuickRange(btn.dataset.reportRange)));
     }
 
     function bindReceiptPreviewControls() {
@@ -11088,6 +11542,24 @@
         renderAdmin();
       } catch {
         alert("Bill delete failed. Check the internet connection or server.");
+      }
+    }
+
+    async function deleteShownBills() {
+      const rows = rangedOrders();
+      if (!rows.length || !confirm(`Delete ${rows.length} bills in this date range?`)) return;
+      try {
+        for (const order of rows) {
+          const orderId = order.clientOrderId || order.id;
+          await adminApi(`/orders/${encodeURIComponent(orderId)}`, { method: "DELETE" });
+        }
+        const ids = new Set(rows.map(order => String(order.clientOrderId || order.id)));
+        orders = orders.filter(order => !ids.has(String(order.clientOrderId || order.id)));
+        renderAdmin();
+      } catch {
+        alert("Some bills could not be deleted. Check the internet connection or server.");
+        await loadAdminData().catch(() => {});
+        renderAdmin();
       }
     }
 
@@ -11358,6 +11830,26 @@
     }
     applyPosLayoutMode();
     $("forgotPasswordBtn").addEventListener("click", openForgotPasswordModal);
+    (() => {
+      const eye = $("passwordEye");
+      const input = $("passwordInput");
+      const show = event => {
+        event.preventDefault();
+        input.type = "text";
+        eye.classList.add("is-showing");
+        eye.setAttribute("aria-pressed", "true");
+      };
+      const hide = () => {
+        input.type = "password";
+        eye.classList.remove("is-showing");
+        eye.setAttribute("aria-pressed", "false");
+      };
+      eye.addEventListener("pointerdown", show);
+      eye.addEventListener("pointerup", hide);
+      eye.addEventListener("pointerleave", hide);
+      eye.addEventListener("pointercancel", hide);
+      eye.addEventListener("contextmenu", event => event.preventDefault());
+    })();
     $("signupBtn").addEventListener("click", () => {
       $("loginStatus").textContent = "Sign up: ask Marketing team to register and approve your canteen. Approval creates your Restaurant ID.";
       $("loginStatus").className = "status ok";
@@ -11456,7 +11948,7 @@
     $("profileBtn").addEventListener("click", () => setPosSection("profile"));
     document.querySelectorAll("[data-admin-tab]").forEach(btn => btn.addEventListener("click", () => {
       adminTab = btn.dataset.adminTab;
-      if (["reports", "finance"].includes(adminTab)) resetReportRangeToToday();
+      if (["reports", "finance", "sales"].includes(adminTab)) resetReportRangeToToday();
       renderAdmin();
     }));
     window.addEventListener("online", syncPendingOrders);

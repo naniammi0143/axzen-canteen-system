@@ -404,7 +404,7 @@
     <form class="login-card" id="loginForm">
       <div class="brand">
         <h1>axzen Marketing</h1>
-        <p>Canteen onboarding and approval console</p>
+        <p>Organization onboarding and approval console</p>
       </div>
       <label>Employee ID <input id="employeeId" autocomplete="username" required></label>
       <label>Password <input id="password" type="password" autocomplete="current-password" required></label>
@@ -422,7 +422,7 @@
     </aside>
     <main>
       <header class="topbar">
-        <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub">Track canteen onboarding, payments and approvals.</p></div>
+        <div><h1 id="pageTitle">Dashboard</h1><p id="pageSub">Track organization onboarding, payments and approvals.</p></div>
         <div class="top-actions">
           <div class="chip" id="roleChip">Super Admin</div>
           <button class="top-menu-btn" id="topMenuBtn" type="button" aria-label="More options">⋮</button>
@@ -440,6 +440,8 @@
   <script src="help-center.js"></script>
   <link rel="stylesheet" href="canteen-detail.css">
   <script src="canteen-detail.js"></script>
+  <link rel="stylesheet" href="app-releases.css">
+  <script src="app-releases.js"></script>
   <script>
     const liveApi = "https://canteen.axzen.in";
     const API = window.Capacitor || window.location.protocol === "capacitor:" ? liveApi : "";
@@ -453,12 +455,12 @@
     let user = null;
     let tab = "dashboard";
     let selectedCanteenId = null;
-    let state = { canteens: [], users: [], printers: [], activities: [], payments: [], supportTickets: [], enquiries: [], websitePlans: [], summary: { cards: {}, marketingPerformance: [], recentActivities: [] } };
+    let state = { canteens: [], users: [], printers: [], activities: [], payments: [], supportTickets: [], enquiries: [], websitePlans: [], appReleases: [], summary: { cards: {}, marketingPerformance: [], recentActivities: [] } };
 
     const superTabs = [
       ["dashboard", "Dashboard"],
       ["approvals", "Approval Queue"],
-      ["canteens", "Canteens"],
+      ["canteens", "Organizations"],
       ["employees", "Employees"],
       ["enquiries", "Website Enquiries"],
       ["plans", "Website Plans"],
@@ -468,6 +470,7 @@
       ["performance", "Marketing Performance"],
       ["activities", "Recent Activities"]
       ,["helpcenter", "Help Center"]
+      ,["appreleases", "App Updates"]
     ];
     const marketingTabs = [
       ["dashboard", "My Dashboard"],
@@ -486,16 +489,20 @@
       billing: "Bill",
       performance: "Stats",
       approvals: "Queue",
-      canteens: "Canteens",
+      canteens: "Organizations",
       employees: "Team",
       enquiries: "Leads",
       plans: "Plans",
       printers: "Printers",
       activities: "Log"
       ,helpcenter: "Help"
+      ,appreleases: "Updates"
     };
     const businessCategories = [
       "Canteen",
+      "Restaurant",
+      "Book Store",
+      "Water Plant",
       "Chicken Shop",
       "Chicken Center",
       "Meat Shop",
@@ -522,7 +529,7 @@
     }
     function credentialText(item) {
       if (!item.canteenLoginId) return "Credentials generate after approval.";
-      return `Canteen: ${item.canteenName}\nLogin ID: ${item.canteenLoginId}\nTemporary Password: ${item.defaultPassword || ""}\nOpen: ${location.origin}/mobile?loginId=${encodeURIComponent(item.canteenLoginId)}&restaurantId=${encodeURIComponent(item.activatedCanteenId || "")}\nFirst login lo customer permanent owner login create cheyyali.`;
+      return `Organization: ${item.canteenName}\nLogin ID: ${item.canteenLoginId}\nTemporary Password: ${item.defaultPassword || ""}\nOpen: ${location.origin}/mobile?loginId=${encodeURIComponent(item.canteenLoginId)}&restaurantId=${encodeURIComponent(item.activatedCanteenId || "")}\nFirst login lo customer permanent owner login create cheyyali.`;
     }
     function copyCredentialsAction(item) {
       return item.canteenLoginId ? `<button class="ghost pos-open" data-copy-credentials="${item.id}" type="button">Copy Login</button>` : "";
@@ -549,7 +556,7 @@
     }
     function setPage(title, sub) {
       $("pageTitle").textContent = title;
-      $("pageSub").textContent = sub || "Track canteen onboarding, payments and approvals.";
+      $("pageSub").textContent = sub || "Track organization onboarding, payments and approvals.";
       document.querySelectorAll("#nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
     }
     function renderNav() {
@@ -577,6 +584,7 @@
         performance: '<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>',
         activities: '<path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/><path d="M12 7v5l3 2"/>',
         helpcenter: '<path d="M9.1 9a3 3 0 1 1 5.4 1.8c-1.5 1-2.5 1.7-2.5 3.2"/><path d="M12 18h.01"/><circle cx="12" cy="12" r="9"/>',
+        appreleases: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
         my: '<path d="M4 10h16l-2-5H6l-2 5Z"/><path d="M6 10v9h12v-9"/>'
       };
       return `<span class="nav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icons[id] || icons.dashboard}</svg></span>`;
@@ -587,8 +595,8 @@
     }
     function cardsHtml(cards, compact = false) {
       const labels = [
-        ["totalCanteens", "Total Canteens"], ["activeCanteens", "Active Canteens"], ["trialCanteens", "Trial Canteens"], ["expiredCanteens", "Expired Canteens"],
-        ["blockedCanteens", "Blocked Canteens"], ["onlineCanteens", "Online Canteens"], ["offlineCanteens", "Offline Canteens"], ["todaysRegistrations", "Today's Registrations"],
+        ["totalCanteens", "Total Organizations"], ["activeCanteens", "Active Organizations"], ["trialCanteens", "Trial Organizations"], ["expiredCanteens", "Expired Organizations"],
+        ["blockedCanteens", "Blocked Organizations"], ["onlineCanteens", "Online Organizations"], ["offlineCanteens", "Offline Organizations"], ["todaysRegistrations", "Today's Registrations"],
         ["todaysCollections", "Today's Collections"], ["monthlyRevenue", "Monthly Revenue"], ["pendingPayments", "Pending Payments"], ["printersAssigned", "Printers Assigned"],
         ["printersAvailable", "Printers Available"], ["openSupportTickets", "Open Support Tickets"], ["totalEnquiries", "Website Enquiries"], ["newEnquiries", "New Enquiries"], ["pendingInstallations", "Pending Installations"]
       ];
@@ -637,7 +645,7 @@
     }
     function openOnlineCanteens() {
       const online = (state.canteens || []).filter(item => item.lastSeenAt && Date.now() - new Date(item.lastSeenAt).getTime() <= 120000);
-      $("page").insertAdjacentHTML("beforeend", `<div class="modal-backdrop" id="onlineModal"><div class="panel" style="max-width:720px;margin:8vh auto"><div class="toolbar"><h2>Online Canteens</h2><button class="ghost" id="closeOnlineModal" type="button">Close</button></div><input id="onlineSearch" placeholder="Search canteen"><div class="list" id="onlineList">${online.map(item => `<div class="list-row" data-online-row="${esc(`${item.canteenName} ${item.ownerName}`.toLowerCase())}"><strong>${esc(item.canteenName)}</strong><span class="muted">${esc(item.ownerName || "-")} | ${formatDateTime(item.lastSeenAt)}</span></div>`).join("") || `<span class="muted">No canteens connected now</span>`}</div></div></div>`);
+      $("page").insertAdjacentHTML("beforeend", `<div class="modal-backdrop" id="onlineModal"><div class="panel" style="max-width:720px;margin:8vh auto"><div class="toolbar"><h2>Online Organizations</h2><button class="ghost" id="closeOnlineModal" type="button">Close</button></div><input id="onlineSearch" placeholder="Search organization"><div class="list" id="onlineList">${online.map(item => `<div class="list-row" data-online-row="${esc(`${item.canteenName} ${item.ownerName}`.toLowerCase())}"><strong>${esc(item.canteenName)}</strong><span class="muted">${esc(item.ownerName || "-")} | ${formatDateTime(item.lastSeenAt)}</span></div>`).join("") || `<span class="muted">No organizations connected now</span>`}</div></div></div>`);
       $("closeOnlineModal").addEventListener("click", () => $("onlineModal").remove());
       $("onlineSearch").addEventListener("input", event => {
         const q = event.target.value.toLowerCase();
@@ -652,7 +660,7 @@
       return `<div class="table-wrap"><table><thead><tr><th>Employee</th><th>Registrations</th><th>Approved</th><th>Rejected</th><th>Collection</th><th>Pending</th><th>Target</th></tr></thead><tbody>${rows.map(row => `<tr><td><strong>${esc(row.name)}</strong><br><span class="muted">${esc(row.employeeId)}</span></td><td>${row.registrations}</td><td>${row.approved}</td><td>${row.rejected}</td><td>${money(row.collection)}</td><td>${money(row.pending)}</td><td>${row.target}</td></tr>`).join("") || `<tr><td colspan="7">No performance data</td></tr>`}</tbody></table></div>`;
     }
     function paymentsTable(rows) {
-      return `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Canteen</th><th>Mode</th><th>Collected</th><th>Pending</th><th>By</th></tr></thead><tbody>${rows.map(row => `<tr><td>${formatDateTime(row.createdAt)}</td><td><strong>${esc(row.canteenName)}</strong></td><td>${esc(row.paymentMode || "-")}</td><td>${money(row.amount)}</td><td>${money(row.pendingAmount)}</td><td>${esc(row.collectedByName || row.collectedBy || "-")}</td></tr>`).join("") || `<tr><td colspan="6">No payment records</td></tr>`}</tbody></table></div>`;
+      return `<div class="table-wrap"><table><thead><tr><th>Date</th><th>Organization</th><th>Mode</th><th>Collected</th><th>Pending</th><th>By</th></tr></thead><tbody>${rows.map(row => `<tr><td>${formatDateTime(row.createdAt)}</td><td><strong>${esc(row.canteenName)}</strong></td><td>${esc(row.paymentMode || "-")}</td><td>${money(row.amount)}</td><td>${money(row.pendingAmount)}</td><td>${esc(row.collectedByName || row.collectedBy || "-")}</td></tr>`).join("") || `<tr><td colspan="6">No payment records</td></tr>`}</tbody></table></div>`;
     }
     function supportTicketsHtml(rows) {
       return `<div class="list">${rows.slice(0, 8).map(row => `<div class="list-row"><div><strong>${esc(row.title)}</strong><br><span class="muted">${esc(row.canteenName || "-")} | ${esc(row.priority || "Normal")}</span></div><span class="pill ${row.status === "Open" ? "orange" : "green"}">${esc(row.status)}</span></div>`).join("") || `<span class="muted">No support tickets</span>`}</div>`;
@@ -901,6 +909,17 @@
         ${user.role === "super_admin" ? `<button class="primary" type="button" onclick="document.getElementById('printerModelInput')?.focus()">Add Printer</button>` : ""}
       </div><div class="table-wrap"><table class="printer-table"><thead><tr><th>#</th><th>Printer Details</th><th>Serial Number</th><th>Model</th><th>Canteen / Executive</th><th>Status</th><th>Connection</th><th>Last Seen</th><th>Actions</th></tr></thead><tbody>${rows || `<tr><td colspan="9">No printers</td></tr>`}</tbody></table></div></section>`;
     }
+    function usingVersion(item) {
+      return item.appInstalledVersion || "Not reported";
+    }
+    function assignedVersion(item) {
+      return item.appReleaseVersion || "Bundled APK";
+    }
+    function versionFilterOptions(rows) {
+      const using = [...new Set(rows.map(usingVersion))].sort();
+      const assigned = [...new Set(rows.map(assignedVersion))].sort();
+      return `<option value="">All versions</option>${using.map(version => `<option value="using:${esc(version)}">Using ${esc(version)}</option>`).join("")}${assigned.map(version => `<option value="assigned:${esc(version)}">Assigned ${esc(version)}</option>`).join("")}`;
+    }
     function canteensTable(rows, actions = true) {
       const mobileCards = rows.map((item, index) => `<article class="canteen-card tone-${index % 6}" data-open-canteen="${item.id}" role="button" tabindex="0">
         <div class="canteen-card-head">
@@ -914,6 +933,8 @@
           <div class="fact"><span>Payment</span><strong>${money(item.paidAmount)} / Pending ${money(item.pendingAmount)}</strong></div>
           <div class="fact"><span>Plan</span><strong>${esc(item.selectedPlan)} - ${esc(item.planType)}${item.planExpiryDate ? `<br>Expiry: ${esc(item.planExpiryDate)}` : ""}</strong></div>
           <div class="fact"><span>Printers</span><strong>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</strong></div>
+          <div class="fact"><span>Using version</span><strong>${esc(usingVersion(item))}</strong></div>
+          <div class="fact"><span>Assigned version</span><strong>${esc(assignedVersion(item))}</strong></div>
         </div>
         <div class="credential-box">
           <div><span class="muted">Activation login</span><br><strong>${item.canteenLoginId ? esc(item.canteenLoginId) : "After approval"}</strong></div>
@@ -924,18 +945,19 @@
         </div>
         <div class="row-actions">${actions ? actionButtons(item) : posOpenAction(item)}</div>
       </article>`).join("") || `<div class="muted">No canteens found</div>`;
-      return `<div class="canteen-result"><div class="mobile-canteens">${mobileCards}</div><div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Category</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map((item, index) => `<tr class="tone-${index % 4}" data-open-canteen="${item.id}" tabindex="0">
+      return `<div class="canteen-result"><div class="mobile-canteens">${mobileCards}</div><div class="table-wrap"><table><thead><tr><th>Canteen</th><th>Category</th><th>Owner</th><th>Plan</th><th>Payment</th><th>Printers</th><th>Version</th><th>Status</th><th>Canteen Login</th><th>Marketing</th>${actions ? "<th>Action</th>" : ""}</tr></thead><tbody>${rows.map((item, index) => `<tr class="tone-${index % 4}" data-open-canteen="${item.id}" tabindex="0">
         <td><strong>${esc(item.canteenName)}</strong><br><span class="muted">${esc(item.city)}, ${esc(item.state)}</span></td>
         <td><span class="pill blue">${esc(item.businessCategory || "Canteen")}</span></td>
         <td>${esc(item.ownerName)}<br><span class="muted">${esc(item.ownerMobile)}</span></td>
         <td>${esc(item.selectedPlan)}<br><span class="muted">${esc(item.planType)}${item.planExpiryDate ? ` | Expiry: ${esc(item.planExpiryDate)}` : ""}</span></td>
         <td>${money(item.paidAmount)}<br><span class="muted">Pending ${money(item.pendingAmount)}</span></td>
         <td>${Number(item.printersAssigned || 0)} / ${Number(item.printersRequired || 0)}</td>
+        <td>Using ${esc(usingVersion(item))}<br><span class="muted">Assigned ${esc(assignedVersion(item))}</span></td>
         <td><span class="pill ${statusClass(item.status)}">${esc(item.status)}</span></td>
         <td>${item.canteenLoginId ? `<strong>ID: ${esc(item.activatedCanteenId || "-")}</strong><br><span class="muted">Login: ${esc(item.canteenLoginId)} | Temp Pass: ${esc(item.defaultPassword || "-")}</span><br><span class="muted">First login: create permanent owner login</span><br>${posOpenAction(item)} ${copyCredentialsAction(item)}` : `<span class="muted">After approval</span>`}</td>
         <td>${esc(item.submittedByName || item.submittedBy)}</td>
         ${actions ? `<td><div class="row-actions">${actionButtons(item)}</div></td>` : ""}
-      </tr>`).join("") || `<tr><td colspan="${actions ? 10 : 9}">No canteens found</td></tr>`}</tbody></table></div></div>`;
+      </tr>`).join("") || `<tr><td colspan="${actions ? 11 : 10}">No canteens found</td></tr>`}</tbody></table></div></div>`;
     }
     function actionButtons(item) {
       if (user.role !== "super_admin") return "";
@@ -1241,6 +1263,7 @@
         performance: ["Marketing Performance", "Employee-wise registration and collection results."],
         activities: ["Recent Activities", "Audit trail for onboarding actions."],
         helpcenter: ["Help Center", "Review POS customer problems and update their status."],
+        appreleases: ["App Updates", "Upload versioned POS bundles and publish them to selected canteens."],
         add: ["Add Lead", "Create customer record and submit canteen activation."],
         my: ["Leads & Visits", "Your leads, visits and activation status."],
         followups: ["Follow-ups", "Today tasks, pending payments and installation handoffs."]
@@ -1253,7 +1276,7 @@
       if (tab === "followups") { $("page").innerHTML = followupsHtml(); bindTabJumps(); bindCredentialCopies(); return; }
       if (tab === "employees") { renderEmployees(); bindEmployeeActions(); return; }
       if (tab === "approvals") $("page").innerHTML = `<section class="panel"><h2>Pending Approval</h2>${canteensTable(state.canteens.filter(item => item.status === "Pending Approval"))}</section>`;
-      else if (tab === "canteens" || tab === "my") $("page").innerHTML = `${user.role === "super_admin" ? "" : workflowStrip()}<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Leads" : "All Canteens"}</h2><div class="toolbar-left"><select id="searchCategory"><option value="all">All</option><option value="canteenName">Canteen</option><option value="businessCategory">Business Category</option><option value="ownerName">Owner</option><option value="city">City</option><option value="status">Status</option></select><input id="searchBox" placeholder="Search by category"></div></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
+      else if (tab === "canteens" || tab === "my") $("page").innerHTML = `${user.role === "super_admin" ? "" : workflowStrip()}<section class="panel"><div class="toolbar"><h2>${tab === "my" ? "My Leads" : "All Canteens"}</h2><div class="toolbar-left"><select id="searchCategory"><option value="all">All</option><option value="canteenName">Canteen</option><option value="businessCategory">Business Category</option><option value="ownerName">Owner</option><option value="city">City</option><option value="status">Status</option><option value="version">Version</option></select><input id="searchBox" placeholder="Search by category"><select id="versionFilter" hidden>${versionFilterOptions(state.canteens)}</select></div></div>${canteensTable(state.canteens, user.role === "super_admin")}</section>`;
       else if (tab === "enquiries") { $("page").innerHTML = `<section class="panel"><h2>Website Enquiries</h2>${enquiriesHtml(state.enquiries || [])}</section>`; bindEnquiryActions(); return; }
       else if (tab === "plans") { $("page").innerHTML = websitePlansHtml(); bindPlanForms(); return; }
       else if (tab === "payments") $("page").innerHTML = `<section class="panel"><h2>Pending Payments</h2>${canteensTable(state.canteens.filter(item => Number(item.pendingAmount || 0) > 0), user.role === "super_admin")}</section><section class="panel"><h2>Payment History</h2>${paymentsTable(state.payments || [])}</section>`;
@@ -1262,20 +1285,34 @@
       else if (tab === "performance") $("page").innerHTML = `<section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section>`;
       else if (tab === "activities") $("page").innerHTML = `<section class="panel"><h2>Recent Activities</h2>${activitiesHtml(60)}</section>`;
       else if (tab === "helpcenter") { $("page").innerHTML = window.MarketingHelpCenter.render(state.supportTickets || []); window.MarketingHelpCenter.bind({ api, refresh: async () => { await refresh(); render(); }, notify: status }); return; }
+      else if (tab === "appreleases") { $("page").innerHTML = window.AppReleases.render({ releases: state.appReleases || [], canteens: state.canteens || [] }); window.AppReleases.bind({ api, refresh: async () => { await refresh(); render(); }, notify: status }); return; }
       bindTableActions();
       bindCredentialCopies();
-      if ($("searchBox")) $("searchBox").addEventListener("input", event => {
-        const q = event.target.value.toLowerCase();
+      const applyCanteenSearch = () => {
         const category = $("searchCategory")?.value || "all";
+        const versionMode = category === "version";
+        if ($("searchBox")) $("searchBox").hidden = versionMode;
+        if ($("versionFilter")) $("versionFilter").hidden = !versionMode;
         const filtered = state.canteens.filter(item => {
+          if (versionMode) {
+            const selected = $("versionFilter")?.value || "";
+            if (!selected) return true;
+            const splitAt = selected.indexOf(":");
+            const kind = selected.slice(0, splitAt);
+            const version = selected.slice(splitAt + 1);
+            return (kind === "assigned" ? assignedVersion(item) : usingVersion(item)) === version;
+          }
+          const q = ($("searchBox")?.value || "").toLowerCase();
           const hay = category === "all" ? `${item.canteenName} ${item.businessCategory || ""} ${item.ownerName} ${item.city} ${item.status}` : String(item[category] || "");
           return hay.toLowerCase().includes(q);
         });
         $("page").querySelector(".canteen-result").outerHTML = canteensTable(filtered, user.role === "super_admin");
         bindTableActions();
         bindCredentialCopies();
-      });
-      if ($("searchCategory")) $("searchCategory").addEventListener("change", () => $("searchBox").dispatchEvent(new Event("input")));
+      };
+      if ($("searchBox")) $("searchBox").addEventListener("input", applyCanteenSearch);
+      if ($("versionFilter")) $("versionFilter").addEventListener("change", applyCanteenSearch);
+      if ($("searchCategory")) $("searchCategory").addEventListener("change", applyCanteenSearch);
     }
     async function enterApp(nextUser) {
       user = nextUser;

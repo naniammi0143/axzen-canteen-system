@@ -26,7 +26,7 @@ async function extract(body, fetcher = fetch) {
   if (/\.csv$/i.test(body.filename)) return { items: normalizeItems(csvRows(bytes.toString('utf8'))), method: 'CSV' };
   if (!['application/pdf', 'image/png', 'image/jpeg', 'image/webp'].includes(match[1])) fail('Use PDF, JPG, PNG, WebP or CSV.');
   const grokKey = process.env.XAI_API_KEY || process.env.GROK_API_KEY;
-  const provider = String(process.env.CATALOG_AI_PROVIDER || (grokKey ? 'grok' : 'openai')).toLowerCase();
+  const provider = String(process.env.CATALOG_AI_PROVIDER || 'grok').toLowerCase();
   if (!['grok', 'openai'].includes(provider)) fail('CATALOG_AI_PROVIDER must be grok or openai.');
   const key = provider === 'grok' ? grokKey : process.env.OPENAI_API_KEY;
   if (!key) fail(`AI catalog reading needs ${provider === 'grok' ? 'XAI_API_KEY (or GROK_API_KEY)' : 'OPENAI_API_KEY'} on the server. CSV import is available without AI.`);

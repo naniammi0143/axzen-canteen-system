@@ -40,7 +40,7 @@ app.use(cors());
 require("./catalog-import").register(app, requireAdmin);
 
 app.use(express.json({
-  limit: "1mb",
+  limit: "8mb",
   verify: (req, res, buf) => {
     req.rawBody = buf.toString("utf8");
   }
@@ -575,6 +575,10 @@ const marketingCanteenSchema = new mongoose.Schema({
   submittedByName: String,
   approvedBy: String,
   approvedAt: String
+  ,appReleaseId: String
+  ,appReleaseVersion: String
+  ,appInstalledVersion: String
+  ,appInstalledAt: String
 }, { timestamps: true, collection: "marketing_canteens" });
 
 const marketingActivitySchema = new mongoose.Schema({
@@ -635,6 +639,18 @@ const marketingSupportTicketSchema = new mongoose.Schema({
   resolvedAt: Date,
   resolvedBy: String
 }, { timestamps: true, collection: "marketing_support_tickets" });
+
+const appReleaseSchema = new mongoose.Schema({
+  version: { type: String, unique: true, index: true },
+  notes: String,
+  sha256: { type: String, index: true },
+  signature: String,
+  size: Number,
+  status: { type: String, enum: ["Draft", "Published"], default: "Draft", index: true },
+  bundle: Buffer,
+  createdBy: String,
+  publishedAt: Date
+}, { timestamps: true, collection: "app_releases" });
 
 const enquirySchema = new mongoose.Schema({
   id: { type: Number, index: true },
@@ -712,6 +728,7 @@ const MarketingActivity = mongoose.models.MarketingActivity || mongoose.model("M
 const MarketingPayment = mongoose.models.MarketingPayment || mongoose.model("MarketingPayment", marketingPaymentSchema);
 const SubscriptionOrder = mongoose.models.SubscriptionOrder || mongoose.model("SubscriptionOrder", subscriptionOrderSchema);
 const MarketingSupportTicket = mongoose.models.MarketingSupportTicket || mongoose.model("MarketingSupportTicket", marketingSupportTicketSchema);
+const AppRelease = mongoose.models.AppRelease || mongoose.model("AppRelease", appReleaseSchema);
 const Enquiry = mongoose.models.Enquiry || mongoose.model("Enquiry", enquirySchema);
 const WebsitePlan = mongoose.models.WebsitePlan || mongoose.model("WebsitePlan", websitePlanSchema);
 const WhatsappLog = mongoose.models.WhatsappLog || mongoose.model("WhatsappLog", whatsappLogSchema);
@@ -908,15 +925,21 @@ async function tokenUserAccessStatus(user) {
   return canteenAccessStatus(canteenId);
 }
 
-async function markCanteenSeen(canteenId) {
+async function markCanteenSeen(canteenId, installedVersion = "") {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   const seen = new Date().toISOString();
+  const version = String(installedVersion || "").trim().slice(0, 40);
+  const patch = { online: true, lastSeenAt: seen };
+  if (version) {
+    patch.appInstalledVersion = version;
+    patch.appInstalledAt = seen;
+  }
   if (!mongoReady) {
     const item = memory.marketingCanteens.find(row => normalizeCanteenId(row.activatedCanteenId) === targetCanteenId);
-    if (item) { item.online = true; item.lastSeenAt = seen; }
+    if (item) Object.assign(item, patch);
     return;
   }
-  await MarketingCanteen.findOneAndUpdate({ activatedCanteenId: targetCanteenId }, { $set: { online: true, lastSeenAt: seen } });
+  await MarketingCanteen.findOneAndUpdate({ activatedCanteenId: targetCanteenId }, { $set: patch });
 }
 
 function decodeCanteenAuthToken(req) {
@@ -948,7 +971,7 @@ async function requireAdmin(req, res, next) {
     if (!access.allowed) {
       return res.status(403).json({ success: false, message: access.message });
     }
-    markCanteenSeen(req.authUser.canteenId).catch(() => {});
+    markCanteenSeen(req.authUser.canteenId, req.get("x-axzen-app-version")).catch(() => {});
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
@@ -967,7 +990,7 @@ async function requireStockAccess(req, res, next) {
     if (!access.allowed) {
       return res.status(403).json({ success: false, message: access.message });
     }
-    markCanteenSeen(req.authUser.canteenId).catch(() => {});
+    markCanteenSeen(req.authUser.canteenId, req.get("x-axzen-app-version")).catch(() => {});
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
@@ -986,7 +1009,7 @@ async function requireCanteenAuth(req, res, next) {
     if (!access.allowed) {
       return res.status(403).json({ success: false, message: access.message });
     }
-    markCanteenSeen(req.authUser.canteenId).catch(() => {});
+    markCanteenSeen(req.authUser.canteenId, req.get("x-axzen-app-version")).catch(() => {});
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
@@ -2230,6 +2253,11 @@ async function allMarketingSupportTickets() {
   return MarketingSupportTicket.find({}).sort({ createdAt: -1 }).limit(200).lean();
 }
 
+async function allAppReleases() {
+  if (!mongoReady) return [];
+  return AppRelease.find({}).select("-bundle").sort({ createdAt: -1 }).limit(50).lean();
+}
+
 async function helpTicketsForCanteen(canteenId) {
   const target = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   if (!mongoReady) return memory.supportTickets.filter(item => normalizeCanteenId(item.canteenId) === target).sort(byNewest);
@@ -3465,6 +3493,27 @@ app.post("/help/tickets", requireDatabase, requireCanteenAuth, async (req, res) 
   }
 });
 
+app.get("/app-update/manifest", requireDatabase, requireCanteenAuth, async (req, res) => {
+  const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
+  const canteen = await MarketingCanteen.findOne({ activatedCanteenId: canteenId }).lean();
+  if (!canteen?.appReleaseId) return res.status(204).end();
+  const release = await AppRelease.findOne({ _id: canteen.appReleaseId, status: "Published" }).select("-bundle").lean();
+  if (!release) return res.status(204).end();
+  res.json({ success: true, release: { id: String(release._id), version: release.version, notes: release.notes || "", sha256: release.sha256, signature: release.signature, size: release.size, downloadUrl: `/app-update/bundles/${release._id}` } });
+});
+
+app.get("/app-update/bundles/:id", requireDatabase, requireCanteenAuth, async (req, res) => {
+  const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
+  const canteen = await MarketingCanteen.findOne({ activatedCanteenId: canteenId }).lean();
+  if (!canteen || String(canteen.appReleaseId || "") !== String(req.params.id)) return res.status(403).json({ success: false, message: "Release is not assigned to this canteen" });
+  const release = await AppRelease.findOne({ _id: req.params.id, status: "Published" }).lean();
+  if (!release?.bundle) return res.status(404).json({ success: false, message: "Release bundle not found" });
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Length", release.bundle.length);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.send(release.bundle);
+});
+
 app.post("/marketing-api/login", requireDatabase, async (req, res) => {
   const employeeId = String(req.body.employeeId || "").trim();
   const password = String(req.body.password || "");
@@ -3505,6 +3554,7 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
   const enquiries = await allEnquiries();
   const websitePlans = await allWebsitePlans();
   const printers = await allPrinters();
+  const appReleases = await allAppReleases();
   const isAdmin = req.marketingUser.role === "super_admin" || req.marketingUser.role === "manager";
   const canteens = isAdmin
     ? allCanteens
@@ -3553,6 +3603,7 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     supportTickets: enrichedSupportTickets,
     enquiries: visibleEnquiries,
     websitePlans: isAdmin ? websitePlans : [],
+    appReleases: isAdmin ? appReleases : [],
     activities: isAdmin ? activities : [],
     summary: marketingSummary(canteens, visibleUsers, isAdmin ? activities : [], visiblePayments, visibleSupportTickets, visibleEnquiries, visiblePrinters)
   });
@@ -3575,6 +3626,38 @@ app.post("/marketing-api/help-tickets/:id/status", requireDatabase, requireSuper
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
+});
+
+app.post("/marketing-api/app-releases", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const version = String(req.body.version || "").trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(version)) throw new Error("Use a valid release version, for example 4.0.1");
+    const raw = String(req.body.bundleBase64 || "").replace(/^data:application\/(?:zip|octet-stream);base64,/i, "");
+    const bundle = Buffer.from(raw, "base64");
+    if (bundle.length < 100 || bundle.length > 6 * 1024 * 1024 || bundle[0] !== 0x50 || bundle[1] !== 0x4b) throw new Error("Upload a valid POS release ZIP smaller than 6 MB");
+    if (await AppRelease.exists({ version })) throw new Error("This release version already exists. Use a new version.");
+    const sha256 = crypto.createHash("sha256").update(bundle).digest("hex");
+    const privateKeyBase64 = process.env.APP_UPDATE_SIGNING_PRIVATE_KEY_BASE64;
+    if (!privateKeyBase64) throw new Error("App update signing key is not configured on the backend");
+    const privateKey = crypto.createPrivateKey(Buffer.from(privateKeyBase64, "base64").toString("utf8"));
+    const signature = crypto.sign("sha256", bundle, privateKey).toString("base64");
+    const release = await AppRelease.create({ version, notes: String(req.body.notes || "").trim().slice(0, 500), sha256, signature, size: bundle.length, status: "Draft", bundle, createdBy: req.marketingUser.employeeId });
+    res.status(201).json({ success: true, release: { id: String(release._id), version, notes: release.notes, sha256, size: bundle.length, status: release.status } });
+  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+});
+
+app.post("/marketing-api/app-releases/:id/publish", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const canteenIds = [...new Set((Array.isArray(req.body.canteenIds) ? req.body.canteenIds : []).map(Number).filter(Number.isFinite))];
+    if (!canteenIds.length) throw new Error("Select at least one canteen.");
+    const release = await AppRelease.findById(req.params.id).select("-bundle").lean();
+    if (!release) throw new Error("Release not found");
+    await AppRelease.updateOne({ _id: release._id }, { $set: { status: "Published", publishedAt: new Date() } });
+    const result = await MarketingCanteen.updateMany({ id: { $in: canteenIds }, activatedCanteenId: { $nin: [null, ""] } }, { $set: { appReleaseId: String(release._id), appReleaseVersion: release.version } });
+    if (!result.modifiedCount) throw new Error("Select approved canteens with an active Canteen ID.");
+    await addMarketingActivity({ type: "app_release", text: `POS release ${release.version} published to ${result.modifiedCount} canteen(s)`, actor: req.marketingUser.name });
+    res.json({ success: true, message: `Release assigned to ${result.modifiedCount} canteen(s).` });
+  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 });
 
 app.post("/marketing-api/website-plans", requireDatabase, requireSuperAdmin, async (req, res) => {

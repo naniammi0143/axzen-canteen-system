@@ -36,6 +36,9 @@ import java.io.FileOutputStream;
 import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
+import java.security.KeyFactory;
+import java.security.Signature;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
@@ -74,6 +77,7 @@ public class MainActivity extends BridgeActivity {
     }
 
     private static final String UPDATE_PREFS = "axzen_app_updates";
+    private static final String UPDATE_PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtE5KkIEmJjU32MEFeuX6wQ6eyAda5bUqA1ktn281eLbyzc0lmtq6Kyot+s7zBqqQwtuSIdmLXmgqZJWJJ9FQZnB2DnFLR6d28Yy/0SzF4+eu8wrG+9s7IKTFLudXJfYH5DTTNb5/TMk5oYnHucaD3XEIO85YN1eatLn+/aXDmmeCU3YlOr9gEU29elFAUOmcswF6TaJxNljUZahve61gMtXAmZDVryW53vYQ/lVAZI5uWJeCl1XH6mmMqJ4zCY5loBtOqurhD8c6HOst55FY4mRcFXczuLPJoBk2U/hGiu62sY4InzKfQpn1bk0qHV1RahCYKCG/IprJCd9mLpETQwIDAQAB";
 
     private void restoreInstalledRelease() {
         SharedPreferences prefs = getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE);
@@ -87,13 +91,14 @@ public class MainActivity extends BridgeActivity {
 
     public class AppUpdateBridge {
         @JavascriptInterface
-        public synchronized String installBundle(String base64, String version, String expectedSha256) {
+        public synchronized String installBundle(String base64, String version, String expectedSha256, String signatureBase64) {
             try {
                 String safeVersion = version == null ? "" : version.replaceAll("[^A-Za-z0-9._-]", "");
                 if (safeVersion.isEmpty() || base64 == null || base64.isEmpty()) throw new Exception("Invalid release bundle");
                 byte[] zipBytes = Base64.decode(base64, Base64.DEFAULT);
                 String actualSha = sha256(zipBytes);
                 if (expectedSha256 == null || !actualSha.equalsIgnoreCase(expectedSha256.trim())) throw new Exception("Release checksum failed");
+                if (!verifySignature(zipBytes, signatureBase64)) throw new Exception("Release signature failed");
                 File releases = new File(getFilesDir(), "pos-releases");
                 File target = new File(releases, safeVersion + "-" + actualSha.substring(0, 12));
                 File staging = new File(releases, ".staging-" + System.currentTimeMillis());
@@ -158,6 +163,15 @@ public class MainActivity extends BridgeActivity {
             StringBuilder value = new StringBuilder();
             for (byte item : digest) value.append(String.format(java.util.Locale.US, "%02x", item));
             return value.toString();
+        }
+
+        private boolean verifySignature(byte[] bytes, String signatureBase64) throws Exception {
+            if (signatureBase64 == null || signatureBase64.isEmpty()) return false;
+            byte[] publicBytes = Base64.decode(UPDATE_PUBLIC_KEY, Base64.DEFAULT);
+            Signature verifier = Signature.getInstance("SHA256withRSA");
+            verifier.initVerify(KeyFactory.getInstance("RSA").generatePublic(new X509EncodedKeySpec(publicBytes)));
+            verifier.update(bytes);
+            return verifier.verify(Base64.decode(signatureBase64, Base64.DEFAULT));
         }
 
         private void deleteTree(File file) {

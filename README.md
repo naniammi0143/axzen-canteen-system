@@ -125,3 +125,7 @@ GET /whatsapp/logs
 Receipt settings: Admin Settings or Printer Settings ? Receipt second line / Area. The preview and bill use this line below the restaurant name. The footer is Powered by / Axzen POS System. Android tear-off feed was reduced from six lines to two; this native change requires a future APK build and physical printer verification.
 
 Grok API references: https://docs.x.ai/developers/model-capabilities/files/chat-with-files and https://docs.x.ai/developers/model-capabilities/text/structured-outputs .
+
+## Targeted POS app updates
+
+The v3.68 Android POS is the update-enabled base APK. Build a versioned web bundle with `npm run release:pos -- --version 4.0.1`, then open Marketing → App Updates, upload the ZIP, select approved canteens, and publish. The POS checks its assigned release after login, verifies the backend RSA signature and SHA-256 checksum, installs it locally, keeps working from the cached bundle offline, and rolls back on the next launch if the new bundle never reports healthy. Keep `APP_UPDATE_SIGNING_PRIVATE_KEY_BASE64` only in `backend/.env`; the matching public key is embedded in the APK. Changes to Android Java, permissions, native printer/share bridges, the app icon, or Capacitor still require a new APK.
