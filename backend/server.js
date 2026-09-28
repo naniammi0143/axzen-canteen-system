@@ -3696,7 +3696,7 @@ app.post("/marketing-api/app-releases", requireDatabase, requireSuperAdmin, asyn
   try {
     const version = String(req.body.version || "").trim();
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(version)) throw new Error("Use a valid release version, for example 4.0.1");
-    const raw = String(req.body.bundleBase64 || "").replace(/^data:application\/(?:zip|octet-stream);base64,/i, "");
+    const raw = String(req.body.bundleBase64 || "").replace(/^data:[^,]*;base64,/i, "").replace(/\s+/g, "");
     const bundle = Buffer.from(raw, "base64");
     if (bundle.length < 100 || bundle.length > 6 * 1024 * 1024 || bundle[0] !== 0x50 || bundle[1] !== 0x4b) throw new Error("Upload a valid POS release ZIP smaller than 6 MB");
     if (await AppRelease.exists({ version })) throw new Error("This release version already exists. Use a new version.");
