@@ -66,6 +66,7 @@ const staticPageOptions = {
 app.use("/mobile", express.static(path.join(__dirname, "../sa"), staticPageOptions));
 app.use("/partner", express.static(path.join(__dirname, "../sa"), staticPageOptions));
 app.use("/admin", express.static(path.join(__dirname, "../admin-web"), staticPageOptions));
+app.use("/sales", express.static(path.join(__dirname, "../marketing-web"), staticPageOptions));
 app.use("/marketing", express.static(path.join(__dirname, "../marketing-web"), staticPageOptions));
 app.use("/employee", express.static(path.join(__dirname, "../employee-web"), staticPageOptions));
 app.use("/manager", express.static(path.join(__dirname, "../employee-web"), staticPageOptions));
@@ -2310,16 +2311,23 @@ function numericPrice(value) {
   return Number(text || 0);
 }
 
-async function subscriptionStatusForCanteen(canteenId) {
+async function subscriptionStatusForCanteen(canteenId, requestedPlanName = "") {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   const marketing = (await allMarketingCanteens()).find(item => normalizeCanteenId(item.activatedCanteenId) === targetCanteenId) || null;
   const core = await getCoreCanteen(targetCanteenId);
   const plans = await allWebsitePlans({ activeOnly: true });
-  const selectedPlanName = marketing?.selectedPlan || core?.plan || "Professional";
-  const selectedPlan = plans.find(plan => String(plan.name || "").toLowerCase() === String(selectedPlanName || "").toLowerCase())
-    || plans.find(plan => String(plan.name || "").toLowerCase() === "professional")
+  const findPlan = name => plans.find(plan => String(plan.name || "").trim().toLowerCase() === String(name || "").trim().toLowerCase());
+  const currentPlanName = marketing?.selectedPlan || core?.plan || "Professional";
+  const currentPlan = findPlan(currentPlanName)
+    || findPlan("professional")
     || plans[0]
     || { name: "Professional", offerPrice: "999" };
+  const requestedPlan = requestedPlanName ? findPlan(requestedPlanName) : null;
+  if (requestedPlanName && (!requestedPlan || !numericPrice(requestedPlan.offerPrice))) {
+    throw new Error("This plan needs the sales team. Please contact Axzen sales.");
+  }
+  const selectedPlan = requestedPlan || currentPlan;
+  const selectedPlanName = selectedPlan.name || currentPlanName;
   const monthlyPrice = numericPrice(selectedPlan.offerPrice) || 999;
   const durations = [1, 3, 6, 9, 12].map(months => ({
     months,
@@ -2335,9 +2343,20 @@ async function subscriptionStatusForCanteen(canteenId) {
     marketingCanteenId: marketing?.id || 0,
     printerModel: marketing?.printerModel || "",
     printerSerialNumber: marketing?.printerSerialNumber || "",
-    planName: selectedPlan.name || selectedPlanName || "Professional",
+    planName: selectedPlanName || "Professional",
+    currentPlanName: currentPlan.name || currentPlanName,
     planType: marketing?.planType || (core?.paymentStatus === "paid" ? "Paid" : "Trial"),
     monthlyPrice,
+    plans: plans.map(plan => ({
+      name: plan.name,
+      description: plan.description || "",
+      monthlyPrice: numericPrice(plan.offerPrice),
+      originalPrice: numericPrice(plan.originalPrice),
+      priceLabel: numericPrice(plan.offerPrice) ? "" : String(plan.offerPrice || "Custom Pricing"),
+      badge: plan.badge || "",
+      popular: plan.popular === true,
+      features: Array.isArray(plan.features) ? plan.features.filter(Boolean) : []
+    })),
     expiryDate,
     status: marketing?.status || (core?.active === false ? "Blocked" : "Active"),
     expired: isPastDate(expiryDate),
@@ -2414,8 +2433,8 @@ async function cashfreeRequest(pathname, options = {}) {
   return body;
 }
 
-async function createSubscriptionCashfreeOrder(canteenId, months, user, req) {
-  const status = await subscriptionStatusForCanteen(canteenId);
+async function createSubscriptionCashfreeOrder(canteenId, months, user, req, planName = "") {
+  const status = await subscriptionStatusForCanteen(canteenId, planName);
   const selected = status.durations.find(item => Number(item.months) === Number(months));
   if (!selected) throw new Error("Select 1, 3, 6, 9, or 12 months");
   const amount = Number(selected.amount || 0);
@@ -3440,7 +3459,7 @@ app.get("/subscription/status", requireDatabase, requireCanteenTokenOnly, async 
 
 app.post("/subscription/recharge/create-order", requireDatabase, requireCanteenTokenOnly, async (req, res) => {
   try {
-    const result = await createSubscriptionCashfreeOrder(req.authUser.canteenId, req.body.months, req.authUser, req);
+    const result = await createSubscriptionCashfreeOrder(req.authUser.canteenId, req.body.months, req.authUser, req, String(req.body.planName || "").trim());
     res.json({ success: true, ...result });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message || "Recharge order failed" });

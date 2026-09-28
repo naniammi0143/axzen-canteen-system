@@ -445,7 +445,9 @@
   <script src="app-releases.js"></script>
   <script>
     const liveApi = "https://axzen-canteen-system.vercel.app";
-    const API = window.Capacitor || window.location.protocol === "capacitor:" ? liveApi : "";
+    const partnerSite = window.location.hostname === "pos.axzen.in";
+    const API = partnerSite || window.Capacitor || window.location.protocol === "capacitor:" ? liveApi : "";
+    const posLoginUrl = partnerSite ? `${location.origin}/partner/` : `${location.origin}/mobile`;
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toLocaleString("en-IN");
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
@@ -530,7 +532,7 @@
     }
     function credentialText(item) {
       if (!item.canteenLoginId) return "Credentials generate after approval.";
-      return `Organization: ${item.canteenName}\nLogin ID: ${item.canteenLoginId}\nTemporary Password: ${item.defaultPassword || ""}\nOpen: ${location.origin}/mobile?loginId=${encodeURIComponent(item.canteenLoginId)}&restaurantId=${encodeURIComponent(item.activatedCanteenId || "")}\nFirst login lo customer permanent owner login create cheyyali.`;
+      return `Organization: ${item.canteenName}\nLogin ID: ${item.canteenLoginId}\nTemporary Password: ${item.defaultPassword || ""}\nOpen: ${posLoginUrl}?loginId=${encodeURIComponent(item.canteenLoginId)}&restaurantId=${encodeURIComponent(item.activatedCanteenId || "")}\nFirst login lo customer permanent owner login create cheyyali.`;
     }
     function copyCredentialsAction(item) {
       return item.canteenLoginId ? `<button class="ghost pos-open" data-copy-credentials="${item.id}" type="button">Copy Login</button>` : "";
