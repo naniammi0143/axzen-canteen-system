@@ -29,8 +29,8 @@ android {
         employee {
             dimension "application"
             applicationId "com.axenhospitality.employee"
-            versionCode 115
-            versionName "1.15"
+            versionCode 130
+            versionName "1.30"
         }
     }
     sourceSets {
@@ -81,7 +81,7 @@ apply from: 'capacitor.build.gradle'
 
 // Each APK packages its own web app; never overwrite POS assets to build Employee.
 [pos: [web: 'sa', id: 'com.axzenhospitality.canteenclean', title: 'Axzen POS'],
- employee: [web: 'employee-web', id: 'com.axenhospitality.employee', title: 'Axzen Employee']].each { flavor, config ->
+ employee: [web: 'employee-web', id: 'com.axenhospitality.employee', title: 'Axzen POS Sales']].each { flavor, config ->
     def taskName = "prepare${flavor.capitalize()}WebAssets"
     tasks.register(taskName, Sync) {
         from(rootProject.file("../${config.web}")) { into 'public' }

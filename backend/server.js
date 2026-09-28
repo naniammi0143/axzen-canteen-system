@@ -64,6 +64,7 @@ const staticPageOptions = {
 };
 
 app.use("/mobile", express.static(path.join(__dirname, "../sa"), staticPageOptions));
+app.use("/partner", express.static(path.join(__dirname, "../sa"), staticPageOptions));
 app.use("/admin", express.static(path.join(__dirname, "../admin-web"), staticPageOptions));
 app.use("/marketing", express.static(path.join(__dirname, "../marketing-web"), staticPageOptions));
 app.use("/employee", express.static(path.join(__dirname, "../employee-web"), staticPageOptions));

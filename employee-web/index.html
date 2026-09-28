@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Axzen Employee</title>
+  <title>Axzen POS Sales</title>
   <link rel="icon" href="assets/axzenPOS.png?v=2" type="image/png">
   <link rel="apple-touch-icon" href="assets/axzenPOS.png?v=2">
   <style>
@@ -972,33 +972,138 @@
       .form-grid, .kv-grid { grid-template-columns: 1fr; }
       .btn { white-space: normal; text-align: center; }
     }
+
   </style>
+  <link rel="stylesheet" href="theme.css?v=4">
 </head>
 <body>
   <section class="screen login" id="loginScreen">
-    <div class="brand">
-      <h1>Axzen Employee</h1>
-      <p>Customer onboarding, approvals, payments, printers and team tracking in one clean workflow.</p>
+    <div class="login-brand">
+      <div class="login-logo"><img src="assets/axzenPOS.png?v=2" alt="Axzen"></div>
+      <div class="login-name">
+        <h1>Axzen <span>POS Sales</span></h1>
+        <p>More Leads. More Business.</p>
+      </div>
     </div>
-    <form class="panel" id="loginForm">
-      <label class="field">Login ID <input id="loginId" autocomplete="username" required></label>
-      <label class="field">Password <input id="password" type="password" autocomplete="current-password" required></label>
+    <form class="login-card" id="loginForm">
+      <div>
+        <h2>Sales Person Login</h2>
+        <p class="lead">Enter your login ID and password to continue</p>
+      </div>
+      <label class="input-icon" aria-label="Login ID"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg><input id="loginId" autocomplete="username" placeholder="Employee ID or mobile number" required></label>
+      <label class="input-icon" aria-label="Password"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><input id="password" type="password" autocomplete="current-password" placeholder="Password" required></label>
       <button class="btn" id="loginBtn" type="submit">Login</button>
-      <div class="status" id="loginStatus">Enter your login details.</div>
+      <div class="status" id="loginStatus"></div>
+      <p class="login-terms">By continuing you agree to our <b>Terms</b> &amp; <b>Privacy</b>.</p>
     </form>
+    <div class="login-art" aria-hidden="true">
+      <svg viewBox="0 0 360 210">
+        <defs>
+          <linearGradient id="artGlow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1E6BFF" stop-opacity=".35"/><stop offset="1" stop-color="#1E6BFF" stop-opacity="0"/></linearGradient>
+          <linearGradient id="artShop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E2E8F0"/></linearGradient>
+        </defs>
+        <circle cx="180" cy="130" r="120" fill="url(#artGlow)"/>
+        <g fill="#12336B" opacity=".7">
+          <rect x="6" y="104" width="26" height="92" rx="3"/>
+          <rect x="36" y="82" width="20" height="114" rx="3"/>
+          <rect x="336" y="96" width="22" height="100" rx="3"/>
+        </g>
+        <g fill="#2B5AA8" opacity=".55">
+          <rect x="12" y="114" width="6" height="6" rx="1"/><rect x="21" y="114" width="6" height="6" rx="1"/>
+          <rect x="12" y="128" width="6" height="6" rx="1"/><rect x="21" y="142" width="6" height="6" rx="1"/>
+          <rect x="41" y="94" width="10" height="6" rx="1"/><rect x="41" y="110" width="10" height="6" rx="1"/><rect x="41" y="126" width="10" height="6" rx="1"/>
+          <rect x="342" y="108" width="10" height="6" rx="1"/><rect x="342" y="124" width="10" height="6" rx="1"/>
+        </g>
+        <ellipse cx="180" cy="198" rx="176" ry="14" fill="#07163A"/>
+        <rect x="186" y="92" width="144" height="104" rx="6" fill="url(#artShop)"/>
+        <g fill="#CBD5E1"><rect x="196" y="108" width="40" height="3" rx="1.5"/><rect x="196" y="126" width="40" height="3" rx="1.5"/></g>
+        <g><rect x="198" y="98" width="9" height="10" rx="2" fill="#F59E0B"/><rect x="210" y="100" width="8" height="8" rx="2" fill="#EF4444"/><rect x="221" y="97" width="11" height="11" rx="2" fill="#22C55E"/><rect x="199" y="116" width="12" height="10" rx="2" fill="#60A5FA"/><rect x="214" y="118" width="8" height="8" rx="2" fill="#F59E0B"/><rect x="225" y="115" width="9" height="11" rx="2" fill="#A78BFA"/></g>
+        <path d="M180 74h156l-6 22H186Z" fill="#1E6BFF"/>
+        <path d="M186 96c4 7 12 7 16 0 4 7 12 7 16 0 4 7 12 7 16 0 4 7 12 7 16 0 4 7 12 7 16 0 4 7 12 7 16 0 4 7 12 7 16 0 4 7 12 7 16 0 4 7 12 7 16 0Z" fill="#60A5FA"/>
+        <g fill="#FFFFFF" opacity=".9"><path d="M200 74h12l-3 22h-12Z"/><path d="M232 74h12l-2 22h-12Z"/><path d="M264 74h12l-1 22h-12Z"/><path d="M296 74h12v22h-12Z"/></g>
+        <rect x="222" y="52" width="80" height="22" rx="6" fill="#0B1F4B"/>
+        <text x="262" y="67" text-anchor="middle" font-size="10" font-weight="800" fill="#FFFFFF" font-family="Inter, Arial, sans-serif" letter-spacing="1.2">AXZEN POS</text>
+        <path d="M280 138c0-10 7-17 15-17s15 7 15 17v10h-30Z" fill="#16A34A"/>
+        <rect x="290" y="108" width="10" height="12" rx="4" fill="#C98E6B"/>
+        <circle cx="295" cy="102" r="11" fill="#E0A77F"/>
+        <path d="M284 101c0-9 5-14 11-14 7 0 12 5 12 12-5-3-11-4-17-2-2 1-4 2-6 4Z" fill="#1E293B"/>
+        <circle cx="291" cy="104" r="1.5" fill="#0F172A"/><circle cx="299" cy="104" r="1.5" fill="#0F172A"/>
+        <path d="M291 109c2.4 2 5.6 2 8 0" stroke="#7C3F28" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+        <rect x="244" y="126" width="30" height="20" rx="3" fill="#0F172A"/>
+        <rect x="247" y="129" width="24" height="12" rx="1.5" fill="#60A5FA"/>
+        <rect x="254" y="146" width="10" height="4" fill="#334155"/>
+        <rect x="196" y="148" width="130" height="8" rx="3" fill="#94A3B8"/>
+        <rect x="200" y="156" width="122" height="40" fill="#1E3A8A"/>
+        <g fill="#FFFFFF" opacity=".16"><rect x="208" y="164" width="48" height="24" rx="3"/><rect x="266" y="164" width="48" height="24" rx="3"/></g>
+        <rect x="160" y="174" width="16" height="18" rx="3" fill="#F59E0B"/>
+        <path d="M168 174c-9-10-7-23 0-30 7 7 9 20 0 30Z" fill="#16A34A"/>
+        <path d="M168 174c-12-4-15-13-13-19 7 1 12 9 13 19Z" fill="#22C55E"/>
+        <rect x="92" y="150" width="14" height="40" rx="6" fill="#0F172A"/>
+        <rect x="112" y="150" width="14" height="40" rx="6" fill="#0F172A"/>
+        <rect x="87" y="184" width="21" height="8" rx="4" fill="#1E293B"/>
+        <rect x="110" y="184" width="21" height="8" rx="4" fill="#1E293B"/>
+        <path d="M86 114c0-13 10-22 23-22s23 9 23 22v42H86Z" fill="#1E6BFF"/>
+        <path d="M101 93l8 10 8-10Z" fill="#FFFFFF"/>
+        <path d="M90 102l36 48" stroke="#0B1F4B" stroke-width="4" stroke-linecap="round"/>
+        <rect x="118" y="140" width="24" height="18" rx="4" fill="#0B1F4B"/>
+        <path d="M90 110c-6 12-6 24-2 34" stroke="#1557D6" stroke-width="11" stroke-linecap="round" fill="none"/>
+        <path d="M128 108c9 4 14 10 16 18" stroke="#1557D6" stroke-width="11" stroke-linecap="round" fill="none"/>
+        <rect x="136" y="100" width="28" height="36" rx="4" fill="#0F172A"/>
+        <rect x="139" y="103" width="22" height="28" rx="2" fill="#EFF6FF"/>
+        <rect x="142" y="120" width="4" height="8" rx="1" fill="#1E6BFF"/>
+        <rect x="148" y="115" width="4" height="13" rx="1" fill="#22C55E"/>
+        <rect x="154" y="109" width="4" height="19" rx="1" fill="#1E6BFF"/>
+        <path d="M142 114l6-5 5 3 6-6" stroke="#F59E0B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="143" cy="132" r="5" fill="#F6C7A8"/>
+        <rect x="103" y="80" width="12" height="14" rx="4" fill="#E8B08E"/>
+        <circle cx="109" cy="68" r="16" fill="#F6C7A8"/>
+        <path d="M93 67c0-12 8-20 17-20 10 0 16 7 16 16-6-4-14-5-22-3-4 1-8 3-11 7Z" fill="#1E293B"/>
+        <circle cx="103" cy="70" r="1.8" fill="#0F172A"/>
+        <circle cx="115" cy="70" r="1.8" fill="#0F172A"/>
+        <path d="M104 77c3 2.5 7 2.5 10 0" stroke="#9A5B3F" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        <g class="art-float">
+          <rect x="8" y="22" width="92" height="36" rx="10" fill="#FFFFFF"/>
+          <circle cx="26" cy="40" r="10" fill="#DBEAFE"/>
+          <circle cx="26" cy="37" r="3.4" fill="#1E6BFF"/>
+          <path d="M20 46c1-4 3.4-5.6 6-5.6s5 1.6 6 5.6Z" fill="#1E6BFF"/>
+          <text x="41" y="37" font-size="9" font-weight="800" fill="#0B1F4B" font-family="Inter, Arial, sans-serif">New Lead</text>
+          <text x="41" y="49" font-size="8" font-weight="700" fill="#16A34A" font-family="Inter, Arial, sans-serif">+12 today</text>
+        </g>
+        <g class="art-float delay">
+          <rect x="120" y="8" width="96" height="38" rx="10" fill="#FFFFFF"/>
+          <circle cx="139" cy="27" r="10" fill="#DCFCE7"/>
+          <path d="M134 27l3.6 3.6 6.6-7" stroke="#16A34A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <text x="154" y="24" font-size="9" font-weight="800" fill="#0B1F4B" font-family="Inter, Arial, sans-serif">Sale Closed</text>
+          <text x="154" y="37" font-size="8.5" font-weight="800" fill="#1E6BFF" font-family="Inter, Arial, sans-serif">&#8377; 999 / mo</text>
+        </g>
+        <g class="art-float slow">
+          <path d="M312 44l10-9 8 5 18-18" stroke="#22C55E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M340 20h10v10" stroke="#22C55E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="238" cy="30" r="9" fill="#F59E0B"/>
+          <text x="238" y="34" text-anchor="middle" font-size="10" font-weight="900" fill="#FFFFFF" font-family="Inter, Arial, sans-serif">&#8377;</text>
+        </g>
+        <circle cx="72" cy="76" r="2.5" fill="#60A5FA"/>
+        <circle cx="300" cy="10" r="2" fill="#93C5FD"/>
+        <circle cx="20" cy="78" r="2" fill="#93C5FD"/>
+      </svg>
+    </div>
   </section>
 
   <section class="screen app hidden" id="appScreen">
     <header class="topbar">
       <button class="icon-btn is-idle" id="backBtn" type="button" aria-label="Back"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg></button>
       <div class="title-area">
+        <img class="brand-mini" src="assets/axzenPOS.png?v=2" alt="">
         <div class="title-mark" id="titleMark"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg></div>
         <div class="title-text">
           <h1 id="pageTitle">Dashboard</h1>
           <p id="pageSub">Axzen employee workflow</p>
         </div>
       </div>
-      <button class="icon-btn" id="notifyBtn" type="button" aria-label="Notifications"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="notify-dot"></span></button>
+      <div class="top-actions">
+        <button class="icon-btn" id="notifyBtn" type="button" aria-label="Notifications"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="notify-dot"></span></button>
+        <button class="avatar-btn" id="avatarBtn" type="button" aria-label="Profile">AX</button>
+      </div>
     </header>
     <main id="page"></main>
     <nav class="bottom-nav" id="tabs"></nav>
@@ -1011,7 +1116,7 @@
   <script>
     const $ = id => document.getElementById(id);
     if (window.Capacitor) document.documentElement.classList.add("native-app");
-    const liveApi = "https://canteen.axzen.in";
+    const liveApi = "https://axzen-canteen-system.vercel.app";
     const API = (window.Capacitor || location.protocol === "capacitor:") ? liveApi : "";
     const TOKEN_KEY = "axzen_employee_token";
     const USER_KEY = "axzen_employee_user";
@@ -1066,7 +1171,17 @@
     };
 
     const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
-    const money = value => "Rs " + Number(value || 0).toLocaleString("en-IN");
+    const money = value => "₹ " + Number(value || 0).toLocaleString("en-IN");
+    const timeAgo = value => {
+      const time = new Date(value || 0).getTime();
+      if (!time) return "";
+      const minutes = Math.max(0, Math.round((Date.now() - time) / 60000));
+      if (minutes < 1) return "just now";
+      if (minutes < 60) return `${minutes}m ago`;
+      if (minutes < 1440) return `${Math.round(minutes / 60)}h ago`;
+      const days = Math.round(minutes / 1440);
+      return days < 30 ? `${days}d ago` : fmtDate(value);
+    };
     const fmtDate = value => value ? new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-";
     const fmtDateTime = value => {
       if (!value) return "";
@@ -1172,9 +1287,12 @@
       $("titleMark").className = `title-mark ${markTone}`;
       $("titleMark").innerHTML = lucideIcon(markIcon, 20);
       const detail = ["canteenDetail", "profile"].includes(route);
+      const home = route === "dashboard";
       $("appScreen").classList.toggle("detail-mode", detail);
+      $("appScreen").classList.toggle("is-home", home);
       $("titleMark").classList.toggle("hidden", detail);
       $("backBtn").classList.toggle("is-idle", !detail && stack.length === 0);
+      $("avatarBtn").textContent = employeeInitials();
       renderTabs();
     }
 
@@ -1324,6 +1442,44 @@
             { id: 4, name: "Business", offerPrice: "Custom Pricing", billingCycle: "month", active: true }
           ];
       return rows.filter(row => row.active !== false);
+    }
+
+    function planPrice(name) {
+      const row = planRows().find(item => String(item.name || "").trim().toLowerCase() === String(name || "").trim().toLowerCase());
+      const price = Number(String(row?.offerPrice || "").replace(/[^0-9.]/g, ""));
+      return price > 0 ? price : 0;
+    }
+
+    // Keeps the plan amount locked to the selected plan's price; custom-priced plans stay editable.
+    function bindPlanAmount({ plan, months, amount, paid, pending, lockPaid = false }) {
+      let lastTotal = null;
+      const sync = event => {
+        const price = planPrice($(plan).value);
+        const fixed = price > 0;
+        const total = price * Math.max(1, Number($(months)?.value || 1));
+        $(amount).readOnly = fixed;
+        $(amount).classList.toggle("locked", fixed);
+        if (fixed) $(amount).value = total;
+        const planChanged = !event || event.target === $(plan) || event.target === $(months);
+        if (paid) {
+          const locked = fixed && lockPaid;
+          $(paid).readOnly = locked;
+          $(paid).classList.toggle("locked", locked);
+          if (locked || (fixed && planChanged && lastTotal !== total)) $(paid).value = total;
+          if (Number($(paid).value || 0) > Number($(amount).value || 0)) $(paid).value = $(amount).value;
+        }
+        if (pending) {
+          $(pending).readOnly = true;
+          $(pending).classList.add("locked");
+          $(pending).value = Math.max(0, Number($(amount).value || 0) - Number($(paid)?.value || 0));
+        }
+        lastTotal = total;
+      };
+      $(plan).addEventListener("change", sync);
+      $(months)?.addEventListener("input", sync);
+      $(amount).addEventListener("input", sync);
+      $(paid)?.addEventListener("input", sync);
+      sync();
     }
 
     function planOptionsHtml(selected = "") {
@@ -1570,19 +1726,50 @@
       const tasks = todayTaskRows();
       const expired = expiredRows();
       const expiryDue = expiryFollowupRows();
-      setPage(isManager() ? "Control Center" : `Hi, ${user?.name || "Employee"}`, isManager() ? "Approvals, collections and team" : "Add customers and complete onboarding");
+      const manager = isManager();
+      const mine = (data.summary?.marketingPerformance || []).find(row => String(row.employeeId) === String(user?.employeeId)) || {};
+      const registered = manager ? Number(cards.totalCanteens ?? employeeRows().length) : Number(mine.registrations ?? employeeRows().length);
+      const target = Number(manager
+        ? (data.summary?.marketingPerformance || []).reduce((sum, row) => sum + Number(row.target || 0), 0)
+        : (mine.target ?? user?.target ?? 0)) || 20;
+      const progress = Math.min(100, Math.round((registered / target) * 100));
+      const closedRows = employeeRows().filter(isPayingOrTrialCustomer);
+      const closedValue = closedRows.reduce((sum, row) => sum + Number(row.paidAmount || 0), 0);
+      const commission = commissionRows().reduce((sum, row) => sum + Number(row.commission || 0), 0);
+      const todayKey = today();
+      const visitsToday = employeeRows().filter(item => timelineRows(item).concat(item.lastActivity || []).some(row =>
+        /visit/i.test(String(row?.type || "")) && dateKey(row?.createdAt) === todayKey
+      )).length;
+      const pendingCount = manager
+        ? (data.canteens || []).filter(x => String(x.status || "").toLowerCase().includes("pending")).length
+        : rows.filter(x => String(x.status || "").includes("Pending")).length;
+      const firstName = String(user?.name || "Employee").split(" ")[0];
+      setPage("Axzen POS Sales", "");
       $("page").innerHTML = `
-        <section class="hero">
-          <div class="section-head">
-            <div><h2>${isManager() ? "Business Snapshot" : "Today's Sales Route"}</h2><p>${fmtDate(new Date())}</p></div>
-            ${pill(token ? "Live" : "Demo")}
-          </div>
-          <div class="metrics three">
-            ${metric("Customers", cards.totalCanteens ?? rows.length)}
-            ${metric("Pending", rows.filter(x => String(x.status).includes("Pending")).length)}
-            ${metric("Collection", money(cards.todaysCollections || cards.monthlyRevenue || 0))}
-          </div>
+        <section class="greet">
+          <h2>Hello ${esc(firstName)} <span aria-hidden="true">👋</span></h2>
+          <p>Here's your today's performance</p>
         </section>
+        <section class="stat-row">
+          <button class="stat-card" type="button" data-route="${manager ? "approvals" : "canteens"}"><span>${manager ? "Pending Approvals" : "Today Visits"}</span><strong>${manager ? pendingCount : visitsToday}</strong><i class="stat-ico green">${lucideIcon(manager ? "shield" : "mapPin", 18)}</i></button>
+          <button class="stat-card" type="button" data-route="canteens"><span>Follow-ups</span><strong>${tasks.length}</strong><i class="stat-ico">${lucideIcon("userPlus", 18)}</i></button>
+        </section>
+        <section class="target-card">
+          <span class="target-label">This Month Target</span>
+          <strong>${target} <small>customers</small></strong>
+          <div class="progress"><i style="width:${progress}%"></i></div>
+          <div class="target-foot"><span><b>${registered}</b> achieved</span><span>${progress}%</span></div>
+        </section>
+        <section class="stat-row two">
+          <div class="stat-card mini"><i class="stat-ico green">${lucideIcon("check", 16)}</i><div><span>Closed Sales <em>(Total)</em></span><strong>${money(closedValue)}</strong></div></div>
+          <div class="stat-card mini"><i class="stat-ico red">${lucideIcon("creditCard", 16)}</i><div><span>Commission Earned</span><strong>${money(commission)}</strong></div></div>
+        </section>
+        <button class="btn block" type="button" data-route="${manager ? "approvals" : "add"}">${lucideIcon(manager ? "shield" : "plus", 18)} ${manager ? "Review Approvals" : "Add New Lead"}</button>
+        <section class="plain-section">
+          <div class="section-head"><h2>${manager ? "Needs Action" : "Recent Leads"}</h2><button class="plain-link" type="button" data-route="canteens">View All</button></div>
+          <div class="list">${customerList(rows.slice(0, 5))}</div>
+        </section>
+        <section class="section-head overview-head"><h2>Overview</h2><span class="muted">${pendingCount} pending</span></section>
         <section class="metrics three">
           ${metric("Active", cards.activeCanteens || 0)}
           ${metric("Trial", cards.trialCanteens || 0)}
@@ -1604,10 +1791,6 @@
           <div class="list">${expiryDue.length ? customerList(expiryDue.slice(0, 8)) : `<div class="empty">No trial or paid customers expiring in 2 days.</div>`}</div>
         </section>
         <section class="panel">
-          <div class="section-head"><h2>${isManager() ? "Needs Action" : "Open Leads"}</h2><button class="btn small soft" type="button" data-route="${isManager() ? "approvals" : "add"}">${isManager() ? "Open" : "Add New"}</button></div>
-          <div class="list">${customerList(rows.slice(0, 5))}</div>
-        </section>
-        <section class="panel">
           <div class="section-head"><h2>Fast Actions</h2>${pill(user?.employeeId || "User")}</div>
           <div class="actions">
             <button class="btn small" type="button" data-route="${isManager() ? "approvals" : "add"}">${isManager() ? "Review Approvals" : "Add Customer"}</button>
@@ -1621,13 +1804,14 @@
     function customerList(rows) {
       if (!rows.length) return `<div class="empty">No customers found.</div>`;
       return rows.map(row => `
-        <article class="row clickable" data-canteen="${esc(row.id)}">
-          <div>
+        <article class="row clickable lead-row" data-canteen="${esc(row.id)}">
+          <span class="row-ico">${lucideIcon("store", 20)}</span>
+          <div class="row-body">
             <h3>${esc(row.canteenName)}</h3>
-            <p>${esc(row.ownerName)} | ${esc(row.ownerMobile)}</p>
-            <p>${esc([row.city, row.state].filter(Boolean).join(", "))} | ${esc(row.selectedPlan || "Plan not set")}</p>
+            <p>${esc([row.ownerName, row.city].filter(Boolean).join(" · ") || row.ownerMobile || "")}</p>
+            <div class="row-status">${pill(row.status)}<span>${esc(timeAgo(row.updatedAt || row.createdAt))}</span></div>
           </div>
-          <div>${pill(row.status)}</div>
+          <span class="row-go">${lucideIcon("chevronRight", 18)}</span>
         </article>`).join("");
     }
 
@@ -1870,7 +2054,8 @@
     function openCloseSaleSheet(item) {
       const suggested = planRows().find(row => String(row.name || "").toLowerCase() === String(item.selectedPlan || "").toLowerCase()) || {};
       const amount = Number(item.paidAmount || String(suggested.offerPrice || "").replace(/[^0-9.]/g, "") || 999);
-      openSheet("Close Sale", `<label class="field">Selected Plan <select id="salePlan">${planOptionsHtml(item.selectedPlan || "Professional")}</select></label><label class="field">Plan Amount <input id="saleAmount" type="number" value="${amount}"></label><label class="field">Paid Amount <input id="salePaidAmount" type="number" value="${Number(item.paidAmount || amount)}"></label><label class="field">Pending Amount <input id="salePendingAmount" type="number" value="${Number(item.pendingAmount || 0)}"></label><label class="field">Plan Months <input id="salePlanMonths" type="number" min="1" value="1"></label><label class="field">Payment Status <select id="salePaymentStatus"><option>Paid</option><option>Partially Paid</option><option>Pending</option></select></label><label class="field">Payment Mode <select id="salePaymentMode"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Payment Link</option></select></label><label class="field">Printer Required <select id="salePrinter"><option>Yes</option><option>No</option></select></label><label class="field">Installation Date <input id="saleInstallDate" type="date" value="${today()}"></label>${activityForm(`<button class="btn red" id="submitSaleBtn" type="button">Submit Sale For Approval</button>`)}`);
+      openSheet("Close Sale", `<label class="field">Selected Plan <select id="salePlan">${planOptionsHtml(item.selectedPlan || "Professional")}</select></label><label class="field">Plan Months <input id="salePlanMonths" type="number" min="1" value="1"></label><label class="field">Plan Amount <input id="saleAmount" type="number" value="${amount}"></label><label class="field">Paid Amount <input id="salePaidAmount" type="number" value="${Number(item.paidAmount || amount)}"></label><label class="field">Pending Amount <input id="salePendingAmount" type="number" value="${Number(item.pendingAmount || 0)}"></label><label class="field">Payment Status <select id="salePaymentStatus"><option>Paid</option><option>Partially Paid</option><option>Pending</option></select></label><label class="field">Payment Mode <select id="salePaymentMode"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank Transfer</option><option>Payment Link</option></select></label><label class="field">Printer Required <select id="salePrinter"><option>Yes</option><option>No</option></select></label><label class="field">Installation Date <input id="saleInstallDate" type="date" value="${today()}"></label>${activityForm(`<button class="btn red" id="submitSaleBtn" type="button">Submit Sale For Approval</button>`)}`);
+      bindPlanAmount({ plan: "salePlan", months: "salePlanMonths", amount: "saleAmount", paid: "salePaidAmount", pending: "salePendingAmount" });
       $("submitSaleBtn").addEventListener("click", () => saveWorkflow(item, {
         type: "Sale Submitted",
         outcome: formValue("salePaymentStatus"),
@@ -1956,6 +2141,19 @@
         applyPlaceholder();
         categorySelect.addEventListener("change", applyPlaceholder);
       }
+      const syncLeadAmount = () => {
+        const paidPlan = $("planType").value === "Paid";
+        const price = planPrice($("selectedPlan").value);
+        const locked = !paidPlan || price > 0;
+        $("paidAmount").readOnly = locked;
+        $("paidAmount").classList.toggle("locked", locked);
+        if (!paidPlan) $("paidAmount").value = 0;
+        else if (price > 0) $("paidAmount").value = price;
+        $("pendingAmount").value = 0;
+      };
+      $("planType").addEventListener("change", syncLeadAmount);
+      $("selectedPlan").addEventListener("change", syncLeadAmount);
+      syncLeadAmount();
     }
 
     async function submitCustomer(event) {
@@ -2164,13 +2362,15 @@
       $("sheetCard").innerHTML = `
         <div class="section-head"><h2>Update Payment</h2><button class="icon-btn" id="closeSheetBtn" type="button"><svg viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>
         <label class="field">Plan <select id="payPlan">${planOptionsHtml(item.selectedPlan || "Professional")}</select></label>
-        <label class="field">Paid Amount <input id="payPaid" type="number" value="${Number(item.paidAmount || 0)}"></label>
-        <label class="field">Pending Amount <input id="payPending" type="number" value="${Number(item.pendingAmount || 0)}"></label>
         <label class="field">Plan Months <input id="payMonths" type="number" min="1" value="1"></label>
+        <label class="field">Plan Amount <input id="payAmount" type="number" min="0" value="${Number(item.paidAmount || 0)}"></label>
+        <label class="field">Paid Amount <input id="payPaid" type="number" min="0" value="${Number(item.paidAmount || 0)}"></label>
+        <label class="field">Pending Amount <input id="payPending" type="number" value="${Number(item.pendingAmount || 0)}"></label>
         <label class="field">Payment Mode <select id="payMode"><option>UPI</option><option>Cash</option><option>Bank Transfer</option><option>Payment Link</option></select></label>
         <button class="btn" id="savePayment" type="button">${manager ? "Save & Activate" : "Send For Manager Approval"}</button>`;
       $("sheet").classList.remove("hidden");
       $("closeSheetBtn").addEventListener("click", closeSheet);
+      bindPlanAmount({ plan: "payPlan", months: "payMonths", amount: "payAmount", paid: "payPaid", pending: "payPending", lockPaid: true });
       $("savePayment").addEventListener("click", async () => {
         try {
           setBusy(true);
@@ -2508,7 +2708,19 @@
       $("sheet").classList.add("hidden");
     }
 
+    let shownRoute = "";
     function render() {
+      const page = $("page");
+      if (route !== shownRoute) {
+        page.classList.remove("page-enter");
+        void page.offsetWidth;
+        page.classList.add("page-enter");
+        shownRoute = route;
+      }
+      return renderRoute();
+    }
+
+    function renderRoute() {
       if (route === "dashboard") return renderDashboard();
       if (route === "canteens") return renderCanteens();
       if (route === "canteenDetail") return renderDetail();
@@ -2583,6 +2795,7 @@
       return false;
     };
     $("notifyBtn").addEventListener("click", openNotifications);
+    $("avatarBtn").addEventListener("click", () => go("profile"));
     $("sheet").addEventListener("click", event => {
       if (event.target.id === "sheet") closeSheet();
     });
