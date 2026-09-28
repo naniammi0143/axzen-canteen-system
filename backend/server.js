@@ -3262,18 +3262,19 @@ app.post("/login", requireDatabase, async (req, res) => {
   const mobile = normalizeMobile(req.body.mobile || req.body.loginId);
   const canteenHint = normalizeCanteenId(req.body.canteenId || req.body.restaurantId || "");
   const loginAsCanteenId = normalizeCanteenId(loginId);
+  const compactCanteenId = value => normalizeCanteenId(value).replace(/[^A-Z0-9]/g, "");
   const password = String(req.body.password || "");
   const users = (await allUsers()).filter(item => item.active !== false && String(item.password) === password);
   const matches = users.filter(item => {
     const itemCanteenId = normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID);
     const itemMobile = normalizeMobile(item.mobile);
-    const canteenOk = !canteenHint || itemCanteenId === canteenHint;
-    return canteenOk && (itemMobile === loginId || itemMobile === mobile || itemCanteenId === loginAsCanteenId);
+    const canteenOk = !canteenHint || compactCanteenId(itemCanteenId) === compactCanteenId(canteenHint);
+    return canteenOk && (itemMobile === loginId || itemMobile === mobile || (loginAsCanteenId && compactCanteenId(itemCanteenId) === compactCanteenId(loginAsCanteenId)));
   });
 
   const mobileMatches = matches.filter(item => normalizeMobile(item.mobile) === loginId || normalizeMobile(item.mobile) === mobile);
   const uniqueCanteens = new Set(mobileMatches.map(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID)));
-  if (!canteenHint && mobileMatches.length > 1 && uniqueCanteens.size > 1 && loginAsCanteenId !== normalizeCanteenId(matches[0]?.canteenId)) {
+  if (!canteenHint && mobileMatches.length > 1 && uniqueCanteens.size > 1 && compactCanteenId(loginAsCanteenId) !== compactCanteenId(matches[0]?.canteenId)) {
     return res.status(409).json({ success: false, message: "Restaurant ID required for this mobile number" });
   }
 
@@ -3284,7 +3285,7 @@ app.post("/login", requireDatabase, async (req, res) => {
     if (access.allowed) allowedMatches.push(item);
     else if (access.message) blockedMessage = access.message;
   }
-  const user = allowedMatches.find(item => normalizeCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === loginAsCanteenId) || allowedMatches[0];
+  const user = allowedMatches.find(item => compactCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === compactCanteenId(loginAsCanteenId)) || allowedMatches[0];
 
   if (!user) return res.status(401).json({ success: false, message: blockedMessage });
   const canteen = await getCoreCanteen(user.canteenId);
@@ -3554,10 +3555,12 @@ app.get("/app-update/bundles/:id", requireDatabase, requireCanteenAuth, async (r
   if (!canteen || String(canteen.appReleaseId || "") !== String(req.params.id)) return res.status(403).json({ success: false, message: "Release is not assigned to this canteen" });
   const release = await AppRelease.findOne({ _id: req.params.id, status: "Published" }).lean();
   if (!release?.bundle) return res.status(404).json({ success: false, message: "Release bundle not found" });
+  const raw = release.bundle;
+  const bundle = Buffer.isBuffer(raw) ? raw : Buffer.from(raw.buffer || raw);
   res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Length", release.bundle.length);
+  res.setHeader("Content-Length", bundle.length);
   res.setHeader("Cache-Control", "private, no-store");
-  res.send(release.bundle);
+  res.send(bundle);
 });
 
 app.post("/marketing-api/login", requireDatabase, async (req, res) => {
