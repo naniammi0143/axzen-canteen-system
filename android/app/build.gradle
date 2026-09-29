@@ -13,8 +13,8 @@ android {
         applicationId "com.axzenhospitality.canteenclean"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 368
-        versionName "3.68"
+        versionCode 376
+        versionName "3.76"
         setProperty("archivesBaseName", "Axzen-DineIn")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

@@ -3,8 +3,8 @@
   --muted: #667085;
   --line: #e6e8ec;
   --paper: #fff;
-  --chrome: #79bb7b;
-  --chrome-strong: #4f9a55;
+  --chrome: #edf3f5;
+  --chrome-strong: #146c60;
   --card: #fff;
   --free: #1f8a4c;
   --busy: #c47b12;
@@ -167,4 +167,55 @@ dialog.di-dialog[open] {
   .di-table h2 { font-size: 22px; }
   dialog.di-dialog[open] { padding: 10px 12px 12px; }
   .di-dialog-head h2 { font-size: 20px; }
+}
+
+/* Floor workspace: calm surfaces, clear status, generous touch targets. */
+.di { background: #f4f6f8; min-height: 100%; --line: #dfe5eb; }
+.di > header { padding: 20px; border-radius: 18px; box-shadow: 0 2px 6px #17203305; }
+.di-brand h1 { font-size: 28px; }
+.di-stats { gap: 8px; }
+.di-stats span { background: #f4f6f8; color: #526273; border: 1px solid #e7ecf0; }
+.di-stats b { color: #172d3b; font-variant-numeric: tabular-nums; }
+.di nav { background: #f0f3f5; border-radius: 12px; padding: 4px; gap: 4px; }
+.di nav .soft { background: transparent; color: #526273; }
+.di-btn { font-family: inherit; font-size: 13px; font-weight: 650; min-height: 44px; }
+.di-btn.soft { color: #34495a; }
+.di-board-head { margin: 24px 0 16px; }
+.di-board-head h2 { font-size: 20px; letter-spacing: -.025em; }
+.di-board-head p { font-size: 13px; }
+.di-floor-filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 12px; }
+.di-floor-filters button { display: flex; align-items: center; gap: 10px; white-space: nowrap; text-transform: capitalize; border: 1px solid var(--line); border-radius: 24px; background: white; color: #526273; padding: 10px 14px; min-height: 44px; font: inherit; font-size: 13px; cursor: pointer; }
+.di-floor-filters button[aria-pressed="true"] { background: #183c39; border-color: #183c39; color: white; }
+.di-floor-filters b { font-size: 12px; opacity: .8; }
+.di-legend { gap: 14px; margin: 4px 0 22px; }
+.di-zone > h2 { color: #526273; font-size: 12px; text-transform: uppercase; letter-spacing: .09em; margin-bottom: 12px; }
+.di-grid { gap: 12px; }
+.di-table { position: relative; min-height: 160px; padding: 16px; border-left-width: 1px; border-top: 4px solid var(--free); box-shadow: 0 2px 4px #17203304; }
+.di-table.occupied { border-top-color: var(--busy); background: #fffcf6; }
+.di-table.reserved { border-top-color: var(--hold); background: #fcfaff; }
+.di-table.cleaning, .di-table.closing { border-top-color: var(--clean); background: #f7fcfd; }
+.di-table.disabled { border-top-color: var(--off); }
+.di-table .di-table-label { font-size: 10px; letter-spacing: .14em; font-weight: 700; }
+.di-table h2 { font-size: 32px; margin: 8px 0 10px; overflow-wrap: anywhere; }
+.di-table-status { display: inline-block; padding: 4px 8px; border-radius: 6px; background: #edf3f0; color: #24664a; }
+.di-table.occupied .di-table-status { color: #935f12; background: #fff0d4; }
+.di-table.reserved .di-table-status { color: #6550a3; background: #efe9ff; }
+.di-table.cleaning .di-table-status { color: #126c7d; background: #dff2f5; }
+.di-table p { font-size: 12px; color: #667085; margin-top: 10px; }
+.di-card, .di-ticket { border-left: 1px solid var(--line); }
+.di-card h3 { margin: 0 0 12px; font-size: 18px; }
+.di-dialog-head { padding: 8px 0 14px; border-bottom: 1px solid var(--line); }
+.di-dialog-head small { text-transform: uppercase; letter-spacing: .12em; font-weight: 700; }
+.di-dialog-content { padding-top: 8px; }
+.di-draft p { padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.di [data-di="send"], .di [data-di="settle"] { width: 100%; margin-top: 8px; }
+.di button:focus-visible, .di input:focus-visible, .di select:focus-visible { outline: 3px solid #378fba; outline-offset: 2px; }
+@media(max-width:760px) {
+ .di { padding: 12px 12px 96px; }
+ .di > header { padding: 16px; gap: 16px; }
+ .di-stats { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); }
+ .di-stats span { min-width: 0; font-size: 11px; }
+ .di-table { padding: 12px; min-height: 158px; }
+ .di-kanban { grid-template-columns: 1fr; }
+ dialog.di-dialog[open] { padding-top: max(16px, env(safe-area-inset-top)); }
 }

@@ -59,7 +59,7 @@ test('restaurant cooked meat dishes use quantity; explicit weights and meat shop
   assert.equal(ctx.isChickenProduct({ name: 'Egg', billingType: 'quantity' }), false);
 });
 test('Back closes modal before navigation, preserves Dine In interception, and returns to categories', () => {
-  const nodes = { paymentModalMount: { children: [1] }, optionsModalMount: { children: [] }, adminView: { classList: { contains: () => true } } };
+  const nodes = { itemSearchBar: { classList: { contains: () => true } }, paymentModalMount: { children: [1] }, optionsModalMount: { children: [] }, adminView: { classList: { contains: () => true } } };
   const calls = [];
   const ctx = vm.createContext({ window: { DineIn: { back: () => true } }, $: id => nodes[id],
     activePosSection: 'dinein', itemSearch: '', showingCategoryHome: false,

@@ -81,3 +81,28 @@ test('table → portion → kitchen → served → payment → report → cleani
     await f.click('reports'); assert.match(f.root.textContent, /1 bills/); assert.match(f.root.textContent, /₹120.00/);
   } finally { f.close(); }
 });
+
+test('local table and draft actions stay responsive when the network stalls', async () => {
+  const dom = new JSDOM('<main id="root"></main>', { url: 'https://test.invalid', runScripts: 'outside-only' });
+  const { window } = dom; window.eval(source);
+  let reads = 0;
+  const root = window.document.getElementById('root');
+  window.DineIn.mount(root, {
+    api: async () => {
+      if (++reads > 1) return new Promise(() => {});
+      return { enabled: true, tables: [{ tableId: 't1', name: '1', zone: 'Hall', seats: 4, status: 'available', active: true, revision: 0 }] };
+    },
+    getMenu: async () => [{ id: 1, name: 'Meals', price: 100 }]
+  });
+  try {
+    await tick();
+    root.querySelector('[data-di="select"]').click();
+    assert.ok(root.querySelector('#di-product'));
+    root.querySelector('[data-di="add"]').click();
+    assert.match(root.querySelector('.di-draft').textContent, /Meals/);
+    assert.equal(root.querySelector('[data-di="send"]').disabled, false);
+    assert.equal(reads, 1);
+    root.querySelector('[data-di="remove"]').click();
+    assert.equal(root.querySelector('.di-draft').textContent, '');
+  } finally { window.DineIn.close(); window.close(); }
+});

@@ -7,6 +7,7 @@ window.DineIn = (() => {
   let back = () => false;
   function mount(root, options) {
     dispose();
+    let refreshing = false, floorFilter = "all";
     let stopped = false, busy = false, access = null, selected = "", mode = options.mode || "tables", menu = [], bills = [], draft = [], requestId = id(), message = "", error = false;
     let draftRevision = null, pendingSend = false, panel = "order", addingTable = false, fieldValues = {}, fieldScope = null;
     const api = (path, body, admin = false) => (admin ? options.adminApi || options.api : options.api)(path, body === undefined ? {} : { method: "POST", body: JSON.stringify(body), timeoutMs: 15000 });
@@ -33,7 +34,7 @@ window.DineIn = (() => {
     }
     function tableButton(t) {
       const open = summary(t);
-      return `<button class="di-table ${esc(t.status)}${t.tableId === selected ? " is-selected" : ""}" data-di="select" data-value="${esc(t.tableId)}" aria-pressed="${t.tableId === selected}"><span>Table</span><h2>${esc(t.name)}</h2><b>${esc(t.status)}</b><p>${t.seats} seats${t.session?.guests ? ` · ${t.session.guests} guests` : ""} · ${money(open.total)}${t.reservation ? ` · ${esc(t.reservation)}` : ""}</p></button>`;
+      return `<button class="di-table ${esc(t.status)}${t.tableId === selected ? " is-selected" : ""}" data-di="select" data-value="${esc(t.tableId)}" aria-pressed="${t.tableId === selected}"><span class="di-table-label">TABLE</span><h2>${esc(t.name)}</h2><b class="di-table-status">${esc(t.status)}</b><p>${t.seats} seats${t.session?.guests ? ` · ${t.session.guests} guests` : ""} · ${money(open.total)}${t.reservation ? ` · ${esc(t.reservation)}` : ""}</p></button>`;
     }
     function render() {
       if (!active()) return;
@@ -57,10 +58,10 @@ window.DineIn = (() => {
         dineBills.forEach(b => { const g = groups.get(b.tableId) || { name: b.tableName, count: 0, total: 0 }; g.count++; g.total += Number(b.total); groups.set(b.tableId, g); });
         html = `<div class="di-board-head"><h2>Table-wise bills</h2><p>Saved bills · ${dineBills.length} bills · ${money(dineBills.reduce((s, b) => s + Number(b.total), 0))}</p></div><div class="di-grid">${[...groups.values()].map(g => `<div class="di-card"><h3>Table ${esc(g.name)}</h3><p>${g.count} bills · ${money(g.total)}</p></div>`).join("")}</div><div class="di-scroll"><table><thead><tr><th>Date</th><th>Table</th><th>Bill</th><th>Payment</th><th>Total</th><th>Receipt</th></tr></thead><tbody>${dineBills.slice().reverse().map(b => `<tr><td>${esc(b.time)}</td><td>${esc(b.tableName)}</td><td>${esc(b.id)}</td><td>${esc(b.payment)}</td><td>${money(b.total)}</td><td>${button("print-bill", "Print", b.clientOrderId)}</td></tr>`).join("") || '<tr><td colspan="6">No settled Dine In bills</td></tr>'}</tbody></table></div>`;
       } else {
-        const tables = floorTables();
+        const tables = floorTables().filter(t => floorFilter === "all" || t.status === floorFilter);
         const groups = new Map();
         tables.forEach(t => { const zone = t.zone || "Floor"; if (!groups.has(zone)) groups.set(zone, []); groups.get(zone).push(t); });
-        html = `<div class="di-legend"><span class="available">Available</span><span class="reserved">Reserved</span><span class="occupied">Occupied</span><span class="cleaning">Cleaning</span><span class="disabled">Disabled</span></div>${[...groups.entries()].map(([zone, rows]) => `<section class="di-zone"><h2>${esc(zone)}</h2><div class="di-grid">${rows.map(tableButton).join("")}</div></section>`).join("") || "<p>No tables yet. Ask your restaurant admin to add tables.</p>"}${options.admin ? `<p class="di-add">${button("new-table", "+ Add table")}</p>` : ""}`;
+        html = `<div class="di-board-head"><h2>Your tables</h2><p>Select a table to take an order or manage its bill.</p></div><div class="di-floor-filters" aria-label="Filter tables">${["all", "available", "occupied", "reserved", "cleaning"].map(status => `<button type="button" data-di="filter" data-value="${status}" aria-pressed="${floorFilter === status}">${status === "all" ? "All tables" : status}<b>${floorTables().filter(t => status === "all" || t.status === status).length}</b></button>`).join("")}</div><div class="di-legend"><span class="available">Available</span><span class="reserved">Reserved</span><span class="occupied">Occupied</span><span class="cleaning">Cleaning</span><span class="disabled">Disabled</span></div>${[...groups.entries()].map(([zone, rows]) => `<section class="di-zone"><h2>${esc(zone)}</h2><div class="di-grid">${rows.map(tableButton).join("")}</div></section>`).join("") || "<p>No tables in this view. Choose another status or add a table.</p>"}${options.admin ? `<p class="di-add">${button("new-table", "+ Add table")}</p>` : ""}`;
         if (row || addingTable) {
           let panelHtml = "";
           if (addingTable) panelHtml = `${tableForm()}${button("save-table", "Create table")}`;
@@ -68,7 +69,7 @@ window.DineIn = (() => {
             const total = summary(row);
             panelHtml = `<p class="di-meta">${esc(row.zone)} · ${row.seats} seats ${row.reservation ? `· ${esc(row.reservation)}` : ""}</p>`;
             if (["available", "reserved", "occupied"].includes(row.status) && row.active) {
-              panelHtml += `<div class="di-layout"><section class="di-card"><h3>Add food</h3><label>Item <select id="di-product">${menu.map(p => `<option value="${esc(p.choiceId)}">${esc(p.name)} · ${money(p.price)}</option>`).join("")}</select></label><div class="di-row"><label>Quantity<input id="di-qty" type="number" min="1" max="999" step="1" value="1"></label><label>Guests<input id="di-guests" type="number" min="1" max="${row.seats}" value="${row.session?.guests || 1}" ${row.session ? "disabled" : ""}></label></div><label>Kitchen note<input id="di-note" maxlength="200" placeholder="Less spicy, no onion…"></label>${button("add", "Add item")}<div class="di-draft">${draft.map((i, n) => `<p>${i.qty} × ${esc(i.name)} · ${money(i.qty * i.price)} ${button("remove", "Remove", n, "soft")}</p>`).join("")}</div><strong>New order: ${money(draft.reduce((s, i) => s + i.price * i.qty, 0))}</strong><p>${button("send", "Send order to kitchen")}</p><small>Only newly added items are sent. Sent orders remain on this table until payment.</small></section><section class="di-card"><h3>Open bill · ${money(total.total)}</h3>${total.items.map(i => `<p>${i.qty} × ${esc(i.name)} <strong>${money(i.qty * i.price)}</strong></p>`).join("") || "No items ordered yet"}${total.items.length ? `<label>Payment<select id="di-payment"><option>Cash</option><option>Online</option><option>Card</option><option>Split</option></select></label><label>Cash portion (Split only)<input id="di-cash" type="number" min="0" step="0.01" value="0"></label>${options.admin ? '<label>Discount<input id="di-discount" type="number" min="0" step="0.01" value="0"></label>' : ""}${button("settle", "Confirm payment & close bill")}` : row.session && options.admin ? button("close-empty", "Close cancelled table") : ""}</section></div>`;
+              panelHtml += `<div class="di-layout"><section class="di-card"><h3>Build your order</h3><p class="di-meta">Choose an item, add quantity, then send to kitchen.</p><label>Item <select id="di-product">${menu.map(p => `<option value="${esc(p.choiceId)}">${esc(p.name)} · ${money(p.price)}</option>`).join("")}</select></label><div class="di-row"><label>Quantity<input id="di-qty" type="number" min="1" max="999" step="1" value="1"></label><label>Guests<input id="di-guests" type="number" min="1" max="${row.seats}" value="${row.session?.guests || 1}" ${row.session ? "disabled" : ""}></label></div><label>Kitchen note<input id="di-note" maxlength="200" placeholder="Less spicy, no onion…"></label>${button("add", "Add item")}<div class="di-draft">${draft.map((i, n) => `<p>${i.qty} × ${esc(i.name)} · ${money(i.qty * i.price)} ${button("remove", "Remove", n, "soft")}</p>`).join("")}</div><strong>New order: ${money(draft.reduce((s, i) => s + i.price * i.qty, 0))}</strong><p>${button("send", "Send order to kitchen")}</p><small>Only newly added items are sent. Sent orders remain on this table until payment.</small></section><section class="di-card"><h3>Open bill · ${money(total.total)}</h3>${total.items.map(i => `<p>${i.qty} × ${esc(i.name)} <strong>${money(i.qty * i.price)}</strong></p>`).join("") || "No items ordered yet"}${total.items.length ? `<label>Payment<select id="di-payment"><option>Cash</option><option>Online</option><option>Card</option><option>Split</option></select></label><label>Cash portion (Split only)<input id="di-cash" type="number" min="0" step="0.01" value="0"></label>${options.admin ? '<label>Discount<input id="di-discount" type="number" min="0" step="0.01" value="0"></label>' : ""}${button("settle", "Confirm payment & close bill")}` : row.session && options.admin ? button("close-empty", "Close cancelled table") : ""}</section></div>`;
             }
             if (row.status === "available") panelHtml += button("reserve", "Reserve table", "", "soft");
             if (["reserved", "cleaning"].includes(row.status)) panelHtml += button("available", row.status === "cleaning" ? "Mark cleaned / available" : "Release reservation");
@@ -98,6 +99,7 @@ window.DineIn = (() => {
       if (!active()) return;
       access = next;
       if (!access.enabled) { draft = []; requestId = id(); }
+      if (draw) render();
       if (access.enabled && !menu.length) menu = (await options.getMenu()).filter(p => p.billingType !== "weight" && !p.hidden).flatMap(p => [p, ...(p.subItems || []).map(o => ({ ...p, name: `${p.name} (${o.name})`, price: o.price, optionName: o.name }))]).map((p, index) => ({ ...p, choiceId: String(index) }));
       const acknowledged = selected && table()?.session?.tickets.some(t => t.id === requestId);
       if (pendingSend && acknowledged) { pendingSend = false; draft = []; requestId = id(); draftRevision = null; message = "Kitchen order was saved. Use Reprint KOT if you did not receive a print."; }
@@ -115,6 +117,7 @@ window.DineIn = (() => {
       if (!btn || busy) return;
       const action = btn.dataset.di, value = btn.dataset.value, row = table();
       if (action === "close-popup") { back(); return; }
+      if (action === "filter") { floorFilter = value; render(); return; }
       if (action === "panel") { panel = value; render(); return; }
       if (action === "new-table") { addingTable = true; render(); return; }
       busy = true; error = false; message = "";
@@ -169,7 +172,7 @@ window.DineIn = (() => {
           options.printBill(action === "last-bill" ? row.lastBill : bills.find(b => b.clientOrderId === value)); message = "Reprint requested. Verify printer output.";
         }
         if (action === "save-table") addingTable = false;
-        await refresh(false);
+        if (!["select", "back", "add", "remove", "tables", "kitchen", "print-kot", "last-bill", "print-bill"].includes(action)) await refresh(false);
       } catch (e) {
         if (e.status >= 400 && e.status < 500) pendingSend = false;
         message = e.message; error = true;
@@ -180,7 +183,7 @@ window.DineIn = (() => {
     }
     root.addEventListener("click", click);
     render(); refresh().catch(e => { message = e.message; error = true; render(); });
-    const timer = setInterval(() => { if (!active()) return clearInterval(timer); if (!busy && !selected && !addingTable && mode !== "reports") refresh().catch(e => { message = `Connection lost: ${e.message}. Refresh before ordering.`; error = true; render(); }); }, 5000);
+    const timer = setInterval(() => { if (!active()) return clearInterval(timer); if (!busy && !refreshing && !document.hidden && !selected && !addingTable && mode !== "reports") { refreshing = true; refresh().catch(e => { message = `Connection lost: ${e.message}. Refresh before ordering.`; error = true; render(); }).finally(() => { refreshing = false; }); } }, 5000);
     dispose = () => { stopped = true; clearInterval(timer); root.removeEventListener("click", click); };
     return dispose;
   }

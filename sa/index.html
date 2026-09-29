@@ -13,9 +13,9 @@
   <script src="app-updater.js"></script>
   <link rel="icon" href="assets/axzenPOS.png?v=2" type="image/png">
   <link rel="apple-touch-icon" href="assets/axzenPOS.png?v=2">
-  <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+  <script async src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    /* System fonts keep first paint independent of the network. */
     :root {
       --ink: #111827;
       --muted: #6b7280;
@@ -7035,7 +7035,7 @@
     }
 
     function preloadProductImages(rows) {
-      (rows || []).slice(0, 80).forEach(item => {
+      (rows || []).slice(0, 8).forEach(item => {
         if (!item || !item.image) return;
         const img = new Image();
         img.loading = "eager";
@@ -10069,7 +10069,7 @@
       if (activePosSection === "dinein") {
         window.DineIn.mount(page, {
           api, adminApi, admin: hasAdminAccess(),
-          getMenu: () => api("/products"),
+          getMenu: () => products.length ? products : api("/products"),
           isActive: () => activePosSection === "dinein" && Boolean(user),
           printKot: (table, ticket, copy) => {
             if (!kitchenPrinterEnabled || !kitchenPrinter) return "Select and enable a Kitchen Printer in Settings; ticket remains visible in Kitchen.";
@@ -12527,7 +12527,7 @@
       renderCart();
       updateSyncStatus();
       setPosSection("billing");
-      await loadSettings().catch(() => applySettings(settings));
+      loadSettings().then(() => renderProducts()).catch(() => applySettings(settings));
       window.AxzenAppUpdater?.check({ apiBase: API, token: localStorage.getItem(tokenKey) }).catch(() => {});
       if (isChickenShopCanteen()) activeCategory = chickenCategory;
       loadProducts().catch(() => renderProducts());

@@ -81,6 +81,12 @@ public class MainActivity extends BridgeActivity {
 
     private void restoreInstalledRelease() {
         SharedPreferences prefs = getSharedPreferences(UPDATE_PREFS, MODE_PRIVATE);
+        long apkInstalledAt = 0;
+        try { apkInstalledAt = getPackageManager().getPackageInfo(getPackageName(), 0).lastUpdateTime; } catch (Exception ignored) {}
+        if (prefs.getLong("apkInstalledAt", -1) != apkInstalledAt) {
+            // A freshly installed APK ships newer web assets than any OTA bundle downloaded for the previous APK.
+            prefs.edit().clear().putLong("apkInstalledAt", apkInstalledAt).apply();
+        }
         String activePath = prefs.getString("activePath", "");
         if (prefs.getBoolean("pendingHealth", false)) {
             activePath = prefs.getString("previousPath", "");
