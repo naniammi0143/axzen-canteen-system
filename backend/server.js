@@ -3541,6 +3541,7 @@ app.post("/help/tickets", requireDatabase, requireCanteenAuth, async (req, res) 
 });
 
 app.get("/app-update/manifest", requireDatabase, requireCanteenAuth, async (req, res) => {
+  res.setHeader("Cache-Control", "private, no-store");
   const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
   const canteen = await MarketingCanteen.findOne({ activatedCanteenId: canteenId }).lean();
   if (!canteen?.appReleaseId) return res.status(204).end();
