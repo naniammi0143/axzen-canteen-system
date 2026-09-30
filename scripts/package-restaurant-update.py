@@ -3,7 +3,7 @@ from pathlib import Path
 import zipfile
 
 root = Path(__file__).resolve().parent.parent
-target = root / 'release-files' / 'Axzen-Restaurant-Update-3.81.0.zip'
+target = root / 'release-files' / 'Axzen-Restaurant-Update-3.82.0.zip'
 allowed = {'.js', '.cjs', '.json', '.html', '.css', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.txt', '.md'}
 files = []
 for name in ('backend', 'sa', 'admin-web', 'marketing-web', 'employee-web', 'api', 'pos-axzen-in/partner', 'pos-axzen-in/api', 'pos-axzen-in/assets', 'pos-axzen-in/sales'):
@@ -20,7 +20,10 @@ for name in ('package.json', 'package-lock.json', 'vercel.json', 'README.md', 'p
 with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as archive:
     for file in sorted(files):
         archive.write(file, file.relative_to(root).as_posix())
-    archive.writestr('RELEASE-3.81.txt', '''Axzen Restaurant 3.81
+    archive.writestr('RELEASE-3.82.txt', '''Axzen Restaurant 3.82
+
+App drawer, Settings and update notifications show the running version. Console
+shows installed Android version separately from assigned releases and web POS.
 
 Chicken/weight billing remains stable across refresh and login changes. Menus,
 settings and in-flight responses are isolated by restaurant login. Dine In is

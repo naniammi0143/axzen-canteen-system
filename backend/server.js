@@ -587,6 +587,9 @@ const marketingCanteenSchema = new mongoose.Schema({
   ,appReleaseVersion: String
   ,appInstalledVersion: String
   ,appInstalledAt: String
+  ,appVersionReportedAt: String
+  ,webInstalledVersion: String
+  ,webVersionReportedAt: String
   ,posTrialReason: String
   ,takeawayEnabled: { type: Boolean, default: true }
 }, { timestamps: true, collection: "marketing_canteens" });
@@ -952,14 +955,14 @@ async function tokenUserAccessStatus(user) {
   return canteenAccessStatus(canteenId);
 }
 
-async function markCanteenSeen(canteenId, installedVersion = "") {
+async function markCanteenSeen(canteenId, installedVersion = "", client = "android") {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
   const seen = new Date().toISOString();
   const version = String(installedVersion || "").trim().slice(0, 40);
   const patch = { online: true, lastSeenAt: seen };
-  if (version) {
-    patch.appInstalledVersion = version;
-    patch.appInstalledAt = seen;
+  if (version && !/^(bundled|bundled apk)$/i.test(version)) {
+    if(client === 'web') {patch.webInstalledVersion=version;patch.webVersionReportedAt=seen;}
+    else {patch.appInstalledVersion=version;patch.appVersionReportedAt=seen;}
   }
   if (!mongoReady) {
     const item = memory.marketingCanteens.find(row => normalizeCanteenId(row.activatedCanteenId) === targetCanteenId);
@@ -998,7 +1001,7 @@ async function requireAdmin(req, res, next) {
     if (!access.allowed) {
       return res.status(403).json({ success: false, message: access.message });
     }
-    markCanteenSeen(req.authUser.canteenId, req.get("x-axzen-app-version")).catch(() => {});
+    markCanteenSeen(req.authUser.canteenId, req.get("x-axzen-app-version"), req.get("x-axzen-client") || "android").catch(() => {});
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
@@ -1017,7 +1020,7 @@ async function requireStockAccess(req, res, next) {
     if (!access.allowed) {
       return res.status(403).json({ success: false, message: access.message });
     }
-    markCanteenSeen(req.authUser.canteenId, req.get("x-axzen-app-version")).catch(() => {});
+    markCanteenSeen(req.authUser.canteenId, req.get("x-axzen-app-version"), req.get("x-axzen-client") || "android").catch(() => {});
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });
@@ -1036,7 +1039,7 @@ async function requireCanteenAuth(req, res, next) {
     if (!access.allowed) {
       return res.status(403).json({ success: false, message: access.message });
     }
-    markCanteenSeen(req.authUser.canteenId, req.get("x-axzen-app-version")).catch(() => {});
+    markCanteenSeen(req.authUser.canteenId, req.get("x-axzen-app-version"), req.get("x-axzen-client") || "android").catch(() => {});
     return next();
   } catch (error) {
     return res.status(401).json({ success: false, message: "Invalid or expired login token" });

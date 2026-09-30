@@ -6,6 +6,7 @@ function fixture(){
  w.scrollTo=()=>{};w.matchMedia=()=>({matches:false,addEventListener(){}});w.setInterval=()=>0;w.HTMLCanvasElement.prototype.getContext=()=>null;
  w.fetch=async()=>({ok:true,json:async()=>({})});w.DineIn={close(){},back(){return false}};w.BusinessRules=BusinessRules;
  w.eval(fs.readFileSync(path.join(root,'sa/bill-taxes.js'),'utf8'));
+ w.eval(fs.readFileSync(path.join(root,'sa/app-version.js'),'utf8'));
  const script=[...w.document.scripts].find(s=>s.textContent.includes('const urlParams =')).textContent;
  w.eval(script+`\nwindow.testPOS={setSession,applySettings,loadProducts,loadSettings,loadAdminData,api,addToCart,logout,ensureUserNavKeys,shopBillingProducts,chickenProductsForMenu,refreshLiveData,
  state:()=>({user,products,settings,cart,orders}),setProducts:rows=>{products=rows;renderProducts();},selectOption:(id,option)=>selectedSubItems[id]=option};`);
