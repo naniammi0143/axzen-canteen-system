@@ -1,6 +1,7 @@
 "use strict";
 const crypto = require("node:crypto");
 const BillTaxes = require('../sa/bill-taxes');
+const BusinessRules = require('../sa/business-rules');
 const fail = (message, status = 400) => { const error = new Error(message); error.status = status; throw error; };
 const round = n => Math.round(n * 100) / 100;
 function number(value, min, max, label) {
@@ -58,7 +59,11 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
   const role = (req, roles) => { if (!roles.includes(req.authUser.role)) fail("Your role cannot perform this action", 403); };
   const cashRoles = ["admin", "manager", "cashier", "billing", "user"];
   async function config(id) { return await Config.findById(id).lean() || { enabled: false, requested: false }; }
-  async function gated(req) { if (!(await config(cid(req))).enabled) fail("Dine In is OFF. Please contact sales team: 8790568446.", 403); }
+  async function eligible(id) {const settings=await getSettings(id);return BusinessRules.dineIn(settings.businessCategory,settings.posMode);}
+  async function gated(req) {
+    if(!await eligible(cid(req))) fail('Dine In is available only for restaurants and canteens',403);
+    if (!(await config(cid(req))).enabled) fail("Dine In is OFF. Please contact sales team: 8790568446.", 403);
+  }
   async function table(req) {
     const row = await Table.findOne({ canteenId: cid(req), tableId: req.params.tableId }).lean();
     if (!row) fail("Table not found", 404);
@@ -74,9 +79,11 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
   app.get("/dine-in", ...auth, wrap(async (req, res) => {
     const access = await config(cid(req));
     const settings=await getSettings(cid(req));
+    if(!BusinessRules.dineIn(settings.businessCategory,settings.posMode))access.enabled=false;
     res.json({ offlineVersion:1, enabled: access.enabled, requested: access.requested, taxSettings:settings.taxSettings||{}, tables: access.enabled ? await Table.find({ canteenId: cid(req) }).sort({ zone: 1, name: 1 }).lean() : [] });
   }));
   app.post("/dine-in/request", ...auth, wrap(async (req, res) => {
+    if(!await eligible(cid(req)))fail('Dine In is available only for restaurants and canteens',403);
     await Config.updateOne({ _id: cid(req) }, { $set: { requested: true }, $setOnInsert: { enabled: false } }, { upsert: true });
     res.json({ success: true });
   }));
@@ -87,6 +94,7 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
   }));
   async function setApproval(canteenId, enabled, actor) {
     if (typeof enabled !== "boolean") fail("Enabled must be true or false");
+    if(enabled && !await eligible(canteenId))fail('Dine In is available only for restaurants and canteens',403);
     if (!enabled && await Table.exists({ canteenId, status: { $in: ["occupied", "closing"] } })) fail("Settle all open tables before disabling Dine In", 409);
     await Audit.create({ canteenId, actor, enabled });
     await Config.updateOne({ _id: canteenId }, { $set: { enabled, requested: false, actor } }, { upsert: true });

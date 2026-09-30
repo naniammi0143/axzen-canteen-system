@@ -1,4 +1,5 @@
 const express = require("express");
+const BusinessRules = require("../sa/business-rules");
 const cors = require("cors");
 const http = require("http");
 const path = require("path");
@@ -1199,7 +1200,7 @@ async function allMenuItems(canteenId = DEFAULT_CANTEEN_ID, options = {}) {
   const includeHidden = options.includeHidden === true;
   const config = await getSettings(targetCanteenId);
   const restaurant = shopKindFromCategory(config.businessCategory, config.posMode) === "canteen";
-  const normalizeBilling = row => restaurant && row.billingType === "weight" && !["kg", "kgs", "kilogram", "kilograms", "g", "gram", "grams"].includes(String(row.unit || row.saleUnit || row.weightUnit || "").trim().toLowerCase())
+  const normalizeBilling = row => BusinessRules.weight(row,config.businessCategory,config.posMode) ? {...row,billingType:"weight",unit:["g","gram","grams"].includes(String(row.unit||"").toLowerCase()) ? row.unit : "Kgs"} : restaurant && row.billingType === "weight" && !["kg", "kgs", "kilogram", "kilograms", "g", "gram", "grams"].includes(String(row.unit || row.saleUnit || row.weightUnit || "").trim().toLowerCase())
     ? { ...row, billingType: "quantity", unit: row.unit || "Plate" } : row;
   if (!mongoReady) {
     return memory.menuItems
@@ -1314,6 +1315,8 @@ function normalizeSubItems(value) {
 async function saveMenuItem(payload) {
   const canteenId = normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID);
   const current = await allMenuItems(canteenId, { includeHidden: true });
+  const config = await getSettings(canteenId);
+  const weighted = BusinessRules.weight(payload,config.businessCategory,config.posMode);
   const item = {
     id: payload.id ? Number(payload.id) : nextId(current),
     canteenId,
@@ -1322,8 +1325,8 @@ async function saveMenuItem(payload) {
     price: Number(payload.price || 0),
     halfPrice: Number(payload.halfPrice || payload.singlePrice || payload.halfItemPrice || 0),
     category: payload.category || "Snacks",
-    unit: String(payload.unit || payload.saleUnit || "Plate").trim() || "Plate",
-    billingType: payload.billingType === "weight" ? "weight" : "quantity",
+    unit: weighted ? (["g","gram","grams"].includes(String(payload.unit||"").toLowerCase()) ? payload.unit : "Kgs") : String(payload.unit || payload.saleUnit || "Plate").trim() || "Plate",
+    billingType: weighted ? "weight" : "quantity",
     image: payload.image || "",
     imageCredit: payload.imageCredit && typeof payload.imageCredit === "object" ? { source: String(payload.imageCredit.source || "").slice(0,1000), license: String(payload.imageCredit.license || "").slice(0,100), author: String(payload.imageCredit.author || "").slice(0,500), licenseUrl: String(payload.imageCredit.licenseUrl || "").slice(0,1000) } : undefined,
     subItems: normalizeSubItems(payload.subItems),
@@ -1559,11 +1562,7 @@ async function allCatalogItemsForCanteen(canteenId = DEFAULT_CANTEEN_ID, search 
 
 async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen", businessCategory = "Canteen") {
   const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
-  if (!(await allMenuItems(targetCanteenId, { includeHidden: true })).length) {
-    for (const item of defaultMenuForBusinessCategory(businessCategory)) {
-      await saveMenuItem({ ...item, canteenId: targetCanteenId });
-    }
-  }
+  // The sales menu contains only items explicitly added for this business.
   const kind = shopKindFromCategory(businessCategory);
   if (kind === "canteen" && !(await allStockItems(targetCanteenId)).length) {
     for (const item of defaultStockItems) {
@@ -1572,7 +1571,6 @@ async function seedCanteenDefaults(canteenId, canteenName = "Main Canteen", busi
   }
   const posMode = posModeForCategory(businessCategory);
   await saveSettings({ ...defaultSettings, canteenName, businessCategory, posMode }, targetCanteenId);
-  await sanitizeMenuForBusinessCategory(targetCanteenId, businessCategory, posMode);
 }
 
 async function allStockItems(canteenId = DEFAULT_CANTEEN_ID) {
@@ -1702,8 +1700,9 @@ async function getSettings(canteenId = DEFAULT_CANTEEN_ID) {
   const core = await getCoreCanteen(targetCanteenId).catch(() => null);
   const coreCategory = core?.businessCategory || "";
   if (!mongoReady) {
-    const merged = { ...defaultSettings, ...memory.settings, canteenId: targetCanteenId };
-    if (coreCategory && (!merged.businessCategory || merged.businessCategory === defaultSettings.businessCategory)) merged.businessCategory = coreCategory;
+    const stored = memory.settingsByCanteen?.[targetCanteenId] || (targetCanteenId === DEFAULT_CANTEEN_ID ? memory.settings : {});
+    const merged = { ...defaultSettings, ...stored, canteenId: targetCanteenId };
+    if (coreCategory) merged.businessCategory = coreCategory;
     if (String(merged.businessCategory || merged.posMode || "").toLowerCase().match(/chicken|meat|mutton|fish/)) merged.posMode = "chicken_shop";
     return merged;
   }
@@ -1712,7 +1711,7 @@ async function getSettings(canteenId = DEFAULT_CANTEEN_ID) {
     ? await ReportSetting.findOne({ key: "app", canteenId: { $exists: false } }).lean()
     : null;
   const merged = { ...defaultSettings, canteenId: targetCanteenId, ...(stored || legacy || {}) };
-  if (coreCategory && (!merged.businessCategory || merged.businessCategory === defaultSettings.businessCategory)) merged.businessCategory = coreCategory;
+  if (coreCategory) merged.businessCategory = coreCategory;
   if (shopKindFromCategory(merged.businessCategory, merged.posMode) === "chicken") merged.posMode = "chicken_shop";
   return merged;
 }
@@ -1749,8 +1748,12 @@ async function saveSettings(payload, canteenId = DEFAULT_CANTEEN_ID) {
   if (next.reportPhone && !next.adminWhatsAppNumber) next.adminWhatsAppNumber = next.reportPhone;
 
   if (!mongoReady) {
-    memory.settings = { ...memory.settings, ...next, canteenId: targetCanteenId };
-    return memory.settings;
+    memory.settingsByCanteen ||= {};
+    const previous=memory.settingsByCanteen[targetCanteenId] || (targetCanteenId===DEFAULT_CANTEEN_ID ? memory.settings : defaultSettings);
+    const saved={...previous,...next,canteenId:targetCanteenId};
+    memory.settingsByCanteen[targetCanteenId]=saved;
+    if(targetCanteenId===DEFAULT_CANTEEN_ID)memory.settings=saved;
+    return saved;
   }
 
   const saved = await ReportSetting.findOneAndUpdate(
@@ -2856,7 +2859,6 @@ async function activateApprovedCanteen(canteen, actor) {
       image: String(item.image || ""),
       sortOrder: 1000 + index
     };
-    if (!itemFitsBusinessCategory(nextItem, canteen.businessCategory || "Canteen")) continue;
     await saveMenuItem(nextItem);
   }
   if (canteen.printerSerialNumber) {
@@ -3174,8 +3176,6 @@ app.get("/health", (req, res) => {
 
 app.get("/products", requireCanteenAuth, async (req, res) => {
   const canteenId = req.authUser.canteenId || DEFAULT_CANTEEN_ID;
-  const settings = await getSettings(canteenId);
-  await sanitizeMenuForBusinessCategory(canteenId, settings.businessCategory, settings.posMode);
   res.json(await allMenuItems(canteenId));
 });
 
@@ -3256,9 +3256,8 @@ app.post("/expenses", requireDatabase, requireAdmin, async (req, res) => {
   }
 });
 
-app.get("/settings", async (req, res) => {
-  const authUser = canteenUserFromRequest(req);
-  res.json(await getSettings(authUser?.canteenId || DEFAULT_CANTEEN_ID));
+app.get("/settings", requireCanteenAuth, async (req, res) => {
+  res.json(await getSettings(req.authUser.canteenId));
 });
 
 app.post("/settings", requireDatabase, requireAdmin, async (req, res) => {

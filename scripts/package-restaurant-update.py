@@ -3,7 +3,7 @@ from pathlib import Path
 import zipfile
 
 root = Path(__file__).resolve().parent.parent
-target = root / 'release-files' / 'Axzen-Restaurant-Update-3.80.0.zip'
+target = root / 'release-files' / 'Axzen-Restaurant-Update-3.81.0.zip'
 allowed = {'.js', '.cjs', '.json', '.html', '.css', '.png', '.jpg', '.jpeg', '.svg', '.webp', '.txt', '.md'}
 files = []
 for name in ('backend', 'sa', 'admin-web', 'marketing-web', 'employee-web', 'api', 'pos-axzen-in/partner', 'pos-axzen-in/api', 'pos-axzen-in/assets', 'pos-axzen-in/sales'):
@@ -20,7 +20,12 @@ for name in ('package.json', 'package-lock.json', 'vercel.json', 'README.md', 'p
 with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as archive:
     for file in sorted(files):
         archive.write(file, file.relative_to(root).as_posix())
-    archive.writestr('RELEASE-3.80.txt', '''Axzen Restaurant 3.80
+    archive.writestr('RELEASE-3.81.txt', '''Axzen Restaurant 3.81
+
+Chicken/weight billing remains stable across refresh and login changes. Menus,
+settings and in-flight responses are isolated by restaurant login. Dine In is
+available only to Restaurant/Canteen business categories. Only explicitly added
+menu items appear; new businesses no longer receive automatic sample dishes.
 
 Home-style Dine In selection and Current Order; fixed single-item category sizes;
 GST form edits survive table loading, saved rates refresh totals and offline cache.

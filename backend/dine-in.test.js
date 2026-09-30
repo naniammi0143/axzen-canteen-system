@@ -7,7 +7,7 @@ const menu = [{ id: 1, name: "Meals", price: 100 }, { id: 2, name: "Tea", price:
 // Dependency-isolated route tests. No production database, credentials or orders.
 function fixture() {
   const routes = {}, models = {}, ledger = new Map();
-  let sequence = 0, failSave = false, taxSettings = {};
+  let sequence = 0, failSave = false, taxSettings = {}, businessCategory = "Restaurant";
   class Schema { index() {} }
   Schema.Types = { Mixed: Object };
   const matches = (r, q) => Object.entries(q).every(([k, v]) => v?.$in ? v.$in.includes(r[k]) : r[k] === v);
@@ -45,7 +45,7 @@ function fixture() {
   MarketingCanteen.rows.push({ id: 1, activatedCanteenId: "A" });
   const service = registerDineIn({ app: { get: (p, ...f) => routes[`GET ${p}`] = f, post: (p, ...f) => routes[`POST ${p}`] = f }, mongoose,
     requireDatabase: next, requireCanteenAuth: next, requireAdmin: admin, requireSuperAdmin: manager, MarketingCanteen,
-    allMenuItems: async () => menu, getSettings: async () => ({ canteenName: "Test Restaurant", taxSettings }), saveOrder: async bill => { if (failSave) throw new Error("Simulated database outage"); if (!ledger.has(bill.clientOrderId)) ledger.set(bill.clientOrderId, clone(bill)); return clone(ledger.get(bill.clientOrderId)); }
+    allMenuItems: async () => menu, getSettings: async () => ({ canteenName: "Test Restaurant", businessCategory, taxSettings }), saveOrder: async bill => { if (failSave) throw new Error("Simulated database outage"); if (!ledger.has(bill.clientOrderId)) ledger.set(bill.clientOrderId, clone(bill)); return clone(ledger.get(bill.clientOrderId)); }
   });
   async function call(method, path, body = {}, { tenant = "A", role = "admin", params = {} } = {}) {
     const req = { body, params, authUser: { canteenId: tenant, name: "Test", role }, marketingUser: { role, employeeId: "TEST" } };
@@ -55,7 +55,7 @@ function fixture() {
     let index = 0; const run = () => fns[index++]?.(req, res, run); await run();
     return { status, data };
   }
-  return { call, models, ledger, service, outage: v => failSave = v, taxes:v=>taxSettings=v };
+  return { call, models, ledger, service, outage: v => failSave = v, taxes:v=>taxSettings=v, category:v=>businessCategory=v };
 }
 test("onboarding approval uses the same audited entitlement and open-table protection", async () => {
   const f = fixture();
@@ -69,6 +69,18 @@ test("onboarding approval uses the same audited entitlement and open-table prote
   f.models.DineTable.rows[0].status = 'available';
   await f.service.setApproval('A', false, 'MANAGER');
   assert.equal((await f.call('GET', '/dine-in')).data.enabled, false);
+});
+
+test('only restaurant and canteen business categories may request or use Dine In',async()=>{
+ const f=fixture();await f.service.setApproval('A',true,'MANAGER');
+ for(const category of ['Chicken Center','Meat Shop','Fish Shop','Retail','Grocery','Cool Drinks','Bakery']){
+  f.category(category);
+  assert.equal((await f.call('GET','/dine-in')).data.enabled,false,category);
+  assert.equal((await f.call('POST','/dine-in/request')).status,403,category);
+  assert.equal((await f.call('POST','/dine-in/tables',{name:'1',seats:4})).status,403,category);
+  await assert.rejects(f.service.setApproval('A',true,'MANAGER'),/only for restaurants/);
+ }
+ f.category('Canteen');assert.equal((await f.call('GET','/dine-in')).data.enabled,true);
 });
 test("server menu price wins; hidden, invalid, fractional and weight items rejected", () => {
   assert.equal(priceItems([{ id: 1, qty: 2, price: 1 }], menu)[0].price, 100);

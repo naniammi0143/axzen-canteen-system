@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const source = fs.readFileSync(require('node:path').join(__dirname, '../sa/index.html'), 'utf8');
+const BusinessRules = require('../sa/business-rules');
 const server = fs.readFileSync(require('node:path').join(__dirname, '../backend/server.js'), 'utf8');
 function declaration(name) {
   const start = source.indexOf(`    function ${name}(`);
@@ -47,8 +48,8 @@ test('report presets highlight the selected range and clear for custom dates', (
   assert.ok(ctx.reportQuickButtons().includes('data-report-range="today" aria-pressed="true"'));
 });
 test('restaurant cooked meat dishes use quantity; explicit weights and meat shops remain supported', () => {
-  const ctx = vm.createContext({ settings: { businessCategory: 'Restaurant' }, user: {} });
-  vm.runInContext(['isChickenCategory', 'isChickenProduct', 'isChickenShopCanteen'].map(declaration).join('\n'), ctx);
+  const ctx = vm.createContext({ BusinessRules, settings: { businessCategory: 'Restaurant' }, user: {} });
+  vm.runInContext(['isChickenCategory', 'isChickenProduct', 'isChickenShopCanteen', 'shopKind'].map(declaration).join('\n'), ctx);
   for (const name of ['Chicken Curry', 'Mutton Biryani', 'Fish Fry']) {
     assert.equal(ctx.isChickenProduct({ name, category: 'Chicken', billingType: 'weight' }), false);
   }
@@ -77,8 +78,8 @@ test('Back closes modal before navigation, preserves Dine In interception, and r
   assert.equal(ctx.window.handlePosBack(), false);
 });
 test('restaurant chicken categories and egg dishes do not open raw-meat or raw-egg billing', () => {
-  const ctx = vm.createContext({ settings: { businessCategory: 'Canteen', posMode: 'canteen' }, user: {} });
-  vm.runInContext(['isChickenCategory', 'isEggProduct', 'isChickenShopCanteen', 'itemSaleUnit'].map(declaration).join('\n'), ctx);
+  const ctx = vm.createContext({ BusinessRules, settings: { businessCategory: 'Canteen', posMode: 'canteen' }, user: {} });
+  vm.runInContext(['isChickenCategory', 'isEggProduct', 'isChickenShopCanteen', 'shopKind', 'itemSaleUnit'].map(declaration).join('\n'), ctx);
   assert.equal(ctx.isChickenCategory('Chicken Fried Rice'), false);
   for (const name of ['Egg Fried Rice', 'Egg Curry', 'Egg Burji']) {
     assert.equal(ctx.isEggProduct({ name }), false);
@@ -96,7 +97,7 @@ test('legacy restaurant menu weight flags are repaired for plates without changi
     { id: 3, canteenId: 'A', name: 'Rice', billingType: 'weight', unit: 'Kgs' },
     { id: 4, canteenId: 'B', name: 'Other tenant', billingType: 'weight' }
   ];
-  const ctx = vm.createContext({ DEFAULT_CANTEEN_ID: 'A', normalizeCanteenId: x => x,
+  const ctx = vm.createContext({ BusinessRules, DEFAULT_CANTEEN_ID: 'A', normalizeCanteenId: x => x,
     getSettings: async () => ({ businessCategory: 'Restaurant' }), shopKindFromCategory: () => 'canteen',
     mongoReady: false, memory: { menuItems: menu } });
   const start = server.indexOf('async function allMenuItems(');
@@ -109,4 +110,25 @@ test('legacy restaurant menu weight flags are repaired for plates without changi
   assert.equal(menu[0].billingType, 'weight');
   ctx.shopKindFromCategory = () => 'chicken';
   assert.equal((await ctx.allMenuItems('A'))[0].billingType, 'weight');
+});
+
+test('server returns only tenant menu items and normalizes legacy raw chicken as weight',async()=>{
+ const ctx=vm.createContext({BusinessRules,DEFAULT_CANTEEN_ID:'DEFAULT',normalizeCanteenId:x=>x,shopKindFromCategory:BusinessRules.kind,
+  getSettings:async id=>({businessCategory:id==='CHICKEN'?'Chicken Center':'Restaurant'}),mongoReady:false,
+  memory:{menuItems:[{id:1,canteenId:'CHICKEN',name:'Chicken',unit:'Plate',billingType:'quantity'},
+   {id:2,canteenId:'CHICKEN',name:'Chicken Wings',unit:'Pieces',billingType:'quantity'},
+   {id:1,canteenId:'RESTAURANT',name:'Chicken Curry',unit:'Plate',billingType:'weight'}]}});
+ const start=server.indexOf('async function allMenuItems(');vm.runInContext(server.slice(start,server.indexOf('\nasync function ',start+1)),ctx);
+ const chicken=await ctx.allMenuItems('CHICKEN');assert.equal(chicken.length,2);assert.equal(chicken[0].billingType,'weight');assert.equal(chicken[0].unit,'Kgs');assert.equal(chicken[1].billingType,'quantity');
+ const restaurant=await ctx.allMenuItems('RESTAURANT');assert.equal(restaurant.length,1);assert.equal(restaurant[0].name,'Chicken Curry');assert.equal(restaurant[0].billingType,'quantity');
+ assert.equal((await ctx.allMenuItems('EMPTY')).length,0);
+});
+
+test('server fallback settings remain tenant-scoped and core business category wins',async()=>{
+ const ctx=vm.createContext({DEFAULT_CANTEEN_ID:'DEFAULT',normalizeCanteenId:x=>x,defaultSettings:{businessCategory:'Canteen',posMode:'canteen'},
+  getCoreCanteen:async id=>({businessCategory:id==='CHICKEN'?'Chicken Center':'Canteen'}),mongoReady:false,shopKindFromCategory:BusinessRules.kind,
+  memory:{settings:{businessCategory:'Canteen',canteenName:'Default Restaurant'},settingsByCanteen:{CHICKEN:{businessCategory:'Canteen',canteenName:'Meat Counter'}}}});
+ const start=server.indexOf('async function getSettings(');vm.runInContext(server.slice(start,server.indexOf('\nfunction ',start+1)),ctx);
+ const chicken=await ctx.getSettings('CHICKEN');assert.equal(chicken.businessCategory,'Chicken Center');assert.equal(chicken.canteenName,'Meat Counter');
+ const other=await ctx.getSettings('OTHER');assert.equal(other.canteenName,undefined);assert.equal(other.businessCategory,'Canteen');
 });

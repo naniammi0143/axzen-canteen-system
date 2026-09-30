@@ -337,7 +337,7 @@
   </section>
 
   <link rel="stylesheet" href="/mobile/dine-in.css">
-  <script src="/mobile/bill-taxes.js"></script><script src="/mobile/restaurant-settings.js"></script><link rel="stylesheet" href="/mobile/restaurant-settings.css"><script src="/mobile/dine-in.js"></script>
+  <script src="/mobile/business-rules.js"></script><script src="/mobile/bill-taxes.js"></script><script src="/mobile/restaurant-settings.js"></script><link rel="stylesheet" href="/mobile/restaurant-settings.css"><script src="/mobile/dine-in.js"></script>
   <script>
     const isLocalHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
     const apiHost = isLocalHost ? "localhost" : window.location.hostname;
@@ -402,6 +402,7 @@
 
     function applySettings(next = {}) {
       settings = { ...settings, ...next };
+      const dine=document.querySelector('[data-tab="dinein"]');if(dine)dine.hidden=!BusinessRules.dineIn(settings.businessCategory,settings.posMode);
       $("sideCanteen").textContent = settings.canteenName;
       $("canteenChip").textContent = settings.canteenName;
     }
@@ -424,6 +425,7 @@
 
     function render() {
       window.DineIn.close();
+      if(tab === "dinein" && !BusinessRules.dineIn(settings.businessCategory,settings.posMode))tab="dashboard";
       if (tab === "dinein") {
         $("pageTitle").textContent = "Dine In — Tables & Kitchen";
         window.DineIn.mount($("page"), { api, admin: session?.role === "admin", getMenu: () => api("/products"), isActive: () => tab === "dinein" });
@@ -1379,6 +1381,7 @@
     });
     const dineNav = document.createElement("button");
     dineNav.dataset.tab = "dinein";
+    dineNav.hidden=!BusinessRules.dineIn(settings.businessCategory,settings.posMode);
     dineNav.textContent = "Dine In / Tables / Kitchen";
     document.querySelector('[data-tab="reports"]').after(dineNav);
     document.querySelectorAll("[data-tab]").forEach(btn => btn.addEventListener("click", () => { tab = btn.dataset.tab; pageMessage(""); render(); }));

@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const files = ['index.html', 'dine-in.js', 'dine-in.css', 'bill-taxes.js', 'dine-in-offline.js', 'restaurant-settings.js', 'restaurant-settings.css', 'offline-worker.js', 'app-updater.css'];
+const files = ['index.html', 'business-rules.js', 'dine-in.js', 'dine-in.css', 'bill-taxes.js', 'dine-in-offline.js', 'restaurant-settings.js', 'restaurant-settings.css', 'offline-worker.js', 'app-updater.css'];
 const normalize = text => text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
 Promise.allSettled(files.map(async file => {
  const response = await fetch('https://pos.axzen.in/partner/' + (file === 'index.html' ? '' : file), { signal: AbortSignal.timeout(20000) });
