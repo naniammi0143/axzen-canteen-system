@@ -14,7 +14,10 @@
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
-    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:textColorPrimary">#0C1532</item>
+        <item name="android:textColorSecondary">#526176</item>
+        <item name="alertDialogTheme">@style/AxzenDialogTheme</item>
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:windowBackground">#FFFFFF</item>
@@ -26,6 +29,13 @@
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
+
+    <style name="AxzenDialogTheme" parent="Theme.AppCompat.Light.Dialog.Alert">
+        <item name="android:textColorPrimary">#0C1532</item>
+        <item name="android:textColorSecondary">#526176</item>
+        <item name="colorAccent">#096554</item>
+        <item name="android:windowBackground">#FFFFFF</item>
+    </style>
 
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="android:background">@drawable/splash</item>

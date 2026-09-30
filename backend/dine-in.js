@@ -1,5 +1,6 @@
 "use strict";
 const crypto = require("node:crypto");
+const BillTaxes = require('../sa/bill-taxes');
 const fail = (message, status = 400) => { const error = new Error(message); error.status = status; throw error; };
 const round = n => Math.round(n * 100) / 100;
 function number(value, min, max, label) {
@@ -22,10 +23,10 @@ function priceItems(lines, menu) {
     return { id: product.id, name: product.name + (option ? ` (${option.name})` : ""), optionName: option?.name || "", nameTe: product.nameTe || "", price: round(price), qty, note: text(line.note, 200) };
   });
 }
-function totals(tickets, discount = 0) {
+function totals(tickets, discount = 0, taxSettings = {}) {
   const items = tickets.filter(t => t.status !== "cancelled").flatMap(t => t.items);
   const subtotal = round(items.reduce((sum, i) => sum + i.qty * i.price, 0));
-  return { items, subtotal, discount: number(discount, 0, subtotal, "discount"), total: round(subtotal - Number(discount)) };
+  return { items, ...BillTaxes.calculate(subtotal, number(discount, 0, subtotal, "discount"), taxSettings) };
 }
 function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, requireAdmin, requireSuperAdmin, MarketingCanteen, allMenuItems, getSettings, saveOrder }) {
   const mixed = mongoose.Schema.Types.Mixed;
@@ -33,7 +34,7 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
   const tableSchema = new mongoose.Schema({
     canteenId: { type: String, required: true }, tableId: String, name: String, zone: String, seats: Number,
     active: { type: Boolean, default: true }, status: { type: String, default: "available" },
-    revision: { type: Number, default: 0 }, session: mixed, lastBill: mixed, reservation: String
+    revision: { type: Number, default: 0 }, session: mixed, lastBill: mixed, reservation: String, offlineOps: [String]
   }, { timestamps: true });
   tableSchema.index({ canteenId: 1, tableId: 1 }, { unique: true });
   tableSchema.index({ canteenId: 1, name: 1 }, { unique: true });
@@ -42,7 +43,17 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
   const auditSchema = new mongoose.Schema({ canteenId: String, actor: String, enabled: Boolean }, { timestamps: true });
   const Audit = mongoose.models.DineApprovalAudit || mongoose.model("DineApprovalAudit", auditSchema);
   const VoidSession = mongoose.models.DineVoidSession || mongoose.model("DineVoidSession", new mongoose.Schema({ _id: String, canteenId: String, tableName: String, session: mixed, actor: String }, { timestamps: true }));
-  const wrap = fn => async (req, res) => { try { await fn(req, res); } catch (e) { res.status(e.code === 11000 ? 409 : e.status || 500).json({ message: e.code === 11000 ? "Table name already exists" : e.message }); } };
+  const wrap = fn => async (req, res) => { try {
+    if(req.body?.operationId && req.params?.tableId) {
+      if(!/^[a-zA-Z0-9-]{16,100}$/.test(req.body.operationId)) fail('Invalid offline operation ID');
+      await gated(req);
+      const current=await table(req);
+      if(current.offlineOps?.includes(req.body.operationId)) return res.json({table:current,duplicate:true});
+      if(Object.hasOwn(req.body,'expectedSessionId') && (current.session?.id||null)!==req.body.expectedSessionId && !(req.body.sessionId && current.lastBill?.dineSessionId===req.body.sessionId)) fail('Table session changed on another device',409);
+      if(req.body.revision!==current.revision && current.status!=='closing' && !(req.body.sessionId && current.lastBill?.dineSessionId===req.body.sessionId)) fail('Table changed on another device',409);
+    }
+    await fn(req, res);
+  } catch (e) { res.status(e.code === 11000 ? 409 : e.status || 500).json({ message: e.code === 11000 ? "Table name already exists" : e.message }); } };
   const cid = req => req.authUser.canteenId;
   const role = (req, roles) => { if (!roles.includes(req.authUser.role)) fail("Your role cannot perform this action", 403); };
   const cashRoles = ["admin", "manager", "cashier", "billing", "user"];
@@ -53,7 +64,8 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
     if (!row) fail("Table not found", 404);
     return row;
   }
-  async function update(row, values) {
+  async function update(row, values, req) {
+    if(req?.body?.operationId) values.offlineOps=[...(row.offlineOps||[]),req.body.operationId].slice(-1000);
     const saved = await Table.findOneAndUpdate({ _id: row._id, revision: row.revision }, { $set: values, $inc: { revision: 1 } }, { new: true }).lean();
     if (!saved) fail("Table changed on another device. Refresh and retry.", 409);
     return saved;
@@ -61,7 +73,8 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
   const auth = [requireDatabase, requireCanteenAuth];
   app.get("/dine-in", ...auth, wrap(async (req, res) => {
     const access = await config(cid(req));
-    res.json({ enabled: access.enabled, requested: access.requested, tables: access.enabled ? await Table.find({ canteenId: cid(req) }).sort({ zone: 1, name: 1 }).lean() : [] });
+    const settings=await getSettings(cid(req));
+    res.json({ offlineVersion:1, enabled: access.enabled, requested: access.requested, taxSettings:settings.taxSettings||{}, tables: access.enabled ? await Table.find({ canteenId: cid(req) }).sort({ zone: 1, name: 1 }).lean() : [] });
   }));
   app.post("/dine-in/request", ...auth, wrap(async (req, res) => {
     await Config.updateOne({ _id: cid(req) }, { $set: { requested: true }, $setOnInsert: { enabled: false } }, { upsert: true });
@@ -109,7 +122,7 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
     const state = req.body.status;
     const allowed = { available: ["reserved"], reserved: ["available"], cleaning: ["available"] };
     if (!allowed[row.status]?.includes(state)) fail("Invalid table state transition", 409);
-    res.json({ table: await update(row, { status: state, reservation: state === "reserved" ? text(req.body.reservation, 100) : "" }) });
+    res.json({ table: await update(row, { status: state, reservation: state === "reserved" ? text(req.body.reservation, 100) : "" }, req) });
   }));
   app.post("/dine-in/tables/:tableId/tickets", ...auth, wrap(async (req, res) => {
     await gated(req); role(req, [...cashRoles, "waiter"]);
@@ -122,12 +135,14 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
     if (row.revision !== req.body.revision) fail("Table changed. Refresh before sending this order.", 409);
     if (row.session?.tickets.length >= 100) fail("Settle this bill before adding more tickets");
     const items = priceItems(req.body.items, await allMenuItems(cid(req)));
+    if(req.body.operationId && (!Array.isArray(req.body.expectedPrices) || items.some((i,n)=>i.price!==req.body.expectedPrices[n]))) fail('Menu prices changed. Review the saved offline bill with your manager',409);
     const guests = number(req.body.guests || 1, 1, row.seats, "guests");
     if (!Number.isInteger(guests)) fail("Guests must be a whole number");
-    const session = row.session || { id: crypto.randomUUID(), openedAt: new Date().toISOString(), guests, tickets: [] };
+    if(req.body.operationId && !/^[a-zA-Z0-9-]{16,80}$/.test(req.body.sessionId||'')) fail('Invalid offline session ID');
+    const session = row.session || { id: req.body.operationId ? req.body.sessionId : crypto.randomUUID(), openedAt: new Date().toISOString(), guests, tickets: [] };
     const ticket = { id: key, number: session.tickets.length + 1, tableName: row.name, items, status: "new", createdAt: new Date().toISOString(), waiter: req.authUser.name };
     session.tickets.push(ticket);
-    res.json({ table: await update(row, { status: "occupied", session, reservation: "" }), ticket });
+    res.json({ table: await update(row, { status: "occupied", session, reservation: "" }, req), ticket });
   }));
   app.post("/dine-in/tables/:tableId/tickets/:ticketId", ...auth, wrap(async (req, res) => {
     await gated(req); role(req, [...cashRoles, "chef", "waiter"]);
@@ -143,7 +158,7 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
       ticket.reason = text(req.body.reason, 200);
     } else if ({ new: "preparing", preparing: "ready", ready: "served" }[ticket.status] !== next) fail("Invalid kitchen status transition", 409);
     ticket.status = next; ticket.updatedBy = req.authUser.name; ticket.updatedAt = new Date().toISOString();
-    res.json({ table: await update(row, { session: row.session }) });
+    res.json({ table: await update(row, { session: row.session }, req) });
   }));
   app.post("/dine-in/tables/:tableId/settle", ...auth, wrap(async (req, res) => {
     await gated(req); role(req, cashRoles);
@@ -153,23 +168,25 @@ function registerDineIn({ app, mongoose, requireDatabase, requireCanteenAuth, re
     if (row.status === "occupied") {
       if (row.revision !== req.body.revision) fail("Order changed. Review the latest bill before paying.", 409);
       if (row.session.tickets.some(t => !["served", "cancelled"].includes(t.status))) fail("Serve or cancel all kitchen tickets before closing the table", 409);
-      const summary = totals(row.session.tickets, req.body.discount || 0);
+      const restaurant = await getSettings(cid(req));
+      const summary = totals(row.session.tickets, req.body.discount || 0, restaurant.taxSettings);
+      if(req.body.operationId && summary.total!==req.body.expectedTotal) fail('Tax settings or prices changed. Review the saved offline payment with your manager',409);
       if (!summary.items.length) fail("No billable items. Admin can close the cancelled table.");
       if (summary.discount) role(req, ["admin", "manager"]);
       if (!["Cash", "Online", "Card", "Split"].includes(req.body.payment)) fail("Select a valid payment method");
       let cash = req.body.payment === "Cash" ? summary.total : 0;
       if (req.body.payment === "Split") cash = number(req.body.cash, 0, summary.total, "split cash");
       if (round(cash) !== cash || round(summary.discount) !== summary.discount) fail("Payment and discount must use at most 2 decimal places");
-      const restaurant = await getSettings(cid(req));
       const bill = { ...summary, canteenId: cid(req), id: Date.now() * 1000 + crypto.randomInt(1000), createdAt: new Date().toISOString(), clientOrderId: `dine-${row.session.id}`, dineSessionId: row.session.id, orderType: "Dine In", tableId: row.tableId, tableName: row.name, canteen: req.authUser.canteenName, cashier: req.authUser.name, cashierMobile: req.authUser.mobile, payment: req.body.payment, paymentBreakup: { cash, online: round(summary.total - cash), credit: 0 }, kitchenTickets: row.session.tickets };
+      if(req.body.operationId) { if(!Number.isSafeInteger(req.body.billId)||req.body.billId<=0||!Number.isFinite(Date.parse(req.body.billCreatedAt)))fail('Invalid offline bill identity');bill.id=req.body.billId;bill.createdAt=req.body.billCreatedAt; }
       bill.canteen = restaurant.canteenName || cid(req);
       row = await update(row, { status: "closing", session: { ...row.session, bill } });
     }
     if (row.status !== "closing") fail("Table cannot be settled", 409);
     // Stable bill ID and persisted closing state allow recovery after network/process failure.
     const saved = await saveOrder(row.session.bill);
-    await update(row, { status: "cleaning", lastBill: saved, session: null });
-    res.json({ order: saved });
+    const cleaned=await update(row, { status: "cleaning", lastBill: saved, session: null }, req);
+    res.json({ order: saved, table:cleaned });
   }));
   app.post("/dine-in/tables/:tableId/close-empty", requireDatabase, requireAdmin, wrap(async (req, res) => {
     await gated(req); const row = await table(req);

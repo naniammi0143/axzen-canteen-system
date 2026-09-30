@@ -329,7 +329,9 @@ let memory = {
   globalCatalogItems: defaultCatalogItems.map(item => ({ catalogId: item.id, name: item.name, image: item.image || "", sourceCount: 1 }))
 };
 
+const BillTaxes = require('../sa/bill-taxes');
 const orderSchema = new mongoose.Schema({
+  taxes:[mongoose.Schema.Types.Mixed], charges:[mongoose.Schema.Types.Mixed], taxTotal:Number, taxableAmount:Number, taxSettings:mongoose.Schema.Types.Mixed, gstin:String, receiptFields:mongoose.Schema.Types.Mixed,
   orderType: String, tableId: String, tableName: String, dineSessionId: String,
   kitchenTickets: [mongoose.Schema.Types.Mixed],
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
@@ -351,6 +353,7 @@ const orderSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "orders" });
 
 const saleSchema = new mongoose.Schema({
+  taxes:[mongoose.Schema.Types.Mixed], charges:[mongoose.Schema.Types.Mixed], taxTotal:Number, taxableAmount:Number, taxSettings:mongoose.Schema.Types.Mixed, gstin:String, receiptFields:mongoose.Schema.Types.Mixed,
   orderType: String, tableId: String, tableName: String, dineSessionId: String,
   kitchenTickets: [mongoose.Schema.Types.Mixed],
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
@@ -457,6 +460,7 @@ const expenseSchema = new mongoose.Schema({
 }, { timestamps: true, collection: "expenses" });
 
 const reportSettingSchema = new mongoose.Schema({
+  taxSettings:mongoose.Schema.Types.Mixed,
   canteenId: { type: String, index: true, default: DEFAULT_CANTEEN_ID },
   key: { type: String, index: true, default: "app" },
   canteenName: String,
@@ -1732,6 +1736,7 @@ function parseReportTime(value) {
 async function saveSettings(payload, canteenId = DEFAULT_CANTEEN_ID) {
   const targetCanteenId = normalizeCanteenId(canteenId || payload.canteenId || DEFAULT_CANTEEN_ID);
   const next = { ...payload };
+  if(Object.hasOwn(next,'taxSettings')) next.taxSettings=BillTaxes.normalize(next.taxSettings);
   if (Object.prototype.hasOwnProperty.call(next, "autoReport")) {
     next.autoReport = next.autoReport === true || next.autoReport === "true";
   }
@@ -1848,6 +1853,8 @@ function makeOrder(payload) {
   const total = Number(payload.total || 0);
   const paymentBreakup = normalizePaymentBreakup(payload.paymentBreakup, payload.payment, total);
   return {
+    createdAt:payload.createdAt && Number.isFinite(Date.parse(payload.createdAt)) ? new Date(payload.createdAt) : new Date(),
+    taxes:payload.taxes||[],charges:payload.charges||[],taxTotal:Number(payload.taxTotal||0),taxableAmount:payload.taxableAmount,taxSettings:payload.taxSettings,gstin:payload.gstin||'',receiptFields:payload.receiptFields,
     canteenId: normalizeCanteenId(payload.canteenId || DEFAULT_CANTEEN_ID),
     id: payload.id || Date.now(),
     clientOrderId: payload.clientOrderId,
@@ -1888,6 +1895,11 @@ function normalizePaymentBreakup(value, payment, total) {
 }
 
 async function saveOrder(payload, dineIn = false) {
+  if(payload.taxSettings && !dineIn && payload.payment!=='Cancel') {
+    const calculated=BillTaxes.calculate(Number(payload.subtotal),Number(payload.discount||0),payload.taxSettings);
+    if(Math.abs(calculated.total-Number(payload.total))>0.001) throw Error('Bill total does not match discount and taxes');
+    payload={...payload,...calculated};
+  }
   const order = makeOrder(payload);
   if (dineIn) {
     for (const key of ["orderType", "tableId", "tableName", "dineSessionId", "kitchenTickets"]) order[key] = payload[key];

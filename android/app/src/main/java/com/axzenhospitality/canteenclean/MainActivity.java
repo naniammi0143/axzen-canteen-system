@@ -745,7 +745,7 @@ public class MainActivity extends BridgeActivity {
             int y = 4;
             int estimatedRows = items == null ? 0 : items.length() * 3;
             int footerFeedLines = Math.max(0, data.optInt("footerFeedLines", 0));
-            int height = 820 + (estimatedRows * 50) + (footerFeedLines * 40);
+            int height = 1250 + (estimatedRows * 50) + (footerFeedLines * 40);
             Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
             canvas.drawColor(Color.WHITE);
@@ -770,13 +770,29 @@ public class MainActivity extends BridgeActivity {
                 y += 70;
             }
 
+            JSONObject fields = data.optJSONObject("receiptFields");
+            if (fields == null) fields = new JSONObject();
+            if (fields.optBoolean("gstin", true) && !data.optString("gstin", "").isEmpty()) {
+                canvas.drawText("GSTIN: " + data.optString("gstin"), left, y + 24, body); y += 32;
+            }
+            if (fields.optBoolean("table", true) && !data.optString("tableName", "").isEmpty()) {
+                canvas.drawText("TABLE: " + data.optString("tableName"), left, y + 24, body); y += 32;
+            }
+            if (fields.optBoolean("cashier", true)) {
+                canvas.drawText("Cashier: " + data.optString("cashier", "-"), left, y + 24, body); y += 32;
+            }
+            if (fields.optBoolean("payment", true)) {
+                canvas.drawText("Payment: " + data.optString("payment", "Cash"), left, y + 24, body); y += 32;
+            }
             y = drawLine(canvas, linePaint, y, width);
             canvas.drawText("Date : " + data.optString("date", "-"), left, y + 24, body);
             canvas.drawText("Time : " + data.optString("time", "-"), right, y + 24, bodyRight);
             y += 34;
-            canvas.drawText("Token :", left, y + 24, body);
-            canvas.drawText(data.optString("token", "-"), right, y + 24, bodyRight);
-            y += 38;
+            if (fields.optBoolean("token", true)) {
+                canvas.drawText("Token :", left, y + 24, body);
+                canvas.drawText(data.optString("token", "-"), right, y + 24, bodyRight);
+                y += 38;
+            }
             y = drawLine(canvas, linePaint, y, width);
             boolean hasWeightItems = hasWeightReceiptItems(items);
             canvas.drawText("#  ITEM NAME", left, y + 25, body);
@@ -822,10 +838,17 @@ public class MainActivity extends BridgeActivity {
             y = drawLine(canvas, linePaint, y, width);
             y = drawAmountRow(canvas, body, bodyRight, "SUBTOTAL", data.optDouble("subtotal", 0), y, width);
             y = drawAmountRow(canvas, body, bodyRight, "DISCOUNT", data.optDouble("discount", 0), y, width);
+            JSONArray taxLines = data.optJSONArray("taxLines");
+            if (taxLines != null) for (int i = 0; i < taxLines.length(); i++) {
+                JSONObject tax = taxLines.optJSONObject(i);
+                if (tax == null) continue;
+                String label = cleanHeaderText(tax.optString("name", "Tax"), "Tax") + " (" + moneyNumber(tax.optDouble("rate", 0)) + "%)";
+                y = drawAmountRow(canvas, receiptPaint(18, false, Paint.Align.LEFT), bodyRight, label, tax.optDouble("amount", 0), y, width);
+            }
             y = drawLine(canvas, linePaint, y, width);
             y = drawAmountRow(canvas, receiptPaint(27, true, Paint.Align.LEFT), receiptPaint(27, true, Paint.Align.RIGHT), "TOTAL", data.optDouble("total", 0), y, width);
             y = drawLine(canvas, linePaint, y, width);
-            canvas.drawText("THANK YOU! VISIT AGAIN", width / 2, y + 34, footer);
+            if (fields.optBoolean("footer", true)) canvas.drawText("THANK YOU! VISIT AGAIN", width / 2, y + 34, footer);
             canvas.drawText("Powered by", width / 2, y + 60, receiptPaint(16, false, Paint.Align.CENTER));
             canvas.drawText("Axzen POS System", width / 2, y + 84, receiptPaint(20, false, Paint.Align.CENTER));
             y += 92 + (footerFeedLines * 24);

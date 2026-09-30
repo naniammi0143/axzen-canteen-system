@@ -11,3 +11,13 @@ test('receipt second line is area, footer is compact, and preview strips control
  }
  const html=ctx.receiptPreviewHtml('Kukatpally');assert.ok(html.includes('Kukatpally'));assert.ok(!html.includes('\x1b'));assert.ok(!html.includes('\x00'));assert.ok(html.includes('font-size:10px'));
 });
+
+test('tax percentages print below discount and optional receipt details obey the saved bill flags',()=>{
+ const ctx=vm.createContext({settings:{canteenName:'Test Restaurant',receiptArea:'Hidden Area'},user:{name:'Cashier'},receiptTextColumns:()=>32,formatQtyUnit:(q,u)=>q+' '+u,printItemName:i=>i.name,itemSaleUnit:()=> 'Plate',cartLineTotal:i=>i.qty*i.price});
+ vm.runInContext(['receiptText','orderTokenNumber'].map(declaration).join('\n'),ctx);
+ const bill={id:101,canteen:'Test Restaurant',items:[{name:'Meals',qty:1,price:100}],subtotal:100,discount:10,total:94.5,taxes:[{name:'CGST',rate:2.5,amount:2.25},{name:'SGST',rate:2.5,amount:2.25}],gstin:'36ABCDE1234F1Z5',receiptFields:{area:false,cashier:false,payment:false,token:false,gstin:true,footer:false}};
+ const text=ctx.receiptText(bill);
+ assert.ok(text.indexOf('DISCOUNT')<text.indexOf('CGST (2.5%)'));assert.ok(text.indexOf('SGST (2.5%)')<text.lastIndexOf('TOTAL'));
+ assert.ok(text.includes('Rs 94.50'));assert.ok(text.includes(bill.gstin));
+ for(const hidden of ['Hidden Area','Cashier:','Payment:','Token:','THANK YOU'])assert.ok(!text.includes(hidden));
+});

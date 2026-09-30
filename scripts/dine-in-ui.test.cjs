@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const { JSDOM } = require('jsdom');
 const source = fs.readFileSync(require('node:path').join(__dirname, '../sa/dine-in.js'), 'utf8');
 const tick = () => new Promise(resolve => setTimeout(resolve, 10));
-function setup(enabled = true) {
+function setup(enabled = true, extra = {}) {
   const dom = new JSDOM('<main id="root"></main>', { url: 'https://test.invalid', runScripts: 'outside-only' });
   const { window } = dom; window.confirm = () => true; window.prompt = () => 'Test'; window.eval(source);
   const state = { enabled, tables: [{ tableId: 't1', name: '1', zone: 'Main Hall', seats: 4, status: 'available', active: true, revision: 0 }] };
@@ -32,7 +32,7 @@ function setup(enabled = true) {
     throw new Error('Unexpected API path: ' + path);
   };
   const root = window.document.getElementById('root');
-  window.DineIn.mount(root, { api, admin: true, getMenu: async () => menu });
+  window.DineIn.mount(root, { api, admin: true, getMenu: async () => menu, ...extra });
   const click = async action => { const button = root.querySelector(`[data-di="${action}"]`); assert.ok(button, action); button.click(); await tick(); };
   return { window, root, calls, state, click, close: () => { window.DineIn.close(); window.close(); } };
 }
@@ -46,11 +46,10 @@ test('table actions open a dialog, preserve inputs between panels, and close to 
   try {
     await tick();
     assert.equal(f.root.querySelector('#di-name'), null);
-    await f.click('new-table');
-    assert.ok(f.root.querySelector('dialog #di-name'));
-    await f.click('close-popup');
+    assert.equal(f.root.querySelector('[data-di="new-table"]'), null, 'Table setup belongs in admin Settings');
     await f.click('select');
     assert.ok(f.root.querySelector('dialog'));
+    assert.equal(f.root.querySelector('[data-di="panel"][data-value="settings"]'),null);
     f.root.querySelector('#di-guests').value = '3';
     f.root.querySelector('[data-di="panel"][data-value="bill"]').click();
     assert.equal(f.root.querySelector('.di-dialog-content').dataset.panel, 'bill');
@@ -105,4 +104,43 @@ test('local table and draft actions stay responsive when the network stalls', as
     root.querySelector('[data-di="remove"]').click();
     assert.equal(root.querySelector('.di-draft').textContent, '');
   } finally { window.DineIn.close(); window.close(); }
+});
+
+test('food cards search, categories and quantity controls send the selected dish and note', async () => {
+  const f = setup();
+  try {
+    await tick(); await f.click('select');
+    const search = f.root.querySelector('#di-search');
+    search.value = 'Half'; search.dispatchEvent(new f.window.Event('input', { bubbles: true }));
+    assert.equal(f.root.querySelectorAll('.di-food').length, 1);
+    f.root.querySelector('#di-note').value = 'No onion';
+    await f.click('quick-add'); await f.click('increment');
+    assert.match(f.root.querySelector('.di-draft').textContent, /120.00/);
+    await f.click('decrement');
+    assert.match(f.root.querySelector('.di-draft').textContent, /60.00/);
+    await f.click('send');
+    const sent = f.calls.find(c => c.path.endsWith('/tickets')).body.items[0];
+    assert.equal(sent.optionName, 'Half');
+    assert.equal(sent.qty, 1);
+    assert.equal(sent.note, 'No onion');
+    f.root.querySelector('[data-di="panel"][data-value="bill"]').click();
+    const payment = f.root.querySelector('#di-payment');
+    payment.value = 'Split'; payment.dispatchEvent(new f.window.Event('input', {bubbles:true}));
+    assert.equal(f.root.querySelector('.di-split').hidden, false);
+    await f.click('refresh');
+    assert.equal(f.root.querySelector('#di-payment').value, 'Split');
+    assert.equal(f.root.querySelector('.di-split').hidden, false);
+  } finally { f.close(); }
+});
+
+test('each table retains its draft and note when switching tables, and food-card close removes selection', async()=>{
+ const drafts={};const f=setup(true,{saveDraft:(id,value)=>drafts[id]=structuredClone(value),getDraft:id=>structuredClone(drafts[id]||null)});
+ try {
+  await tick();f.state.tables.push({tableId:'t2',name:'2',zone:'Hall',seats:4,status:'available',active:true,revision:0});await f.click('refresh');await f.click('select');
+  f.root.querySelector('#di-note').value='Less spicy';await f.click('quick-add');
+  f.root.querySelector('[data-di="select"][data-value="t2"]').click();await tick();assert.equal(f.root.querySelector('.di-draft').textContent,'');
+  f.root.querySelector('#di-note').value='No onion';await f.click('quick-add');await f.click('increment');
+  f.root.querySelector('[data-di="select"][data-value="t1"]').click();await tick();assert.equal(f.root.querySelector('#di-note').value,'Less spicy');assert.equal(drafts.t1.draft[0].qty,1);assert.equal(drafts.t2.draft[0].qty,2);
+  await f.click('quick-remove');assert.equal(f.root.querySelector('.di-draft').textContent,'');assert.equal(drafts.t2.draft[0].qty,2);
+ } finally {f.close();}
 });

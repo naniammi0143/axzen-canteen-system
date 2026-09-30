@@ -337,7 +337,7 @@
   </section>
 
   <link rel="stylesheet" href="/mobile/dine-in.css">
-  <script src="/mobile/dine-in.js"></script>
+  <script src="/mobile/bill-taxes.js"></script><script src="/mobile/restaurant-settings.js"></script><link rel="stylesheet" href="/mobile/restaurant-settings.css"><script src="/mobile/dine-in.js"></script>
   <script>
     const isLocalHost = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
     const apiHost = isLocalHost ? "localhost" : window.location.hostname;
@@ -1344,6 +1344,8 @@
         <button class="primary">Save Settings</button>
       </form></section>`;
       $("settingsForm").addEventListener("submit", saveSettings);
+      const restaurant=document.createElement("div"); $("page").appendChild(restaurant);
+      RestaurantSettings.mount(restaurant,{api,settings,onSaved:applySettings});
     }
 
     async function saveSettings(event) {
