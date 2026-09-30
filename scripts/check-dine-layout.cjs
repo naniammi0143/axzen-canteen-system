@@ -20,7 +20,11 @@ const delay=ms=>new Promise(r=>setTimeout(r,ms));
   const metrics=await evaluate(`(()=>{const g=document.querySelector('.di-food-grid'),c=document.querySelector('.di-categories'),o=document.querySelector('.di-new-order');return {width:innerWidth,pageWidth:document.documentElement.scrollWidth,gridHeight:g.clientHeight,gridScroll:g.scrollHeight,gridBottom:g.getBoundingClientRect().bottom,categoryTop:c.getBoundingClientRect().top,orderBottom:o.getBoundingClientRect().bottom,orderTop:o.getBoundingClientRect().top}})()`);
   await evaluate(`document.querySelector('.di-food-grid').scrollTop=180`);
   metrics.categoryAfter=await evaluate(`document.querySelector('.di-categories').getBoundingClientRect().top`);
-  const shot=await call('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,`dine-in-${name}-3.79.png`),Buffer.from(shot.data,'base64'));
+  const shot=await call('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(output,`dine-in-${name}-3.80.png`),Buffer.from(shot.data,'base64'));
+  const before=await evaluate(`(()=>{const r=document.querySelector('.di-food').getBoundingClientRect();return {width:r.width,height:r.height}})()`);
+  await evaluate(`document.querySelector('[data-di="category"][data-value="Breads"]').click()`);await delay(100);
+  const single=await evaluate(`(()=>{const r=document.querySelector('.di-food').getBoundingClientRect();return {count:document.querySelectorAll('.di-food').length,width:r.width,height:r.height}})()`);
+  if(single.count!==1||single.width>before.width+1||single.height>before.height+1)throw Error(`${name}: single-item card stretched ${JSON.stringify({before,single})}`);
   if(metrics.pageWidth>width+1||metrics.gridHeight<50||Math.abs(metrics.categoryAfter-metrics.categoryTop)>1||metrics.orderBottom>height+1||(name==='mobile' && metrics.gridBottom>metrics.orderTop+1))throw Error(`${name}: layout check failed ${JSON.stringify(metrics)}`);
   results.push({name,...metrics});
  }

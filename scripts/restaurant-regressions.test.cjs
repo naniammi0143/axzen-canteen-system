@@ -22,3 +22,17 @@ test('admin tax settings save checked percentages and print flags, rejecting dou
  w.document.querySelector('#rs-tax-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,10));
  assert.equal(calls.length,1);assert.match(w.document.querySelector('.rs-message').textContent,/one tax system/);w.close();
 });
+
+test('slow table loading preserves GST edits and the entered rate saves and calculates',async()=>{
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://test.invalid',runScripts:'outside-only'}),w=dom.window;
+ w.eval(fs.readFileSync(path.join(root,'sa/bill-taxes.js'),'utf8'));w.eval(fs.readFileSync(path.join(root,'sa/restaurant-settings.js'),'utf8'));
+ let release,saved;
+ w.RestaurantSettings.mount(w.document.getElementById('root'),{settings:{},api:async(p,o)=>p==='/dine-in'?await new Promise(r=>release=r):{settings:JSON.parse(o.body)},onSaved:v=>saved=v});
+ const rate=w.document.querySelector('[data-rate="gst"]');rate.value='5';w.document.querySelector('[data-tax="gst"]').checked=true;
+ release({tables:[]});await new Promise(r=>setTimeout(r,10));
+ assert.equal(w.document.querySelector('[data-rate="gst"]'),rate,'table refresh must not replace tax inputs');
+ assert.equal(rate.value,'5');assert.equal(w.document.querySelector('[data-tax="gst"]').checked,true);
+ w.document.querySelector('#rs-tax-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,10));
+ assert.equal(w.BillTaxes.calculate(200,0,saved.taxSettings).total,210);
+ assert.equal(w.document.querySelector('[data-rate="gst"]').value,'5');w.close();
+});

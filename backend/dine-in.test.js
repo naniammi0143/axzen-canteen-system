@@ -102,6 +102,16 @@ async function offlineFixture() {
   return {f,w,dom,row,store,create,post,network:v=>network=v,loseAck:()=>loseAck=true};
 }
 
+test('saved tax settings update the offline table cache and survive restarting',async()=>{
+ const x=await offlineFixture();try{
+  x.network(false);
+  await x.store.updateTaxSettings({rows:[{id:'gst',enabled:true,rate:12}]});
+  const restarted=x.create();const access=await restarted.api('/dine-in');
+  assert.equal(x.w.BillTaxes.calculate(100,0,access.taxSettings).total,112);
+  restarted.stop();
+ }finally{x.store.stop();x.dom.window.close();}
+});
+
 test('offline orders, kitchen progress and tax-inclusive payment survive restart and lost acknowledgements without duplicate bills',async()=>{
  const x=await offlineFixture();try{
   x.network(false);

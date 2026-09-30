@@ -144,3 +144,18 @@ test('each table retains its draft and note when switching tables, and food-card
   await f.click('quick-remove');assert.equal(f.root.querySelector('.di-draft').textContent,'');assert.equal(drafts.t2.draft[0].qty,2);
  } finally {f.close();}
 });
+
+test('Home-style card selection increments the badge and remove clears it; draft includes GST',async()=>{
+ const f=setup();
+ try {
+  f.window.eval(fs.readFileSync(require('node:path').join(__dirname,'../sa/bill-taxes.js'),'utf8'));
+  f.state.taxSettings={rows:[{id:'gst',enabled:true,rate:5}]};
+  await tick();await f.click('refresh');await f.click('select');await f.click('quick-add');await f.click('quick-add');
+  assert.equal(f.root.querySelector('.di-food.selected .di-food-count').textContent,'2');
+  assert.equal(f.root.querySelector('.di-food-select').getAttribute('aria-pressed'),'true');
+  assert.match(f.root.querySelector('.di-order-summary').textContent,/GST \(5%\)/);
+  assert.match(f.root.querySelector('.di-new-order .di-total').textContent,/210.00/);
+  await f.click('quick-remove');assert.equal(f.root.querySelector('.di-food.selected'),null);
+  assert.equal(f.root.querySelector('.di-food-count'),null);assert.equal(f.root.querySelector('.di-draft').textContent,'');
+ } finally {f.close();}
+});
