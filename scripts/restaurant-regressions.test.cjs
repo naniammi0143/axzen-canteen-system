@@ -6,7 +6,9 @@ test('POS and admin inline scripts parse and required offline assets are package
   for(const script of doc.scripts)if(!script.src&&script.textContent.trim()){new vm.Script(script.textContent,{filename:file});count++;}
   assert.ok(count>0);
  }
- for(const file of ['bill-taxes.js','dine-in-offline.js','restaurant-settings.js','offline-shell.js','offline-worker.js'])new vm.Script(fs.readFileSync(path.join(root,'sa',file),'utf8'),{filename:file});
+ for(const file of ['bill-taxes.js','dine-in-offline.js','restaurant-settings.js','restaurant-settings-v2.js','offline-shell.js','offline-worker.js'])new vm.Script(fs.readFileSync(path.join(root,'sa',file),'utf8'),{filename:file});
+ const pos=fs.readFileSync(path.join(root,'sa/index.html'),'utf8'),worker=fs.readFileSync(path.join(root,'sa/offline-worker.js'),'utf8');
+ assert.match(pos,/restaurant-settings-v2\.js/);assert.match(worker,/axzen-pos-shell-3\.83/);assert.match(worker,/fetch\(request,\{cache:'no-store'\}\)/);
 });
 test('tax checkboxes save exactly one GST system and automatically pair CGST with SGST',async()=>{
  const dom=new JSDOM('<div id="root"></div>',{url:'https://test.invalid',runScripts:'outside-only'}),w=dom.window;
