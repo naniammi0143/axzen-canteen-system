@@ -33,6 +33,14 @@ test('tablet menu cards keep their normal width when a category has only one ite
   assert.match(source, /html\.pos-layout-tablet #posView \.menu-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fill, 168px\) !important;[^}]*justify-content:\s*start !important;/);
   assert.doesNotMatch(source, /html\.pos-layout-tablet #posView \.menu-grid\s*\{[^}]*minmax\(168px, 1fr\)/);
 });
+test('Apple-style UI font and Telugu glyph font are loaded instead of silently falling back on Windows', () => {
+  assert.ok(source.includes('family=Inter:wght@400;500;600;700;800;900'));
+  assert.ok(source.includes('family=Noto+Sans+Telugu:wght@400;500;600;700;800;900'));
+  assert.match(source, /--font-ui:\s*Inter, "Noto Sans Telugu", -apple-system/);
+  assert.ok(source.includes('Calm, Apple-like type hierarchy'));
+  assert.match(source, /body :is\(button, label, strong, b\)\s*\{\s*font-weight:\s*600 !important;/);
+  assert.match(source, /body :is\(h1, h2, h3, \.item-price, #cartTotal, \.payment-total, \.cart-page-total\)[^{]*\{[^}]*font-weight:\s*700 !important;/);
+});
 test('report presets highlight the selected range and clear for custom dates', () => {
   const saved = {};
   const ctx = vm.createContext({
