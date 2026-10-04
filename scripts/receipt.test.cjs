@@ -21,3 +21,17 @@ test('tax percentages print below discount and optional receipt details obey the
  assert.ok(text.includes('Rs 94.50'));assert.ok(text.includes(bill.gstin));
  for(const hidden of ['Hidden Area','Cashier:','Payment:','Token:','THANK YOU'])assert.ok(!text.includes(hidden));
 });
+
+test('selected menu language is used unchanged on screen, receipt text and Android bitmap print',()=>{
+ const settings={menuLanguage:'telugu',receiptLanguage:'english'};
+ const ctx=vm.createContext({settings,window:{AxenPrinter:{printReceiptBitmapToPrinterAsync(){}}},languageMode:value=>['english','telugu','both'].includes(value)?value:'english',suggestTeluguName:value=>value});
+ vm.runInContext(['localizedName','printItemName','canPrintReceiptBitmap'].map(declaration).join('\n'),ctx);
+ const item={name:'Chicken Curry',nameTe:'చికెన్ కర్రీ'};
+ assert.equal(ctx.localizedName(item),'చికెన్ కర్రీ');
+ assert.equal(ctx.printItemName(item),'చికెన్ కర్రీ');
+ assert.equal(ctx.canPrintReceiptBitmap({receiptLanguage:'telugu'}),true);
+ assert.equal(ctx.canPrintReceiptBitmap({receiptLanguage:'english'}),false);
+ settings.menuLanguage='both';
+ assert.equal(ctx.localizedName(item),'Chicken Curry / చికెన్ కర్రీ');
+ assert.equal(ctx.printItemName(item),'Chicken Curry / చికెన్ కర్రీ');
+});
