@@ -29,6 +29,7 @@ test('phone and tablet layouts match browser and APK, including portrait and rot
   }
 });
 test('tablet menu cards keep their normal width when a category has only one item', () => {
+  assert.match(source, /\/\* Keep menu cards identical[\s\S]*?#posView \.menu-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fill, 168px\) !important;[^}]*justify-content:\s*start !important;/);
   assert.match(source, /html\.pos-layout-tablet #posView \.menu-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fill, 168px\) !important;[^}]*justify-content:\s*start !important;/);
   assert.doesNotMatch(source, /html\.pos-layout-tablet #posView \.menu-grid\s*\{[^}]*minmax\(168px, 1fr\)/);
 });
