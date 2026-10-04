@@ -8,19 +8,23 @@ test('POS and admin inline scripts parse and required offline assets are package
  }
  for(const file of ['bill-taxes.js','dine-in-offline.js','restaurant-settings.js','offline-shell.js','offline-worker.js'])new vm.Script(fs.readFileSync(path.join(root,'sa',file),'utf8'),{filename:file});
 });
-test('admin tax settings save checked percentages and print flags, rejecting double GST',async()=>{
+test('tax checkboxes save exactly one GST system and automatically pair CGST with SGST',async()=>{
  const dom=new JSDOM('<div id="root"></div>',{url:'https://test.invalid',runScripts:'outside-only'}),w=dom.window;
  w.eval(fs.readFileSync(path.join(root,'sa/bill-taxes.js'),'utf8'));w.eval(fs.readFileSync(path.join(root,'sa/restaurant-settings.js'),'utf8'));
  const calls=[];let saved;
  w.RestaurantSettings.mount(w.document.getElementById('root'),{settings:{},api:async(p,o)=>{if(p==='/dine-in')return {tables:[]};const body=JSON.parse(o.body);calls.push(body);return {settings:body};},onSaved:v=>saved=v});
  await new Promise(r=>setTimeout(r,10));
- for(const id of ['cgst','sgst']){w.document.querySelector(`[data-tax="${id}"]`).checked=true;w.document.querySelector(`[data-rate="${id}"]`).value=2.5;}
+ w.document.querySelector('[data-rate="cgst"]').value=2.5;w.document.querySelector('[data-rate="sgst"]').value=2.5;
+ const cgst=w.document.querySelector('[data-tax="cgst"]');cgst.checked=true;cgst.dispatchEvent(new w.Event('change',{bubbles:true}));
+ assert.equal(w.document.querySelector('[data-tax="sgst"]').checked,true);
  w.document.querySelector('[data-print="cashier"]').checked=false;
  w.document.querySelector('#rs-tax-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,10));
- assert.equal(saved.taxSettings.rows.filter(r=>r.enabled).length,2);assert.equal(saved.taxSettings.print.cashier,false);
- w.document.querySelector('[data-tax="gst"]').checked=true;w.document.querySelector('[data-rate="gst"]').value=5;
+ assert.equal(saved.taxSettings.rows.filter(r=>r.enabled).map(r=>r.name).join(','),'CGST,SGST');assert.equal(saved.taxSettings.print.cashier,false);
+ assert.equal(w.BillTaxes.calculate(200,0,saved.taxSettings).taxes.map(r=>r.name).join(','),'CGST,SGST');
+ const gst=w.document.querySelector('[data-tax="gst"]');w.document.querySelector('[data-rate="gst"]').value=5;gst.checked=true;gst.dispatchEvent(new w.Event('change',{bubbles:true}));
+ assert.equal(w.document.querySelector('[data-tax="cgst"]').checked,false);assert.equal(w.document.querySelector('[data-tax="sgst"]').checked,false);
  w.document.querySelector('#rs-tax-form').dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await new Promise(r=>setTimeout(r,10));
- assert.equal(calls.length,1);assert.match(w.document.querySelector('.rs-message').textContent,/one tax system/);w.close();
+ assert.equal(calls.length,2);assert.equal(saved.taxSettings.rows.filter(r=>r.enabled).map(r=>r.name).join(','),'GST');assert.match(w.document.querySelector('.rs-message').textContent,/Checked taxes/);w.close();
 });
 
 test('slow table loading preserves GST edits and the entered rate saves and calculates',async()=>{

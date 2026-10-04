@@ -58,6 +58,15 @@ test('table actions open a dialog, preserve inputs between panels, and close to 
     assert.equal(f.root.querySelector('dialog'), null);
   } finally { f.close(); }
 });
+test('admin can add a table directly from the Dine In floor', async () => {
+  const f = setup(true, { manageTables: true });
+  try {
+    await tick(); await f.click('new-table');
+    assert.ok(f.root.querySelector('#di-name'));
+    assert.ok(f.root.querySelector('[data-di="save-table"]'));
+    assert.match(f.root.querySelector('dialog').textContent, /Add a table/);
+  } finally { f.close(); }
+});
 test('table → portion → kitchen → served → payment → report → cleaning', async () => {
   const f = setup();
   try {

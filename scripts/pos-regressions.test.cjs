@@ -46,6 +46,10 @@ test('sales reports omit profit and loss while the separate finance report remai
   assert.doesNotMatch(declaration('reportShareText'), /Profit|Loss|Consumption Cost|consumptionCost/);
   assert.match(declaration('financePageHtml'), /Profit\/Loss Report/);
 });
+test('admin Dine In mount exposes table management and tax settings refresh the active bill', () => {
+  assert.match(source, /admin:\s*hasAdminAccess\(\),\s*manageTables:\s*hasAdminAccess\(\)/);
+  assert.match(source, /applySettings\(next\);renderCart\(\);await tableOfflineStore\(\)\?\.updateTaxSettings\(next\.taxSettings\)\.catch/);
+});
 test('report presets highlight the selected range and clear for custom dates', () => {
   const saved = {};
   const ctx = vm.createContext({
