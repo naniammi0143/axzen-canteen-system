@@ -159,3 +159,22 @@ test('Home-style card selection increments the badge and remove clears it; draft
   assert.equal(f.root.querySelector('.di-food-count'),null);assert.equal(f.root.querySelector('.di-draft').textContent,'');
  } finally {f.close();}
 });
+
+test('Petpooja-style floor exposes area tabs, operational states and running table details', async () => {
+  const f = setup();
+  try {
+    f.state.tables.push({ tableId: 't2', name: '2', zone: 'Garden', seats: 6, status: 'occupied', active: true, revision: 1,
+      session: { id: 's2', openedAt: new Date(Date.now() - 35 * 60000).toISOString(), guests: 3, tickets: [{ id: 'k2', status: 'preparing', items: [{ name: 'Meals', qty: 2, price: 100 }] }] } });
+    await tick(); await f.click('refresh');
+    assert.match(f.root.textContent, /Table View/);
+    assert.equal(f.root.querySelectorAll('.di-zone-tabs [data-di="zone"]').length, 3);
+    const running = f.root.querySelector('.di-table.occupied');
+    assert.match(running.textContent, /Running/);
+    assert.match(running.textContent, /3 guests/);
+    assert.match(running.textContent, /2 items/);
+    assert.match(running.textContent, /1 KOT/);
+    assert.match(running.textContent, /35m/);
+    f.root.querySelector('[data-di="zone"][data-value="Garden"]').click();
+    assert.equal(f.root.querySelectorAll('.di-table').length, 1);
+  } finally { f.close(); }
+});
