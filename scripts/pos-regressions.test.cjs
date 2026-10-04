@@ -41,6 +41,11 @@ test('Apple UI font stack and close Windows/Telugu fallbacks are loaded', () => 
   assert.match(source, /body :is\(button, label, strong, b\)\s*\{\s*font-weight:\s*600 !important;/);
   assert.match(source, /body :is\(h1, h2, h3, \.item-price, #cartTotal, \.payment-total, \.cart-page-total\)[^{]*\{[^}]*font-weight:\s*700 !important;/);
 });
+test('sales reports omit profit and loss while the separate finance report remains available', () => {
+  assert.doesNotMatch(declaration('reportPageHtml'), /Profit\/Loss|Net Profit|Net Loss|consumptionCost/);
+  assert.doesNotMatch(declaration('reportShareText'), /Profit|Loss|Consumption Cost|consumptionCost/);
+  assert.match(declaration('financePageHtml'), /Profit\/Loss Report/);
+});
 test('report presets highlight the selected range and clear for custom dates', () => {
   const saved = {};
   const ctx = vm.createContext({
