@@ -6030,6 +6030,41 @@
       .printer-setting-head { flex-wrap: wrap; }
       #posView .option-page { max-width: 100%; overflow-x: hidden; }
     }
+    .paper-roll-page { max-width: 980px; margin: 0 auto; padding: 18px; color: #10213f; }
+    .paper-roll-hero { overflow: hidden; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(260px, .9fr); min-height: 280px; border-radius: 28px; background: linear-gradient(135deg,#071d49 0%,#123f92 55%,#2f79ff 100%); color: #fff; box-shadow: 0 22px 50px rgba(15,55,130,.22); }
+    .paper-roll-copy { padding: 34px; display: flex; flex-direction: column; justify-content: center; }
+    .paper-roll-kicker { width: max-content; padding: 7px 11px; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; background: rgba(255,255,255,.12); font-size: 11px; font-weight: 900; letter-spacing: .12em; }
+    .paper-roll-copy h2 { margin: 14px 0 8px; font-size: clamp(28px,5vw,44px); letter-spacing: -.04em; }
+    .paper-roll-copy p { margin: 0; max-width: 510px; color: #dceaff; line-height: 1.55; }
+    .paper-roll-art { position: relative; display: grid; place-items: center; min-height: 250px; background: radial-gradient(circle,rgba(255,255,255,.2),transparent 62%); }
+    .paper-roll-art svg { width: min(92%,350px); filter: drop-shadow(0 22px 20px rgba(0,0,0,.24)); }
+    .paper-roll-grid { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(280px,.85fr); gap: 16px; margin-top: 18px; }
+    .paper-roll-card { padding: 22px; border: 1px solid #dce5f2; border-radius: 22px; background: #fff; box-shadow: 0 10px 30px rgba(15,38,80,.07); }
+    .paper-roll-price { display: flex; align-items: end; justify-content: space-between; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid #e8eef7; }
+    .paper-roll-price strong { display: block; font-size: 30px; color: #0d47a1; }
+    .paper-roll-price span { color: #64748b; font-size: 12px; font-weight: 800; }
+    .paper-roll-min { padding: 8px 11px; border-radius: 999px; background: #fff4d7; color: #9a5c00; font-weight: 900; font-size: 12px; }
+    .paper-order-form { display: grid; gap: 13px; margin-top: 16px; }
+    .paper-order-form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .paper-order-form label { display: grid; gap: 6px; color: #334155; font-size: 12px; font-weight: 850; }
+    .paper-order-form input,.paper-order-form textarea,.paper-order-form select { width: 100%; border: 1px solid #cbd7e8; border-radius: 12px; background: #f9fbff; padding: 12px; color: #0f172a; }
+    .paper-order-form textarea { min-height: 82px; resize: vertical; }
+    .paper-order-total { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-radius: 14px; background: #eef5ff; }
+    .paper-order-total strong { font-size: 22px; color: #0d47a1; }
+    .paper-buy-btn { min-height: 52px; border: 0; border-radius: 15px; background: linear-gradient(135deg,#1461d2,#1e7cff); color: #fff; font-size: 16px; font-weight: 950; box-shadow: 0 12px 24px rgba(30,100,220,.24); }
+    .paper-buy-btn:disabled { opacity: .6; box-shadow: none; }
+    .paper-feature-list { display: grid; gap: 10px; margin-top: 16px; }
+    .paper-feature { display: flex; gap: 10px; align-items: center; color: #42526b; font-size: 13px; font-weight: 750; }
+    .paper-feature b { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; background: #e8f2ff; color: #1461d2; }
+    .paper-history { margin-top: 18px; }
+    .paper-order-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 15px 0; border-bottom: 1px solid #e7edf6; }
+    .paper-order-row:last-child { border-bottom: 0; }
+    .paper-order-row strong,.paper-order-row small { display: block; }
+    .paper-order-row small { margin-top: 4px; color: #64748b; }
+    .paper-status { align-self: start; padding: 7px 10px; border-radius: 999px; background: #e9f2ff; color: #1253aa; font-size: 11px; font-weight: 900; }
+    .paper-status.Delivered { background: #dcfce7; color: #15803d; }
+    .paper-status.Cancelled { background: #fee2e2; color: #b91c1c; }
+    @media(max-width:720px){.paper-roll-page{padding:10px}.paper-roll-hero,.paper-roll-grid{grid-template-columns:1fr}.paper-roll-copy{padding:24px}.paper-roll-art{min-height:190px}.paper-roll-art svg{width:250px}.paper-order-form .two{grid-template-columns:1fr}.paper-roll-card{padding:17px}}
   </style>
 </head>
 <body>
@@ -6243,6 +6278,7 @@
     const loginIdParam = urlParams.get("loginId") || urlParams.get("restaurantId") || urlParams.get("canteenId") || "";
     const restaurantIdParam = urlParams.get("restaurantId") || urlParams.get("canteenId") || "";
     const cashfreeReturnOrderId = urlParams.get("cf_order_id") || "";
+    const paperRollReturnOrderId = urlParams.get("paper_order_id") || (cashfreeReturnOrderId.startsWith("AXZEN_ROLL_") ? cashfreeReturnOrderId : "");
     const hasApiOverride = Boolean(apiParam);
     if (apiParam) localStorage.setItem("AXEN_API_URL", apiParam);
     const liveApi = "https://axzen-canteen-system.vercel.app";
@@ -6264,6 +6300,7 @@
     const chickenCategory = "Chicken";
     const itemUnitOptions = ["Plate", "Pieces", "Kgs", "Grams", "Item", "Ltrs", "ML", "Cup", "Glass", "Bottle", "Packet", "Box", "Dozen", "Bundle", "Set", "Meter", "Feet", "Pair", "Sachet", "Tin"];
     const pendingCashfreeOrderKey = "AXEN_PENDING_CASHFREE_ORDER";
+    const pendingPaperRollOrderKey = "AXEN_PENDING_PAPER_ROLL_ORDER";
     const categoryOrder = (() => {
       const defaults = ["All", chickenCategory, singleItemsCategory, "Breakfast", "Meals", "Biryani", "Starters", "Chinese", "Tiffin", "Tea", "Coffee", "Drinks", "Snacks", "Lunch", "Juice", "Desserts", "Dinner"];
       try {
@@ -6362,6 +6399,8 @@
     let subscriptionState = null;
     let subscriptionCheckoutOpen = false;
     let selectedRechargeMonths = 1;
+    let paperRollProduct = null;
+    let paperRollOrders = [];
 
     const $ = id => document.getElementById(id);
     const money = value => "Rs " + Number(value || 0).toFixed(2);
@@ -6549,6 +6588,15 @@
       const overrides = productUnitOverrides();
       overrides[key] = unit;
       writeJson(productUnitOverridesKey, overrides);
+    }
+
+    function useBootstrapProducts(rows) {
+      if (!Array.isArray(rows)) return false;
+      products = applyProductUnitOverrides(tenantProducts(rows, false));
+      writeJson(productCacheKey, products);
+      renderProducts();
+      preloadProductImages(products);
+      return true;
     }
 
     if (localStorage.getItem(appBuildKey) !== appBuild) {
@@ -6922,6 +6970,7 @@
       window.DineIn?.close(); dineOffline?.stop(); dineOffline=null; dineOfflineScope='';
       user = nextUser;
       products=[];orders=[];expenses=[];users=[];creditors=[];addresses=[];cart=[];selectedSubItems={};cartDiscount=0;
+      paperRollProduct=null;paperRollOrders=[];
       activeCategory='All';itemSearch='';showingCategoryHome=false;adminAccessToken='';adminUnlocked=false;subscriptionState=null;
       settings={...defaultClientSettings,canteenId:user?.canteenId,businessCategory:user?.canteen?.businessCategory,posMode:user?.canteen?.posMode};
       try { const saved=JSON.parse(scopedLocalGet('AXEN_BUSINESS_SETTINGS')||'{}');if(saved.canteenId===user?.canteenId)settings={...settings,...saved}; } catch {}
@@ -6974,6 +7023,7 @@
       localStorage.removeItem(tokenKey);
       user = null;
       products=[];orders=[];expenses=[];users=[];creditors=[];addresses=[];settings={...defaultClientSettings};subscriptionState=null;cartDiscount=0;
+      paperRollProduct=null;paperRollOrders=[];
       adminAccessToken = "";
       cart = [];
       selectedSubItems = {};
@@ -8894,6 +8944,7 @@
         counter: "user",
         settings: "settings",
         subscription: "creditCard",
+        paperRolls: "package",
         dayClose: "lockKeyhole",
         sync: "cloud",
         admin: "settings"
@@ -8934,6 +8985,7 @@
         settings: "Settings",
         delivery: "Delivery",
         subscription: "Subscription"
+        ,paperRolls: "Paper Rolls"
       })[section] || "Dashboard";
     }
 
@@ -8956,6 +9008,7 @@
         settings: "Search, menu refresh and admin access.",
         delivery: "Delivery logos and sales registration.",
         subscription: "Plan status and Cashfree recharge."
+        ,paperRolls: "Order thermal billing rolls and track delivery."
       })[section] || "Overview";
     }
 
@@ -10163,6 +10216,7 @@
         : activePosSection === "add" || activePosSection === "edit" ? itemManagerPageHtml(activePosSection)
         : activePosSection === "delivery" ? deliveryPageHtml()
         : activePosSection === "subscription" ? planRechargeHtml()
+        : activePosSection === "paperRolls" ? paperRollsPageHtml()
         : simpleAdminPageHtml(activePosSection);
       page.innerHTML = html;
       if (activePosSection === "report" && canUseDineIn()) {
@@ -10173,6 +10227,73 @@
         page.prepend(tablesButton);
       }
       bindOptionPageActions();
+    }
+
+    function paperRollArtSvg() {
+      return `<svg viewBox="0 0 420 270" role="img" aria-label="Thermal paper rolls"><defs><linearGradient id="rollFace" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#dce6f4"/></linearGradient><linearGradient id="rollSide" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d9e4f1"/><stop offset="1" stop-color="#9eb3cc"/></linearGradient></defs><ellipse cx="210" cy="238" rx="150" ry="18" fill="#001437" opacity=".22"/><g transform="translate(40 25)"><g transform="rotate(-8 95 110)"><path d="M45 55h95v132H45z" fill="url(#rollSide)"/><ellipse cx="45" cy="121" rx="42" ry="66" fill="url(#rollFace)"/><ellipse cx="45" cy="121" rx="15" ry="24" fill="#98abc2"/><ellipse cx="45" cy="121" rx="7" ry="12" fill="#526a87"/><ellipse cx="140" cy="121" rx="42" ry="66" fill="#eef4fa"/></g><g transform="translate(130 5) rotate(7 110 112)"><path d="M55 45h118v148H55z" fill="url(#rollSide)"/><ellipse cx="55" cy="119" rx="49" ry="74" fill="url(#rollFace)"/><ellipse cx="55" cy="119" rx="18" ry="27" fill="#a5b7ca"/><ellipse cx="55" cy="119" rx="8" ry="13" fill="#536b87"/><ellipse cx="173" cy="119" rx="49" ry="74" fill="#f8fbff"/><path d="M173 55c48 20 76 42 96 90l-38 48c-17-39-34-54-58-65Z" fill="#fff" opacity=".96"/></g></g></svg>`;
+    }
+
+    function paperRollsPageHtml() {
+      const product = paperRollProduct || { name:"Thermal Paper Rolls",size:"58mm x 40mm",description:"Premium thermal billing rolls for your POS printer.",unitPrice:15,minimumQuantity:100 };
+      const min = Number(product.minimumQuantity || 100);
+      const history = paperRollOrders.map(order => `<div class="paper-order-row"><div><strong>${esc(order.orderId)}</strong><small>${Number(order.quantity || 0)} pcs · ${money(order.amount)} · ${esc(order.paymentMethod || "-")}</small><small>${new Date(order.createdAt || Date.now()).toLocaleString("en-IN")}${order.paymentStatus ? ` · Payment: ${esc(order.paymentStatus)}` : ""}</small></div><span class="paper-status ${esc(order.status || "Placed")}">${esc(order.status || "Placed")}</span></div>`).join("");
+      return `<div class="paper-roll-page">
+        <section class="paper-roll-hero"><div class="paper-roll-copy"><span class="paper-roll-kicker">AXZEN SUPPLIES</span><h2>Paper Roll Order</h2><p>${esc(product.description)} Reliable print quality, low dust and doorstep delivery.</p></div><div class="paper-roll-art">${paperRollArtSvg()}</div></section>
+        <div class="paper-roll-grid"><section class="paper-roll-card"><div class="paper-roll-price"><div><span>${esc(product.name)} · ${esc(product.size)}</span><strong>${money(product.unitPrice)} <small>/ roll</small></strong></div><b class="paper-roll-min">Minimum ${min} pcs</b></div>
+          <form class="paper-order-form" id="paperRollOrderForm"><div class="two"><label>Quantity (pcs)<input id="paperRollQty" type="number" min="${min}" max="10000" step="1" value="${min}" required></label><label>Payment method<select id="paperRollPayment"><option value="Online">Online payment</option><option value="Cash on Delivery">Cash on Delivery</option></select></label></div><div class="two"><label>Customer name<input id="paperRollName" value="${esc(user?.name || "")}" maxlength="100" required></label><label>Mobile number<input id="paperRollPhone" inputmode="tel" value="${esc(user?.mobile || "")}" maxlength="10" required></label></div><label>Delivery address<textarea id="paperRollAddress" placeholder="Shop name, door number, street, area, city and PIN code" required>${esc(user?.canteen?.address || settings.address || "")}</textarea></label><div class="paper-order-total"><span>Order total</span><strong id="paperRollTotal">${money(min * Number(product.unitPrice || 0))}</strong></div><button class="paper-buy-btn" id="paperRollBuy" type="submit">Buy Now</button><div class="status" id="paperRollMessage"></div></form>
+        </section><aside class="paper-roll-card"><h3>Made for daily billing</h3><div class="paper-feature-list"><div class="paper-feature"><b>✓</b><span>Compatible with standard 58mm thermal printers</span></div><div class="paper-feature"><b>✓</b><span>Crisp printing with smooth paper feed</span></div><div class="paper-feature"><b>✓</b><span>Online payment or Cash on Delivery</span></div><div class="paper-feature"><b>✓</b><span>Order status visible in this app</span></div></div></aside></div>
+        <section class="paper-roll-card paper-history"><div class="row-between"><div><h3>My Paper Roll Orders</h3><p class="muted">Track confirmation, packing, shipping and delivery.</p></div><button class="ghost-action" id="refreshPaperRollOrders" type="button">Refresh</button></div>${history || `<div class="muted">No paper roll orders yet.</div>`}</section>
+      </div>`;
+    }
+
+    async function loadPaperRollOrders() {
+      const data = await api("/paper-rolls", { timeoutMs: 12000 });
+      paperRollProduct = data.product || paperRollProduct;
+      paperRollOrders = Array.isArray(data.orders) ? data.orders : [];
+      if (activePosSection === "paperRolls") renderOptionPage();
+      return data;
+    }
+
+    async function verifyPaperRollPayment(orderId) {
+      const result = await api(`/paper-rolls/orders/${encodeURIComponent(orderId)}/verify`, { method:"POST", timeoutMs:15000, body:"{}" });
+      localStorage.removeItem(pendingPaperRollOrderKey);
+      await loadPaperRollOrders();
+      return result.order;
+    }
+
+    async function submitPaperRollOrder(event) {
+      event.preventDefault();
+      const button = $("paperRollBuy"), message = $("paperRollMessage");
+      const quantity = Number($("paperRollQty")?.value || 0);
+      button.disabled = true; message.textContent = "Creating your order..."; message.className = "status";
+      try {
+        const result = await api("/paper-rolls/orders", { method:"POST", timeoutMs:20000, body:JSON.stringify({quantity,paymentMethod:$("paperRollPayment").value,customerName:$("paperRollName").value,phone:$("paperRollPhone").value,deliveryAddress:$("paperRollAddress").value}) });
+        if (result.order?.paymentMethod === "Cash on Delivery") {
+          message.textContent = `Order placed. ${result.order.orderId}`; message.className = "status ok";
+          await loadPaperRollOrders();
+          return;
+        }
+        if (!result.paymentSessionId) throw new Error("Payment session missing from Cashfree");
+        if (typeof Cashfree !== "function") throw new Error("Cashfree SDK not loaded. Check internet connection.");
+        localStorage.setItem(pendingPaperRollOrderKey, JSON.stringify({orderId:result.order.orderId,createdAt:new Date().toISOString()}));
+        message.textContent = "Opening secure online payment..."; message.className = "status ok";
+        const cashfree = Cashfree({ mode: result.environment || "sandbox" });
+        const checkout = await cashfree.checkout({ paymentSessionId:result.paymentSessionId,redirectTarget:window.Capacitor?"_self":"_modal",returnUrl:`${location.origin}${location.pathname}?paper_order_id=${encodeURIComponent(result.order.orderId)}&cf_order_id=${encodeURIComponent(result.order.orderId)}` });
+        if (!window.Capacitor) {
+          const error = checkout?.error?.message || checkout?.error;
+          if (error) throw new Error(String(error));
+          await verifyPaperRollPayment(result.order.orderId);
+        }
+      } catch (error) {
+        message.textContent = error.message || "Paper roll order failed"; message.className = "status error";
+      } finally { if (button) button.disabled = false; }
+    }
+
+    function bindPaperRollPage() {
+      if (!paperRollProduct) loadPaperRollOrders().catch(error => { const node=$("paperRollMessage");if(node){node.textContent=error.message;node.className="status error";} });
+      $("paperRollQty")?.addEventListener("input", event => { const qty=Number(event.target.value||0),price=Number(paperRollProduct?.unitPrice||15);if($("paperRollTotal"))$("paperRollTotal").textContent=money(qty*price); });
+      $("paperRollOrderForm")?.addEventListener("submit", submitPaperRollOrder);
+      $("refreshPaperRollOrders")?.addEventListener("click", () => loadPaperRollOrders().catch(()=>{}));
     }
 
     function deliveryPageHtml() {
@@ -10217,6 +10338,7 @@
     }
 
     function bindOptionPageActions() {
+      if (activePosSection === "paperRolls") bindPaperRollPage();
       if ($("printerReceiptArea")) $("printerReceiptArea").oninput = event => { $("printerReceiptPreview").innerHTML = receiptPreviewHtml(event.target.value); };
       if ($("saveReceiptArea")) $("saveReceiptArea").onclick = async () => {
         const button = $("saveReceiptArea"); button.disabled = true;
@@ -11100,6 +11222,7 @@
                 ${drawerItem("store", "Store", "S", activeSection)}
                 ${drawerItem("expenses", "Expenses", "X", activeSection)}
                 ${drawerItem("cash", "Cash Summary", "C", activeSection)}
+                ${drawerItem("paperRolls", "Paper Rolls", "P", activeSection)}
                 <button class="drawer-item" id="dayCloseBtn" type="button"><span>${drawerIcon("dayClose")}</span><strong>Day Close</strong><span class="drawer-arrow">${lucideIcon("chevronRight", 18)}</span></button>
                 <button class="drawer-item" id="syncNowBtn" type="button"><span>${drawerIcon("sync")}</span><strong>Sync Data</strong><span class="drawer-arrow">${lucideIcon("chevronRight", 18)}</span></button>
               </section>
@@ -12423,6 +12546,7 @@
         setSession(data.user, data.token);
         cacheLogin($("ownerSetupMobile").value.trim(), password, data.user, data.token || "");
         applySettings(data.settings);
+        useBootstrapProducts(data.products);
         await enterApp();
       } catch (error) {
         $("setupStatus").textContent = error.message || "Activation failed. Check server and try again.";
@@ -12499,6 +12623,7 @@
         setSession(data.user, data.token);
         cacheLogin(loginId, password, data.user, data.token || "");
         applySettings(data.settings);
+        useBootstrapProducts(data.products);
         if (data.user?.mustChangePassword) {
           showOwnerSetup();
           return;
@@ -12596,7 +12721,14 @@
       loadSubscriptionStatus({ silent: true }).catch(() => {});
       loadAdminData().catch(() => updateSyncStatus("Data load failed", "offline"));
       syncPendingOrders().catch(() => updateSyncStatus());
-      if (cashfreeReturnOrderId) {
+      if (paperRollReturnOrderId) {
+        setPosSection("paperRolls");
+        verifyPaperRollPayment(paperRollReturnOrderId).catch(error => {
+          const node = $("paperRollMessage");
+          if (node) { node.textContent = error.message || "Payment verification pending"; node.className = "status error"; }
+          loadPaperRollOrders().catch(() => {});
+        });
+      } else if (cashfreeReturnOrderId) {
         adminTab = "plan";
         show("adminView");
         renderAdmin();

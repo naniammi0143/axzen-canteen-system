@@ -327,6 +327,7 @@ let memory = {
   enquiries: [],
   websitePlans: [...defaultWebsitePlans],
   subscriptionOrders: [],
+  paperRollOrders: [],
   globalCatalogItems: defaultCatalogItems.map(item => ({ catalogId: item.id, name: item.name, image: item.image || "", sourceCount: 1 }))
 };
 
@@ -637,6 +638,30 @@ const subscriptionOrderSchema = new mongoose.Schema({
   createdByMobile: String
 }, { timestamps: true, collection: "subscription_orders" });
 
+const paperRollOrderSchema = new mongoose.Schema({
+  orderId: { type: String, unique: true, index: true },
+  canteenId: { type: String, index: true },
+  canteenName: String,
+  customerName: String,
+  phone: String,
+  deliveryAddress: String,
+  productName: String,
+  productSize: String,
+  quantity: Number,
+  unitPrice: Number,
+  amount: Number,
+  currency: { type: String, default: "INR" },
+  paymentMethod: String,
+  paymentStatus: { type: String, index: true },
+  status: { type: String, index: true, default: "Placed" },
+  paymentSessionId: String,
+  cfOrderId: String,
+  cfPaymentId: String,
+  rawPayment: mongoose.Schema.Types.Mixed,
+  statusHistory: [{ status: String, note: String, actor: String, at: String }],
+  createdByMobile: String
+}, { timestamps: true, collection: "paper_roll_orders" });
+
 const marketingSupportTicketSchema = new mongoose.Schema({
   id: Number,
   canteenId: { type: String, index: true },
@@ -743,6 +768,7 @@ const MarketingCanteen = mongoose.models.MarketingCanteen || mongoose.model("Mar
 const MarketingActivity = mongoose.models.MarketingActivity || mongoose.model("MarketingActivity", marketingActivitySchema);
 const MarketingPayment = mongoose.models.MarketingPayment || mongoose.model("MarketingPayment", marketingPaymentSchema);
 const SubscriptionOrder = mongoose.models.SubscriptionOrder || mongoose.model("SubscriptionOrder", subscriptionOrderSchema);
+const PaperRollOrder = mongoose.models.PaperRollOrder || mongoose.model("PaperRollOrder", paperRollOrderSchema);
 const MarketingSupportTicket = mongoose.models.MarketingSupportTicket || mongoose.model("MarketingSupportTicket", marketingSupportTicketSchema);
 const AppRelease = mongoose.models.AppRelease || mongoose.model("AppRelease", appReleaseSchema);
 const Enquiry = mongoose.models.Enquiry || mongoose.model("Enquiry", enquirySchema);
@@ -1160,6 +1186,8 @@ async function ensureDatabaseIndexes() {
     );
   }
   await GlobalCatalogItem.collection.createIndex({ name: 1 }, { name: "name_1" });
+  await PaperRollOrder.collection.createIndex({ orderId: 1 }, { unique: true, name: "orderId_1" });
+  await PaperRollOrder.collection.createIndex({ canteenId: 1, createdAt: -1 }, { name: "canteenId_1_createdAt_-1" });
 }
 
 async function connectDatabase() {
@@ -2270,6 +2298,136 @@ async function findSubscriptionOrder(orderId) {
   return SubscriptionOrder.findOne({ orderId }).lean();
 }
 
+function paperRollProduct() {
+  const configuredPrice = Number(process.env.PAPER_ROLL_UNIT_PRICE || 15);
+  return {
+    sku: "THERMAL-58MM",
+    name: "Thermal Paper Rolls",
+    size: "58mm x 40mm",
+    description: "Clear, smooth thermal paper made for Axzen POS and standard 58mm billing printers.",
+    unitPrice: Number.isFinite(configuredPrice) && configuredPrice > 0 ? configuredPrice : 15,
+    minimumQuantity: 100,
+    currency: "INR"
+  };
+}
+
+async function allPaperRollOrders(canteenId = "") {
+  const tenant = normalizeCanteenId(canteenId);
+  if (!mongoReady) {
+    return memory.paperRollOrders
+      .filter(item => !tenant || normalizeCanteenId(item.canteenId) === tenant)
+      .slice()
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }
+  return PaperRollOrder.find(tenant ? { canteenId: tenant } : {}).sort({ createdAt: -1 }).limit(1000).lean();
+}
+
+async function findPaperRollOrder(orderId) {
+  const id = String(orderId || "").trim();
+  if (!id) return null;
+  if (!mongoReady) return memory.paperRollOrders.find(item => item.orderId === id) || null;
+  return PaperRollOrder.findOne({ orderId: id }).lean();
+}
+
+async function savePaperRollOrder(entry) {
+  const payload = { ...entry, updatedAt: new Date().toISOString() };
+  if (!mongoReady) {
+    const index = memory.paperRollOrders.findIndex(item => item.orderId === payload.orderId);
+    if (index >= 0) memory.paperRollOrders[index] = { ...memory.paperRollOrders[index], ...payload };
+    else memory.paperRollOrders.unshift({ ...payload, createdAt: new Date().toISOString() });
+    return memory.paperRollOrders.find(item => item.orderId === payload.orderId);
+  }
+  return PaperRollOrder.findOneAndUpdate(
+    { orderId: payload.orderId },
+    { $set: payload, $setOnInsert: { createdAt: new Date().toISOString() } },
+    { new: true, upsert: true }
+  ).lean();
+}
+
+async function createPaperRollOrder(canteenId, body, user, req) {
+  const product = paperRollProduct();
+  const quantity = Number(body.quantity);
+  if (!Number.isInteger(quantity) || quantity < product.minimumQuantity || quantity > 10000) {
+    throw new Error(`Order at least ${product.minimumQuantity} rolls (maximum 10,000).`);
+  }
+  const paymentMethod = String(body.paymentMethod || "").trim();
+  if (!['Online', 'Cash on Delivery'].includes(paymentMethod)) throw new Error("Choose Online or Cash on Delivery.");
+  const customerName = String(body.customerName || user?.name || "").trim().slice(0, 100);
+  const phone = String(body.phone || user?.mobile || "").replace(/\D/g, "").slice(-10);
+  const deliveryAddress = String(body.deliveryAddress || "").replace(/\s+/g, " ").trim().slice(0, 500);
+  if (!customerName || phone.length !== 10 || deliveryAddress.length < 8) throw new Error("Enter customer name, 10-digit phone and complete delivery address.");
+  const tenant = normalizeCanteenId(canteenId);
+  const settings = await getSettings(tenant);
+  const orderId = `AXZEN_ROLL_${tenant}_${Date.now()}_${Math.random().toString(16).slice(2, 8)}`.replace(/[^A-Z0-9_]/g, "_");
+  const amount = Number((quantity * product.unitPrice).toFixed(2));
+  const base = {
+    orderId,
+    canteenId: tenant,
+    canteenName: settings.canteenName || user?.canteen?.name || tenant,
+    customerName,
+    phone,
+    deliveryAddress,
+    productName: product.name,
+    productSize: product.size,
+    quantity,
+    unitPrice: product.unitPrice,
+    amount,
+    currency: product.currency,
+    paymentMethod,
+    paymentStatus: paymentMethod === "Cash on Delivery" ? "COD" : "Pending",
+    status: paymentMethod === "Cash on Delivery" ? "Placed" : "Awaiting Payment",
+    createdByMobile: user?.mobile || "",
+    statusHistory: [{ status: paymentMethod === "Cash on Delivery" ? "Placed" : "Awaiting Payment", note: paymentMethod, actor: customerName, at: new Date().toISOString() }]
+  };
+  if (paymentMethod === "Cash on Delivery") return { order: await savePaperRollOrder(base), environment: CASHFREE_ENV };
+  const returnBase = process.env.CASHFREE_RETURN_URL || process.env.PUBLIC_APP_URL || `${req.protocol}://${req.get("host")}/mobile`;
+  const cashfreeOrder = await cashfreeRequest("/orders", {
+    method: "POST",
+    body: {
+      order_id: orderId,
+      order_amount: amount,
+      order_currency: product.currency,
+      customer_details: {
+        customer_id: tenant,
+        customer_name: customerName,
+        customer_email: process.env.CASHFREE_DEFAULT_EMAIL || "support@axzeninfotech.com",
+        customer_phone: phone
+      },
+      order_meta: { return_url: `${returnBase}${String(returnBase).includes("?") ? "&" : "?"}paper_order_id={order_id}&cf_order_id={order_id}` },
+      order_note: `${quantity} ${product.name} (${product.size})`
+    }
+  });
+  const order = await savePaperRollOrder({
+    ...base,
+    paymentSessionId: cashfreeOrder.payment_session_id || "",
+    cfOrderId: cashfreeOrder.cf_order_id || ""
+  });
+  return { order, paymentSessionId: cashfreeOrder.payment_session_id || "", environment: CASHFREE_ENV };
+}
+
+async function verifyPaperRollCashfreeOrder(orderId) {
+  const order = await findPaperRollOrder(orderId);
+  if (!order) throw new Error("Paper roll order not found");
+  if (order.paymentStatus === "Paid") return order;
+  const payments = await cashfreeRequest(`/orders/${encodeURIComponent(orderId)}/payments`);
+  const rows = Array.isArray(payments) ? payments : (payments.payments || payments.data || []);
+  const success = rows.find(item => String(item.payment_status || item.status || "").toUpperCase() === "SUCCESS");
+  if (!success) {
+    await savePaperRollOrder({ ...order, paymentStatus: "Pending", status: "Awaiting Payment", rawPayment: rows });
+    throw new Error("Payment not completed yet");
+  }
+  const history = Array.isArray(order.statusHistory) ? order.statusHistory.slice() : [];
+  history.push({ status: "Confirmed", note: "Online payment received", actor: "Cashfree", at: new Date().toISOString() });
+  return savePaperRollOrder({
+    ...order,
+    paymentStatus: "Paid",
+    status: "Confirmed",
+    cfPaymentId: success.cf_payment_id || success.payment_id || "",
+    rawPayment: success,
+    statusHistory: history
+  });
+}
+
 async function addMarketingPayment(payment) {
   const entry = {
     id: Date.now(),
@@ -3302,14 +3460,24 @@ app.post("/login", requireDatabase, async (req, res) => {
   const user = allowedMatches.find(item => compactCanteenId(item.canteenId || DEFAULT_CANTEEN_ID) === compactCanteenId(loginAsCanteenId)) || allowedMatches[0];
 
   if (!user) return res.status(401).json({ success: false, message: blockedMessage });
-  const canteen = await getCoreCanteen(user.canteenId);
-  const subscription = await subscriptionStatusForCanteen(user.canteenId);
+  const [canteen, subscription, settings, products] = await Promise.all([
+    getCoreCanteen(user.canteenId),
+    subscriptionStatusForCanteen(user.canteenId),
+    getSettings(user.canteenId),
+    allMenuItems(user.canteenId)
+  ]);
   const canteenWithPrinter = {
     ...canteen,
     printerModel: subscription.printerModel || canteen?.printerModel || "",
     printerSerialNumber: subscription.printerSerialNumber || canteen?.printerSerialNumber || ""
   };
-  res.json({ success: true, user: { ...publicUser(user), canteen: canteenWithPrinter }, token: signToken(user), settings: await getSettings(user.canteenId) });
+  res.json({
+    success: true,
+    user: { ...publicUser(user), canteen: canteenWithPrinter },
+    token: signToken(user),
+    settings,
+    products
+  });
 });
 
 app.post("/activate-owner", requireDatabase, requireAdmin, async (req, res) => {
@@ -3348,7 +3516,11 @@ app.post("/activate-owner", requireDatabase, requireAdmin, async (req, res) => {
       }
     }
     const savedUser = publicUser(owner);
-    res.json({ success: true, user: { ...savedUser, canteen }, token: signToken(owner), settings: await getSettings(canteenId) });
+    const [settings, products] = await Promise.all([
+      getSettings(canteenId),
+      allMenuItems(canteenId)
+    ]);
+    res.json({ success: true, user: { ...savedUser, canteen }, token: signToken(owner), settings, products });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message || "Owner activation failed" });
   }
@@ -3464,6 +3636,34 @@ app.delete("/orders/:id", requireDatabase, requireAdmin, async (req, res) => {
 
 app.get("/dashboard", requireCanteenAuth, async (req, res) => res.json(await dashboardData(req.authUser.canteenId)));
 
+app.get("/paper-rolls", requireDatabase, requireCanteenTokenOnly, async (req, res) => {
+  res.json({
+    success: true,
+    product: paperRollProduct(),
+    orders: await allPaperRollOrders(req.authUser.canteenId)
+  });
+});
+
+app.post("/paper-rolls/orders", requireDatabase, requireCanteenTokenOnly, async (req, res) => {
+  try {
+    res.json({ success: true, ...(await createPaperRollOrder(req.authUser.canteenId, req.body || {}, req.authUser, req)) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || "Paper roll order failed" });
+  }
+});
+
+app.post("/paper-rolls/orders/:orderId/verify", requireDatabase, requireCanteenTokenOnly, async (req, res) => {
+  try {
+    const existing = await findPaperRollOrder(req.params.orderId);
+    if (!existing || normalizeCanteenId(existing.canteenId) !== normalizeCanteenId(req.authUser.canteenId)) {
+      return res.status(404).json({ success: false, message: "Paper roll order not found" });
+    }
+    res.json({ success: true, order: await verifyPaperRollCashfreeOrder(existing.orderId) });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message || "Payment verification failed" });
+  }
+});
+
 app.get("/subscription/status", requireDatabase, requireCanteenTokenOnly, async (req, res) => {
   try {
     res.json({ success: true, ...(await subscriptionStatusForCanteen(req.authUser.canteenId)) });
@@ -3501,10 +3701,19 @@ async function handleCashfreeSubscriptionWebhook(req, res) {
     verifyCashfreeWebhookSignature(req);
     if (!orderId) return res.json({ success: true, ignored: true, message: "Cashfree test event received" });
     const paymentStatus = cashfreeWebhookPaymentStatus(req.body);
+    const paperOrder = orderId.startsWith("AXZEN_ROLL_") ? await findPaperRollOrder(orderId) : null;
     if (!paymentStatus.includes("SUCCESS") && !paymentStatus.includes("PAID")) {
+      if (paperOrder) {
+        await savePaperRollOrder({ ...paperOrder, paymentStatus: "Pending", status: "Awaiting Payment", rawPayment: req.body });
+        return res.json({ success: true, ignored: true, orderId, paymentStatus });
+      }
       const order = await findSubscriptionOrder(orderId);
       if (order) await saveSubscriptionOrder({ ...order, status: "pending", rawPayment: req.body });
       return res.json({ success: true, ignored: true, orderId, paymentStatus });
+    }
+    if (paperOrder) {
+      const order = await verifyPaperRollCashfreeOrder(orderId);
+      return res.json({ success: true, orderId, status: order?.status || "Confirmed" });
     }
     const order = await verifySubscriptionCashfreeOrder(orderId, { name: "Cashfree Webhook", mobile: "WEBHOOK" });
     return res.json({ success: true, orderId, status: order?.status || "paid" });
@@ -3612,15 +3821,18 @@ app.put("/marketing-api/me/bank", requireDatabase, requireMarketingAuth, async (
 });
 
 app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
-  const allCanteens = await allMarketingCanteens();
-  const users = await allMarketingUsers();
-  const activities = await allMarketingActivities();
-  const payments = await allMarketingPayments();
-  const supportTickets = await allMarketingSupportTickets();
-  const enquiries = await allEnquiries();
-  const websitePlans = await allWebsitePlans();
-  const printers = await allPrinters();
-  const appReleases = await allAppReleases();
+  const [allCanteens, users, activities, payments, supportTickets, enquiries, websitePlans, printers, appReleases, paperRollOrders] = await Promise.all([
+    allMarketingCanteens(),
+    allMarketingUsers(),
+    allMarketingActivities(),
+    allMarketingPayments(),
+    allMarketingSupportTickets(),
+    allEnquiries(),
+    allWebsitePlans(),
+    allPrinters(),
+    allAppReleases(),
+    allPaperRollOrders()
+  ]);
   const isAdmin = req.marketingUser.role === "super_admin" || req.marketingUser.role === "manager";
   const canteens = isAdmin
     ? allCanteens
@@ -3672,9 +3884,27 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     enquiries: deskOnly ? [] : visibleEnquiries,
     websitePlans: isAdmin && !deskOnly ? websitePlans : [],
     appReleases: isAdmin && !deskOnly ? appReleases : [],
+    paperRollOrders: isAdmin && !deskOnly ? paperRollOrders : [],
     activities: isAdmin && !deskOnly ? activities : [],
     summary: marketingSummary(deskOnly ? [] : canteens, deskOnly ? [] : visibleUsers, isAdmin && !deskOnly ? activities : [], deskOnly ? [] : visiblePayments, visibleSupportTickets, deskOnly ? [] : visibleEnquiries, deskOnly ? [] : visiblePrinters)
   });
+});
+
+app.post("/marketing-api/paper-roll-orders/:orderId/status", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const allowed = ["Placed", "Confirmed", "Packed", "Shipped", "Delivered", "Cancelled"];
+    const status = String(req.body.status || "").trim();
+    if (!allowed.includes(status)) throw new Error("Choose a valid paper roll order status");
+    const order = await findPaperRollOrder(req.params.orderId);
+    if (!order) return res.status(404).json({ success: false, message: "Paper roll order not found" });
+    const note = String(req.body.note || "").trim().slice(0, 300);
+    const history = Array.isArray(order.statusHistory) ? order.statusHistory.slice() : [];
+    history.push({ status, note, actor: req.marketingUser.name || req.marketingUser.employeeId, at: new Date().toISOString() });
+    const saved = await savePaperRollOrder({ ...order, status, statusHistory: history });
+    res.json({ success: true, order: saved });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 });
 
 app.post("/marketing-api/help-tickets/:id/status", requireDatabase, requireHelpDesk, async (req, res) => {

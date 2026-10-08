@@ -1117,7 +1117,8 @@
     const $ = id => document.getElementById(id);
     if (window.Capacitor) document.documentElement.classList.add("native-app");
     const liveApi = "https://axzen-canteen-system.vercel.app";
-    const API = (window.Capacitor || location.protocol === "capacitor:") ? liveApi : "";
+    const apiOwnHosts = new Set(["axzen-canteen-system.vercel.app", "localhost", "127.0.0.1"]);
+    const API = (window.Capacitor || location.protocol === "capacitor:" || !apiOwnHosts.has(location.hostname)) ? liveApi : "";
     const TOKEN_KEY = "axzen_employee_token";
     const USER_KEY = "axzen_employee_user";
     const DATA_CACHE_KEY = "axzen_employee_dashboard_cache";
@@ -1239,7 +1240,17 @@
     async function api(path, options = {}) {
       const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
       if (token) headers.Authorization = `Bearer ${token}`;
-      const response = await fetch(`${API}${path}`, { ...options, headers });
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), Number(options.timeoutMs || 15000));
+      let response;
+      try {
+        const { timeoutMs, ...fetchOptions } = options;
+        response = await fetch(`${API}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+      } catch (error) {
+        throw new Error(error?.name === "AbortError" ? "Server response timed out. Please try again." : "Server not reachable. Check internet and try again.");
+      } finally {
+        clearTimeout(timeout);
+      }
       const body = await response.json().catch(() => ({}));
       if (!response.ok || body.success === false) throw new Error(body.message || "Server request failed");
       return body;

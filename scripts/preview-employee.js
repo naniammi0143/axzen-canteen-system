@@ -35,7 +35,7 @@ http.createServer((req, res) => {
     let body = data;
     if (ext === ".html") {
       body = String(data).replace(
-        "const API = (window.Capacitor || location.protocol === \"capacitor:\") ? liveApi : \"\";",
+        /const apiOwnHosts = new Set\([^;]+;\s*const API = [^;]+;/,
         "const API = liveApi;"
       );
     }

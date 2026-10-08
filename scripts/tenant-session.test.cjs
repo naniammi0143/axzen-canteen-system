@@ -8,7 +8,7 @@ function fixture(){
  w.eval(fs.readFileSync(path.join(root,'sa/bill-taxes.js'),'utf8'));
  w.eval(fs.readFileSync(path.join(root,'sa/app-version.js'),'utf8'));
  const script=[...w.document.scripts].find(s=>s.textContent.includes('const urlParams =')).textContent;
- w.eval(script+`\nwindow.testPOS={setSession,applySettings,loadProducts,loadSettings,loadAdminData,api,addToCart,logout,ensureUserNavKeys,shopBillingProducts,chickenProductsForMenu,refreshLiveData,
+ w.eval(script+`\nwindow.testPOS={setSession,applySettings,useBootstrapProducts,loadProducts,loadSettings,loadAdminData,api,addToCart,logout,ensureUserNavKeys,shopBillingProducts,chickenProductsForMenu,refreshLiveData,
  state:()=>({user,products,settings,cart,orders}),setProducts:rows=>{products=rows;renderProducts();},selectOption:(id,option)=>selectedSubItems[id]=option};`);
  return {w,dom,pos:w.testPOS,login:(id,category)=>w.testPOS.setSession({canteenId:id,mobile:'test',name:id,role:'admin',canteen:{businessCategory:category}},'token-'+id),close:()=>w.close()};
 }
@@ -23,6 +23,19 @@ test('chicken popup survives menu refresh, supports kg and money, and ignores ol
   f.w.fetch=async()=>({ok:true,json:async()=>[item]});await f.pos.loadProducts();
   f.pos.addToCart(1,{name:'Old portion',price:40});assert.ok(f.w.document.getElementById('chickenKgInput'));assert.equal(f.pos.state().cart.length,0);
   assert.equal(f.w.document.querySelector('[data-nav="dinein"]').hidden,true);
+ }finally{f.close();}
+});
+test('fresh login renders and caches bootstrap products without another request',()=>{
+ const f=fixture();try{
+  f.login('FRESH','Restaurant');
+  const used=f.pos.useBootstrapProducts([
+   {id:1,canteenId:'FRESH',name:'Ready Meal',category:'Meals',price:120},
+   {id:2,canteenId:'OTHER',name:'Foreign Meal',category:'Meals',price:90}
+  ]);
+  assert.equal(used,true);
+  assert.deepEqual(Array.from(f.pos.state().products,p=>p.name),['Ready Meal']);
+  assert.match(f.w.localStorage.getItem('AXEN_PRODUCTS::FRESH'),/Ready Meal/);
+  assert.match(f.w.document.getElementById('menuGrid').textContent,/Ready Meal/);
  }finally{f.close();}
 });
 test('login switch clears products and rejects late menu/settings responses from the previous tenant',async()=>{
