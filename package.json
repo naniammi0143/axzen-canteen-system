@@ -6,6 +6,7 @@
     "preview:all": "node scripts/dev-preview.js",
     "preview:sa": "node scripts/preview-sa.js",
     "release:pos": "node scripts/build-pos-release.cjs",
+    "release:employee": "node scripts/build-employee-release.cjs",
     "android:add": "cap add android",
     "android:sync": "cap sync android",
     "android:open": "cap open android"

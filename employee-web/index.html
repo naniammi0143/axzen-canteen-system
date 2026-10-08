@@ -6,6 +6,7 @@
   <title>Axzen POS Sales</title>
   <link rel="icon" href="assets/axzenPOS.png?v=2" type="image/png">
   <link rel="apple-touch-icon" href="assets/axzenPOS.png?v=2">
+  <link rel="stylesheet" href="app-updater.css">
   <style>
     :root {
       --page: #f4f7fb;
@@ -203,6 +204,32 @@
       min-height: 100dvh;
       padding-bottom: calc(84px + var(--app-safe-bottom));
     }
+
+    .pull-refresh {
+      position: fixed;
+      z-index: 20;
+      left: 50%;
+      top: calc(var(--app-safe-top) + 72px);
+      transform: translate(-50%, -56px);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 38px;
+      padding: 8px 14px;
+      border: 1px solid #dbe5f3;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--brand);
+      box-shadow: var(--shadow);
+      font-weight: 800;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform .18s ease, opacity .18s ease;
+    }
+    .pull-refresh.visible { opacity: 1; }
+    .pull-refresh.refreshing { transform: translate(-50%, 0) !important; opacity: 1; }
+    .pull-refresh.refreshing svg { animation: pull-spin .75s linear infinite; }
+    @keyframes pull-spin { to { transform: rotate(360deg); } }
 
     .topbar {
       position: sticky;
@@ -1101,10 +1128,12 @@
         </div>
       </div>
       <div class="top-actions">
+        <button class="icon-btn" id="updateBtn" data-app-notifications type="button" aria-label="App updates"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg></button>
         <button class="icon-btn" id="notifyBtn" type="button" aria-label="Notifications"><svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="notify-dot"></span></button>
         <button class="avatar-btn" id="avatarBtn" type="button" aria-label="Profile">AX</button>
       </div>
     </header>
+    <div class="pull-refresh" id="pullRefresh" role="status"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v6h-6"/></svg><span id="pullRefreshText">Pull to refresh</span></div>
     <main id="page"></main>
     <nav class="bottom-nav" id="tabs"></nav>
   </section>
@@ -1113,6 +1142,8 @@
     <div class="sheet-card" id="sheetCard"></div>
   </div>
 
+  <script src="app-version.js"></script>
+  <script src="app-updater.js"></script>
   <script>
     const $ = id => document.getElementById(id);
     if (window.Capacitor) document.documentElement.classList.add("native-app");
@@ -1245,7 +1276,7 @@
       let response;
       try {
         const { timeoutMs, ...fetchOptions } = options;
-        response = await fetch(`${API}${path}`, { ...fetchOptions, headers, signal: controller.signal });
+        response = await fetch(`${API}${path}`, { cache: "no-store", ...fetchOptions, headers, signal: controller.signal });
       } catch (error) {
         throw new Error(error?.name === "AbortError" ? "Server response timed out. Please try again." : "Server not reachable. Check internet and try again.");
       } finally {
@@ -1341,18 +1372,27 @@
       }));
     }
 
-    async function refreshData({ silent = false } = {}) {
+    let refreshPromise = null;
+    async function refreshData({ silent = false, repaint = true } = {}) {
       if (!token) return;
+      if (refreshPromise) return refreshPromise;
+      refreshPromise = (async () => {
       try {
         if (!silent) setBusy(true);
         const body = await api("/marketing-api/dashboard");
         data = body;
         localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(data));
+        if (repaint && !$('appScreen').classList.contains('hidden')) render();
+        return body;
       } catch (error) {
         if (!silent) toast(error.message + ". Check your connection and try again.", "error");
+        throw error;
       } finally {
-        setBusy(false);
+        if (!silent) setBusy(false);
+        refreshPromise = null;
       }
+      })();
+      return refreshPromise;
     }
 
     function setBusy(next) {
@@ -2776,7 +2816,8 @@
         $("loginScreen").classList.add("hidden");
         $("appScreen").classList.remove("hidden");
         render();
-        refreshData({ silent: true }).then(render).catch(() => {});
+        startEmployeeServices();
+        refreshData({ silent: true }).catch(() => {});
       } catch (error) {
         $("loginStatus").className = "status error";
         $("loginStatus").textContent = error.message;
@@ -2786,6 +2827,7 @@
     }
 
     function logout() {
+      stopEmployeeServices();
       token = "";
       user = null;
       localStorage.removeItem(TOKEN_KEY);
@@ -2801,6 +2843,7 @@
       render();
     });
     window.handlePosBack = () => {
+      if (window.AxzenAppUpdater?.back?.()) return true;
       if (!$("sheet").classList.contains("hidden")) { closeSheet(); return true; }
       if (route !== "dashboard" || stack.length) { $("backBtn").click(); return true; }
       return false;
@@ -2811,11 +2854,59 @@
       if (event.target.id === "sheet") closeSheet();
     });
 
+    let employeeRefreshTimer = null;
+    function canAutoRefresh() {
+      return token && !busy && document.visibilityState === "visible" && $("sheet").classList.contains("hidden") && route !== "add";
+    }
+    function automaticRefresh() {
+      if (canAutoRefresh()) refreshData({ silent: true }).catch(() => {});
+    }
+    function startEmployeeServices() {
+      clearInterval(employeeRefreshTimer);
+      employeeRefreshTimer = setInterval(automaticRefresh, 15000);
+      window.AxzenAppUpdater?.start?.({ apiBase: API, token, manifestPath: "/employee-app-update/manifest" });
+      setTimeout(() => window.AxzenAppUpdater?.markHealthy?.(), 1200);
+    }
+    function stopEmployeeServices() {
+      clearInterval(employeeRefreshTimer); employeeRefreshTimer = null;
+      window.AxzenAppUpdater?.stop?.();
+    }
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) automaticRefresh(); });
+    window.addEventListener("focus", automaticRefresh);
+    window.addEventListener("online", automaticRefresh);
+
+    (() => {
+      const surface = $("appScreen"), indicator = $("pullRefresh"), label = $("pullRefreshText");
+      let startY = 0, distance = 0, tracking = false;
+      surface.addEventListener("touchstart", event => {
+        if (!token || window.scrollY > 2 || busy || event.target.closest("input,textarea,select,button")) return;
+        startY = event.touches[0].clientY; distance = 0; tracking = true;
+      }, { passive: true });
+      surface.addEventListener("touchmove", event => {
+        if (!tracking) return;
+        distance = Math.max(0, Math.min(110, (event.touches[0].clientY - startY) * .55));
+        if (!distance) return;
+        indicator.classList.add("visible"); indicator.style.transform = `translate(-50%, ${distance - 54}px)`;
+        label.textContent = distance >= 62 ? "Release to refresh" : "Pull to refresh";
+      }, { passive: true });
+      surface.addEventListener("touchend", async () => {
+        if (!tracking) return; tracking = false;
+        if (distance >= 62) {
+          indicator.classList.add("refreshing"); label.textContent = "Refreshing…";
+          try { await refreshData({ silent: true }); label.textContent = "Updated"; }
+          catch { label.textContent = "Could not refresh"; }
+          setTimeout(() => { indicator.classList.remove("refreshing", "visible"); indicator.style.transform = ""; }, 650);
+        } else { indicator.classList.remove("visible"); indicator.style.transform = ""; }
+        distance = 0;
+      }, { passive: true });
+    })();
+
     if (token && user) {
       $("loginScreen").classList.add("hidden");
       $("appScreen").classList.remove("hidden");
       render();
-      refreshData({ silent: true }).then(render).catch(() => {});
+      startEmployeeServices();
+      refreshData({ silent: true }).catch(() => {});
     }
   </script>
 </body>

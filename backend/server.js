@@ -527,7 +527,12 @@ const marketingUserSchema = new mongoose.Schema({
   role: { type: String, enum: ["marketing", "manager", "super_admin"], default: "marketing" },
   department: { type: String, default: "Marketing" },
   active: { type: Boolean, default: true },
-  target: Number
+  target: Number,
+  employeeReleaseId: String,
+  employeeReleaseVersion: String,
+  employeeInstalledVersion: String,
+  employeeInstalledAt: String,
+  employeeVersionReportedAt: String
 }, { timestamps: true, collection: "marketing_users" });
 
 const marketingCanteenSchema = new mongoose.Schema({
@@ -683,6 +688,7 @@ const marketingSupportTicketSchema = new mongoose.Schema({
 
 const appReleaseSchema = new mongoose.Schema({
   version: { type: String, unique: true, index: true },
+  appType: { type: String, enum: ["pos", "employee"], default: "pos", index: true },
   notes: String,
   sha256: { type: String, index: true },
   signature: String,
@@ -842,7 +848,12 @@ function publicMarketingUser(user) {
     role: user.role,
     department: user.department || "Marketing",
     active: user.active !== false,
-    target: Number(user.target || 0)
+    target: Number(user.target || 0),
+    employeeReleaseId: user.employeeReleaseId || "",
+    employeeReleaseVersion: user.employeeReleaseVersion || "",
+    employeeInstalledVersion: user.employeeInstalledVersion || "",
+    employeeInstalledAt: user.employeeInstalledAt || "",
+    employeeVersionReportedAt: user.employeeVersionReportedAt || ""
   };
 }
 
@@ -868,7 +879,7 @@ function requireMarketingAuth(req, res, next) {
     req.marketingUser = user;
     if (String(user.department || "") === "Help Center") {
       const path = String(req.path || "");
-      const allowed = path === "/marketing-api/me" || path === "/marketing-api/dashboard" || path.startsWith("/marketing-api/help-tickets");
+      const allowed = path === "/marketing-api/me" || path === "/marketing-api/dashboard" || path.startsWith("/marketing-api/help-tickets") || path.startsWith("/employee-app-update/");
       if (!allowed) return res.status(403).json({ success: false, message: "Help Center access only" });
     }
     return next();
@@ -3769,7 +3780,7 @@ app.get("/app-update/manifest", requireDatabase, requireCanteenAuth, async (req,
   const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
   const canteen = await MarketingCanteen.findOne({ activatedCanteenId: canteenId }).lean();
   if (!canteen?.appReleaseId) return res.status(204).end();
-  const release = await AppRelease.findOne({ _id: canteen.appReleaseId, status: "Published" }).select("-bundle").lean();
+  const release = await AppRelease.findOne({ _id: canteen.appReleaseId, status: "Published", appType: { $in: ["pos", null] } }).select("-bundle").lean();
   if (!release) return res.status(204).end();
   res.json({ success: true, release: { id: String(release._id), version: release.version, notes: release.notes || "", sha256: release.sha256, signature: release.signature, size: release.size, downloadUrl: `/app-update/bundles/${release._id}` } });
 });
@@ -3778,8 +3789,39 @@ app.get("/app-update/bundles/:id", requireDatabase, requireCanteenAuth, async (r
   const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
   const canteen = await MarketingCanteen.findOne({ activatedCanteenId: canteenId }).lean();
   if (!canteen || String(canteen.appReleaseId || "") !== String(req.params.id)) return res.status(403).json({ success: false, message: "Release is not assigned to this canteen" });
-  const release = await AppRelease.findOne({ _id: req.params.id, status: "Published" }).lean();
+  const release = await AppRelease.findOne({ _id: req.params.id, status: "Published", appType: { $in: ["pos", null] } }).lean();
   if (!release?.bundle) return res.status(404).json({ success: false, message: "Release bundle not found" });
+  const raw = release.bundle;
+  const bundle = Buffer.isBuffer(raw) ? raw : Buffer.from(raw.buffer || raw);
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Length", bundle.length);
+  res.setHeader("Cache-Control", "private, no-store");
+  res.send(bundle);
+});
+
+app.get("/employee-app-update/manifest", requireDatabase, requireMarketingAuth, async (req, res) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  const employeeId = String(req.marketingUser.employeeId || "").trim().toUpperCase();
+  const reportedVersion = String(req.headers["x-axzen-app-version"] || "").trim().slice(0, 40);
+  const user = await MarketingUser.findOne({ employeeId }).lean();
+  if (!user) return res.status(404).json({ success: false, message: "Employee account not found" });
+  if (reportedVersion) {
+    const report = { employeeInstalledVersion: reportedVersion, employeeVersionReportedAt: new Date().toISOString() };
+    if (reportedVersion === user.employeeReleaseVersion) report.employeeInstalledAt = new Date().toISOString();
+    await MarketingUser.updateOne({ _id: user._id }, { $set: report });
+  }
+  if (!user.employeeReleaseId) return res.status(204).end();
+  const release = await AppRelease.findOne({ _id: user.employeeReleaseId, status: "Published", appType: "employee" }).select("-bundle").lean();
+  if (!release) return res.status(204).end();
+  res.json({ success: true, release: { id: String(release._id), version: release.version, notes: release.notes || "", sha256: release.sha256, signature: release.signature, size: release.size, downloadUrl: `/employee-app-update/bundles/${release._id}` } });
+});
+
+app.get("/employee-app-update/bundles/:id", requireDatabase, requireMarketingAuth, async (req, res) => {
+  const employeeId = String(req.marketingUser.employeeId || "").trim().toUpperCase();
+  const user = await MarketingUser.findOne({ employeeId }).lean();
+  if (!user || String(user.employeeReleaseId || "") !== String(req.params.id)) return res.status(403).json({ success: false, message: "Release is not assigned to this employee" });
+  const release = await AppRelease.findOne({ _id: req.params.id, status: "Published", appType: "employee" }).lean();
+  if (!release?.bundle) return res.status(404).json({ success: false, message: "Employee release bundle not found" });
   const raw = release.bundle;
   const bundle = Buffer.isBuffer(raw) ? raw : Buffer.from(raw.buffer || raw);
   res.setHeader("Content-Type", "application/zip");
@@ -3944,32 +3986,43 @@ app.post("/marketing-api/help-tickets/:id/status", requireDatabase, requireHelpD
 app.post("/marketing-api/app-releases", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const version = String(req.body.version || "").trim();
+    const appType = req.body.appType === "employee" ? "employee" : "pos";
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(version)) throw new Error("Use a valid release version, for example 4.0.1");
     const raw = String(req.body.bundleBase64 || "").replace(/^data:[^,]*;base64,/i, "").replace(/\s+/g, "");
     const bundle = Buffer.from(raw, "base64");
-    if (bundle.length < 100 || bundle.length > 6 * 1024 * 1024 || bundle[0] !== 0x50 || bundle[1] !== 0x4b) throw new Error("Upload a valid POS release ZIP smaller than 6 MB");
+    if (bundle.length < 100 || bundle.length > 6 * 1024 * 1024 || bundle[0] !== 0x50 || bundle[1] !== 0x4b) throw new Error(`Upload a valid ${appType === "employee" ? "Employee" : "POS"} release ZIP smaller than 6 MB`);
     if (await AppRelease.exists({ version })) throw new Error("This release version already exists. Use a new version.");
     const sha256 = crypto.createHash("sha256").update(bundle).digest("hex");
     const privateKeyBase64 = process.env.APP_UPDATE_SIGNING_PRIVATE_KEY_BASE64;
     if (!privateKeyBase64) throw new Error("App update signing key is not configured on the backend");
     const privateKey = crypto.createPrivateKey(Buffer.from(privateKeyBase64, "base64").toString("utf8"));
     const signature = crypto.sign("sha256", bundle, privateKey).toString("base64");
-    const release = await AppRelease.create({ version, notes: String(req.body.notes || "").trim().slice(0, 500), sha256, signature, size: bundle.length, status: "Draft", bundle, createdBy: req.marketingUser.employeeId });
-    res.status(201).json({ success: true, release: { id: String(release._id), version, notes: release.notes, sha256, size: bundle.length, status: release.status } });
+    const release = await AppRelease.create({ version, appType, notes: String(req.body.notes || "").trim().slice(0, 500), sha256, signature, size: bundle.length, status: "Draft", bundle, createdBy: req.marketingUser.employeeId });
+    res.status(201).json({ success: true, release: { id: String(release._id), version, appType, notes: release.notes, sha256, size: bundle.length, status: release.status } });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 });
 
 app.post("/marketing-api/app-releases/:id/publish", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
-    const canteenIds = [...new Set((Array.isArray(req.body.canteenIds) ? req.body.canteenIds : []).map(Number).filter(Number.isFinite))];
-    if (!canteenIds.length) throw new Error("Select at least one canteen.");
     const release = await AppRelease.findById(req.params.id).select("-bundle").lean();
     if (!release) throw new Error("Release not found");
-    await AppRelease.updateOne({ _id: release._id }, { $set: { status: "Published", publishedAt: new Date() } });
+    const appType = release.appType === "employee" ? "employee" : "pos";
+    if (appType === "employee") {
+      const employeeIds = [...new Set((Array.isArray(req.body.employeeIds) ? req.body.employeeIds : []).map(value => String(value || "").trim().toUpperCase()).filter(Boolean))];
+      if (!employeeIds.length) throw new Error("Select at least one employee.");
+      const result = await MarketingUser.updateMany({ employeeId: { $in: employeeIds }, active: { $ne: false } }, { $set: { employeeReleaseId: String(release._id), employeeReleaseVersion: release.version } });
+      if (!result.matchedCount) throw new Error("Select active employees.");
+      await AppRelease.updateOne({ _id: release._id }, { $set: { status: "Published", publishedAt: new Date() } });
+      await addMarketingActivity({ type: "app_release", text: `Employee release ${release.version} published to ${result.matchedCount} employee(s)`, actor: req.marketingUser.name });
+      return res.json({ success: true, message: `Release assigned to ${result.matchedCount} employee(s).` });
+    }
+    const canteenIds = [...new Set((Array.isArray(req.body.canteenIds) ? req.body.canteenIds : []).map(Number).filter(Number.isFinite))];
+    if (!canteenIds.length) throw new Error("Select at least one canteen.");
     const result = await MarketingCanteen.updateMany({ id: { $in: canteenIds }, activatedCanteenId: { $nin: [null, ""] } }, { $set: { appReleaseId: String(release._id), appReleaseVersion: release.version } });
-    if (!result.modifiedCount) throw new Error("Select approved canteens with an active Canteen ID.");
-    await addMarketingActivity({ type: "app_release", text: `POS release ${release.version} published to ${result.modifiedCount} canteen(s)`, actor: req.marketingUser.name });
-    res.json({ success: true, message: `Release assigned to ${result.modifiedCount} canteen(s).` });
+    if (!result.matchedCount) throw new Error("Select approved canteens with an active Canteen ID.");
+    await AppRelease.updateOne({ _id: release._id }, { $set: { status: "Published", publishedAt: new Date() } });
+    await addMarketingActivity({ type: "app_release", text: `POS release ${release.version} published to ${result.matchedCount} canteen(s)`, actor: req.marketingUser.name });
+    res.json({ success: true, message: `Release assigned to ${result.matchedCount} canteen(s).` });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 });
 

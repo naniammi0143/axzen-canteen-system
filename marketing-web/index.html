@@ -1419,7 +1419,7 @@
         performance: ["Marketing Performance", "Employee-wise registration and collection results."],
         activities: ["Recent Activities", "Audit trail for onboarding actions."],
         helpcenter: ["Help Center", "Ticketing desk for organization requests submitted from Help."],
-        appreleases: ["App Updates", "Upload versioned POS bundles and publish them to selected canteens."],
+        appreleases: ["App Updates", "Upload separate POS or Employee bundles and publish them to selected organizations."],
         add: ["Add Lead", "Create customer record and submit canteen activation."],
         my: ["Leads & Visits", "Your leads, visits and activation status."],
         followups: ["Follow-ups", "Today tasks, pending payments and installation handoffs."]
@@ -1442,7 +1442,7 @@
       else if (tab === "performance") $("page").innerHTML = `<section class="panel"><h2>Marketing Performance</h2>${performanceTable(state.summary.marketingPerformance)}</section>`;
       else if (tab === "activities") $("page").innerHTML = `<section class="panel"><h2>Recent Activities</h2>${activitiesHtml(60)}</section>`;
       else if (tab === "helpcenter") { $("page").innerHTML = window.MarketingHelpCenter.render(state.supportTickets || []); window.MarketingHelpCenter.bind({ api, refresh: async () => { await refresh(); render(); }, notify: status }); return; }
-      else if (tab === "appreleases") { $("page").innerHTML = window.AppReleases.render({ releases: state.appReleases || [], canteens: state.canteens || [] }); window.AppReleases.bind({ api, refresh: async () => { await refresh(); render(); }, notify: status }); return; }
+      else if (tab === "appreleases") { $("page").innerHTML = window.AppReleases.render({ releases: state.appReleases || [], canteens: state.canteens || [], users: state.users || [] }); window.AppReleases.bind({ api, refresh: async () => { await refresh(); render(); }, notify: status }); return; }
       bindTableActions();
       bindCredentialCopies();
       const applyCanteenSearch = () => {
