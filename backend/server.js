@@ -3337,7 +3337,8 @@ app.get("/health", (req, res) => {
 
 app.get("/products", requireCanteenAuth, async (req, res) => {
   const canteenId = req.authUser.canteenId || DEFAULT_CANTEEN_ID;
-  res.json(await allMenuItems(canteenId));
+  const includeHidden = req.authUser.role === "admin" && String(req.query.includeHidden || "").toLowerCase() === "true";
+  res.json(await allMenuItems(canteenId, { includeHidden }));
 });
 
 app.get("/catalog/default-products", requireAdmin, async (req, res) => {
@@ -3464,7 +3465,7 @@ app.post("/login", requireDatabase, async (req, res) => {
     getCoreCanteen(user.canteenId),
     subscriptionStatusForCanteen(user.canteenId),
     getSettings(user.canteenId),
-    allMenuItems(user.canteenId)
+    allMenuItems(user.canteenId, { includeHidden: user.role === "admin" })
   ]);
   const canteenWithPrinter = {
     ...canteen,
@@ -3518,7 +3519,7 @@ app.post("/activate-owner", requireDatabase, requireAdmin, async (req, res) => {
     const savedUser = publicUser(owner);
     const [settings, products] = await Promise.all([
       getSettings(canteenId),
-      allMenuItems(canteenId)
+      allMenuItems(canteenId, { includeHidden: true })
     ]);
     res.json({ success: true, user: { ...savedUser, canteen }, token: signToken(owner), settings, products });
   } catch (error) {

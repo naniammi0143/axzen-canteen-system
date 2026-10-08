@@ -8,7 +8,7 @@ function fixture(){
  w.eval(fs.readFileSync(path.join(root,'sa/bill-taxes.js'),'utf8'));
  w.eval(fs.readFileSync(path.join(root,'sa/app-version.js'),'utf8'));
  const script=[...w.document.scripts].find(s=>s.textContent.includes('const urlParams =')).textContent;
- w.eval(script+`\nwindow.testPOS={setSession,applySettings,useBootstrapProducts,loadProducts,loadSettings,loadAdminData,api,addToCart,logout,ensureUserNavKeys,shopBillingProducts,chickenProductsForMenu,refreshLiveData,
+ w.eval(script+`\nwindow.testPOS={setSession,applySettings,useBootstrapProducts,loadProducts,loadSettings,loadAdminData,api,addToCart,logout,ensureUserNavKeys,shopBillingProducts,chickenProductsForMenu,itemManagerPageHtml,refreshLiveData,
  state:()=>({user,products,settings,cart,orders}),setProducts:rows=>{products=rows;renderProducts();},selectOption:(id,option)=>selectedSubItems[id]=option};`);
  return {w,dom,pos:w.testPOS,login:(id,category)=>w.testPOS.setSession({canteenId:id,mobile:'test',name:id,role:'admin',canteen:{businessCategory:category}},'token-'+id),close:()=>w.close()};
 }
@@ -64,6 +64,22 @@ test('only active menu items appear, cached prices cannot resurrect removed dish
   assert.deepEqual(Array.from(f.pos.chickenProductsForMenu(),p=>p.name),['Chicken']);
   f.login('R','Restaurant');f.pos.setProducts([{id:1,canteenId:'R',name:'Chicken Curry',category:'Chicken',price:100,unit:'Plate'}]);f.pos.addToCart(1);
   assert.equal(f.pos.state().cart[0].qty,1);assert.equal(f.w.document.getElementById('chickenKgInput'),null);
+ }finally{f.close();}
+});
+
+test('admin Edit Items loads hidden and legacy-category products without showing hidden items in billing',async()=>{
+ const f=fixture();try{
+  f.login('CHICKEN','Chicken Center');
+  let requested='';
+  f.w.fetch=async url=>{requested=String(url);return {ok:true,json:async()=>[
+   {id:1,canteenId:'CHICKEN',name:'Chicken',category:'Chicken',price:200},
+   {id:2,canteenId:'CHICKEN',name:'Old Meals Item',category:'Meals',price:100,hidden:true}
+  ]};};
+  await f.pos.loadProducts();
+  assert.match(requested,/\/products\?includeHidden=true$/);
+  assert.deepEqual(Array.from(f.pos.shopBillingProducts(),row=>row.name),['Chicken']);
+  const edit=f.pos.itemManagerPageHtml('edit');
+  assert.match(edit,/Chicken/);assert.match(edit,/Old Meals Item/);assert.match(edit,/Hidden/);
  }finally{f.close();}
 });
 

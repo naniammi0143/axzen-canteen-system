@@ -7109,7 +7109,8 @@
         preloadProductImages(products);
       }
       try {
-        products = applyProductUnitOverrides(tenantProducts(await api("/products", { timeoutMs: cached.length ? 6500 : 9000 })));
+        const productPath = hasAdminAccess() ? "/products?includeHidden=true" : "/products";
+        products = applyProductUnitOverrides(tenantProducts(await api(productPath, { timeoutMs: cached.length ? 6500 : 9000 })));
         writeJson(productCacheKey, products);
         preloadProductImages(products);
       } catch {}
@@ -10111,7 +10112,7 @@
       if (!hasAdminAccess()) {
         return `${sectionHeader(section)}${adminUnlockHtml()}`;
       }
-      const managedProducts = isChickenShopCanteen() ? products.filter(item => !isCanteenMealItem(item)) : products;
+      const managedProducts = products;
       const rows = managedProducts.slice().sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0)).map(item => {
         const subs = productSubItems(item);
         const hidden = isItemHidden(item);

@@ -29,8 +29,8 @@ android {
         employee {
             dimension "application"
             applicationId "com.axenhospitality.employee"
-            versionCode 130
-            versionName "1.30"
+            versionCode 131
+            versionName "1.31"
         }
     }
     sourceSets {
