@@ -408,6 +408,8 @@ const menuItemSchema = new mongoose.Schema({
   image: String,
   imageCredit: { source: String, license: String, author: String, licenseUrl: String },
   nameTe: String,
+  itemNumber: { type: String, default: "" },
+  itemNumberEnabled: { type: Boolean, default: false },
   subItems: [{ name: String, nameTe: String, price: Number }],
   sortOrder: Number,
   hidden: { type: Boolean, default: false }
@@ -1125,6 +1127,37 @@ async function seedDefaults() {
       { upsert: true }
     );
   }
+  const coreCanteens = await Canteen.find({}).lean();
+  const mappedCanteens = await MarketingCanteen.find({}, { activatedCanteenId: 1 }).lean();
+  const mappedIds = new Set(mappedCanteens.map(item => normalizeCanteenId(item.activatedCanteenId || "")).filter(Boolean));
+  const missingCanteens = coreCanteens.filter(item => !mappedIds.has(normalizeCanteenId(item.canteenId || "")));
+  if (missingCanteens.length) {
+    const now = new Date().toISOString();
+    const baseId = Date.now();
+    await MarketingCanteen.insertMany(missingCanteens.map((canteen, index) => ({
+      id: baseId + index,
+      canteenName: String(canteen.name || canteen.canteenId || "Organization"),
+      businessCategory: String(canteen.businessCategory || "Canteen"),
+      ownerName: String(canteen.ownerName || "Owner"),
+      ownerMobile: String(canteen.phone || ""),
+      address: String(canteen.address || ""),
+      selectedPlan: String(canteen.plan || "Starter"),
+      planType: String(canteen.paymentStatus || "Trial"),
+      paymentMode: "Cash",
+      paidAmount: 0,
+      pendingAmount: 0,
+      status: canteen.active === false ? "Blocked" : "Active",
+      activatedCanteenId: String(canteen.canteenId || ""),
+      canteenLoginId: String(canteen.canteenId || ""),
+      online: false,
+      blocked: canteen.active === false,
+      printersAssigned: 0,
+      submittedBy: "SYSTEM",
+      submittedByName: "System Migration",
+      createdAt: canteen.createdAt || now,
+      updatedAt: now
+    })));
+  }
   if (!await MarketingCanteen.countDocuments()) await MarketingCanteen.insertMany(defaultMarketingCanteens);
   if (!await MarketingActivity.countDocuments()) await MarketingActivity.insertMany(memory.marketingActivities);
   if (!await MarketingPayment.countDocuments()) await MarketingPayment.insertMany(defaultMarketingPayments);
@@ -1364,6 +1397,8 @@ async function saveMenuItem(payload) {
     canteenId,
     name: String(payload.name || "").trim(),
     nameTe: String(payload.nameTe || payload.teluguName || "").trim(),
+    itemNumber: String(payload.itemNumber ?? payload.allotNumber ?? "").replace(/[^0-9A-Za-z#-]/g, "").trim().slice(0, 12),
+    itemNumberEnabled: payload.itemNumberEnabled === true || payload.itemNumberEnabled === "true",
     price: Number(payload.price || 0),
     halfPrice: Number(payload.halfPrice || payload.singlePrice || payload.halfItemPrice || 0),
     category: payload.category || "Snacks",
@@ -1377,6 +1412,7 @@ async function saveMenuItem(payload) {
   };
 
   if (!item.name) throw new Error("Product name is required");
+  if (!item.itemNumber) item.itemNumberEnabled = false;
 
   const sameName = current.find(row =>
     String(row.name || "").trim().toLowerCase() === item.name.toLowerCase() &&
@@ -1388,6 +1424,10 @@ async function saveMenuItem(payload) {
     item.id = Number(sameName.id);
     if (!item.image) item.image = sameName.image || "";
     if (!item.nameTe) item.nameTe = sameName.nameTe || "";
+    if (!item.itemNumber && sameName.itemNumber) {
+      item.itemNumber = sameName.itemNumber;
+      item.itemNumberEnabled = sameName.itemNumberEnabled === true;
+    }
     if (!item.unit && sameName.unit) item.unit = sameName.unit;
     if ((!item.subItems || !item.subItems.length) && Array.isArray(sameName.subItems)) item.subItems = sameName.subItems;
   }
@@ -1809,6 +1849,14 @@ async function saveSettings(payload, canteenId = DEFAULT_CANTEEN_ID) {
 async function allUsers() {
   if (!mongoReady) return memory.users;
   return User.find({}).sort({ createdAt: 1 }).lean();
+}
+
+async function allUsersForCanteen(canteenId = DEFAULT_CANTEEN_ID) {
+  const targetCanteenId = normalizeCanteenId(canteenId || DEFAULT_CANTEEN_ID);
+  if (!mongoReady) {
+    return memory.users.filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === targetCanteenId);
+  }
+  return User.find({ canteenId: targetCanteenId }).sort({ createdAt: 1 }).lean();
 }
 
 async function saveUser(payload) {
@@ -3178,7 +3226,7 @@ async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
     allMenuItems(canteenId, { includeHidden: true }),
     allCreditors(canteenId),
     allBranchAddresses(canteenId),
-    allUsers(),
+    allUsersForCanteen(canteenId),
     getSettings(canteenId)
   ]);
   const todayOrders = reportOrdersForType(orders, "daily");
@@ -3199,7 +3247,7 @@ async function dashboardData(canteenId = DEFAULT_CANTEEN_ID) {
     products,
     creditors,
     addresses,
-    users: allUserRows.filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === normalizeCanteenId(canteenId)).map(publicUser),
+    users: allUserRows.map(publicUser),
     settings,
     orders
   };
@@ -3368,7 +3416,7 @@ app.get("/catalog/item-suggestions", requireAdmin, async (req, res) => {
 app.post("/products", requireDatabase, requireAdmin, async (req, res) => {
   try {
     const product = await saveMenuItem({ ...req.body, canteenId: req.authUser.canteenId || DEFAULT_CANTEEN_ID });
-    res.json({ success: true, product, products: await allMenuItems(req.authUser.canteenId, { includeHidden: true }) });
+    res.json({ success: true, product });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -3569,7 +3617,17 @@ app.post("/forgot-password", requireDatabase, async (req, res) => {
 
 app.get("/users", requireCanteenAuth, async (req, res) => {
   const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
-  res.json((await allUsers()).filter(user => normalizeCanteenId(user.canteenId || DEFAULT_CANTEEN_ID) === canteenId).map(publicUser));
+  res.json((await allUsersForCanteen(canteenId)).map(publicUser));
+});
+
+app.get("/sync/changes", requireCanteenAuth, async (req, res) => {
+  const canteenId = normalizeCanteenId(req.authUser.canteenId || DEFAULT_CANTEEN_ID);
+  const includeHidden = req.authUser.role === "admin";
+  const [products, users] = await Promise.all([
+    allMenuItems(canteenId, { includeHidden }),
+    allUsersForCanteen(canteenId)
+  ]);
+  res.json({ products, users: users.map(publicUser) });
 });
 
 app.post("/users", requireDatabase, requireAdmin, async (req, res) => {
@@ -4086,6 +4144,32 @@ app.post("/marketing-api/canteens", requireDatabase, requireMarketingAuth, async
   }
   try {
     const canteen = await createMarketingCanteen(req.body, req.marketingUser);
+    res.json({ success: true, canteen });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+app.post("/marketing-api/canteens/direct-approve", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    if (Object.prototype.hasOwnProperty.call(req.body, "dineInRequested") && typeof req.body.dineInRequested !== "boolean") {
+      throw new Error("Dine In request must be true or false");
+    }
+    const submitted = await createMarketingCanteen(req.body, req.marketingUser);
+    const paidAmount = Number(submitted.paidAmount || 0);
+    const planType = String(submitted.planType || (paidAmount > 0 ? "Paid" : "Trial"));
+    const status = planType.toLowerCase() === "trial" ? "Trial" : "Active";
+    const approved = await updateMarketingCanteen(submitted.id, {
+      status,
+      planType,
+      paymentApprovalStatus: "Approved",
+      approvedBy: req.marketingUser.employeeId,
+      approvedAt: new Date().toISOString(),
+      online: true
+    }, req.marketingUser);
+    const canteen = await activateApprovedCanteen(approved, req.marketingUser);
+    if (submitted.dineInRequested) await dineService.setApproval(canteen.activatedCanteenId, true, req.marketingUser.employeeId);
+    await addMarketingActivity({ type: "approved", text: `${canteen.canteenName} added and directly approved`, actor: req.marketingUser.name, canteenId: canteen.id });
     res.json({ success: true, canteen });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
