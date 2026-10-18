@@ -4073,6 +4073,7 @@ app.post("/marketing-api/help-tickets/:id/status", requireDatabase, requireHelpD
 async function createAppRelease({ version, appType, notes, bundle, createdBy }) {
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(version)) throw new Error("Use a valid release version, for example 4.0.1");
   if (bundle.length < 100 || bundle.length > 10 * 1024 * 1024 || bundle[0] !== 0x50 || bundle[1] !== 0x4b) throw new Error(`Upload a valid ${appType === "employee" ? "Employee" : "POS"} release ZIP of 10 MB or less`);
+  if (appType === "pos" && !bundle.includes(Buffer.from("index.html"))) throw new Error("POS update ZIP must contain index.html. Upload the Web release ZIP, not the Android APK ZIP.");
   if (await AppRelease.exists({ version })) throw new Error("This release version already exists. Use a new version.");
   const sha256 = crypto.createHash("sha256").update(bundle).digest("hex");
   const privateKeyBase64 = process.env.APP_UPDATE_SIGNING_PRIVATE_KEY_BASE64;
