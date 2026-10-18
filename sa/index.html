@@ -556,6 +556,25 @@
       box-shadow: inset 0 1px 0 #fff;
     }
     .item-icon.initials { font-size: 13px; background: linear-gradient(145deg, #eef7ff, #fff8e8); }
+    .item-number-image-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding: 8px 10px;
+      overflow: hidden;
+      background: linear-gradient(90deg, transparent 0%, rgba(8, 38, 83, .12) 36%, rgba(8, 38, 83, .76) 55%, rgba(5, 22, 51, .96) 100%);
+      color: #fff;
+      font-size: clamp(28px, 4.1vw, 56px);
+      font-weight: 950;
+      letter-spacing: -.07em;
+      line-height: 1;
+      text-shadow: 0 2px 8px rgba(0, 0, 0, .28);
+      pointer-events: none;
+    }
+    .item-number-image-overlay small { margin: 0 3px 0 0; font-size: .43em; font-weight: 900; letter-spacing: 0; opacity: .82; }
 
     .item-card h3 { margin: 0; font-size: 18px; line-height: 1.12; overflow-wrap: anywhere; }
     .item-card p { margin: 0; color: var(--muted); font-size: 13px; font-weight: 900; }
@@ -2232,12 +2251,39 @@
       padding: 0 11px;
       font-weight: 900;
     }
-    #newItemPrice, #newItemHalfPrice, #newItemSubPrice, .item-manager-card [data-price-item], .item-manager-card [data-half-price-item] {
+    #newItemPrice, #newItemHalfPrice, #newItemSubPrice, .item-manager-card [data-price-item], .item-manager-card [data-half-price-item],
+    #newItemNumber, .item-manager-card [data-edit-number] {
       border-color: #bfdbfe;
       background: linear-gradient(180deg, #eff6ff, #ffffff);
       color: #1d4ed8;
       box-shadow: inset 0 0 0 1px #dbeafe;
     }
+    .item-number-field { display: grid; grid-template-columns: minmax(150px, 1fr) auto; align-items: center; gap: 8px; grid-column: 1 / -1; }
+    .item-number-field > label { margin: 0; }
+    .item-number-toggle, .item-number-master {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .item-number-toggle input, .item-number-master input { width: 18px; height: 18px; min-height: 0; margin: 0; padding: 0; accent-color: #1d4ed8; box-shadow: none; background: transparent; }
+    .item-number-toggle.is-on, .item-number-master.is-on { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+    .item-number-toggle.is-off { text-decoration: line-through; opacity: .75; }
+    .item-number-master { min-height: 44px; }
+    .item-number-chip { flex: 0 0 auto; display: inline-grid; place-items: center; min-width: 26px; padding: 3px 9px; border: 1px solid #93c5fd; border-radius: 8px; background: linear-gradient(135deg, #bfdbfe 0%, #dbeafe 48%, #eff6ff 100%); color: #0b3a7e; box-shadow: 0 1px 2px rgba(30, 64, 175, .16); font-size: 11px; font-weight: 950; letter-spacing: .03em; line-height: 1.5; white-space: nowrap; }
+    .item-number-chip.item-number-off { border-color: #e2e8f0; background: #f1f5f9; color: #94a3b8; }
+    @media (max-width: 560px) { .item-number-field { grid-template-columns: 1fr; gap: 6px; } .item-number-toggle { justify-content: flex-start; } }
+    @media (max-width: 760px) { .item-number-image-overlay { padding: 5px 7px; font-size: clamp(23px, 9.5vw, 40px); } }
     .item-suggest-box {
       display: grid;
       gap: 8px;
@@ -2382,6 +2428,8 @@
     }
     .item-manager-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .item-manager-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .item-manager-search { display: grid; gap: 6px; color: var(--muted); font-size: 12px; font-weight: 850; }
+    .item-manager-search input { min-height: 44px; border: 1px solid var(--line); border-radius: 12px; background: #fff; padding: 0 12px; color: var(--ink); font: inherit; }
     .add-item-dialog {
       width: min(460px, calc(100vw - 24px));
       max-height: min(720px, calc(100dvh - 24px));
@@ -3430,6 +3478,17 @@
     #posView .content { padding: 28px 336px 90px 20px; }
     #posView.option-mode .content { padding-right: 20px; }
     #posView.option-mode .cart-sheet { display: none; }
+    #posView.search-active .topbar,
+    #posView.search-active #categoryTabs,
+    #posView.search-active .section-title-row { display: none !important; }
+    #posView.search-active .content { padding-top: 12px; }
+    #posView.search-active .item-search-bar {
+      position: sticky;
+      top: calc(var(--app-safe-top, 0px) + 8px);
+      z-index: 9;
+      margin-top: 0;
+      background: #fff;
+    }
     .search-row { display: none; }
     .search-box { display: flex; align-items: center; gap: 10px; min-height: 58px; border: 1px solid #e5eaf0; border-radius: 18px; background: white; padding: 0 14px; color: #667085; box-shadow: 0 10px 24px #11182708; }
     .search-box input { border: 0; box-shadow: none; background: transparent; padding: 0; font-size: 16px; font-weight: 650; }
@@ -3767,9 +3826,12 @@
       #posView .cart-inner { padding: 10px 14px; }
       #posView .cart-head strong { font-size: 17px; }
       #posView .cart-head .muted { display: none; }
-      #posView .cart-list { display: none; }
-      #posView .cart-row { grid-template-columns: 1fr auto; gap: 6px; padding-bottom: 4px; font-size: 12px; }
-      #posView .cart-row .cart-thumb, #posView .cart-row .cart-remove, #posView .cart-index { display: none; }
+      #posView .cart-list { display: grid; max-height: 64px; margin: 6px 0; overflow-y: auto; }
+      #posView .cart-row { grid-template-columns: minmax(0, 1fr) 28px; grid-template-areas: "name remove" "actions actions"; gap: 4px 6px; padding-bottom: 6px; font-size: 12px; }
+      #posView .cart-row .cart-thumb, #posView .cart-index { display: none; }
+      #posView .cart-row .cart-remove { grid-area: remove; display: inline-grid; place-items: center; }
+      #posView .cart-row .cart-row-main { grid-area: name; }
+      #posView .cart-row .cart-row-actions { grid-area: actions; width: 100%; }
       #posView .cart-row .qty { grid-column: auto; width: 84px; }
       .cart-summary { display: none; }
       #posView #cartTotal { font-size: 22px; }
@@ -5711,8 +5773,20 @@
     .item-search-bar > svg { width: 18px; height: 18px; flex: 0 0 18px; color: #64748B; }
     .item-search-bar input { flex: 1 1 auto; min-width: 0; min-height: 42px; border: 0 !important; outline: 0; background: transparent !important; box-shadow: none !important; padding: 0 !important; font-size: 15px; font-weight: 600; color: #0F172A; }
     .item-search-bar input::-webkit-search-cancel-button { display: none; }
-    .item-search-bar button { width: 32px; height: 32px; flex: 0 0 32px; padding: 0; border: 0; border-radius: 10px; background: #F1F5F9; color: #475569; font-size: 20px; line-height: 1; }
+    .item-search-bar > button { width: 32px; height: 32px; flex: 0 0 32px; padding: 0; border: 0; border-radius: 10px; background: #F1F5F9; color: #475569; font-size: 20px; line-height: 1; }
     .item-search-empty { grid-column: 1 / -1; text-align: center; color: #64748B; font-weight: 600; }
+    .item-search-bar { position: relative; }
+    .item-search-results { position: absolute; top: calc(100% + 6px); right: 0; left: 0; z-index: 30; display: grid; gap: 4px; max-height: min(calc(100dvh - var(--app-safe-top, 0px) - 108px), 440px); overflow-y: auto; padding: 6px; border: 1px solid #DCE5F0; border-radius: 14px; background: #fff; box-shadow: 0 12px 28px rgba(15, 23, 42, .18); }
+    .item-search-results:empty { display: none; }
+    .item-search-result { display: grid !important; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 9px; width: 100% !important; min-height: 60px; padding: 7px !important; border: 0 !important; border-radius: 10px !important; background: #fff !important; color: #0F172A !important; text-align: left; font-size: inherit !important; line-height: 1.2 !important; }
+    .item-search-result:active { background: #EEF5FF !important; }
+    .item-search-result-image { width: 44px; height: 44px; border-radius: 9px; background: #E2E8F0 center / cover no-repeat; color: #475569; display: grid; place-items: center; font-weight: 800; }
+    .item-search-result-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 750; }
+    .item-search-result-category { display: block; margin-top: 3px; color: #64748B; font-size: 11px; font-weight: 650; }
+    .item-search-result-price { padding: 6px 8px; border-radius: 8px; background: #DCFCE7; color: #166534; font-size: 13px; font-weight: 850; white-space: nowrap; }
+    .item-search-no-result { padding: 12px; color: #64748B; text-align: center; font-weight: 600; }
+    .item-search-result-number { display: inline-grid; place-items: center; min-width: 24px; margin-right: 7px; padding: 2px 7px; border: 1px solid #BFDBFE; border-radius: 7px; background: #EFF6FF; color: #1D4ED8; font-size: 11px; font-weight: 900; vertical-align: middle; }
+    .item-search-result-number.item-number-off { border-color: #E2E8F0; background: #F1F5F9; color: #94A3B8; }
     @keyframes navIconPop { 0% { transform: scale(.8); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
     @keyframes itemSearchIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
@@ -6065,6 +6139,49 @@
     .paper-status.Delivered { background: #dcfce7; color: #15803d; }
     .paper-status.Cancelled { background: #fee2e2; color: #b91c1c; }
     @media(max-width:720px){.paper-roll-page{padding:10px}.paper-roll-hero,.paper-roll-grid{grid-template-columns:1fr}.paper-roll-copy{padding:24px}.paper-roll-art{min-height:190px}.paper-roll-art svg{width:250px}.paper-order-form .two{grid-template-columns:1fr}.paper-roll-card{padding:17px}}
+    .report-section-heading { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .report-section-heading h3 { margin: 0; }
+    .report-section-heading p { margin: 4px 0 0; color: #64748B; font-size: 12px; font-weight: 650; }
+    .report-section-heading > span { padding: 6px 9px; border-radius: 999px; background: #EEF5FF; color: #0B5FE8; font-size: 12px; font-weight: 850; white-space: nowrap; }
+    .user-sales-cards { display: none; }
+    @media (max-width: 760px) {
+      #posView .report-modern-page { gap: 12px !important; }
+      #posView .report-hero { padding: 15px !important; background: linear-gradient(135deg, #FFFFFF 0%, #F0F6FF 100%) !important; }
+      #posView .report-scope-note { margin: -2px 2px 2px !important; padding: 10px 12px !important; border-radius: 12px !important; background: #F8FAFC !important; color: #475569 !important; font-size: 12px !important; font-weight: 750 !important; }
+      #posView .report-modern-filter { padding: 13px !important; }
+      #posView .report-modern-filter label { color: #334155 !important; font-size: 10px !important; }
+      #posView .report-modern-filter input { min-height: 46px !important; background: #F8FAFC !important; font-size: 14px !important; }
+      #posView .report-modern-actions button { min-height: 42px !important; font-size: 12px !important; }
+      #posView .report-kpi-grid { gap: 9px !important; }
+      #posView .report-kpi-card { min-height: 112px !important; padding: 13px !important; }
+      #posView .report-kpi-card strong { font-size: 20px !important; }
+      #posView .report-primary-kpi { grid-column: 1 / -1 !important; min-height: 126px !important; padding: 16px !important; background: linear-gradient(135deg, #EEF4FF 0%, #FFFFFF 100%) !important; border-color: #BFDBFE !important; }
+      #posView .report-primary-kpi strong { font-size: 29px !important; color: #0B5FE8 !important; }
+      #posView .report-primary-kpi small { color: #475569 !important; font-size: 12px !important; }
+      #posView .report-card-compact { padding: 14px !important; border-radius: 16px !important; }
+      #posView .report-user-wise { border: 1px solid #BFDBFE !important; background: linear-gradient(180deg, #F8FBFF 0%, #FFFFFF 35%) !important; }
+      #posView .report-user-table { display: none !important; }
+      #posView .user-sales-cards { display: grid !important; gap: 10px !important; }
+      #posView .user-sales-card { display: grid; gap: 12px; padding: 13px; border: 1px solid #DCE8FA; border-radius: 15px; background: #fff; box-shadow: 0 5px 14px rgba(15, 23, 42, .06); }
+      #posView .user-sales-card-top { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+      #posView .user-sales-avatar { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: #DBEAFE; color: #1D4ED8; font-size: 17px; font-weight: 900; }
+      #posView .user-sales-card-top strong { display: block; overflow: hidden; color: #0F172A; font-size: 15px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+      #posView .user-sales-card-top small { display: block; margin-top: 3px; color: #64748B; font-size: 11px; font-weight: 650; }
+      #posView .user-sales-total { text-align: right; }
+      #posView .user-sales-total span { display: block; color: #64748B; font-size: 10px; font-weight: 750; text-transform: uppercase; }
+      #posView .user-sales-total b { display: block; margin-top: 3px; color: #0B5FE8; font-size: 15px; font-weight: 950; white-space: nowrap; }
+      #posView .user-sales-breakup { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+      #posView .user-sales-breakup span { display: grid; gap: 3px; padding: 8px 6px; border-radius: 9px; background: #F8FAFC; color: #64748B; font-size: 10px; font-weight: 700; text-align: center; }
+      #posView .user-sales-breakup b { color: #1E293B; font-size: 12px; font-weight: 900; white-space: nowrap; }
+      #posView .report-mini-table { font-size: 12px !important; }
+    }
+    html.pos-layout-compact #posView .report-user-table { display: none !important; }
+    html.pos-layout-compact #posView .user-sales-cards { display: grid !important; gap: 10px !important; }
+    @media (max-width: 760px) {
+      #posView:not(.option-mode) .content { padding-bottom: calc(258px + env(safe-area-inset-bottom, 0px)) !important; }
+      #posView.search-active .cart-sheet { display: block !important; }
+      #posView.search-active .item-search-results { max-height: min(440px, max(160px, calc(100dvh - var(--app-safe-top, 0px) - 310px))) !important; }
+    }
   </style>
 </head>
 <body>
@@ -6200,8 +6317,9 @@
           <div class="section-title-row"><h2 id="billingSectionTitle">Popular Items</h2><div class="section-tools"><span id="billingSectionMeta"></span><button class="item-search-toggle" id="itemSearchToggle" type="button" aria-label="Search items" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button></div></div>
           <div class="item-search-bar hidden" id="itemSearchBar">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-            <input id="itemSearch" type="search" placeholder="Search item name or category" autocomplete="off" enterkeyhint="search" aria-label="Search items">
+            <input id="itemSearch" type="search" placeholder="Search item number or name" autocomplete="off" enterkeyhint="search" aria-label="Search items">
             <button id="itemSearchClear" type="button" aria-label="Close search">&times;</button>
+            <div class="item-search-results" id="itemSearchResults" role="listbox" aria-label="Search results"></div>
           </div>
           <div class="menu-grid" id="menuGrid"></div>
         </div>
@@ -6298,6 +6416,7 @@
 
     const singleItemsCategory = "Single Items";
     const chickenCategory = "Chicken";
+    const hiddenCategoryKey = "AXEN_HIDDEN_CATEGORIES";
     const itemUnitOptions = ["Plate", "Pieces", "Kgs", "Grams", "Item", "Ltrs", "ML", "Cup", "Glass", "Bottle", "Packet", "Box", "Dozen", "Bundle", "Set", "Meter", "Feet", "Pair", "Sachet", "Tin"];
     const pendingCashfreeOrderKey = "AXEN_PENDING_CASHFREE_ORDER";
     const pendingPaperRollOrderKey = "AXEN_PENDING_PAPER_ROLL_ORDER";
@@ -6305,7 +6424,9 @@
       const defaults = ["All", chickenCategory, singleItemsCategory, "Breakfast", "Meals", "Biryani", "Starters", "Chinese", "Tiffin", "Tea", "Coffee", "Drinks", "Snacks", "Lunch", "Juice", "Desserts", "Dinner"];
       try {
         const saved = JSON.parse(localStorage.getItem("AXEN_CATEGORIES") || "[]");
-        return [...new Set([...defaults, ...saved.map(item => item === "Half Items" ? singleItemsCategory : item)])];
+        const hidden = new Set(JSON.parse(localStorage.getItem(hiddenCategoryKey) || "[]"));
+        return [...new Set([...defaults, ...saved.map(item => item === "Half Items" ? singleItemsCategory : item)])]
+          .filter(item => item === "All" || !hidden.has(item));
       } catch {
         return defaults;
       }
@@ -6373,6 +6494,7 @@
     let payment = "";
     let cartPaymentMode = "Cash";
     let itemSearch = "";
+    let itemManagerSearch = "";
     let cartDiscount = 0;
     let adminTab = "dashboard";
     let activePosSection = "billing";
@@ -6385,6 +6507,8 @@
     let billingPrinterEnabled = localStorage.getItem(billingPrinterEnabledKey) !== "false";
     let kitchenPrinter = localStorage.getItem(kitchenPrinterKey) || "";
     let kitchenPrinterEnabled = localStorage.getItem(kitchenPrinterEnabledKey) === "true";
+    let printerKeepAliveTimer = null;
+    let lightweightSyncUnavailable = false;
     let receiptLogoDataUrl = "";
     let selectedSubItems = {};
     let longPressTimer = null;
@@ -6588,6 +6712,41 @@
       const overrides = productUnitOverrides();
       overrides[key] = unit;
       writeJson(productUnitOverridesKey, overrides);
+    }
+
+    const allNumbersKey = "AXEN_ALL_NUMBERS_ENABLED";
+    const allNumbersEnabled = () => scopedLocalGet(allNumbersKey) !== "false";
+    const setAllNumbersEnabled = enabled => scopedLocalSet(allNumbersKey, enabled ? "true" : "false");
+    function normalizeItemNumber(value) {
+      return String(value ?? "").replace(/\D/g, "").slice(0, 12);
+    }
+    function itemNumberText(item) {
+      return normalizeItemNumber(item?.itemNumber ?? item?.allotNumber ?? "");
+    }
+    function itemNumberInUse(itemNumber, itemId) {
+      const number = normalizeItemNumber(itemNumber);
+      return Boolean(number) && products.some(item =>
+        Number(item.id) !== Number(itemId) && itemNumberText(item) === number
+      );
+    }
+    const itemNumberOn = item => itemNumberText(item) !== "" && (item?.itemNumberEnabled === undefined || item.itemNumberEnabled === true || item.itemNumberEnabled === "true");
+    const itemNumberLabel = item => allNumbersEnabled() && itemNumberOn(item) ? `No. ${itemNumberText(item)}` : "";
+    function itemNumberChipHtml(item) {
+      const value = itemNumberText(item);
+      if (!value || !allNumbersEnabled()) return "";
+      return `<span class="item-number-chip${itemNumberOn(item) ? "" : " item-number-off"}">${itemNumberOn(item) ? "" : "Off · "}#${esc(value)}</span>`;
+    }
+    function itemNumberImageHtml(item) {
+      if (!allNumbersEnabled() || !itemNumberOn(item)) return "";
+      return `<span class="item-number-image-overlay" aria-label="Item number ${esc(itemNumberText(item))}"><small>#</small>${esc(itemNumberText(item))}</span>`;
+    }
+    function matchesItemNumber(item, query) {
+      if (!allNumbersEnabled()) return false;
+      const value = itemNumberText(item).toLowerCase();
+      if (!value || !query) return false;
+      const needle = String(query).trim().toLowerCase().replace(/^(no\.?|#)/, "").trim();
+      if (!needle) return false;
+      return value === needle || value.includes(needle);
     }
 
     function useBootstrapProducts(rows) {
@@ -7147,6 +7306,7 @@
         expenses = dashboard.expenses || [];
         creditors = dashboard.creditors || [];
         addresses = dashboard.addresses || [];
+        users = dashboard.users || users;
         const currentUser = (dashboard.users || []).find(row => String(row.mobile || "") === String(user?.mobile || "") && String(row.canteenId || '').toUpperCase() === String(user?.canteenId || '').toUpperCase());
         if (currentUser) {
           user = { ...user, ...currentUser };
@@ -7158,9 +7318,16 @@
         updateSyncStatus("Data load failed", navigator.onLine ? "offline" : "offline");
       }
       if(generation!==sessionGeneration)return;
-      try {
-        users = await api("/users", { timeoutMs: 9000 });
-      } catch {}
+      if ($("adminView") && !$("adminView").classList.contains("hidden")) renderAdmin();
+    }
+
+    function applyLiveChanges(changes) {
+      if (Array.isArray(changes.products) && (changes.products.length || !products.length)) {
+        products = applyProductUnitOverrides(tenantProducts(changes.products, false));
+        writeJson(productCacheKey, products);
+        renderProducts();
+      }
+      if (Array.isArray(changes.users)) users = changes.users;
       if ($("adminView") && !$("adminView").classList.contains("hidden")) renderAdmin();
     }
 
@@ -7170,10 +7337,35 @@
       if (active && ["INPUT", "SELECT", "TEXTAREA"].includes(active.tagName)) return;
       liveRefreshBusy = true;
       try {
-        await loadAdminData();
+        const changes = lightweightSyncUnavailable
+          ? await Promise.all([
+            api(`/products?includeHidden=${hasAdminAccess() ? "true" : "false"}`, { timeoutMs: 3500 }),
+            api("/users", { timeoutMs: 3500 })
+          ]).then(([latestProducts, latestUsers]) => ({ products: latestProducts, users: latestUsers }))
+          : await api("/sync/changes", { timeoutMs: 3500 });
+        applyLiveChanges(changes);
+      } catch {
+        if (!lightweightSyncUnavailable) {
+          lightweightSyncUnavailable = true;
+          try {
+            const [latestProducts, latestUsers] = await Promise.all([
+              api(`/products?includeHidden=${hasAdminAccess() ? "true" : "false"}`, { timeoutMs: 3500 }),
+              api("/users", { timeoutMs: 3500 })
+            ]);
+            applyLiveChanges({ products: latestProducts, users: latestUsers });
+          } catch {}
+        }
       } finally {
         liveRefreshBusy = false;
       }
+    }
+
+    function upsertLocalUser(savedUser) {
+      if (!savedUser) return;
+      const mobile = String(savedUser.mobile || "");
+      const index = users.findIndex(row => String(row.mobile || "") === mobile);
+      if (index >= 0) users[index] = { ...users[index], ...savedUser };
+      else users = [...users, savedUser];
     }
 
     function renderCategories() {
@@ -7181,7 +7373,8 @@
       found.delete("Half Items");
       if (shouldShowChickenCategory()) found.add(chickenCategory);
       if (canShowSingleItemsCategory()) found.add(singleItemsCategory);
-      const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item))];
+      const hidden = new Set(JSON.parse(localStorage.getItem(hiddenCategoryKey) || "[]"));
+      const categories = [...categoryOrder.filter(item => item === "All" || found.has(item)), ...[...found].filter(item => !categoryOrder.includes(item) && !hidden.has(item))];
       $("categoryTabs").innerHTML = categories.map(category => `
         <button class="tab ${category === activeCategory ? "active" : ""}" data-category="${esc(category)}"><span>${categoryIconSvg(category)}</span>${esc(categoryLabel(category))}</button>
       `).join("");
@@ -7192,7 +7385,8 @@
       found.delete("Half Items");
       if (shouldShowChickenCategory()) found.add(chickenCategory);
       if (canShowSingleItemsCategory()) found.add(singleItemsCategory);
-      return [...categoryOrder.filter(item => item !== "All" && found.has(item)), ...[...found].filter(item => item !== "All" && !categoryOrder.includes(item))];
+      const hidden = new Set(JSON.parse(localStorage.getItem(hiddenCategoryKey) || "[]"));
+      return [...categoryOrder.filter(item => item !== "All" && found.has(item)), ...[...found].filter(item => item !== "All" && !categoryOrder.includes(item) && !hidden.has(item))];
     }
 
     function categoryCardImage(category) {
@@ -7205,6 +7399,7 @@
     }
 
     function renderCategoryHome() {
+      if ($("itemSearchResults")) $("itemSearchResults").innerHTML = "";
       renderCategories();
       if ($("billingSectionTitle")) $("billingSectionTitle").textContent = "Categories";
       if ($("billingSectionMeta")) $("billingSectionMeta").textContent = "Select category";
@@ -7221,6 +7416,26 @@
           </span>
         </button>`;
       }).join("") || `<div class="panel">No categories</div>`;
+    }
+
+    function renderItemSearchSuggestions(items, query) {
+      const results = $("itemSearchResults");
+      if (!results) return;
+      if (!query) {
+        results.innerHTML = "";
+        return;
+      }
+      results.innerHTML = items.slice(0, 8).map(item => {
+        const name = item.displayName || localizedName(item);
+        const price = item.displayPrice || item.price;
+        const image = item.image ? `background-image:url('${String(item.image).replace(/'/g, "%27")}')` : "";
+        const number = allNumbersEnabled() && itemNumberText(item) ? `<b class="item-search-result-number${itemNumberOn(item) ? "" : " item-number-off"}">${esc(itemNumberText(item))}</b>` : "";
+        return `<button class="item-search-result" type="button" role="option" data-search-item="${item.id}"${item.isSingleItem ? " data-search-single-item=\"1\"" : ""}>
+          <span class="item-search-result-image" style="${image}">${image ? "" : esc(String(name || "?").slice(0, 1).toUpperCase())}</span>
+          <span><span class="item-search-result-name">${number}${esc(name)}</span><span class="item-search-result-category">Category: ${esc(categoryLabel(item.category || "Other"))}</span></span>
+          <span class="item-search-result-price">${money(price)}</span>
+        </button>`;
+      }).join("") || `<div class="item-search-no-result">No items found</div>`;
     }
 
     function renderProducts() {
@@ -7246,9 +7461,10 @@
           .filter(item => !isSingleItemsCategory(item.category) && singleItemPrice(item) > 0)
           .map(item => ({ ...item, isSingleItem: true, displayName: `Single ${localizedName(item)}`, displayPrice: singleItemPrice(item) }))
         : baseProducts.filter(item => item.category === activeCategory))
-        .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.nameTe || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query))
+        .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.nameTe || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query) || matchesItemNumber(item, query))
         .slice()
         .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
+      renderItemSearchSuggestions(visible, query);
       $("menuGrid").innerHTML = visible.map(item => {
         const selectedOption = item.isSingleItem ? null : selectedSubItems[item.id] || null;
         const displayName = item.displayName || localizedName(item);
@@ -7262,7 +7478,7 @@
         <button class="item-card ${item.isSingleItem ? "half-item-card" : ""} ${cardQty ? "selected" : ""}" data-item="${item.id}"${singleAttrs}>
           ${cardQty ? `<span class="remove-badge" data-remove-card-line="${esc(removeTarget)}">X</span>` : ""}
           ${cardQty ? `<span class="count-badge ${item.isSingleItem ? "half-count-badge" : ""}">${cardQty}</span>` : ""}
-          <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(displayName || "?").slice(0, 2).toUpperCase()}${item.isSingleItem ? `<span class="half-plate-mark">SINGLE</span><span class="half-plate-slash"></span>` : ""}</span>
+          <span class="item-icon ${item.image ? "" : "initials"}" style="${item.image ? `background-image:url('${item.image.replace(/'/g, "%27")}')` : ""}">${String(displayName || "?").slice(0, 2).toUpperCase()}${itemNumberImageHtml(item)}${item.isSingleItem ? `<span class="half-plate-mark">SINGLE</span><span class="half-plate-slash"></span>` : ""}</span>
           <span class="item-body">
             <span class="item-name-line">
               <span class="item-name-wrap"><span class="item-emoji">${itemEmoji(item)}</span><h3>${esc(displayName)}</h3></span>
@@ -7279,6 +7495,7 @@
       const bar = $("itemSearchBar");
       if (!bar) return;
       bar.classList.toggle("hidden", !open);
+      $("posView")?.classList.toggle("search-active", open);
       $("itemSearchToggle")?.setAttribute("aria-expanded", String(open));
       $("itemSearchToggle")?.classList.toggle("active", open);
       if (open) {
@@ -7290,6 +7507,15 @@
         $("itemSearch").value = "";
         renderProducts();
       }
+    }
+
+    function clearItemSearchAfterSelection() {
+      if (!itemSearch) return;
+      itemSearch = "";
+      const input = $("itemSearch");
+      if (input) input.value = "";
+      renderProducts();
+      requestAnimationFrame(() => input?.focus());
     }
 
     function productSubItems(item) {
@@ -8266,12 +8492,22 @@
     }
 
     function wakePrinter() {
-      if (window.AxenPrinter && typeof window.AxenPrinter.wake === "function") {
+      if (window.AxenPrinter && (typeof window.AxenPrinter.wakeAsync === "function" || typeof window.AxenPrinter.wake === "function")) {
         try {
           applySelectedPrinterToBridge();
-          window.AxenPrinter.wake();
+          if (typeof window.AxenPrinter.wakeAsync === "function") window.AxenPrinter.wakeAsync();
+          else window.AxenPrinter.wake();
         } catch {}
       }
+    }
+
+    function startPrinterKeepAlive() {
+      if (printerKeepAliveTimer) clearInterval(printerKeepAliveTimer);
+      printerKeepAliveTimer = null;
+      if (!billingPrinterEnabled || !billingPrinter || !window.AxenPrinter) return;
+      printerKeepAliveTimer = setInterval(() => {
+        if (document.visibilityState === "visible") wakePrinter();
+      }, 120000);
     }
 
     function testPrint() {
@@ -8703,6 +8939,7 @@
       if (window.AxenPrinter && typeof window.AxenPrinter.selectPrinter === "function") {
         try { window.AxenPrinter.selectPrinter(billingPrinter || ""); } catch {}
       }
+      startPrinterKeepAlive();
       return billingPrinter ? "Billing Printer saved" : "Billing Printer auto selection active";
     }
 
@@ -8735,6 +8972,7 @@
             try { window.AxenPrinter.selectPrinter(""); } catch {}
           }
         }
+        startPrinterKeepAlive();
         return printerStatusText("Billing Printer", billingPrinterEnabled, billingPrinter);
       }
       kitchenPrinterEnabled = Boolean(enabled);
@@ -9409,7 +9647,7 @@
         </div>
         <div class="work-card">
           <h3>${isChickenShopCanteen() ? "Shop Categories" : "Restaurant Categories"}</h3>
-          <div class="sub-chip-row">${(isChickenShopCanteen() ? visibleCategories() : categoryOrder.filter(item => item !== "All")).map(item => `<span>${esc(categoryLabel(item))}</span>`).join("")}</div>
+          <div class="sub-chip-row">${(isChickenShopCanteen() ? visibleCategories() : categoryOrder.filter(item => item !== "All")).map(item => `<span>${esc(categoryLabel(item))}<button type="button" data-delete-category="${esc(item)}" aria-label="Delete ${esc(categoryLabel(item))}">&times;</button></span>`).join("")}</div>
         </div>`;
     }
 
@@ -9489,6 +9727,13 @@
         <tr><td>${esc(cashier)}</td><td>${item.bills}</td><td>${money(item.cash)}</td><td>${money(item.online)}</td><td>${money(item.credit)}</td><td>${money(item.total)}</td></tr>`).join("");
       const userRowsCompact = [...userGroups.entries()].sort((a, b) => b[1].total - a[1].total).slice(0, 4).map(([cashier, item]) => `
         <tr><td><span class="user-mini-icon">${lucideIcon("user", 16)}</span>${esc(cashier)}</td><td>${item.bills}</td><td>${money(item.total)}</td></tr>`).join("");
+      const userCards = [...userGroups.entries()].sort((a, b) => b[1].total - a[1].total).map(([cashier, item]) => {
+        const initial = String(cashier || "U").trim().slice(0, 1).toUpperCase();
+        return `<article class="user-sales-card">
+          <div class="user-sales-card-top"><span class="user-sales-avatar">${esc(initial)}</span><div><strong>${esc(cashier)}</strong><small>${item.bills} bill${item.bills === 1 ? "" : "s"} in selected period</small></div><div class="user-sales-total"><span>Total Sale</span><b>${money(item.total)}</b></div></div>
+          <div class="user-sales-breakup"><span>Cash <b>${money(item.cash)}</b></span><span>Online <b>${money(item.online)}</b></span><span>Credit <b>${money(item.credit)}</b></span></div>
+        </article>`;
+      }).join("");
       const itemRowsCompact = [...totals.items.entries()].sort((a, b) => b[1].amount - a[1].amount).slice(0, 4).map(([name, item]) => `
         <tr><td>${esc(name)}</td><td>${item.qty}</td><td>${money(item.amount)}</td></tr>`).join("");
       const overviewGroups = new Map();
@@ -9541,7 +9786,7 @@
           </div>
           <div class="report-kpi-grid">
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><path d="M4 18l5-5 4 3 7-8"/><path d="M14 8h6v6"/></svg></i><span>Today Sale</span></div><strong>${money(todayTotal)}</strong><small>${todayRows.length} bills today</small></div>
-            <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon purple"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg></i><span>Range Sale</span></div><strong>${money(totals.total)}</strong><small>${displayDateLabel(range.from)} - ${displayDateLabel(range.to)}</small></div>
+            <div class="report-kpi-card report-primary-kpi"><div class="report-kpi-top"><i class="report-kpi-icon purple"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg></i><span>Range Sale</span></div><strong>${money(totals.total)}</strong><small>${displayDateLabel(range.from)} - ${displayDateLabel(range.to)}</small></div>
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon purple"><svg viewBox="0 0 24 24"><path d="M7 3h10v18H7z"/><path d="M9 7h6"/><path d="M9 11h6"/><path d="M9 15h3"/></svg></i><span>Total Bills</span></div><strong>${rows.length}</strong><small>Selected dates</small></div>
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon green"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 10v4"/><path d="M18 10v4"/></svg></i><span>Cash</span></div><strong>${money(totals.cash)}</strong><small>This shop / login</small></div>
             <div class="report-kpi-card"><div class="report-kpi-top"><i class="report-kpi-icon blue"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c3 3 3 15 0 18"/><path d="M12 3c-3 3-3 15 0 18"/></svg></i><span>Online</span></div><strong>${money(totals.online)}</strong><small>This shop / login</small></div>
@@ -9556,7 +9801,7 @@
           ${weeklySalesChartHtml(chartData)}
           <div class="work-card report-card-compact"><h3>Date Wise</h3><table class="data-table report-mini-table"><thead><tr><th>Date</th><th>Bills</th><th>Sale</th><th>Cash</th><th>Online</th></tr></thead><tbody>${dateRows || `<tr><td colspan="5" class="report-empty">No sales in this date range</td></tr>`}</tbody></table></div>
           <div class="work-card report-card-compact"><h3>Item Wise</h3><table class="data-table report-mini-table"><thead><tr><th>Item</th><th>Qty</th><th>Sale</th></tr></thead><tbody>${itemRows || `<tr><td colspan="3" class="report-empty">No item sales in this date range</td></tr>`}</tbody></table></div>
-          <div class="work-card report-card-compact report-span-all"><h3>${hasAdminAccess() ? "User Wise" : "Your Sales"}</h3><table class="data-table report-mini-table"><thead><tr><th>User</th><th>Bills</th><th>Cash</th><th>Online</th><th>Credit</th><th>Sale</th></tr></thead><tbody>${userRows || `<tr><td colspan="6" class="report-empty">No user sales in this date range</td></tr>`}</tbody></table></div>
+          <div class="work-card report-card-compact report-span-all report-user-wise"><div class="report-section-heading"><div><h3>${hasAdminAccess() ? "User Wise Sales" : "Your Sales"}</h3><p>Each user's bills and payment breakup</p></div><span>${userGroups.size} user${userGroups.size === 1 ? "" : "s"}</span></div><div class="user-sales-cards">${userCards || `<p class="report-empty">No user sales in this date range</p>`}</div><div class="report-user-table"><table class="data-table report-mini-table"><thead><tr><th>User</th><th>Bills</th><th>Cash</th><th>Online</th><th>Credit</th><th>Sale</th></tr></thead><tbody>${userRows || `<tr><td colspan="6" class="report-empty">No user sales in this date range</td></tr>`}</tbody></table></div></div>
         </div>`;
     }
 
@@ -10113,7 +10358,13 @@
         return `${sectionHeader(section)}${adminUnlockHtml()}`;
       }
       const managedProducts = products;
-      const rows = managedProducts.slice().sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0)).map(item => {
+      const query = itemManagerSearch.trim().toLowerCase();
+      const visibleProducts = managedProducts.filter(item => {
+        if (!query) return true;
+        return [item.name, item.nameTe, item.category, itemSaleUnit(item), itemNumberText(item)]
+          .some(value => String(value || "").toLowerCase().includes(query));
+      });
+      const rows = visibleProducts.slice().sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0)).map(item => {
         const subs = productSubItems(item);
         const hidden = isItemHidden(item);
         const editing = item._editing === true;
@@ -10121,7 +10372,7 @@
         return `<div class="work-card item-manager-card${editing ? " is-editing" : ""}">
           <div class="item-manager-top">
             <span class="item-manager-thumb ${imageStyle ? "" : "initials"}" style="${imageStyle}">${imageStyle ? "" : esc(String(item.name || "I").slice(0, 1))}</span>
-            <div><h3>${esc(localizedName(item, "both"))}</h3>${item.imageCredit?.source && /^https:\/\//i.test(item.imageCredit.source) ? `<a href="${esc(item.imageCredit.source)}" target="_blank" rel="noopener">Photo: ${esc(item.imageCredit.author)} ? ${esc(item.imageCredit.license)}</a>` : ""}<span class="muted">${esc(item.category || "-")} | ${esc(itemSaleUnit(item) || "Plate")} | ${subs.length ? `${subs.length} sub items` : "Empty"} | ${hidden ? "Hidden" : "Visible"}</span></div>
+            <div><h3>${esc(localizedName(item, "both"))}</h3>${item.imageCredit?.source && /^https:\/\//i.test(item.imageCredit.source) ? `<a href="${esc(item.imageCredit.source)}" target="_blank" rel="noopener">Photo: ${esc(item.imageCredit.author)} ? ${esc(item.imageCredit.license)}</a>` : ""}<span class="muted">${esc(item.category || "-")} | ${esc(itemSaleUnit(item) || "Plate")} | ${subs.length ? `${subs.length} sub items` : "Empty"} | ${hidden ? "Hidden" : "Visible"}</span>${itemNumberChipHtml(item)}</div>
             <button class="ghost-action${editing ? " item-update-btn" : ""}" data-edit-item="${item.id}" type="button">${editing ? "Update" : "Edit"}</button>
             <button class="ghost-action ${hidden ? "" : "danger-lite"}" data-hide-item="${item.id}" type="button">${hidden ? "Show" : "Hide"}</button>
           </div>
@@ -10133,25 +10384,31 @@
             <input data-edit-image="${item.id}" value="${esc(item.image || "")}" placeholder="Image URL">
             <select data-edit-category="${item.id}">${categoryOrder.filter(cat => cat !== "All" && !isSingleItemsCategory(cat)).map(cat => `<option value="${esc(cat)}" ${cat === item.category ? "selected" : ""}>${esc(categoryLabel(cat))}</option>`).join("")}</select>
             <select data-edit-unit="${item.id}">${itemUnitOptionsHtml(itemSaleUnit(item) || "Plate")}</select>
+            <div class="item-number-field">
+              <input data-edit-number="${item.id}" value="${esc(itemNumberText(item))}" placeholder="Item number e.g. 011638" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off" aria-label="Item number">
+              <label class="item-number-toggle ${itemNumberOn(item) ? "is-on" : "is-off"}"><input type="checkbox" data-number-enabled="${item.id}" ${itemNumberOn(item) ? "checked" : ""}> Enable number</label>
+            </div>
           </div>` : ""}
           <div class="sub-chip-row">${subs.map(sub => `<span>${esc(sub.name)} - ${money(sub.price)}</span>`).join("") || `<span>Empty</span>`}</div>
           ${editing ? `<div class="add-sub-row">
             <input data-sub-name="${item.id}" placeholder="Sub item name">
             <input data-sub-price="${item.id}" type="number" min="0" placeholder="Price">
             <button class="ghost-action" data-add-sub="${item.id}" type="button">Add Sub</button>
-          </div>` : ""}
+          </div><button class="ghost-action" data-close-edit="${item.id}" type="button">Close</button>` : ""}
         </div>`;
       }).join("");
       return `
         ${sectionHeader(section)}
         <div class="work-header compact item-manager-head">
-          <div><h2>Edit Items</h2><p>${managedProducts.length} items in ${esc(settings.canteenName || "this shop")}</p></div>
+          <div><h2>Edit Items</h2><p>${query ? `${visibleProducts.length} of ${managedProducts.length}` : managedProducts.length} items in ${esc(settings.canteenName || "this shop")}</p></div>
           <div class="item-manager-actions">
+            <label class="item-number-master ${allNumbersEnabled() ? "is-on" : "is-off"}" for="allNumbersMaster"><input type="checkbox" id="allNumbersMaster" ${allNumbersEnabled() ? "checked" : ""}> Allot numbers</label>
             <button class="page-action" id="openAddItemBtn" type="button">Add Item</button>
             <button class="page-action" id="uploadCatalogBtn" type="button">Upload menu card</button>
           </div>
         </div>
-        ${rows || `<div class="work-card">No items yet. Use Add Item, or upload a menu card and confirm the list.</div>`}`;
+        <label class="item-manager-search"><span>Search items</span><input id="itemManagerSearch" type="search" value="${esc(itemManagerSearch)}" placeholder="Search name, number, Telugu name, category or unit" autocomplete="off"></label>
+        ${rows || `<div class="work-card">${query ? "No items match this search." : "No items yet. Use Add Item, or upload a menu card and confirm the list."}</div>`}`;
     }
 
     function simpleAdminPageHtml(section) {
@@ -10351,6 +10608,17 @@
       };
       if ($("uploadCatalogBtn")) $("uploadCatalogBtn").onclick = openCatalogImport;
       if ($("openAddItemBtn")) $("openAddItemBtn").onclick = openAddItemDialog;
+      if ($("itemManagerSearch")) $("itemManagerSearch").addEventListener("input", event => {
+        const input = event.target;
+        const cursor = input.selectionStart;
+        itemManagerSearch = input.value;
+        renderOptionPage();
+        requestAnimationFrame(() => {
+          const next = $("itemManagerSearch");
+          next?.focus();
+          next?.setSelectionRange(cursor, cursor);
+        });
+      });
       bindPrinterSettingsControls();
       if ($("menuTestPrint")) $("menuTestPrint").addEventListener("click", testPrint);
       if ($("testBillingPrinter")) $("testBillingPrinter").addEventListener("click", () => testSinglePrinter("billing"));
@@ -10379,6 +10647,7 @@
       bindPurchaseLineControls(document);
       updatePurchaseInvoiceTotal();
       if ($("saveCategoryBtn")) $("saveCategoryBtn").addEventListener("click", saveCategoryFromPos);
+      document.querySelectorAll("[data-delete-category]").forEach(btn => btn.addEventListener("click", () => deleteCategoryFromPos(btn.dataset.deleteCategory)));
       if ($("posUserForm")) $("posUserForm").addEventListener("submit", savePosUser);
       if ($("bulkAddToCart")) $("bulkAddToCart").addEventListener("click", addBulkItemsToCart);
       if ($("bulkProceedPayment")) $("bulkProceedPayment").addEventListener("click", openBulkConfirmModal);
@@ -10404,9 +10673,12 @@
         renderOptionPage();
       }));
       document.querySelectorAll("[data-store-tab]").forEach(btn => btn.addEventListener("click", () => setStoreTab(btn.dataset.storeTab)));
-      document.querySelectorAll("[data-price-item], [data-half-price-item]").forEach(input => input.addEventListener("change", () => savePriceFromPos(input.dataset.priceItem || input.dataset.halfPriceItem, document.querySelector(`[data-price-item="${input.dataset.priceItem || input.dataset.halfPriceItem}"]`)?.value)));
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       document.querySelectorAll("[data-edit-item]").forEach(btn => btn.addEventListener("click", () => toggleItemEdit(btn.dataset.editItem)));
+      document.querySelectorAll("[data-close-edit]").forEach(btn => btn.addEventListener("click", () => closeItemEdit(btn.dataset.closeEdit)));
+      document.querySelectorAll("[data-number-enabled]").forEach(input => input.addEventListener("change", () => toggleItemNumberEnabled(input.dataset.numberEnabled)));
+      document.querySelectorAll("[data-edit-number]").forEach(input => input.addEventListener("input", () => { input.value = normalizeItemNumber(input.value); }));
+      if ($("allNumbersMaster")) $("allNumbersMaster").addEventListener("change", event => setAllNumbersMaster(event.target.checked));
       document.querySelectorAll("[data-hide-item]").forEach(btn => btn.addEventListener("click", () => toggleItemHidden(btn.dataset.hideItem)));
       document.querySelectorAll("[data-go-billing]").forEach(btn => btn.addEventListener("click", () => setPosSection("billing")));
       document.querySelectorAll("[data-go-store]").forEach(btn => btn.addEventListener("click", () => setPosSection("store")));
@@ -10609,7 +10881,11 @@
       if (cleanProduct.unit) saveProductUnitOverride(cleanProduct, cleanProduct.unit);
       const saved = await adminApi("/products", { method: "POST", body: JSON.stringify(cleanProduct) });
       const serverProducts = Array.isArray(saved.products) ? saved.products.map(item => Number(item.id) === Number(cleanProduct.id) && !item.unit ? { ...item, unit: cleanProduct.unit } : item) : null;
-      products = applyProductUnitOverrides(serverProducts || products.map(item => Number(item.id) === Number(cleanProduct.id) ? cleanProduct : item));
+      const serverProduct = saved.product ? { ...saved.product, unit: saved.product.unit || cleanProduct.unit } : cleanProduct;
+      const localProducts = products.some(item => Number(item.id) === Number(cleanProduct.id))
+        ? products.map(item => Number(item.id) === Number(cleanProduct.id) ? serverProduct : item)
+        : [...products, serverProduct];
+      products = applyProductUnitOverrides(serverProducts || localProducts);
       writeJson(productCacheKey, products);
       renderProducts();
       if (!$("adminView").classList.contains("hidden") && adminTab === "menu") renderAdmin();
@@ -10830,6 +11106,8 @@
           <select id="newItemUnit">${itemUnitOptionsHtml(isChickenShopCanteen() ? "Kgs" : "Plate")}</select>
           <input id="newItemPrice" type="number" min="0" placeholder="Price">
           <input id="newItemHalfPrice" type="number" min="0" placeholder="Half item price">
+          <input id="newItemNumber" placeholder="Item number e.g. 011638 (optional)" inputmode="numeric" pattern="[0-9]*" maxlength="12" autocomplete="off">
+          <label class="item-number-toggle is-on" for="newItemNumberEnabled"><input type="checkbox" id="newItemNumberEnabled" checked> Item number enabled</label>
           <input id="newItemImage" placeholder="Image URL (optional)">
           <input id="newItemSubName" placeholder="Sub item optional">
           <input id="newItemSubPrice" type="number" min="0" placeholder="Sub item price optional">
@@ -10845,6 +11123,7 @@
         event.preventDefault();
         if (await saveNewItemFromPos()) close();
       });
+      $("newItemNumber").addEventListener("input", event => { event.target.value = normalizeItemNumber(event.target.value); });
       bindTeluguNameSuggestions();
       bindItemSuggestionSearch();
       dialog.showModal();
@@ -10862,11 +11141,75 @@
         const category = document.querySelector(`[data-edit-category="${id}"]`)?.value || item.category;
         const unit = document.querySelector(`[data-edit-unit="${id}"]`)?.value || itemSaleUnit(item) || "Plate";
         const halfPrice = Number(document.querySelector(`[data-half-price-item="${id}"]`)?.value || 0);
-        await persistProductFromPos({ ...item, name, nameTe, price, halfPrice, image, category, unit, _editing: false });
+        const numberInput = document.querySelector(`[data-edit-number="${id}"]`);
+        const itemNumber = normalizeItemNumber(numberInput ? numberInput.value : itemNumberText(item));
+        const itemNumberEnabled = document.querySelector(`[data-number-enabled="${id}"]`)?.checked === true;
+        if (itemNumberInUse(itemNumber, id)) {
+          $("posMessage").textContent = `Item number ${itemNumber} is already assigned to another item`;
+          $("posMessage").className = "status error";
+          return;
+        }
+        const updated = { ...item, name, nameTe, price, halfPrice, image, category, unit, itemNumber, itemNumberEnabled: itemNumber ? itemNumberEnabled : false, _editing: false };
+        products = products.map(row => Number(row.id) === Number(id) ? updated : row);
+        saveProductUnitOverride(updated, unit);
+        writeJson(productCacheKey, products);
+        renderProducts();
+        refreshItemManager();
+        $("posMessage").textContent = "Item updated. Syncing...";
+        $("posMessage").className = "status ok";
+        persistProductFromPos(updated).then(() => {
+          $("posMessage").textContent = "Item updated";
+        }).catch(() => {
+          $("posMessage").textContent = "Saved on this device. Server sync will retry.";
+          $("posMessage").className = "status error";
+        });
         return;
       }
       products = products.map(row => Number(row.id) === Number(id) ? { ...row, _editing: true } : { ...row, _editing: false });
       refreshItemManager();
+    }
+
+    function closeItemEdit(id) {
+      products = products.map(row => Number(row.id) === Number(id) ? { ...row, _editing: false } : row);
+      refreshItemManager();
+    }
+
+    async function toggleItemNumberEnabled(id) {
+      const item = products.find(row => Number(row.id) === Number(id));
+      const input = document.querySelector(`[data-number-enabled="${id}"]`);
+      if (!item || !input) return;
+      const numberField = document.querySelector(`[data-edit-number="${id}"]`);
+      const itemNumber = normalizeItemNumber(numberField ? numberField.value : itemNumberText(item));
+      const enabled = input.checked === true;
+      if (enabled && !itemNumber) {
+        input.checked = false;
+        $("posMessage").textContent = "Type an allot number before enabling it";
+        $("posMessage").className = "status error";
+        return;
+      }
+      products = products.map(row => Number(row.id) === Number(id) ? { ...row, itemNumber, itemNumberEnabled: enabled, _editing: true } : row);
+      try {
+        await persistProductFromPos({ ...item, itemNumber, itemNumberEnabled: enabled, _editing: true });
+        $("posMessage").textContent = enabled ? `Allot number ${itemNumber} enabled` : `Allot number ${itemNumber || "number"} disabled`;
+        $("posMessage").className = "status ok";
+      } catch {
+        $("posMessage").textContent = "Saved on this device. Server sync will retry.";
+        $("posMessage").className = "status error";
+      }
+      products = products.map(row => Number(row.id) === Number(id) ? { ...row, _editing: true } : row);
+      refreshItemManager();
+    }
+
+    function setAllNumbersMaster(checked) {
+      setAllNumbersEnabled(checked);
+      renderProducts();
+      document.querySelectorAll("#allNumbersMaster").forEach(input => {
+        input.checked = checked;
+        input.closest(".item-number-master")?.classList.toggle("is-on", checked);
+        input.closest(".item-number-master")?.classList.toggle("is-off", !checked);
+      });
+      $("posMessage").textContent = checked ? "Allot numbers enabled" : "Allot numbers disabled";
+      $("posMessage").className = "status ok";
     }
 
     async function toggleItemHidden(id) {
@@ -10908,6 +11251,13 @@
       const subName = $("newItemSubName").value.trim();
       const subPrice = Number($("newItemSubPrice").value || price);
       const halfPrice = Number($("newItemHalfPrice").value || 0);
+      const itemNumber = normalizeItemNumber($("newItemNumber")?.value);
+      if (itemNumberInUse(itemNumber, existing?.id)) {
+        $("addItemStatus").textContent = `Item number ${itemNumber} is already assigned to another item`;
+        $("addItemStatus").className = "status error";
+        return false;
+      }
+      const itemNumberEnabled = Boolean(itemNumber) && $("newItemNumberEnabled")?.checked !== false;
       const image = $("newItemImage").value.trim();
       const unit = $("newItemUnit")?.value || "Plate";
       const product = {
@@ -10916,6 +11266,8 @@
         nameTe,
         price,
         halfPrice,
+        itemNumber,
+        itemNumberEnabled,
         category: $("newItemCategory").value,
         unit,
         billingType: ["kgs", "kg", "grams", "gram"].includes(String(unit).toLowerCase()) ? "weight" : "quantity",
@@ -11128,6 +11480,9 @@
     function saveCategoryFromPos() {
       const value = $("newCategoryInput")?.value.trim();
       if (!value || categoryOrder.includes(value)) return;
+      const hidden = new Set(JSON.parse(localStorage.getItem(hiddenCategoryKey) || "[]"));
+      hidden.delete(value);
+      localStorage.setItem(hiddenCategoryKey, JSON.stringify([...hidden]));
       categoryOrder.splice(categoryOrder.length - 1, 0, value);
       localStorage.setItem("AXEN_CATEGORIES", JSON.stringify(categoryOrder.filter(item => item !== "All")));
       $("posMessage").textContent = "Category added";
@@ -11136,10 +11491,34 @@
       renderCategories();
     }
 
+    async function deleteCategoryFromPos(category) {
+      if (!category || category === "All" || !confirm(`Delete ${categoryLabel(category)} category? Its items will move to Other.`)) return;
+      const hidden = new Set(JSON.parse(localStorage.getItem(hiddenCategoryKey) || "[]"));
+      hidden.add(category);
+      localStorage.setItem(hiddenCategoryKey, JSON.stringify([...hidden]));
+      const index = categoryOrder.indexOf(category);
+      if (index >= 0) categoryOrder.splice(index, 1);
+      localStorage.setItem("AXEN_CATEGORIES", JSON.stringify(categoryOrder.filter(item => item !== "All")));
+      const moved = products.filter(item => item.category === category).map(item => ({ ...item, category: "Other", _editing: false }));
+      products = products.map(item => item.category === category ? { ...item, category: "Other", _editing: false } : item);
+      if (activeCategory === category) activeCategory = "All";
+      writeJson(productCacheKey, products);
+      renderProducts();
+      renderOptionPage();
+      try {
+        await Promise.all(moved.map(item => persistProductFromPos(item)));
+        $("posMessage").textContent = "Category deleted";
+        $("posMessage").className = "status ok";
+      } catch {
+        $("posMessage").textContent = "Category removed here; server sync will retry.";
+        $("posMessage").className = "status error";
+      }
+    }
+
     async function savePosUser(event) {
       event.preventDefault();
       try {
-        await adminApi("/users", {
+        const saved = await adminApi("/users", {
           method: "POST",
           body: JSON.stringify({
             name: $("posNewName").value.trim(),
@@ -11150,9 +11529,9 @@
             canteenId: user?.canteenId
           })
         });
+        upsertLocalUser(saved.user);
         $("posMessage").textContent = "User saved";
         $("posMessage").className = "status ok";
-        await loadAdminData();
         if (!$("adminView").classList.contains("hidden") && adminTab === "users") renderAdmin();
         else renderOptionPage();
       } catch {
@@ -12349,6 +12728,9 @@
       bindTeluguNameSuggestions();
       bindItemSuggestionSearch();
       document.querySelectorAll("[data-edit-item]").forEach(btn => btn.addEventListener("click", () => toggleItemEdit(btn.dataset.editItem)));
+      document.querySelectorAll("[data-close-edit]").forEach(btn => btn.addEventListener("click", () => closeItemEdit(btn.dataset.closeEdit)));
+      document.querySelectorAll("[data-number-enabled]").forEach(input => input.addEventListener("change", () => toggleItemNumberEnabled(input.dataset.numberEnabled)));
+      if ($("allNumbersMaster")) $("allNumbersMaster").addEventListener("change", event => setAllNumbersMaster(event.target.checked));
       document.querySelectorAll("[data-hide-item]").forEach(btn => btn.addEventListener("click", () => toggleItemHidden(btn.dataset.hideItem)));
       if ($("saveExpenseBtn")) $("saveExpenseBtn").addEventListener("click", saveExpenseFromPos);
       if ($("adminSaveStock")) $("adminSaveStock").addEventListener("click", saveAdminStock);
@@ -12493,7 +12875,7 @@
     async function saveUser(event) {
       event.preventDefault();
       try {
-        await adminApi("/users", {
+        const saved = await adminApi("/users", {
           method: "POST",
           body: JSON.stringify({
             name: $("newName").value,
@@ -12504,7 +12886,7 @@
             canteenId: user?.canteenId
           })
         });
-        await loadAdminData();
+        upsertLocalUser(saved.user);
         renderAdmin();
       } catch {
         alert("User save failed. Check the admin login.");
@@ -12783,6 +13165,15 @@
     });
     $("itemSearchToggle")?.addEventListener("click", () => setItemSearchOpen($("itemSearchBar").classList.contains("hidden")));
     $("itemSearchClear")?.addEventListener("click", () => setItemSearchOpen(false));
+    $("itemSearchResults")?.addEventListener("click", event => {
+      const button = event.target.closest("[data-search-item]");
+      if (!button) return;
+      const product = findBillingProduct(button.dataset.searchItem);
+      if (!product) return;
+      const option = button.dataset.searchSingleItem === "1" ? { name: "Single Item", price: singleItemPrice(product) } : selectedSubItems[product.id] || null;
+      addToCart(product.id, option);
+      clearItemSearchAfterSelection();
+    });
     $("billingSectionMeta")?.addEventListener("click", () => {
       if (itemSearch || activeCategory === "All") return;
       activeCategory = "All";
@@ -12834,6 +13225,7 @@
         const product = findBillingProduct(btn.dataset.item);
         const singleOption = btn.dataset.singleItem ? { name: "Single Item", price: singleItemPrice(product) } : null;
         addToCart(btn.dataset.item, singleOption || selectedSubItems[btn.dataset.item] || null);
+        clearItemSearchAfterSelection();
       }
     });
     $("menuGrid").addEventListener("pointerdown", event => {
