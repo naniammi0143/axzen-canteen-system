@@ -310,6 +310,12 @@ public class MainActivity extends BridgeActivity {
         }
 
         @JavascriptInterface
+        public String wakeAsync() {
+            new Thread(() -> wake()).start();
+            return "Printer wake queued";
+        }
+
+        @JavascriptInterface
         public synchronized String print(String text) {
             if (!hasBluetoothPermission()) {
                 requestBluetoothPermission();
@@ -573,6 +579,20 @@ public class MainActivity extends BridgeActivity {
         }
 
         private void writeReceiptToPrinter(BluetoothAdapter adapter, BluetoothDevice printer, String text, String logoDataUrl, String logoPosition, String headerName, String companyName, int paperWidth) throws Exception {
+            Exception lastError = null;
+            for (int attempt = 0; attempt < 2; attempt++) {
+                try {
+                    writeReceiptToPrinterOnce(adapter, printer, text, logoDataUrl, logoPosition, headerName, companyName, paperWidth);
+                    return;
+                } catch (Exception error) {
+                    lastError = error;
+                    if (attempt == 0) Thread.sleep(250);
+                }
+            }
+            throw lastError;
+        }
+
+        private void writeReceiptToPrinterOnce(BluetoothAdapter adapter, BluetoothDevice printer, String text, String logoDataUrl, String logoPosition, String headerName, String companyName, int paperWidth) throws Exception {
             BluetoothSocket targetSocket = null;
             OutputStream targetOutput = null;
             try {
@@ -714,6 +734,20 @@ public class MainActivity extends BridgeActivity {
         }
 
         private void writeBitmapReceiptToPrinter(BluetoothAdapter adapter, BluetoothDevice printer, String receiptJson) throws Exception {
+            Exception lastError = null;
+            for (int attempt = 0; attempt < 2; attempt++) {
+                try {
+                    writeBitmapReceiptToPrinterOnce(adapter, printer, receiptJson);
+                    return;
+                } catch (Exception error) {
+                    lastError = error;
+                    if (attempt == 0) Thread.sleep(250);
+                }
+            }
+            throw lastError;
+        }
+
+        private void writeBitmapReceiptToPrinterOnce(BluetoothAdapter adapter, BluetoothDevice printer, String receiptJson) throws Exception {
             BluetoothSocket targetSocket = null;
             OutputStream targetOutput = null;
             try {

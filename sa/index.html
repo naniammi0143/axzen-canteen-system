@@ -582,7 +582,7 @@
       position: absolute;
       top: 6px;
       right: 8px;
-      z-index: 3;
+      z-index: 6;
       min-width: 30px;
       height: 30px;
       border-radius: 999px;
@@ -604,7 +604,7 @@
       position: absolute;
       top: 6px;
       left: 8px;
-      z-index: 4;
+      z-index: 6;
       width: 30px;
       height: 30px;
       border-radius: 999px;
@@ -2444,9 +2444,15 @@
     .add-item-close { width: 36px; height: 36px; border: 1px solid #e5eaf0; border-radius: 10px; background: #fff; font-size: 22px; line-height: 1; }
     .item-manager-top {
       display: grid;
-      grid-template-columns: 58px minmax(0, 1fr) auto auto;
+      grid-template-columns: 58px minmax(0, 1fr) auto auto auto;
       gap: 10px;
       align-items: center;
+    }
+    .item-card-export { width: 38px; height: 38px; display: inline-grid; place-items: center; padding: 0; color: #1d4ed8; border-color: #bfdbfe; background: #eff6ff; }
+    .item-card-export svg { width: 18px; height: 18px; }
+    @media (max-width: 640px) {
+      .item-manager-top { grid-template-columns: 50px minmax(0, 1fr) auto auto; gap: 7px; }
+      .item-manager-top .item-card-export { grid-column: 2; width: 100%; height: 34px; }
     }
     .item-manager-thumb {
       width: 58px;
@@ -6181,6 +6187,25 @@
       #posView:not(.option-mode) .content { padding-bottom: calc(258px + env(safe-area-inset-bottom, 0px)) !important; }
       #posView.search-active .cart-sheet { display: block !important; }
       #posView.search-active .item-search-results { max-height: min(440px, max(160px, calc(100dvh - var(--app-safe-top, 0px) - 310px))) !important; }
+      #posView .cart-sheet { border: 2px solid #16a34a !important; box-shadow: 0 12px 30px rgba(22, 163, 74, .20) !important; }
+      html.pos-layout-compact #posView.search-active .cart-sheet {
+        position: fixed !important;
+        left: 10px !important;
+        right: 10px !important;
+        width: auto !important;
+        bottom: calc(66px + var(--app-safe-bottom, 0px)) !important;
+        margin: 0 !important;
+        z-index: 12 !important;
+      }
+      html.pos-layout-compact #posView.search-active .bottom-nav,
+      html.pos-layout-compact #posView.search-active .bottom-nav.user-nav {
+        position: fixed !important;
+        left: 50% !important;
+        right: auto !important;
+        bottom: calc(8px - var(--search-keyboard-offset, 0px) + var(--app-safe-bottom, 0px)) !important;
+        transform: translateX(-50%) !important;
+        z-index: 11 !important;
+      }
     }
   </style>
 </head>
@@ -6731,6 +6756,18 @@
     }
     const itemNumberOn = item => itemNumberText(item) !== "" && (item?.itemNumberEnabled === undefined || item.itemNumberEnabled === true || item.itemNumberEnabled === "true");
     const itemNumberLabel = item => allNumbersEnabled() && itemNumberOn(item) ? `No. ${itemNumberText(item)}` : "";
+    function compareItemDisplayOrder(first, second) {
+      const firstNumber = itemNumberOn(first) ? itemNumberText(first) : "";
+      const secondNumber = itemNumberOn(second) ? itemNumberText(second) : "";
+      if (firstNumber && secondNumber) {
+        const difference = Number(firstNumber) - Number(secondNumber);
+        if (difference) return difference;
+        const numberTextOrder = firstNumber.localeCompare(secondNumber, undefined, { numeric: true });
+        if (numberTextOrder) return numberTextOrder;
+      } else if (firstNumber) return -1;
+      else if (secondNumber) return 1;
+      return Number(first.sortOrder ?? first.id ?? 0) - Number(second.sortOrder ?? second.id ?? 0);
+    }
     function itemNumberChipHtml(item) {
       const value = itemNumberText(item);
       if (!value || !allNumbersEnabled()) return "";
@@ -7463,7 +7500,7 @@
         : baseProducts.filter(item => item.category === activeCategory))
         .filter(item => !query || String(item.name || "").toLowerCase().includes(query) || String(item.nameTe || "").toLowerCase().includes(query) || String(item.category || "").toLowerCase().includes(query) || matchesItemNumber(item, query))
         .slice()
-        .sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0));
+        .sort(compareItemDisplayOrder);
       renderItemSearchSuggestions(visible, query);
       $("menuGrid").innerHTML = visible.map(item => {
         const selectedOption = item.isSingleItem ? null : selectedSubItems[item.id] || null;
@@ -7491,6 +7528,19 @@
       }).join("") || (query ? `<div class="panel item-search-empty">No items found for "${esc(itemSearch.trim())}"</div>` : `<div class="panel">No menu items</div>`);
     }
 
+    let searchViewportBaseHeight = 0;
+    function updateSearchKeyboardOffset() {
+      const searchOpen = $("posView")?.classList.contains("search-active");
+      if (!searchOpen || !searchViewportBaseHeight) {
+        document.documentElement.style.setProperty("--search-keyboard-offset", "0px");
+        return;
+      }
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
+      document.documentElement.style.setProperty("--search-keyboard-offset", `${Math.max(0, Math.round(searchViewportBaseHeight - viewportHeight))}px`);
+    }
+    window.visualViewport?.addEventListener("resize", updateSearchKeyboardOffset);
+    window.visualViewport?.addEventListener("scroll", updateSearchKeyboardOffset);
+
     function setItemSearchOpen(open) {
       const bar = $("itemSearchBar");
       if (!bar) return;
@@ -7499,9 +7549,13 @@
       $("itemSearchToggle")?.setAttribute("aria-expanded", String(open));
       $("itemSearchToggle")?.classList.toggle("active", open);
       if (open) {
+        searchViewportBaseHeight = window.visualViewport?.height || window.innerHeight;
         $("itemSearch").focus();
+        requestAnimationFrame(updateSearchKeyboardOffset);
         return;
       }
+      searchViewportBaseHeight = 0;
+      updateSearchKeyboardOffset();
       if (itemSearch) {
         itemSearch = "";
         $("itemSearch").value = "";
@@ -7514,8 +7568,6 @@
       itemSearch = "";
       const input = $("itemSearch");
       if (input) input.value = "";
-      renderProducts();
-      requestAnimationFrame(() => input?.focus());
     }
 
     function productSubItems(item) {
@@ -10364,7 +10416,7 @@
         return [item.name, item.nameTe, item.category, itemSaleUnit(item), itemNumberText(item)]
           .some(value => String(value || "").toLowerCase().includes(query));
       });
-      const rows = visibleProducts.slice().sort((a, b) => Number(a.sortOrder ?? a.id ?? 0) - Number(b.sortOrder ?? b.id ?? 0)).map(item => {
+      const rows = visibleProducts.slice().sort(compareItemDisplayOrder).map(item => {
         const subs = productSubItems(item);
         const hidden = isItemHidden(item);
         const editing = item._editing === true;
@@ -10373,6 +10425,8 @@
           <div class="item-manager-top">
             <span class="item-manager-thumb ${imageStyle ? "" : "initials"}" style="${imageStyle}">${imageStyle ? "" : esc(String(item.name || "I").slice(0, 1))}</span>
             <div><h3>${esc(localizedName(item, "both"))}</h3>${item.imageCredit?.source && /^https:\/\//i.test(item.imageCredit.source) ? `<a href="${esc(item.imageCredit.source)}" target="_blank" rel="noopener">Photo: ${esc(item.imageCredit.author)} ? ${esc(item.imageCredit.license)}</a>` : ""}<span class="muted">${esc(item.category || "-")} | ${esc(itemSaleUnit(item) || "Plate")} | ${subs.length ? `${subs.length} sub items` : "Empty"} | ${hidden ? "Hidden" : "Visible"}</span>${itemNumberChipHtml(item)}</div>
+            <button class="ghost-action item-card-export" data-download-item-card="${item.id}" type="button" aria-label="Download item card" title="Download item card"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M11 3h2v9.17l2.59-2.58L17 11l-5 5-5-5 1.41-1.41L11 12.17V3Zm-6 15h14v2H5v-2Z"/></svg></button>
+            <button class="ghost-action item-card-export" data-share-item-card="${item.id}" type="button" aria-label="Share item card" title="Share as image"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18 16a3 3 0 0 0-2.04.8l-6.91-4.03a3.1 3.1 0 0 0 0-1.54l6.91-4.03A3 3 0 1 0 15 5a3.1 3.1 0 0 0 .05.54L8.14 9.57A3 3 0 1 0 8.14 14l6.91 4.03A3 3 0 1 0 18 16Z"/></svg></button>
             <button class="ghost-action${editing ? " item-update-btn" : ""}" data-edit-item="${item.id}" type="button">${editing ? "Update" : "Edit"}</button>
             <button class="ghost-action ${hidden ? "" : "danger-lite"}" data-hide-item="${item.id}" type="button">${hidden ? "Show" : "Hide"}</button>
           </div>
@@ -10409,6 +10463,51 @@
         </div>
         <label class="item-manager-search"><span>Search items</span><input id="itemManagerSearch" type="search" value="${esc(itemManagerSearch)}" placeholder="Search name, number, Telugu name, category or unit" autocomplete="off"></label>
         ${rows || `<div class="work-card">${query ? "No items match this search." : "No items yet. Use Add Item, or upload a menu card and confirm the list."}</div>`}`;
+    }
+
+    function itemCardFileName(item) {
+      const number = itemNumberText(item) || String(item.id || "item");
+      const name = String(item.name || "item").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "item";
+      return `item-${number}-${name}.png`;
+    }
+    function drawItemCardText(context, text, x, y, maxWidth, lineHeight, maxLines) {
+      const words = String(text || "Item").split(/\s+/).filter(Boolean), lines = [];
+      let line = "";
+      words.forEach(word => { const next = line ? `${line} ${word}` : word; if (context.measureText(next).width > maxWidth && line) { lines.push(line); line = word; } else line = next; });
+      if (line) lines.push(line);
+      lines.slice(0, maxLines).forEach((value, index) => context.fillText(value, x, y + (index * lineHeight)));
+    }
+    function itemCardCanvas(item) {
+      const canvas = document.createElement("canvas"); canvas.width = 1200; canvas.height = 675;
+      const context = canvas.getContext("2d"), number = itemNumberText(item) || "-", name = localizedName(item, "english") || item.name || "Item", price = money(Number(item.price || 0));
+      const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height); gradient.addColorStop(0, "#0b2f68"); gradient.addColorStop(.52, "#0a2148"); gradient.addColorStop(1, "#020d22");
+      context.fillStyle = gradient; context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "rgba(255,255,255,.07)"; context.beginPath(); context.arc(120, 80, 260, 0, Math.PI * 2); context.fill();
+      context.fillStyle = "rgba(255,255,255,.09)"; context.fillRect(60, 55, 490, 6);
+      context.fillStyle = "#b9d8ff"; context.font = "700 29px Arial, sans-serif"; context.fillText("ITEM NUMBER", 64, 118);
+      context.fillStyle = "#ffffff"; context.font = "900 250px Arial, sans-serif"; context.fillText(`#${number}`, 55, 365);
+      context.font = "800 56px Arial, sans-serif"; drawItemCardText(context, name, 65, 480, 650, 66, 2);
+      context.fillStyle = "rgba(255,255,255,.14)"; context.fillRect(760, 60, 380, 555);
+      context.fillStyle = "#b9d8ff"; context.font = "700 28px Arial, sans-serif"; context.fillText("PRICE", 808, 170);
+      context.fillStyle = "#ffffff"; context.font = "900 88px Arial, sans-serif"; context.fillText(price, 808, 275);
+      context.fillStyle = "#b9d8ff"; context.font = "700 27px Arial, sans-serif"; context.fillText(categoryLabel(item.category || "Other"), 808, 365);
+      context.fillStyle = "#ffffff"; context.font = "700 30px Arial, sans-serif"; context.fillText(settings.canteenName || "Axzen POS", 808, 540);
+      return canvas;
+    }
+    function itemCardBlob(item) { return new Promise(resolve => itemCardCanvas(item).toBlob(resolve, "image/png")); }
+    async function downloadItemCard(id) {
+      const item = products.find(row => Number(row.id) === Number(id)); if (!item) return;
+      const blob = await itemCardBlob(item); if (!blob) throw new Error("Could not create the item image");
+      const url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = itemCardFileName(item); document.body.appendChild(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+      $("posMessage").textContent = "Item card downloaded"; $("posMessage").className = "status ok";
+    }
+    async function shareItemCard(id) {
+      const item = products.find(row => Number(row.id) === Number(id)); if (!item) return;
+      const canvas = itemCardCanvas(item), dataUrl = canvas.toDataURL("image/png"), title = `${itemNumberText(item) ? `#${itemNumberText(item)} · ` : ""}${localizedName(item, "english") || item.name}`;
+      if (window.AxenShare?.sharePng) { const result = window.AxenShare.sharePng(dataUrl, itemCardFileName(item), title); if (!String(result || "").toLowerCase().includes("failed")) return; }
+      const blob = await itemCardBlob(item), file = blob ? new File([blob], itemCardFileName(item), { type: "image/png" }) : null;
+      if (file && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title });
+      else { await downloadItemCard(id); window.location.href = `whatsapp://send?text=${encodeURIComponent(`${title}\n${money(Number(item.price || 0))}`)}`; }
     }
 
     function simpleAdminPageHtml(section) {
@@ -10676,6 +10775,8 @@
       document.querySelectorAll("[data-add-sub]").forEach(btn => btn.addEventListener("click", () => saveSubItemFromPos(btn.dataset.addSub)));
       document.querySelectorAll("[data-edit-item]").forEach(btn => btn.addEventListener("click", () => toggleItemEdit(btn.dataset.editItem)));
       document.querySelectorAll("[data-close-edit]").forEach(btn => btn.addEventListener("click", () => closeItemEdit(btn.dataset.closeEdit)));
+      document.querySelectorAll("[data-download-item-card]").forEach(btn => btn.addEventListener("click", () => downloadItemCard(btn.dataset.downloadItemCard).catch(error => alert(error.message || "Item card download failed"))));
+      document.querySelectorAll("[data-share-item-card]").forEach(btn => btn.addEventListener("click", () => shareItemCard(btn.dataset.shareItemCard).catch(error => { if (error?.name !== "AbortError") alert(error.message || "Item card share failed"); })));
       document.querySelectorAll("[data-number-enabled]").forEach(input => input.addEventListener("change", () => toggleItemNumberEnabled(input.dataset.numberEnabled)));
       document.querySelectorAll("[data-edit-number]").forEach(input => input.addEventListener("input", () => { input.value = normalizeItemNumber(input.value); }));
       if ($("allNumbersMaster")) $("allNumbersMaster").addEventListener("change", event => setAllNumbersMaster(event.target.checked));
@@ -12729,6 +12830,8 @@
       bindItemSuggestionSearch();
       document.querySelectorAll("[data-edit-item]").forEach(btn => btn.addEventListener("click", () => toggleItemEdit(btn.dataset.editItem)));
       document.querySelectorAll("[data-close-edit]").forEach(btn => btn.addEventListener("click", () => closeItemEdit(btn.dataset.closeEdit)));
+      document.querySelectorAll("[data-download-item-card]").forEach(btn => btn.addEventListener("click", () => downloadItemCard(btn.dataset.downloadItemCard).catch(error => alert(error.message || "Item card download failed"))));
+      document.querySelectorAll("[data-share-item-card]").forEach(btn => btn.addEventListener("click", () => shareItemCard(btn.dataset.shareItemCard).catch(error => { if (error?.name !== "AbortError") alert(error.message || "Item card share failed"); })));
       document.querySelectorAll("[data-number-enabled]").forEach(input => input.addEventListener("change", () => toggleItemNumberEnabled(input.dataset.numberEnabled)));
       if ($("allNumbersMaster")) $("allNumbersMaster").addEventListener("change", event => setAllNumbersMaster(event.target.checked));
       document.querySelectorAll("[data-hide-item]").forEach(btn => btn.addEventListener("click", () => toggleItemHidden(btn.dataset.hideItem)));
@@ -13171,8 +13274,8 @@
       const product = findBillingProduct(button.dataset.searchItem);
       if (!product) return;
       const option = button.dataset.searchSingleItem === "1" ? { name: "Single Item", price: singleItemPrice(product) } : selectedSubItems[product.id] || null;
-      addToCart(product.id, option);
       clearItemSearchAfterSelection();
+      addToCart(product.id, option);
     });
     $("billingSectionMeta")?.addEventListener("click", () => {
       if (itemSearch || activeCategory === "All") return;
@@ -13224,8 +13327,8 @@
       if (btn) {
         const product = findBillingProduct(btn.dataset.item);
         const singleOption = btn.dataset.singleItem ? { name: "Single Item", price: singleItemPrice(product) } : null;
-        addToCart(btn.dataset.item, singleOption || selectedSubItems[btn.dataset.item] || null);
         clearItemSearchAfterSelection();
+        addToCart(btn.dataset.item, singleOption || selectedSubItems[btn.dataset.item] || null);
       }
     });
     $("menuGrid").addEventListener("pointerdown", event => {
