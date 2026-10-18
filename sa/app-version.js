@@ -1,5 +1,5 @@
 window.AxzenVersion = (() => {
-  const bundledVersion = '3.82.0';
+  const bundledVersion = '3.96.0';
   function current() {
     try {
       const raw=window.AxzenUpdater?.current?.();
