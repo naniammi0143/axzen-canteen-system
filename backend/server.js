@@ -41,7 +41,7 @@ app.use(cors());
 require("./catalog-import").register(app, requireAdmin);
 
 app.use(express.json({
-  limit: "8mb",
+  limit: "16mb",
   verify: (req, res, buf) => {
     req.rawBody = buf.toString("utf8");
   }
@@ -1397,7 +1397,7 @@ async function saveMenuItem(payload) {
     canteenId,
     name: String(payload.name || "").trim(),
     nameTe: String(payload.nameTe || payload.teluguName || "").trim(),
-    itemNumber: String(payload.itemNumber ?? payload.allotNumber ?? "").replace(/[^0-9A-Za-z#-]/g, "").trim().slice(0, 12),
+    itemNumber: String(payload.itemNumber ?? payload.allotNumber ?? "").replace(/\D/g, "").slice(0, 12),
     itemNumberEnabled: payload.itemNumberEnabled === true || payload.itemNumberEnabled === "true",
     price: Number(payload.price || 0),
     halfPrice: Number(payload.halfPrice || payload.singlePrice || payload.halfItemPrice || 0),
@@ -1413,6 +1413,11 @@ async function saveMenuItem(payload) {
 
   if (!item.name) throw new Error("Product name is required");
   if (!item.itemNumber) item.itemNumberEnabled = false;
+
+  if (item.itemNumber && current.some(row =>
+    Number(row.id) !== Number(item.id) &&
+    String(row.itemNumber ?? row.allotNumber ?? "").replace(/\D/g, "").slice(0, 12) === item.itemNumber
+  )) throw new Error("This item number is already assigned to another item");
 
   const sameName = current.find(row =>
     String(row.name || "").trim().toLowerCase() === item.name.toLowerCase() &&
@@ -2517,7 +2522,7 @@ async function allMarketingSupportTickets() {
 
 async function allAppReleases() {
   if (!mongoReady) return [];
-  return AppRelease.find({}).select("-bundle").sort({ createdAt: -1 }).limit(50).lean();
+  return AppRelease.find({}).select("-bundle").sort({ createdAt: -1 }).allowDiskUse(true).limit(50).lean();
 }
 
 async function helpTicketsForCanteen(canteenId) {
@@ -3922,7 +3927,7 @@ app.put("/marketing-api/me/bank", requireDatabase, requireMarketingAuth, async (
 });
 
 app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
-  const [allCanteens, users, activities, payments, supportTickets, enquiries, websitePlans, printers, appReleases, paperRollOrders] = await Promise.all([
+  const dashboardSources = await Promise.allSettled([
     allMarketingCanteens(),
     allMarketingUsers(),
     allMarketingActivities(),
@@ -3934,6 +3939,11 @@ app.get("/marketing-api/dashboard", requireMarketingAuth, async (req, res) => {
     allAppReleases(),
     allPaperRollOrders()
   ]);
+  const [allCanteens, users, activities, payments, supportTickets, enquiries, websitePlans, printers, appReleases, paperRollOrders] = dashboardSources.map((result, index) => {
+    if (result.status === "fulfilled") return result.value;
+    console.error(`Marketing dashboard source ${index} failed:`, result.reason?.message || result.reason);
+    return [];
+  });
   const isAdmin = req.marketingUser.role === "super_admin" || req.marketingUser.role === "manager";
   const canteens = isAdmin
     ? allCanteens
@@ -4048,7 +4058,7 @@ app.post("/marketing-api/app-releases", requireDatabase, requireSuperAdmin, asyn
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(version)) throw new Error("Use a valid release version, for example 4.0.1");
     const raw = String(req.body.bundleBase64 || "").replace(/^data:[^,]*;base64,/i, "").replace(/\s+/g, "");
     const bundle = Buffer.from(raw, "base64");
-    if (bundle.length < 100 || bundle.length > 6 * 1024 * 1024 || bundle[0] !== 0x50 || bundle[1] !== 0x4b) throw new Error(`Upload a valid ${appType === "employee" ? "Employee" : "POS"} release ZIP smaller than 6 MB`);
+    if (bundle.length < 100 || bundle.length > 10 * 1024 * 1024 || bundle[0] !== 0x50 || bundle[1] !== 0x4b) throw new Error(`Upload a valid ${appType === "employee" ? "Employee" : "POS"} release ZIP of 10 MB or less`);
     if (await AppRelease.exists({ version })) throw new Error("This release version already exists. Use a new version.");
     const sha256 = crypto.createHash("sha256").update(bundle).digest("hex");
     const privateKeyBase64 = process.env.APP_UPDATE_SIGNING_PRIVATE_KEY_BASE64;
