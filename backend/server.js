@@ -4128,7 +4128,10 @@ app.post("/marketing-api/app-releases/uploads/:uploadId/complete", requireDataba
     if (!upload) throw new Error("Upload session not found");
     const chunks = await AppReleaseUploadChunk.find({ uploadId: upload.uploadId }).sort({ index: 1 }).lean();
     if (chunks.length !== upload.totalChunks || chunks.some((chunk, index) => chunk.index !== index)) throw new Error("Upload is incomplete. Please try again.");
-    const bundle = Buffer.concat(chunks.map(chunk => Buffer.from(chunk.data)));
+    const bundle = Buffer.concat(chunks.map(chunk => {
+      const data = chunk.data;
+      return Buffer.isBuffer(data) ? data : Buffer.from(data?.buffer || data);
+    }));
     if (bundle.length !== upload.totalSize) throw new Error("Upload size mismatch. Please try again.");
     const release = await createAppRelease({ ...upload, bundle });
     await Promise.all([AppReleaseUpload.deleteOne({ _id: upload._id }), AppReleaseUploadChunk.deleteMany({ uploadId: upload.uploadId })]);
