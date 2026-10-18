@@ -701,6 +701,23 @@ const appReleaseSchema = new mongoose.Schema({
   publishedAt: Date
 }, { timestamps: true, collection: "app_releases" });
 
+const appReleaseUploadSchema = new mongoose.Schema({
+  uploadId: { type: String, unique: true, index: true },
+  version: String,
+  appType: { type: String, enum: ["pos", "employee"], default: "pos" },
+  notes: String,
+  totalChunks: Number,
+  totalSize: Number,
+  createdBy: String
+}, { timestamps: true, collection: "app_release_uploads" });
+
+const appReleaseUploadChunkSchema = new mongoose.Schema({
+  uploadId: { type: String, index: true },
+  index: Number,
+  data: Buffer
+}, { timestamps: true, collection: "app_release_upload_chunks" });
+appReleaseUploadChunkSchema.index({ uploadId: 1, index: 1 }, { unique: true });
+
 const enquirySchema = new mongoose.Schema({
   id: { type: Number, index: true },
   name: String,
@@ -779,6 +796,8 @@ const SubscriptionOrder = mongoose.models.SubscriptionOrder || mongoose.model("S
 const PaperRollOrder = mongoose.models.PaperRollOrder || mongoose.model("PaperRollOrder", paperRollOrderSchema);
 const MarketingSupportTicket = mongoose.models.MarketingSupportTicket || mongoose.model("MarketingSupportTicket", marketingSupportTicketSchema);
 const AppRelease = mongoose.models.AppRelease || mongoose.model("AppRelease", appReleaseSchema);
+const AppReleaseUpload = mongoose.models.AppReleaseUpload || mongoose.model("AppReleaseUpload", appReleaseUploadSchema);
+const AppReleaseUploadChunk = mongoose.models.AppReleaseUploadChunk || mongoose.model("AppReleaseUploadChunk", appReleaseUploadChunkSchema);
 const Enquiry = mongoose.models.Enquiry || mongoose.model("Enquiry", enquirySchema);
 const WebsitePlan = mongoose.models.WebsitePlan || mongoose.model("WebsitePlan", websitePlanSchema);
 const WhatsappLog = mongoose.models.WhatsappLog || mongoose.model("WhatsappLog", whatsappLogSchema);
@@ -4051,22 +4070,69 @@ app.post("/marketing-api/help-tickets/:id/status", requireDatabase, requireHelpD
   }
 });
 
+async function createAppRelease({ version, appType, notes, bundle, createdBy }) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(version)) throw new Error("Use a valid release version, for example 4.0.1");
+  if (bundle.length < 100 || bundle.length > 10 * 1024 * 1024 || bundle[0] !== 0x50 || bundle[1] !== 0x4b) throw new Error(`Upload a valid ${appType === "employee" ? "Employee" : "POS"} release ZIP of 10 MB or less`);
+  if (await AppRelease.exists({ version })) throw new Error("This release version already exists. Use a new version.");
+  const sha256 = crypto.createHash("sha256").update(bundle).digest("hex");
+  const privateKeyBase64 = process.env.APP_UPDATE_SIGNING_PRIVATE_KEY_BASE64;
+  if (!privateKeyBase64) throw new Error("App update signing key is not configured on the backend");
+  const privateKey = crypto.createPrivateKey(Buffer.from(privateKeyBase64, "base64").toString("utf8"));
+  const signature = crypto.sign("sha256", bundle, privateKey).toString("base64");
+  const release = await AppRelease.create({ version, appType, notes: String(notes || "").trim().slice(0, 500), sha256, signature, size: bundle.length, status: "Draft", bundle, createdBy });
+  return { id: String(release._id), version, appType, notes: release.notes, sha256, size: bundle.length, status: release.status };
+}
+
 app.post("/marketing-api/app-releases", requireDatabase, requireSuperAdmin, async (req, res) => {
   try {
     const version = String(req.body.version || "").trim();
     const appType = req.body.appType === "employee" ? "employee" : "pos";
-    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(version)) throw new Error("Use a valid release version, for example 4.0.1");
     const raw = String(req.body.bundleBase64 || "").replace(/^data:[^,]*;base64,/i, "").replace(/\s+/g, "");
-    const bundle = Buffer.from(raw, "base64");
-    if (bundle.length < 100 || bundle.length > 10 * 1024 * 1024 || bundle[0] !== 0x50 || bundle[1] !== 0x4b) throw new Error(`Upload a valid ${appType === "employee" ? "Employee" : "POS"} release ZIP of 10 MB or less`);
+    const release = await createAppRelease({ version, appType, notes: req.body.notes, bundle: Buffer.from(raw, "base64"), createdBy: req.marketingUser.employeeId });
+    res.status(201).json({ success: true, release });
+  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+});
+
+app.post("/marketing-api/app-releases/uploads", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const version = String(req.body.version || "").trim();
+    const appType = req.body.appType === "employee" ? "employee" : "pos";
+    const totalChunks = Number(req.body.totalChunks || 0);
+    const totalSize = Number(req.body.totalSize || 0);
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(version)) throw new Error("Use a valid release version, for example 4.0.1");
+    if (!Number.isInteger(totalChunks) || totalChunks < 1 || totalChunks > 24 || !Number.isInteger(totalSize) || totalSize < 100 || totalSize > 10 * 1024 * 1024) throw new Error("Choose a ZIP of 10 MB or less");
     if (await AppRelease.exists({ version })) throw new Error("This release version already exists. Use a new version.");
-    const sha256 = crypto.createHash("sha256").update(bundle).digest("hex");
-    const privateKeyBase64 = process.env.APP_UPDATE_SIGNING_PRIVATE_KEY_BASE64;
-    if (!privateKeyBase64) throw new Error("App update signing key is not configured on the backend");
-    const privateKey = crypto.createPrivateKey(Buffer.from(privateKeyBase64, "base64").toString("utf8"));
-    const signature = crypto.sign("sha256", bundle, privateKey).toString("base64");
-    const release = await AppRelease.create({ version, appType, notes: String(req.body.notes || "").trim().slice(0, 500), sha256, signature, size: bundle.length, status: "Draft", bundle, createdBy: req.marketingUser.employeeId });
-    res.status(201).json({ success: true, release: { id: String(release._id), version, appType, notes: release.notes, sha256, size: bundle.length, status: release.status } });
+    await AppReleaseUpload.deleteMany({ createdAt: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } });
+    const uploadId = crypto.randomUUID();
+    await AppReleaseUpload.create({ uploadId, version, appType, notes: String(req.body.notes || "").trim().slice(0, 500), totalChunks, totalSize, createdBy: req.marketingUser.employeeId });
+    res.status(201).json({ success: true, uploadId });
+  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+});
+
+app.post("/marketing-api/app-releases/uploads/:uploadId/chunks/:index", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const upload = await AppReleaseUpload.findOne({ uploadId: String(req.params.uploadId), createdBy: req.marketingUser.employeeId }).lean();
+    const index = Number(req.params.index);
+    if (!upload || !Number.isInteger(index) || index < 0 || index >= upload.totalChunks) throw new Error("Upload session not found");
+    const raw = String(req.body.chunkBase64 || "").replace(/\s+/g, "");
+    const data = Buffer.from(raw, "base64");
+    if (!data.length || data.length > 600 * 1024) throw new Error("Invalid upload chunk");
+    await AppReleaseUploadChunk.findOneAndUpdate({ uploadId: upload.uploadId, index }, { $set: { data } }, { upsert: true, new: true });
+    res.json({ success: true, index });
+  } catch (error) { res.status(400).json({ success: false, message: error.message }); }
+});
+
+app.post("/marketing-api/app-releases/uploads/:uploadId/complete", requireDatabase, requireSuperAdmin, async (req, res) => {
+  try {
+    const upload = await AppReleaseUpload.findOne({ uploadId: String(req.params.uploadId), createdBy: req.marketingUser.employeeId }).lean();
+    if (!upload) throw new Error("Upload session not found");
+    const chunks = await AppReleaseUploadChunk.find({ uploadId: upload.uploadId }).sort({ index: 1 }).lean();
+    if (chunks.length !== upload.totalChunks || chunks.some((chunk, index) => chunk.index !== index)) throw new Error("Upload is incomplete. Please try again.");
+    const bundle = Buffer.concat(chunks.map(chunk => Buffer.from(chunk.data)));
+    if (bundle.length !== upload.totalSize) throw new Error("Upload size mismatch. Please try again.");
+    const release = await createAppRelease({ ...upload, bundle });
+    await Promise.all([AppReleaseUpload.deleteOne({ _id: upload._id }), AppReleaseUploadChunk.deleteMany({ uploadId: upload.uploadId })]);
+    res.status(201).json({ success: true, release });
   } catch (error) { res.status(400).json({ success: false, message: error.message }); }
 });
 
